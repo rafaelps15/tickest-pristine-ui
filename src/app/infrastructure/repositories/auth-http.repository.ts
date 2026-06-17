@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthRepository } from '../../domain/interfaces/auth.repository';
 import { LoginRequestDto } from '../dtos/login-request.dto';
+import { CreateUserRequestDto } from '../dtos/create-user-request.dto';
 import { ApiResultDto } from '../dtos/api-result.dto';
 
 /** Implementação HTTP do repositório de autenticação. */
@@ -13,5 +14,9 @@ export class AuthHttpRepository extends AuthRepository {
 
   login(request: LoginRequestDto): Observable<ApiResultDto<string>> {
     return this.http.post<ApiResultDto<string>>(`${this.apiUrl}/login`, request);
+  }
+
+  register(request: CreateUserRequestDto): Observable<ApiResultDto<void>> {
+    return this.http.post<ApiResultDto<void>>(`${this.apiUrl}/register`, request);
   }
 }

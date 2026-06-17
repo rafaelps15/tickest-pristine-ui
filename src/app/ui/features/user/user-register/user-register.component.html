@@ -1,98 +1,138 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Gestão /</span> Usuários</h4>
-      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegister">
-        <i class="bx bx-plus me-1"></i> Novo Usuário
+@if (isSelfRegistration) {
+  <div class="text-center mb-5">
+    <h4 class="mb-2 fw-bold text-dark h2">Criar conta corporativa</h4>
+    <p class="text-muted small">Preencha as informações para solicitar acesso à plataforma.</p>
+  </div>
+  <ng-container *ngTemplateOutlet="formTemplate"></ng-container>
+  <div class="text-center mt-5">
+    <p class="mb-0 small text-muted">
+      Já possui uma conta ativa? 
+      <a routerLink="/login" class="ms-1 fw-bold text-primary text-decoration-none border-bottom border-primary">Fazer login</a>
+    </p>
+  </div>
+} @else {
+  <!-- Layout Administrativo (Dentro do MainLayout) -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex align-items-center justify-content-between">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Gestão de Usuários</h4>
+        <button type="button" class="btn btn-outline-secondary btn-sm" routerLink="/dashboard">
+          <i class="bx bx-arrow-back me-1"></i> Voltar ao Painel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 overflow-hidden">
+    <div class="card-header bg-white py-4 border-bottom">
+      <h5 class="mb-0 fw-bold text-dark">Módulo de Gestão de Usuários</h5>
+      <p class="text-muted small mb-0 mt-1">Gerencie permissões, edite dados ou cadastre novos colaboradores.</p>
+    </div>
+    <div class="card-body p-4 p-lg-5">
+      <div class="max-w-700 mx-auto">
+        <ng-container *ngTemplateOutlet="formTemplate"></ng-container>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Template Reutilizável do Formulário (Padrão Elite) -->
+<ng-template #formTemplate>
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="needs-validation">
+    
+    <!-- Feedbacks de Estado -->
+    @if (usersService.state().error) {
+      <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4 fade show" role="alert">
+        <i class="bx bx-error-circle fs-4 me-3"></i>
+        <div class="fw-medium">{{ usersService.state().error }}</div>
+      </div>
+    }
+    @if (usersService.state().success) {
+      <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4 fade show" role="alert">
+        <i class="bx bx-check-circle fs-4 me-3"></i>
+        <div class="fw-medium">Processamento concluído com sucesso.</div>
+      </div>
+    }
+
+    <div class="row g-4">
+      <!-- Seção: Informações Pessoais -->
+      <div class="col-12">
+        <label class="form-label-premium">Nome Completo</label>
+        <input type="text" class="form-control form-control-premium" placeholder="Ex: Alberto Santos Dumont" formControlName="name"
+               [class.is-invalid]="isFieldInvalid('name')" />
+        <div class="invalid-feedback">O nome completo é obrigatório.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label-premium">Matrícula / Código RE</label>
+        <input type="text" class="form-control form-control-premium" placeholder="000000" formControlName="employeeCode"
+               [class.is-invalid]="isFieldInvalid('employeeCode')" />
+        <div class="invalid-feedback">Formato de código inválido.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label-premium">E-mail Corporativo</label>
+        <input type="email" class="form-control form-control-premium" placeholder="colaborador@empresa.com" formControlName="email"
+               [class.is-invalid]="isFieldInvalid('email')" />
+        <div class="invalid-feedback">E-mail corporativo inválido.</div>
+      </div>
+
+      <!-- Seção: Segurança -->
+      <div class="col-md-6">
+        <label class="form-label-premium">Senha de Acesso</label>
+        <input type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="password"
+               [class.is-invalid]="isFieldInvalid('password')" />
+        <div class="invalid-feedback">Mínimo de 6 caracteres.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label-premium">Confirmar Senha</label>
+        <input type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="confirmPassword"
+               [class.is-invalid]="isFieldInvalid('confirmPassword') || form.hasError('passwordMismatch')" />
+        <div class="invalid-feedback">
+          @if (form.hasError('passwordMismatch')) { As senhas não coincidem. }
+          @else { Confirmação obrigatória. }
+        </div>
+      </div>
+
+      <div class="col-12 my-2">
+        <div class="border-bottom opacity-10"></div>
+      </div>
+
+      <!-- Seção: Estrutura Organizacional (Opcional por enquanto) -->
+      <div class="col-md-6">
+        <label class="form-label-premium text-muted">Departamento</label>
+        <select class="form-select form-select-premium bg-light-subtle" formControlName="departmentId">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label-premium text-muted">Setor / Área</label>
+        <select class="form-select form-select-premium bg-light-subtle" formControlName="sectorId">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label-premium text-muted">Especialidade</label>
+        <select class="form-select form-select-premium bg-light-subtle" formControlName="specialtyId">
+          <option value="">Selecione sua especialidade técnica...</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="mt-5">
+      <button type="submit" class="btn btn-primary btn-premium w-100 shadow-sm" 
+              [disabled]="usersService.state().loading || form.invalid">
+        @if (usersService.state().loading) {
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+          PROCESSANDO REQUISIÇÃO...
+        } @else {
+          {{ isSelfRegistration ? 'SOLICITAR REGISTRO' : 'CONFIRMAR CADASTRO' }}
+        }
       </button>
     </div>
-  </div>
-</div>
-
-<!-- Tabela de Usuários -->
-<div class="card">
-  <h5 class="card-header">Listagem de Usuários</h5>
-  <div class="table-responsive text-nowrap">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Nome</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody class="table-border-bottom-0">
-        @for (user of usersService.users(); track user.id) {
-          <tr>
-            <td><strong>{{ user.employeeCode }}</strong></td>
-            <td>{{ user.name }}</td>
-            <td>
-              <div class="dropdown">
-                <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                  <i class="bx bx-dots-vertical-rounded"></i>
-                </button>
-                <div class="dropdown-menu">
-                  <a class="dropdown-item" href="javascript:void(0);"><i class="bx bx-edit-alt me-1"></i> Editar</a>
-                  <a class="dropdown-item" href="javascript:void(0);"><i class="bx bx-trash me-1"></i> Excluir</a>
-                </div>
-              </div>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Modal de Cadastro -->
-<div class="modal fade" id="modalRegister" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalRegisterTitle">Cadastrar Novo Usuário</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="modal-body">
-          <div class="row">
-            <div class="col mb-3">
-              <label for="name" class="form-label">Nome</label>
-              <input type="text" id="name" class="form-control" placeholder="Digite o nome completo" formControlName="name" />
-            </div>
-          </div>
-          <div class="row g-2">
-            <div class="col mb-3">
-              <label for="employeeCode" class="form-label">Código do funcionário</label>
-              <input type="text" id="employeeCode" class="form-control" placeholder="RE / Matrícula" formControlName="employeeCode" />
-            </div>
-            <div class="col mb-3">
-              <label for="email" class="form-label">E-mail</label>
-              <input type="email" id="email" class="form-control" placeholder="exemplo&#64;empresa.com" formControlName="email" />
-            </div>
-          </div>
-          <div class="row g-2">
-            <div class="col mb-3">
-              <label for="password" class="form-label">Senha</label>
-              <input type="password" id="password" class="form-control" placeholder="············" formControlName="password" />
-            </div>
-            <div class="col mb-3">
-              <label for="roleId" class="form-label">Role</label>
-              <select id="roleId" class="form-select" formControlName="roleId">
-                <option value="">Selecione...</option>
-                @for (role of rolesService.roles(); track role.id) {
-                  <option [value]="role.id">{{ role.name }}</option>
-                }
-              </select>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">Salvar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+  </form>
+</ng-template>

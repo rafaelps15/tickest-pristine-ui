@@ -23,6 +23,7 @@ export class RolesService {
       .pipe(finalize(() => this.state.update(s => ({ ...s, loading: false }))))
       .subscribe({
         next: (res) => {
+          console.log('Roles carregadas:', res);
           if (res.isSuccess) {
             this.state.update(s => ({ ...s, data: res.value }));
           } else {

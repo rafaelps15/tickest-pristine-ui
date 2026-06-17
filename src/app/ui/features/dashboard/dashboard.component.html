@@ -91,9 +91,9 @@
   </div>
 </div>
 
-<!-- Gráfico -->
+<!-- Gráfico e Ações Rápidas -->
 <div class="row">
-  <div class="col-12 mb-4">
+  <div class="col-lg-8 mb-4">
     <div class="card">
       <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title m-0">Tendência de Tickets</h5>
@@ -110,6 +110,43 @@
       <div class="card-body">
         <div class="chart-container" style="position: relative; height: 350px;">
           <canvas #ticketChart></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ações Rápidas Administrativas -->
+  <div class="col-lg-4 mb-4">
+    <div class="card h-100 border-0 shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title m-0 fw-bold text-dark">Painel de Controle</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">Acesso direto às ferramentas de administração.</p>
+        
+        <div class="d-grid gap-3 mt-4">
+          <button class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between border-2" 
+                  routerLink="/usuarios">
+            <div class="d-flex align-items-center">
+              <i class="bx bx-group fs-4 me-3"></i>
+              <div>
+                <div class="fw-bold">Gestão de Usuários</div>
+                <div class="small opacity-75">Controle total de acessos</div>
+              </div>
+            </div>
+            <i class="bx bx-chevron-right"></i>
+          </button>
+
+          <button class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2">
+            <div class="d-flex align-items-center">
+              <i class="bx bx-cog fs-4 me-3"></i>
+              <div>
+                <div class="fw-bold">Configurações</div>
+                <div class="small opacity-75">Ajustes da plataforma</div>
+              </div>
+            </div>
+            <i class="bx bx-chevron-right"></i>
+          </button>
         </div>
       </div>
     </div>

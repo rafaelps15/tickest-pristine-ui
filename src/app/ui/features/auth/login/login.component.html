@@ -1,109 +1,76 @@
-<div class="authentication-wrapper">
-  <div class="authentication-inner">
-    <!-- Login Card -->
-    <div class="card">
-      <div class="card-body">
-        <!-- Logo -->
-        <div class="app-brand justify-content-center mb-5">
-          <a class="app-brand-link d-flex align-items-center" style="gap: 0; text-decoration: none;">
-            <span class="app-brand-logo">
-              <img src="/img/logo/logo_letra.png" alt="Tickest Logo" style="width: 38px; height: auto; margin-top: -5px;">
-            </span>
-            <span class="app-brand-text text-primary" style="font-size: 2.6rem; letter-spacing: -2px; margin-left: -2px; font-family: 'Montserrat', sans-serif; text-transform: lowercase;">
-              icket
-            </span>
-          </a>
-        </div>
-        <!-- /Logo -->
+<div class="text-center mb-4">
+  <h4 class="mb-2 fw-bold text-dark">Acesse sua Conta</h4>
+  <p class="text-muted">Utilize suas credenciais corporativas</p>
+</div>
 
-        <div class="text-center mb-4">
-          <h4 class="mb-2">Acesse sua Conta</h4>
-          <p class="text-muted">Utilize suas credenciais corporativas para entrar</p>
-        </div>
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3">
+  
+  <div class="mb-4">
+    <label for="email" class="form-label fw-semibold small text-uppercase">E-mail Corporativo</label>
+    <input 
+      type="email" 
+      class="form-control form-control-lg" 
+      id="email" 
+      formControlName="email" 
+      placeholder="seu@email.com" 
+      autofocus 
+      [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
+    />
+    @if (form.get('email')?.errors?.['required']) {
+      <div class="invalid-feedback">O e-mail é obrigatório.</div>
+    }
+    @if (form.get('email')?.errors?.['email']) {
+      <div class="invalid-feedback">Insira um e-mail válido.</div>
+    }
+  </div>
 
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3">
-          
-          <div class="mb-4">
-            <label for="email" class="form-label">E-mail Corporativo</label>
-            <input 
-              type="email" 
-              class="form-control" 
-              id="email" 
-              formControlName="email" 
-              placeholder="seu@email.com" 
-              autofocus 
-              [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
-            />
-            @if (form.get('email')?.errors?.['required']) {
-              <div class="invalid-feedback">O e-mail é obrigatório para o acesso.</div>
-            }
-            @if (form.get('email')?.errors?.['email']) {
-              <div class="invalid-feedback">Por favor, insira um formato de e-mail válido.</div>
-            }
-          </div>
-
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-1">
-              <label class="form-label mb-0" for="password">Senha</label>
-              <a href="javascript:void(0);" class="text-primary small fw-semibold">Esqueceu a senha?</a>
-            </div>
-            <div class="input-group input-group-merge">
-              <input 
-                [type]="showPassword() ? 'text' : 'password'" 
-                id="password" 
-                class="form-control" 
-                formControlName="password"
-                placeholder="••••••••••••"
-                [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
-              />
-              <span class="input-group-text cursor-pointer" (click)="togglePassword()">
-                <i class="bx" [class.bx-show]="showPassword()" [class.bx-hide]="!showPassword()"></i>
-              </span>
-              @if (form.get('password')?.invalid && form.get('password')?.touched) {
-                <div class="invalid-feedback">A senha é necessária para autenticação.</div>
-              }
-            </div>
-          </div>
-
-          @if (authService.state().error) {
-            <div class="mb-4">
-              <div class="alert alert-danger py-3 px-3 d-flex align-items-center" role="alert">
-                <i class="bx bx-error-circle me-2 fs-4"></i>
-                <div>{{ authService.state().error }}</div>
-              </div>
-            </div>
-          }
-
-          <div class="mb-4 pt-2">
-            <button 
-              class="btn btn-primary d-grid w-100 py-3" 
-              type="submit" 
-              [disabled]="form.invalid || authService.state().loading"
-            >
-              @if (authService.state().loading) {
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Autenticando...
-              } @else {
-                Entrar no Sistema
-              }
-            </button>
-          </div>
-        </form>
-
-        <p class="text-center mb-0">
-          <span class="text-muted">Ainda não tem acesso?</span>
-          <a routerLink="/auth/register" class="ms-1 fw-bold text-primary">
-            Solicite um registro
-          </a>
-        </p>
-
-      </div>
+  <div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <label class="form-label mb-0 fw-semibold small text-uppercase" for="password">Senha</label>
+      <a href="javascript:void(0);" class="text-primary small fw-semibold">Esqueceu?</a>
     </div>
-    <!-- /Login Card -->
-    
-    <!-- Footer opcional para o premium -->
-    <div class="text-center mt-4 text-white-50 small">
-      &copy; 2026 Tickest Platform. Todos os direitos reservados.
+    <div class="input-group input-group-merge">
+      <input 
+        [type]="showPassword() ? 'text' : 'password'" 
+        id="password" 
+        class="form-control form-control-lg" 
+        formControlName="password"
+        placeholder="••••••••••••"
+        [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
+      />
+      <span class="input-group-text cursor-pointer" (click)="togglePassword()">
+        <i class="bx" [class.bx-show]="showPassword()" [class.bx-hide]="!showPassword()"></i>
+      </span>
+      @if (form.get('password')?.invalid && form.get('password')?.touched) {
+        <div class="invalid-feedback">A senha é necessária.</div>
+      }
     </div>
   </div>
-</div>
+
+  @if (authService.state().error) {
+    <div class="alert alert-danger py-3 d-flex align-items-center mb-4" role="alert">
+      <i class="bx bx-error-circle me-2 fs-5"></i>
+      <div class="small fw-bold">{{ authService.state().error }}</div>
+    </div>
+  }
+
+  <button 
+    class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm" 
+    type="submit" 
+    [disabled]="form.invalid || authService.state().loading"
+  >
+    @if (authService.state().loading) {
+      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      AUTENTICANDO...
+    } @else {
+      ENTRAR NO SISTEMA
+    }
+  </button>
+</form>
+
+<p class="text-center mt-4 mb-0">
+  <span class="text-muted">Novo por aqui?</span>
+  <a routerLink="/register" class="ms-1 fw-bold text-primary text-decoration-none">
+    Crie sua conta
+  </a>
+</p>

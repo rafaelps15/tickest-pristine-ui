@@ -7,7 +7,7 @@ export const adminMasterGuard: CanActivateFn = () => {
   const session = inject(SessionService);
   const router = inject(Router);
 
-  if (session.isAuthenticated() && session.role() === 'adminMaster') {
+  if (session.isAuthenticated() && (session.role() === 'adminMaster' || session.role() === 'admin')) {
     return true;
   }
 
