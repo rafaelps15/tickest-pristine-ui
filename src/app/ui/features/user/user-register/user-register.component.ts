@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
 import { UsersService } from "../../../../application/services/users.service";
@@ -15,9 +15,9 @@ export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): V
 
 @Component({
     selector: 'app-user-register',
-    standalone: true,
     imports: [CommonModule, ReactiveFormsModule, RouterModule],
     templateUrl: './user-register.component.html',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-register.component.css'
 })
 export class UserRegisterComponent implements OnInit {

@@ -2,7 +2,7 @@ import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideClientHydration } from '@angular/platform-browser';
+import { provideClientHydration, withNoIncrementalHydration } from '@angular/platform-browser';
 
 import { routes } from '../routes/app.routes';
 import { RoleRepository } from '../../domain/interfaces/role.repository';
@@ -20,9 +20,9 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideClientHydration(),
+    provideClientHydration(withNoIncrementalHydration()),
     provideAnimationsAsync(),
-    provideHttpClient(
+    provideHttpClient(withFetch(),
       withInterceptors([authInterceptor])
     ),
     { provide: RoleRepository, useClass: RoleHttpRepository },

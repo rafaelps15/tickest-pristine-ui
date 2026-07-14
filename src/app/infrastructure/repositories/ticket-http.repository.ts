@@ -7,6 +7,8 @@ import { Ticket } from '../../domain/models/ticket.model';
 import { TicketStatus } from '../../domain/enums/ticket-status.enum';
 
 import { ApiResultDto } from '../dtos/api-result.dto';
+import { toResult } from '../mappers/api-result.mapper';
+import { environment } from '../../../environments/environment';
 
 /** Implementação HTTP do repositório de tickets. */
 @Injectable({
@@ -14,7 +16,7 @@ import { ApiResultDto } from '../dtos/api-result.dto';
 })
 export class TicketHttpRepository extends TicketRepository {
     private readonly http = inject(HttpClient);
-    private readonly apiUrl = 'http://localhost:5195/api/tickets';
+    private readonly apiUrl = `${environment.apiUrl}/tickets`;
 
     getDashBoardTickets() {
         return this.http
@@ -30,7 +32,7 @@ export class TicketHttpRepository extends TicketRepository {
 
     updateTicketStatus(id: number, status: TicketStatus) {
         return this.http
-            .put<ApiResultDto<void>>(`${this.apiUrl}/${id}/status`, { status });
-
+            .put<ApiResultDto<void>>(`${this.apiUrl}/${id}/status`, { status })
+            .pipe(map(toResult));
     }
-}   
+}

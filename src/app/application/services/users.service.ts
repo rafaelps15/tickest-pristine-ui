@@ -1,8 +1,10 @@
 import { inject, Injectable, signal, computed } from "@angular/core";
+import { HttpErrorResponse } from "@angular/common/http";
 import { UserRepository } from "../../domain/interfaces/user.repository";
 import { AuthRepository } from "../../domain/interfaces/auth.repository";
-import { CreateUserRequestDto } from "../../infrastructure/dtos/create-user-request.dto";
+import { CreateUserData } from "../../domain/models/create-user-data.model";
 import { UserSummary } from "../../domain/models/user-summary.model";
+import { extractErrorMessage } from "../../core/utils/http-error.util";
 import { finalize } from "rxjs";
 
 /** Serviço de usuários. */
@@ -29,22 +31,22 @@ export class UsersService {
           if (res.isSuccess) {
             this.state.update(s => ({ ...s, data: res.value }));
           } else {
-            this.state.update(s => ({ ...s, error: res.errorResult?.message ?? 'Erro ao carregar usuários' }));
+            this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao carregar usuários' }));
           }
         },
-        error: (err) => {
-          console.error('Erro ao carregar usuários:', err);
-          this.state.update(s => ({ ...s, error: 'Erro de conexão ao carregar usuários' }));
+        error: (err: HttpErrorResponse) => {
+          const message = extractErrorMessage(err, {}, 'Erro de conexão ao carregar usuários');
+          this.state.update(s => ({ ...s, error: message }));
         }
       });
   }
 
   /** Cria ou registra um usuário. Se isPublic for true, usa o endpoint api/auth/register. */
-  createUser(data: CreateUserRequestDto, isPublic: boolean = false) {
+  createUser(data: CreateUserData, isPublic: boolean = false) {
     this.state.update(s => ({ ...s, loading: true, success: false, error: null }));
 
-    const call = isPublic 
-      ? this.authRepository.register(data) 
+    const call = isPublic
+      ? this.authRepository.register(data)
       : this.repository.createUser(data);
 
     call.pipe(finalize(() => this.state.update(s => ({ ...s, loading: false }))))
@@ -53,23 +55,15 @@ export class UsersService {
           if (res.isSuccess) {
             this.state.update(s => ({ ...s, success: true }));
           } else {
-            this.state.update(s => ({ ...s, error: res.errorResult?.message ?? 'Erro ao processar solicitação' }));
+            this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao processar solicitação' }));
           }
         },
-        error: (err) => {
-          console.error('Erro ao criar usuário:', err);
-
-          const apiMessage = err.error?.errorResult?.message || err.error?.message;
-          if (apiMessage) {
-            this.state.update(s => ({ ...s, error: apiMessage }));
-            return;
-          }
-
-          let errorMessage = 'Ocorreu um erro inesperado.';
-          if (err.status === 0) errorMessage = 'Sem conexão com o servidor.';
-          else if (err.status === 409) errorMessage = 'Este e-mail já está cadastrado.';
-
-          this.state.update(s => ({ ...s, error: errorMessage }));
+        error: (err: HttpErrorResponse) => {
+          const message = extractErrorMessage(err, {
+            0: 'Sem conexão com o servidor.',
+            409: 'Este e-mail já está cadastrado.'
+          }, 'Ocorreu um erro inesperado.');
+          this.state.update(s => ({ ...s, error: message }));
         }
       });
   }

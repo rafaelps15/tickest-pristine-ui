@@ -1,18 +1,18 @@
-import { Component, inject, OnInit, AfterViewInit, ElementRef, ViewChild, PLATFORM_ID } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, OnInit, AfterViewInit, ElementRef, ViewChild, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../../application/services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { Chart, registerables } from 'chart.js';
 
-declare var Chart: any;
+Chart.register(...registerables);
 
 /** UI da área restrita. */
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
+    selector: 'app-dashboard',
+    imports: [RouterLink],
+    templateUrl: './dashboard.component.html',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
   private readonly authService = inject(AuthService);

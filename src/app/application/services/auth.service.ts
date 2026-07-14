@@ -1,9 +1,24 @@
 import { inject, Injectable, signal } from "@angular/core";
+import { HttpErrorResponse } from "@angular/common/http";
 import { AuthRepository } from "../../domain/interfaces/auth.repository";
-import { LoginRequestDto } from "../../infrastructure/dtos/login-request.dto";
+import { LoginCredentials } from "../../domain/models/login-credentials.model";
 import { SessionService } from "../../core/services/session.service";
+import { extractErrorMessage } from "../../core/utils/http-error.util";
 import { finalize } from "rxjs";
 import { Router } from "@angular/router";
+
+/** Extrai o token de string da resposta de login, tolerando variações de formato do backend. */
+function extractToken(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const candidate = obj['token'] ?? obj['accessToken'] ?? obj['value'];
+    return typeof candidate === 'string' ? candidate : null;
+  }
+
+  return null;
+}
 
 /** Serviço de autenticação. */
 @Injectable({ providedIn: 'root' })
@@ -18,61 +33,33 @@ export class AuthService {
     error: null as string | null
   });
 
-  login(credentials: LoginRequestDto) {
+  login(credentials: LoginCredentials) {
     this.state.update(s => ({ ...s, loading: true, error: null }));
 
     this.repository.login(credentials)
       .pipe(finalize(() => this.state.update(s => ({ ...s, loading: false }))))
       .subscribe({
         next: (res) => {
-          console.log('Resposta do login:', res);
-          if (res.isSuccess) {
-            let token = res.value;
-            
-            // Se o value for um objeto, tenta pegar a propriedade 'token' ou similar
-            if (token && typeof token === 'object') {
-              token = (token as any).token || (token as any).accessToken || (token as any).value;
-              console.log('Token extraído do objeto:', token);
-            }
-
-            if (typeof token !== 'string') {
-              console.error('Não foi possível extrair uma string de token da resposta.', res.value);
-              this.state.update(s => ({ ...s, error: 'Erro ao processar login do servidor.' }));
-              return;
-            }
-
-            this.session.saveSession(token);
-            console.log('Sessão salva. Autenticado?', this.session.isAuthenticated());
-            
-            this.router.navigate(['/dashboard']);
-          } else {
-            console.error('Falha no login:', res.errorResult);
-            this.state.update(s => ({ ...s, error: res.errorResult?.message ?? 'E-mail ou senha incorretos' }));
-          }
-        },
-        error: (err) => {
-          console.error('Erro de autenticação:', err);
-          
-          // Tenta extrair a mensagem de erro da resposta da API.
-          const apiMessage = err.error?.errorResult?.message || err.error?.message;
-          
-          if (apiMessage) {
-            this.state.update(s => ({ ...s, error: apiMessage }));
+          if (!res.isSuccess) {
+            this.state.update(s => ({ ...s, error: res.error?.message ?? 'E-mail ou senha incorretos' }));
             return;
           }
 
-          // Mensagens de fallback para falhas de rede ou respostas sem corpo.
-          let errorMessage = 'Ocorreu um erro inesperado. Tente novamente.';
-          
-          if (err.status === 0) {
-            errorMessage = 'Não foi possível conectar ao servidor. Verifique sua conexão.';
-          } else if (err.status === 401) {
-            errorMessage = 'E-mail ou senha incorretos.';
-          } else if (err.status === 500) {
-            errorMessage = 'Erro interno no servidor.';
+          const token = extractToken(res.value);
+          if (!token) {
+            this.state.update(s => ({ ...s, error: 'Erro ao processar login do servidor.' }));
+            return;
           }
 
-          this.state.update(s => ({ ...s, error: errorMessage }));
+          this.session.saveSession(token);
+          this.router.navigate(['/dashboard']);
+        },
+        error: (err: HttpErrorResponse) => {
+          const message = extractErrorMessage(err, {
+            401: 'E-mail ou senha incorretos.',
+            500: 'Erro interno no servidor.'
+          });
+          this.state.update(s => ({ ...s, error: message }));
         }
       });
   }

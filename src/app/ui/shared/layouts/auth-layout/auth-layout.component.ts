@@ -1,13 +1,12 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+
 import { RouterModule } from '@angular/router';
 
 /** Layout para as páginas de autenticação (Login, Registro, etc). */
 @Component({
-  selector: 'app-auth-layout',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  template: `
+    selector: 'app-auth-layout',
+    imports: [RouterModule],
+    template: `
     <div class="auth-layout-container">
       <div class="auth-layout-card shadow-lg border-0">
         <div class="auth-layout-header">
@@ -22,7 +21,8 @@ import { RouterModule } from '@angular/router';
       </div>
     </div>
   `,
-  styles: [`
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    styles: [`
     .auth-layout-container {
       min-height: 100vh;
       display: flex;

@@ -1,6 +1,8 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
+import { HttpErrorResponse } from "@angular/common/http";
 import { RoleRepository } from "../../domain/interfaces/role.repository";
 import { Role } from "../../domain/entities/role.entity";
+import { extractErrorMessage } from "../../core/utils/http-error.util";
 import { finalize } from "rxjs";
 
 /** Serviço de papéis. */
@@ -23,16 +25,15 @@ export class RolesService {
       .pipe(finalize(() => this.state.update(s => ({ ...s, loading: false }))))
       .subscribe({
         next: (res) => {
-          console.log('Roles carregadas:', res);
           if (res.isSuccess) {
             this.state.update(s => ({ ...s, data: res.value }));
           } else {
-            this.state.update(s => ({ ...s, error: res.errorResult?.message ?? 'Erro ao carregar papéis' }));
+            this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao carregar papéis' }));
           }
         },
-        error: (err) => {
-          console.error('Erro ao carregar papéis:', err);
-          this.state.update(s => ({ ...s, error: 'Não foi possível carregar os perfis de acesso.' }));
+        error: (err: HttpErrorResponse) => {
+          const message = extractErrorMessage(err, {}, 'Não foi possível carregar os perfis de acesso.');
+          this.state.update(s => ({ ...s, error: message }));
         }
       });
   }

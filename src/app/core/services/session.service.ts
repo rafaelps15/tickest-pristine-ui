@@ -1,5 +1,8 @@
 import { Injectable, signal, computed } from '@angular/core';
 
+/** Payload decodificado de um JWT. */
+type JwtPayload = Record<string, unknown>;
+
 /** Serviço de gestão de sessão. */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
@@ -14,12 +17,7 @@ export class SessionService {
   // Estado de autenticação.
   isAuthenticated = computed(() => {
     const token = this._token();
-    const isValid = typeof token === 'string' && token.split('.').length === 3;
-    console.log('Validando Token:', { exists: !!token, isString: typeof token === 'string', length: token?.length, isValid });
-    if (token && !isValid) {
-      console.warn('Token presente mas inválido:', token);
-    }
-    return isValid;
+    return typeof token === 'string' && token.split('.').length === 3;
   });
 
   /** Usuário decodificado do token. */
@@ -62,17 +60,14 @@ export class SessionService {
     return null;
   }
 
-  private decodeToken(token: string): any {
+  private decodeToken(token: string): JwtPayload | null {
     try {
       const parts = token.split('.');
       if (parts.length < 2) {
         throw new Error('Token format is invalid');
       }
-      const payload = parts[1];
-      const decoded = JSON.parse(atob(payload));
-      return decoded;
-    } catch (e) {
-      console.error('Erro ao decodificar token:', e);
+      return JSON.parse(atob(parts[1])) as JwtPayload;
+    } catch {
       return null;
     }
   }
