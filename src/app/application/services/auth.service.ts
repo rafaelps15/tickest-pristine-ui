@@ -7,19 +7,6 @@ import { extractErrorMessage } from "../../core/utils/http-error.util";
 import { finalize } from "rxjs";
 import { Router } from "@angular/router";
 
-/** Extrai o token de string da resposta de login, tolerando variações de formato do backend. */
-function extractToken(value: unknown): string | null {
-  if (typeof value === 'string') return value;
-
-  if (value && typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    const candidate = obj['token'] ?? obj['accessToken'] ?? obj['value'];
-    return typeof candidate === 'string' ? candidate : null;
-  }
-
-  return null;
-}
-
 /** Serviço de autenticação. */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -45,18 +32,14 @@ export class AuthService {
             return;
           }
 
-          const token = extractToken(res.value);
-          if (!token) {
-            this.state.update(s => ({ ...s, error: 'Erro ao processar login do servidor.' }));
-            return;
-          }
-
-          this.session.saveSession(token);
+          this.session.saveSession(res.value);
           this.router.navigate(['/dashboard']);
         },
         error: (err: HttpErrorResponse) => {
+          // Login e registro respondem 404 (UserErrors.NotFoundByEmail) tanto para
+          // usuário inexistente quanto para senha incorreta, para não vazar qual dos dois é o caso.
           const message = extractErrorMessage(err, {
-            401: 'E-mail ou senha incorretos.',
+            404: 'E-mail ou senha incorretos.',
             500: 'Erro interno no servidor.'
           });
           this.state.update(s => ({ ...s, error: message }));

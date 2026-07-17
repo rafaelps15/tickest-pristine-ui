@@ -1,17 +1,16 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
 import { HttpErrorResponse } from "@angular/common/http";
 import { RoleRepository } from "../../domain/interfaces/role.repository";
-import { Role } from "../../domain/entities/role.entity";
 import { extractErrorMessage } from "../../core/utils/http-error.util";
 import { finalize } from "rxjs";
 
-/** Serviço de papéis. */
+/** Serviço de permissões (códigos de permissão disponíveis no sistema). */
 @Injectable({ providedIn: 'root' })
 export class RolesService {
   private readonly repository = inject(RoleRepository);
 
   state = signal({
-    data: [] as Role[],
+    data: [] as string[],
     loading: false,
     error: null as string | null
   });
@@ -28,7 +27,7 @@ export class RolesService {
           if (res.isSuccess) {
             this.state.update(s => ({ ...s, data: res.value }));
           } else {
-            this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao carregar papéis' }));
+            this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao carregar permissões' }));
           }
         },
         error: (err: HttpErrorResponse) => {

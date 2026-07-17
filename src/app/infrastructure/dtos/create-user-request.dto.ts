@@ -1,11 +1,7 @@
-/** Dados detalhados para criação de colaborador/usuário. */
+/** Corpo da requisição POST /users/register. */
 export interface CreateUserRequestDto {
-  name: string;
   email: string;
-  employeeCode: string; // Código do funcionário
-  departmentId?: number;
-  sectorId?: number;
-  specialtyId?: number;
-  roleId: number[];
-  password?: string;
+  firstName: string;
+  lastName: string;
+  password: string;
 }

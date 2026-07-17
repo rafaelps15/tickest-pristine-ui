@@ -1,5 +1,7 @@
+/** Dados de perfil de um usuário, conforme retornado por GET /users/{id}. */
 export interface UserSummary {
-    id: number;
-    name: string;
-    employeeCode: string;
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
 }

@@ -15,8 +15,11 @@ export function extractErrorMessage(
 ): string {
   // status 0 significa que não houve resposta HTTP (falha de rede/CORS): err.error aqui é o
   // próprio erro de rede (ex.: TypeError "Failed to fetch"), não um corpo de erro da API.
+  // Corpo de erro real da API é um ProblemDetails: { title, detail, errors? }.
   if (err.status !== 0) {
-    const apiMessage: string | undefined = err.error?.errorResult?.message || err.error?.message;
+    const validationErrors: Record<string, string[]> | undefined = err.error?.errors;
+    const validationMessage = validationErrors ? Object.values(validationErrors).flat().join(' ') : undefined;
+    const apiMessage: string | undefined = validationMessage || err.error?.detail || err.error?.title;
     if (apiMessage) return apiMessage;
   }
 

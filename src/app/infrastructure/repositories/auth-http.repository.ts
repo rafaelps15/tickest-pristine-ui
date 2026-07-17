@@ -1,14 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { AuthRepository } from '../../domain/interfaces/auth.repository';
 import { LoginCredentials } from '../../domain/models/login-credentials.model';
 import { CreateUserData } from '../../domain/models/create-user-data.model';
+import { AccessTokens } from '../../domain/models/access-tokens.model';
 import { Result } from '../../domain/models/result.model';
 import { LoginRequestDto } from '../dtos/login-request.dto';
 import { CreateUserRequestDto } from '../dtos/create-user-request.dto';
-import { ApiResultDto } from '../dtos/api-result.dto';
+import { AccessTokensResponseDto } from '../dtos/access-tokens-response.dto';
 import { toResult } from '../mappers/api-result.mapper';
 import { environment } from '../../../environments/environment';
 
@@ -16,20 +16,19 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class AuthHttpRepository extends AuthRepository {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/auth`;
+  private readonly apiUrl = `${environment.apiUrl}/users`;
 
-  login(request: LoginCredentials): Observable<Result<string>> {
+  login(request: LoginCredentials): Observable<Result<AccessTokens>> {
     const dto: LoginRequestDto = request;
     return this.http
-    
-      .post<ApiResultDto<string>>(`${this.apiUrl}/login`, dto)
-      .pipe(map(toResult));
+      .post<AccessTokensResponseDto>(`${this.apiUrl}/login`, dto)
+      .pipe(toResult());
   }
 
-  register(request: CreateUserData): Observable<Result<void>> {
+  register(request: CreateUserData): Observable<Result<string>> {
     const dto: CreateUserRequestDto = request;
     return this.http
-      .post<ApiResultDto<void>>(`${this.apiUrl}/register`, dto)
-      .pipe(map(toResult));
+      .post<string>(`${this.apiUrl}/register`, dto)
+      .pipe(toResult());
   }
 }

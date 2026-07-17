@@ -56,21 +56,21 @@
 
     <div class="row g-4">
       <!-- Seção: Informações Pessoais -->
+      <div class="col-md-6">
+        <label class="form-label-premium">Nome</label>
+        <input type="text" class="form-control form-control-premium" placeholder="Ex: Alberto" formControlName="firstName"
+               [class.is-invalid]="isFieldInvalid('firstName')" />
+        <div class="invalid-feedback">O nome é obrigatório.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label-premium">Sobrenome</label>
+        <input type="text" class="form-control form-control-premium" placeholder="Ex: Santos Dumont" formControlName="lastName"
+               [class.is-invalid]="isFieldInvalid('lastName')" />
+        <div class="invalid-feedback">O sobrenome é obrigatório.</div>
+      </div>
+
       <div class="col-12">
-        <label class="form-label-premium">Nome Completo</label>
-        <input type="text" class="form-control form-control-premium" placeholder="Ex: Alberto Santos Dumont" formControlName="name"
-               [class.is-invalid]="isFieldInvalid('name')" />
-        <div class="invalid-feedback">O nome completo é obrigatório.</div>
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label-premium">Matrícula / Código RE</label>
-        <input type="text" class="form-control form-control-premium" placeholder="000000" formControlName="employeeCode"
-               [class.is-invalid]="isFieldInvalid('employeeCode')" />
-        <div class="invalid-feedback">Formato de código inválido.</div>
-      </div>
-
-      <div class="col-md-6">
         <label class="form-label-premium">E-mail Corporativo</label>
         <input type="email" class="form-control form-control-premium" placeholder="colaborador@empresa.com" formControlName="email"
                [class.is-invalid]="isFieldInvalid('email')" />
@@ -94,33 +94,6 @@
           @else { Confirmação obrigatória. }
         </div>
       </div>
-
-      <div class="col-12 my-2">
-        <div class="border-bottom opacity-10"></div>
-      </div>
-
-      <!-- Seção: Estrutura Organizacional (Opcional por enquanto) -->
-      <div class="col-md-6">
-        <label class="form-label-premium text-muted">Departamento</label>
-        <select class="form-select form-select-premium bg-light-subtle" formControlName="departmentId">
-          <option value="">Selecione...</option>
-        </select>
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label-premium text-muted">Setor / Área</label>
-        <select class="form-select form-select-premium bg-light-subtle" formControlName="sectorId">
-          <option value="">Selecione...</option>
-        </select>
-      </div>
-
-      <div class="col-12">
-        <label class="form-label-premium text-muted">Especialidade</label>
-        <select class="form-select form-select-premium bg-light-subtle" formControlName="specialtyId">
-          <option value="">Selecione sua especialidade técnica...</option>
-        </select>
-      </div>
-
     </div>
 
     <div class="mt-5">

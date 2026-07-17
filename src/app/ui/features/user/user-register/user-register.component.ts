@@ -8,8 +8,8 @@ import { RouterModule, Router } from '@angular/router';
 export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
-    return password && confirmPassword && password.value !== confirmPassword.value 
-        ? { passwordMismatch: true } 
+    return password && confirmPassword && password.value !== confirmPassword.value
+        ? { passwordMismatch: true }
         : null;
 };
 
@@ -30,20 +30,16 @@ export class UserRegisterComponent implements OnInit {
 
     /** Formulário reativo com validações robustas e tipagem implícita. */
     readonly form = this.fb.group({
-        name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-        employeeCode: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
+        firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+        lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
         email: ['', [Validators.required, Validators.email]],
         password: ['', [Validators.required, Validators.minLength(6)]],
-        confirmPassword: ['', [Validators.required]],
-        departmentId: [''],
-        sectorId: [''],
-        specialtyId: [''],
-        roleId: [''] // Removida obrigatoriedade pois o campo foi removido da tela
+        confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator });
 
     ngOnInit(): void {
         this.usersService.resetState();
-        
+
         // Verifica se a URL atual é de registro público ou administrativo
         this.isSelfRegistration = this.router.url.includes('/register');
     }
@@ -64,17 +60,13 @@ export class UserRegisterComponent implements OnInit {
         }
 
         const raw = this.form.getRawValue();
-        
+
         this.usersService.createUser({
-            name: raw.name!,
             email: raw.email!,
-            employeeCode: raw.employeeCode!,
-            roleId: raw.roleId ? [Number(raw.roleId)] : [], // Envia array vazio ou com o ID se disponível
-            password: raw.password!,
-            departmentId: raw.departmentId ? Number(raw.departmentId) : undefined,
-            sectorId: raw.sectorId ? Number(raw.sectorId) : undefined,
-            specialtyId: raw.specialtyId ? Number(raw.specialtyId) : undefined
-        }, this.isSelfRegistration);
+            firstName: raw.firstName!,
+            lastName: raw.lastName!,
+            password: raw.password!
+        });
 
         if (this.isSelfRegistration) {
             // Efeito de redirecionamento após sucesso (apenas para auto-registro)
@@ -87,4 +79,3 @@ export class UserRegisterComponent implements OnInit {
         }
     }
 }
-
