@@ -1,41 +1,26 @@
 .card {
     border: none;
     box-shadow: 0 0.125rem 0.25rem rgba(161, 172, 184, 0.4);
-    border-radius: 0.5rem;
-    transition: transform 0.2s ease-in-out;
+    border-radius: 0.75rem;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 0.75rem 1.5rem rgba(105, 108, 255, 0.15);
 }
 
 .card-stats {
     background-color: #ffffff;
 }
 
-.bg-label-primary {
-    background-color: #e7e7ff !important;
-    color: #696cff !important;
-}
-
-.bg-label-success {
-    background-color: #e8fadf !important;
-    color: #71dd37 !important;
-}
-
-.bg-label-warning {
-    background-color: #fff2e2 !important;
-    color: #ffab00 !important;
-}
-
-.bg-label-info {
-    background-color: #e5f5fa !important;
-    color: #03c3ec !important;
-}
-
-.bg-label-danger {
-    background-color: #ffe5e5 !important;
-    color: #ff3e1d !important;
+.card-stats .badge.rounded {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.85rem !important;
 }
 
 .card-title {

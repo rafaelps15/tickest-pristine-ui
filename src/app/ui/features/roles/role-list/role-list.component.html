@@ -1,9 +1,9 @@
 <div class="row mb-4">
   <div class="col-12">
     <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Roles</h4>
+      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Funções</h4>
       <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#roleCreateModal">
-        <i class="bx bx-plus me-1"></i> Nova Role
+        <i class="bx bx-plus me-1"></i> Nova Função
       </button>
     </div>
   </div>
@@ -25,9 +25,9 @@
       </thead>
       <tbody>
         @if (rolesService.state().loading) {
-          <tr><td colspan="3" class="text-center py-4 text-muted">Carregando...</td></tr>
+          <tr><td colspan="3" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
         } @else if (rolesService.roles().length === 0) {
-          <tr><td colspan="3" class="text-center py-4 text-muted">Nenhuma role cadastrada.</td></tr>
+          <tr><td colspan="3" class="text-center py-5 text-muted"><i class="bx bx-shield-quarter display-6 d-block mb-2 opacity-50"></i>Nenhuma função cadastrada ainda.</td></tr>
         } @else {
           @for (role of rolesService.roles(); track role.id) {
             <tr>
@@ -58,7 +58,7 @@
     <div class="modal-content">
       <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
         <div class="modal-header">
-          <h5 class="modal-title">Nova Role</h5>
+          <h5 class="modal-title">Nova Função</h5>
           <button id="roleCreateModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">

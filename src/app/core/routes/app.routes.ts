@@ -46,24 +46,28 @@ export const routes: Routes = [
       {
         path: 'usuarios',
         canActivate: [adminMasterGuard],
+        data: { requiredPermission: 'users:manage' },
         loadComponent: () => import('../../ui/features/user/user-list/user-list.component')
           .then(m => m.UserListComponent)
       },
       {
         path: 'departamentos',
         canActivate: [adminMasterGuard],
+        data: { requiredPermission: 'departments:manage' },
         loadComponent: () => import('../../ui/features/departments/department-list/department-list.component')
           .then(m => m.DepartmentListComponent)
       },
       {
         path: 'setores',
         canActivate: [adminMasterGuard],
+        data: { requiredPermission: 'sectors:manage' },
         loadComponent: () => import('../../ui/features/sectors/sector-list/sector-list.component')
           .then(m => m.SectorListComponent)
       },
       {
         path: 'roles',
         canActivate: [adminMasterGuard],
+        data: { requiredPermission: 'roles:manage' },
         loadComponent: () => import('../../ui/features/roles/role-list/role-list.component')
           .then(m => m.RoleListComponent)
       },

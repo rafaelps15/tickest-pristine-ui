@@ -8,7 +8,7 @@ import { RouterModule } from '@angular/router';
     imports: [RouterModule],
     template: `
     <div class="auth-layout-container">
-      <div class="auth-layout-card shadow-lg border-0">
+      <div class="auth-layout-card border-0">
         <div class="auth-layout-header">
           <div class="brand-wrapper d-flex justify-content-center align-items-center mb-5">
             <img src="/img/logo/logo_letra.png" alt="Logo" style="width: 48px; height: auto;">
@@ -39,6 +39,8 @@ import { RouterModule } from '@angular/router';
       background: #ffffff;
       border-radius: 1.25rem;
       padding: 3.5rem 3rem;
+      box-shadow: 0 1.5rem 4rem rgba(105, 108, 255, 0.16), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.04);
+      animation: auth-card-in 350ms cubic-bezier(0.4, 0, 0.2, 1);
     }
     .brand-text {
       font-size: 3rem;
@@ -47,6 +49,14 @@ import { RouterModule } from '@angular/router';
       text-transform: lowercase;
       line-height: 1;
       font-weight: 700;
+      background: linear-gradient(to right, #696cff, #3a3ca3);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    @keyframes auth-card-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
   `]
 })

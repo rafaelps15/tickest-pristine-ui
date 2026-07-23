@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, effect, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
 import { UsersService } from "../../../../application/services/users.service";
 import { RouterModule, Router } from '@angular/router';
@@ -15,7 +15,7 @@ export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): V
 
 @Component({
     selector: 'app-user-register',
-    imports: [CommonModule, ReactiveFormsModule, RouterModule],
+    imports: [NgTemplateOutlet, ReactiveFormsModule, RouterModule],
     templateUrl: './user-register.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-register.component.css'

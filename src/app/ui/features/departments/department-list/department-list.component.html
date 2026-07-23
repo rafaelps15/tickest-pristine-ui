@@ -27,9 +27,9 @@
       </thead>
       <tbody>
         @if (departmentsService.state().loading) {
-          <tr><td colspan="5" class="text-center py-4 text-muted">Carregando...</td></tr>
+          <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
         } @else if (departmentsService.departments().length === 0) {
-          <tr><td colspan="5" class="text-center py-4 text-muted">Nenhum departamento cadastrado.</td></tr>
+          <tr><td colspan="5" class="text-center py-5 text-muted"><i class="bx bx-sitemap display-6 d-block mb-2 opacity-50"></i>Nenhum departamento cadastrado ainda.</td></tr>
         } @else {
           @for (department of departmentsService.departments(); track department.id) {
             <tr>

@@ -1,4 +1,4 @@
-<div class="layout-wrapper layout-content-navbar">
+<div class="layout-wrapper layout-content-navbar" [class.menu-open]="menuOpen()">
   <div class="layout-container">
     <!-- Menu (Sidebar) -->
     <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
@@ -9,14 +9,14 @@
           </span>
         </a>
 
-        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none" (click)="closeMenu()">
           <i class="bx bx-chevron-left bx-sm align-middle"></i>
         </a>
       </div>
 
       <div class="menu-inner-shadow"></div>
 
-      <ul class="menu-inner py-3">
+      <ul class="menu-inner py-3" (click)="closeMenu()">
         <!-- Principal -->
         <li class="menu-header small text-uppercase">
           <span class="menu-header-text">Principal</span>
@@ -36,37 +36,48 @@
         </li>
 
         <!-- Administração -->
-        <li class="menu-header small text-uppercase">
-          <span class="menu-header-text">Administração</span>
-        </li>
+        @if (sessionService.hasPermission('users:manage') || sessionService.hasPermission('roles:manage') ||
+             sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
+          <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Administração</span>
+          </li>
+        }
 
-        <li class="menu-item" routerLinkActive="active">
-          <a routerLink="/usuarios" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-group"></i>
-            <div>Usuários</div>
-          </a>
-        </li>
+        @if (sessionService.hasPermission('users:manage')) {
+          <li class="menu-item" routerLinkActive="active">
+            <a routerLink="/usuarios" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-group"></i>
+              <div>Usuários</div>
+            </a>
+          </li>
+        }
 
-        <li class="menu-item" routerLinkActive="active">
-          <a routerLink="/roles" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-shield-quarter"></i>
-            <div>Roles</div>
-          </a>
-        </li>
+        @if (sessionService.hasPermission('roles:manage')) {
+          <li class="menu-item" routerLinkActive="active">
+            <a routerLink="/roles" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-shield-quarter"></i>
+              <div>Funções</div>
+            </a>
+          </li>
+        }
 
-        <li class="menu-item" routerLinkActive="active">
-          <a routerLink="/departamentos" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-sitemap"></i>
-            <div>Departamentos</div>
-          </a>
-        </li>
+        @if (sessionService.hasPermission('departments:manage')) {
+          <li class="menu-item" routerLinkActive="active">
+            <a routerLink="/departamentos" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-sitemap"></i>
+              <div>Departamentos</div>
+            </a>
+          </li>
+        }
 
-        <li class="menu-item" routerLinkActive="active">
-          <a routerLink="/setores" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-git-branch"></i>
-            <div>Setores</div>
-          </a>
-        </li>
+        @if (sessionService.hasPermission('sectors:manage')) {
+          <li class="menu-item" routerLinkActive="active">
+            <a routerLink="/setores" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-git-branch"></i>
+              <div>Setores</div>
+            </a>
+          </li>
+        }
 
         <li class="menu-item mt-4">
           <a href="javascript:void(0);" class="menu-link text-danger" (click)="logout()">
@@ -83,7 +94,7 @@
       <!-- Navbar -->
       <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
         <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
-          <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+          <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)" (click)="toggleMenu()">
             <i class="bx bx-menu bx-sm"></i>
           </a>
         </div>
@@ -142,5 +153,5 @@
     <!-- / Layout page -->
   </div>
   <!-- Overlay -->
-  <div class="layout-overlay layout-menu-toggle"></div>
+  <div class="layout-overlay layout-menu-toggle" (click)="closeMenu()"></div>
 </div>

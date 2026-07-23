@@ -26,9 +26,15 @@
       </thead>
       <tbody>
         @if (ticketsService.state().loading) {
-          <tr><td colspan="4" class="text-center py-4 text-muted">Carregando...</td></tr>
+          <tr><td colspan="4" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
         } @else if (ticketsService.tickets().length === 0) {
-          <tr><td colspan="4" class="text-center py-4 text-muted">Você ainda não abriu nenhum ticket.</td></tr>
+          <tr>
+            <td colspan="4" class="text-center py-5 text-muted">
+              <i class="bx bx-ticket display-6 d-block mb-2 opacity-50"></i>
+              Você ainda não abriu nenhum ticket.
+              <a routerLink="/tickets/novo" class="d-block small mt-2">Abrir o primeiro ticket</a>
+            </td>
+          </tr>
         } @else {
           @for (ticket of ticketsService.tickets(); track ticket.id) {
             <tr>

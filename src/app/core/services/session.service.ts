@@ -55,6 +55,24 @@ export class SessionService {
     return typeof claim === 'string' ? claim : null;
   });
 
+  /**
+   * Códigos de permissão do usuário logado, extraídos da claim `permissions`.
+   * O emissor de JWT serializa múltiplas claims de mesmo nome como array — mas
+   * emite uma string solta (não um array de 1 item) quando há só uma permissão,
+   * então os dois formatos precisam ser tratados aqui.
+   */
+  permissions = computed(() => {
+    const claim = this.user()?.['permissions'];
+    if (Array.isArray(claim)) return new Set(claim.filter((c): c is string => typeof c === 'string'));
+    if (typeof claim === 'string') return new Set([claim]);
+    return new Set<string>();
+  });
+
+  /** Indica se o usuário logado possui o código de permissão informado. */
+  hasPermission(code: string): boolean {
+    return this.permissions().has(code);
+  }
+
   /** Salva os tokens da sessão e no local storage. */
   saveSession(tokens: AccessTokens): void {
     if (typeof window !== 'undefined') {

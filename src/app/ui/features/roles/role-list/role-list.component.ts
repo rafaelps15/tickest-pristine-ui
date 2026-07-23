@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RolesService } from '../../../../application/services/roles.service';
 import { PermissionsService } from '../../../../application/services/permissions.service';
@@ -8,7 +7,7 @@ import { Role } from '../../../../domain/models/role.model';
 /** Tela administrativa de gestão de roles e atribuição de permissões (RBAC). */
 @Component({
     selector: 'app-role-list',
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [ReactiveFormsModule],
     templateUrl: './role-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './role-list.component.css'

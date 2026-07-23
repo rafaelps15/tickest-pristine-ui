@@ -1,12 +1,10 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
 
 import { TicketRepository } from '../../domain/interfaces/ticket.repository';
 import { CreateTicketData, Ticket, UpdateTicketData } from '../../domain/models/ticket.model';
 import { TicketStatus } from '../../domain/enums/ticket-status.enum';
 import { SessionService } from '../../core/services/session.service';
-import { extractErrorMessage } from '../../core/utils/http-error.util';
 
 /** Serviço para gerenciamento de tickets do usuário logado. */
 @Injectable({
@@ -16,10 +14,29 @@ export class TicketsService {
     private readonly ticketRepository = inject(TicketRepository);
     private readonly session = inject(SessionService);
 
-    state = signal({
-        data: [] as Ticket[],
-        loading: false,
-        error: null as string | null
+    /**
+     * Resource de leitura (GET /tickets/users/{userId}) — `params` reativo ao usuário logado:
+     * refaz a busca sozinho se o userId mudar (ex: troca de sessão), sem precisar de efeitos manuais.
+     */
+    private readonly listResource = rxResource({
+        params: () => this.session.userId() ?? undefined,
+        stream: ({ params }) => this.ticketRepository.getByUser(params)
+    });
+
+    /** Erro de uma mutação (create/update/reopen/delete); a leitura tem o próprio erro, vindo do resource. */
+    private readonly mutationError = signal<string | null>(null);
+
+    state = computed(() => {
+        const result = this.listResource.value();
+        const readError = result && !result.isSuccess
+            ? (result.error?.message ?? 'Erro ao carregar tickets')
+            : null;
+
+        return {
+            data: result?.isSuccess ? result.value : [] as Ticket[],
+            loading: this.listResource.isLoading(),
+            error: this.mutationError() ?? readError
+        };
     });
 
     /** Lista de tickets carregada por {@link loadForCurrentUser}. */
@@ -37,38 +54,19 @@ export class TicketsService {
 
     /** Busca os tickets do usuário logado na API e atualiza {@link tickets}. */
     loadForCurrentUser() {
-        const userId = this.session.userId();
-        if (!userId) {
-            return;
-        }
-
-        this.state.update(s => ({ ...s, loading: true, error: null }));
-
-        this.ticketRepository.getByUser(userId)
-            .pipe(finalize(() => this.state.update(s => ({ ...s, loading: false }))))
-            .subscribe({
-                next: (res) => {
-                    if (res.isSuccess) {
-                        this.state.update(s => ({ ...s, data: res.value }));
-                    } else {
-                        this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao carregar tickets' }));
-                    }
-                },
-                error: (err: HttpErrorResponse) => {
-                    const message = extractErrorMessage(err, {}, 'Não foi possível carregar os tickets.');
-                    this.state.update(s => ({ ...s, error: message }));
-                }
-            });
+        this.mutationError.set(null);
+        this.listResource.reload();
     }
 
     /** Abre um novo ticket e, se der certo, recarrega a lista. */
     create(data: CreateTicketData, onSuccess?: () => void) {
         this.ticketRepository.create(data).subscribe(res => {
             if (res.isSuccess) {
-                this.loadForCurrentUser();
+                this.mutationError.set(null);
+                this.listResource.reload();
                 onSuccess?.();
             } else {
-                this.state.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao abrir o ticket' }));
+                this.mutationError.set(res.error?.message ?? 'Erro ao abrir o ticket');
             }
         });
     }
@@ -76,21 +74,21 @@ export class TicketsService {
     /** Atualiza descrição/status de um ticket e, se der certo, recarrega a lista. */
     update(ticketId: string, data: UpdateTicketData) {
         this.ticketRepository.update(ticketId, data).subscribe(res => {
-            if (res.isSuccess) this.loadForCurrentUser();
+            if (res.isSuccess) this.listResource.reload();
         });
     }
 
     /** Reabre um ticket inativo e, se der certo, recarrega a lista. */
     reopen(ticketId: string) {
         this.ticketRepository.reopen(ticketId).subscribe(res => {
-            if (res.isSuccess) this.loadForCurrentUser();
+            if (res.isSuccess) this.listResource.reload();
         });
     }
 
     /** Exclui (soft-delete) um ticket e, se der certo, recarrega a lista. */
     remove(ticketId: string) {
         this.ticketRepository.delete(ticketId).subscribe(res => {
-            if (res.isSuccess) this.loadForCurrentUser();
+            if (res.isSuccess) this.listResource.reload();
         });
     }
 }

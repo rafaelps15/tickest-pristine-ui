@@ -20,22 +20,30 @@
         <tr>
           <th>Nome</th>
           <th>E-mail</th>
+          <th>Funções</th>
           <th class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
         @if (usersService.listState().loading) {
-          <tr><td colspan="3" class="text-center py-4 text-muted">Carregando...</td></tr>
+          <tr><td colspan="4" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
         } @else if (usersService.users().length === 0) {
-          <tr><td colspan="3" class="text-center py-4 text-muted">Nenhum usuário cadastrado.</td></tr>
+          <tr><td colspan="4" class="text-center py-5 text-muted"><i class="bx bx-group display-6 d-block mb-2 opacity-50"></i>Nenhum usuário cadastrado ainda.</td></tr>
         } @else {
           @for (user of usersService.users(); track user.id) {
             <tr>
               <td class="fw-semibold">{{ user.firstName }} {{ user.lastName }}</td>
               <td class="text-muted small">{{ user.email }}</td>
+              <td>
+                @for (role of user.roles; track role.id) {
+                  <span class="badge bg-label-primary me-1">{{ role.name }}</span>
+                } @empty {
+                  <span class="text-muted small">—</span>
+                }
+              </td>
               <td class="text-end">
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
-                  <i class="bx bx-shield-quarter me-1"></i> Atribuir Roles
+                  <i class="bx bx-shield-quarter me-1"></i> Atribuir Funções
                 </button>
               </td>
             </tr>
@@ -104,13 +112,13 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Atribuir Roles — {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }}</h5>
+        <h5 class="modal-title">Atribuir Funções — {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }}</h5>
         <button id="userRolesModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-warning small border-0">
           <i class="bx bx-info-circle me-1"></i>
-          Selecionar as roles abaixo <strong>substitui completamente</strong> as roles atuais do usuário — a API não informa quais roles ele já possui.
+          As funções já atribuídas ao usuário vêm pré-marcadas abaixo. Salvar <strong>substitui completamente</strong> o conjunto de funções do usuário pelo que estiver marcado aqui.
         </div>
         @for (role of rolesService.roles(); track role.id) {
           <div class="form-check mb-2">
@@ -120,7 +128,7 @@
             <label class="form-check-label" [for]="'role-' + role.id">{{ role.name }}</label>
           </div>
         } @empty {
-          <p class="text-muted small">Nenhuma role cadastrada ainda.</p>
+          <p class="text-muted small">Nenhuma função cadastrada ainda.</p>
         }
       </div>
       <div class="modal-footer">

@@ -1,1 +1,229 @@
 /* You can add global styles to this file, and also import other style files */
+
+/*
+ * Sistema de design do TickestPristine — tokens (cor, sombra, raio, transição) e
+ * polimento global sobre o Bootstrap, para que toda tela (não só login/dashboard)
+ * herde o mesmo acabamento premium sem precisar reimplementar por componente.
+ */
+:root {
+  --tk-primary: #696cff;
+  --tk-primary-dark: #5f61e6;
+  --tk-primary-darker: #3a3ca3;
+  --tk-primary-rgb: 105, 108, 255;
+
+  --tk-page-bg: #f5f5f9;
+  --tk-surface: #ffffff;
+  --tk-border: #e7e7ff;
+
+  --tk-text-primary: #2b2c40;
+  --tk-text-secondary: #697a8d;
+  --tk-text-muted: #a1acb8;
+
+  --tk-shadow-sm: 0 0.125rem 0.375rem rgba(105, 108, 255, 0.08);
+  --tk-shadow-md: 0 0.375rem 1.25rem rgba(105, 108, 255, 0.12);
+  --tk-shadow-lg: 0 1rem 3rem rgba(105, 108, 255, 0.18);
+
+  --tk-radius-sm: 0.5rem;
+  --tk-radius-md: 0.75rem;
+  --tk-radius-lg: 1.25rem;
+
+  --tk-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--tk-primary-rgb), 0.3) transparent;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Public Sans', system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: var(--tk-page-bg);
+  color: var(--tk-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--tk-primary-rgb), 0.25);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--tk-primary-rgb), 0.4);
+}
+
+/* Cards: elevação suave e consistente em todas as telas */
+.card {
+  border: none;
+  border-radius: var(--tk-radius-md);
+  box-shadow: var(--tk-shadow-sm);
+  transition: box-shadow var(--tk-transition), transform var(--tk-transition);
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(var(--tk-primary-rgb), 0.08);
+  font-weight: 600;
+}
+
+/* Botões: peso visual e resposta ao toque em qualquer tela, não só no login */
+.btn {
+  border-radius: var(--tk-radius-sm);
+  font-weight: 500;
+  transition: transform var(--tk-transition), box-shadow var(--tk-transition), background-color var(--tk-transition);
+}
+
+.btn-primary {
+  background: linear-gradient(to right, var(--tk-primary), var(--tk-primary-dark));
+  border: none;
+  box-shadow: 0 0.25rem 0.75rem rgba(var(--tk-primary-rgb), 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0.5rem 1.1rem rgba(var(--tk-primary-rgb), 0.4);
+  background: linear-gradient(to right, var(--tk-primary-dark), var(--tk-primary));
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-outline-secondary, .btn-outline-primary {
+  transition: transform var(--tk-transition), box-shadow var(--tk-transition);
+}
+
+.btn-outline-secondary:hover, .btn-outline-primary:hover {
+  transform: translateY(-1px);
+}
+
+/* Tabelas: cabeçalho discreto, linhas com resposta ao hover */
+.table thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tk-text-muted);
+  font-weight: 600;
+  border-bottom-width: 1px;
+  background-color: rgba(var(--tk-primary-rgb), 0.03);
+}
+
+.table-hover tbody tr {
+  transition: background-color var(--tk-transition);
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(var(--tk-primary-rgb), 0.04);
+}
+
+/* Formulários */
+.form-label {
+  font-weight: 600;
+  color: var(--tk-text-secondary);
+  font-size: 0.85rem;
+}
+
+.form-control, .form-select {
+  border-radius: var(--tk-radius-sm);
+  border: 1.5px solid #d9dee3;
+  transition: border-color var(--tk-transition), box-shadow var(--tk-transition), transform var(--tk-transition);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--tk-primary);
+  box-shadow: 0 0 0 0.2rem rgba(var(--tk-primary-rgb), 0.15);
+}
+
+/* Modais: mesma linguagem visual dos cards, com mais elevação por ficarem por cima */
+.modal-content {
+  border: none;
+  border-radius: var(--tk-radius-lg);
+  box-shadow: var(--tk-shadow-lg);
+  overflow: hidden;
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(var(--tk-primary-rgb), 0.08);
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(var(--tk-primary-rgb), 0.08);
+}
+
+/* Badges: um pouco mais de caráter que o padrão do Bootstrap */
+.badge {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.4em 0.7em;
+  border-radius: 999px;
+}
+
+/*
+ * Badges "soft" (fundo claro + texto na cor) usados em qualquer tela (roles, permissões,
+ * status de ticket etc.) — precisam estar aqui e não num CSS de componente, já que o
+ * Angular isola estilos por componente e essas classes são usadas entre várias telas.
+ */
+.bg-label-primary {
+  background-color: #e7e7ff !important;
+  color: var(--tk-primary) !important;
+}
+
+.bg-label-success {
+  background-color: #e8fadf !important;
+  color: #71dd37 !important;
+}
+
+.bg-label-warning {
+  background-color: #fff2e2 !important;
+  color: #ffab00 !important;
+}
+
+.bg-label-info {
+  background-color: #e5f5fa !important;
+  color: #03c3ec !important;
+}
+
+.bg-label-danger {
+  background-color: #ffe5e5 !important;
+  color: #ff3e1d !important;
+}
+
+.bg-label-secondary {
+  background-color: #eceef1 !important;
+  color: #697a8d !important;
+}
+
+/* Alertas */
+.alert {
+  border: none;
+  border-radius: var(--tk-radius-sm);
+}
+
+/* Spinners no tom da marca */
+.spinner-border.text-primary {
+  color: var(--tk-primary) !important;
+}
+
+/* Fade-in leve ao entrar cada rota — dá vida sem ser chamativo */
+@keyframes tk-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+router-outlet + * {
+  display: block;
+  animation: tk-fade-in 250ms ease-out;
+}

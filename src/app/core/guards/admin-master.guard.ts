@@ -1,22 +1,29 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
 import { SessionService } from '../services/session.service';
 
 /**
  * Guard para rotas administrativas.
  *
- * O back-end não emite claims de papel/permissão no JWT (autorização é por permissão,
- * checada no servidor a cada requisição via [HasPermission]) — então aqui só validamos
- * autenticação. Uma ação sem a permissão necessária falha com 403 na API e o
- * authInterceptor já trata isso (limpa a sessão e redireciona para o login).
+ * A rota deve declarar a permissão exigida em `data.requiredPermission` (código
+ * igual ao usado pelo back-end em `[HasPermission]`, ex. `"users:manage"`).
+ * O JWT já carrega a claim `permissions` do usuário (ver SessionService), então
+ * aqui validamos autenticação e a posse da permissão antes de liberar a rota —
+ * sem isso, o usuário só descobria via 403 da API depois de já estar na tela.
  */
-export const adminMasterGuard: CanActivateFn = () => {
+export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const session = inject(SessionService);
   const router = inject(Router);
 
-  if (session.isAuthenticated()) {
-    return true;
+  if (!session.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
   }
 
-  return router.createUrlTree(['/login']);
+  const requiredPermission = route.data['requiredPermission'] as string | undefined;
+
+  if (requiredPermission && !session.hasPermission(requiredPermission)) {
+    return router.createUrlTree(['/dashboard']);
+  }
+
+  return true;
 };

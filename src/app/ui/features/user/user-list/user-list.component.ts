@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { UsersService } from '../../../../application/services/users.service';
 import { RolesService } from '../../../../application/services/roles.service';
@@ -17,7 +16,7 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
 /** Tela administrativa de gestão de usuários: listagem, criação e atribuição de roles. */
 @Component({
     selector: 'app-user-list',
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [ReactiveFormsModule],
     templateUrl: './user-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-list.component.css'
@@ -38,7 +37,7 @@ export class UserListComponent implements OnInit {
     /** Usuário selecionado para atribuição de roles. */
     selectedUser = signal<UserSummary | null>(null);
 
-    /** Roles marcadas no modal de atribuição (sempre começa vazio — a API não expõe as roles atuais do usuário). */
+    /** Roles marcadas no modal de atribuição. */
     selectedRoleIds = signal<Set<string>>(new Set());
 
     constructor() {
@@ -73,7 +72,7 @@ export class UserListComponent implements OnInit {
 
     openAssignRolesModal(user: UserSummary): void {
         this.selectedUser.set(user);
-        this.selectedRoleIds.set(new Set());
+        this.selectedRoleIds.set(new Set(user.roles.map(role => role.id)));
     }
 
     isChecked(roleId: string): boolean {

@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DepartmentsService } from '../../../../application/services/departments.service';
 import { Department } from '../../../../domain/models/department.model';
@@ -7,7 +6,7 @@ import { Department } from '../../../../domain/models/department.model';
 /** Tela administrativa de gestão de departamentos (CRUD). */
 @Component({
     selector: 'app-department-list',
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [ReactiveFormsModule],
     templateUrl: './department-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './department-list.component.css'

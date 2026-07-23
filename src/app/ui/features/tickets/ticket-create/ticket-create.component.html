@@ -28,7 +28,7 @@
             <textarea class="form-control" rows="4" formControlName="description" placeholder="Descreva o problema em detalhes"></textarea>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">Prioridade</label>
             <select class="form-select" formControlName="priority">
               @for (priority of priorities; track priority.value) {
@@ -37,11 +37,21 @@
             </select>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
+            <label class="form-label">Departamento</label>
+            <select class="form-select" formControlName="departmentId">
+              <option value="" disabled>Selecione...</option>
+              @for (department of departmentsService.departments(); track department.id) {
+                <option [value]="department.id">{{ department.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="col-md-4">
             <label class="form-label">Setor</label>
             <select class="form-select" formControlName="sectorId">
               <option value="" disabled>Selecione...</option>
-              @for (sector of sectorsService.sectors(); track sector.id) {
+              @for (sector of availableSectors(); track sector.id) {
                 <option [value]="sector.id">{{ sector.name }}</option>
               }
             </select>

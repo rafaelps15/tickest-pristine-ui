@@ -95,21 +95,52 @@
   <div class="col-lg-8 mb-4">
     <div class="card">
       <div class="card-header d-flex align-items-center justify-content-between">
-        <h5 class="card-title m-0">Tickets por Status</h5>
-        <div class="dropdown">
-          <button class="btn p-0" type="button" id="cardOpt3" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="bx bx-dots-vertical-rounded"></i>
-          </button>
-          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="cardOpt3">
-            <a class="dropdown-item" href="javascript:void(0);">Ver Relatório</a>
-            <a class="dropdown-item" href="javascript:void(0);">Exportar PDF</a>
-          </div>
-        </div>
+        <h5 class="card-title m-0">Tickets por Prioridade e Status</h5>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleTable()">
+          <i class="bx bx-table me-1"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
+        </button>
       </div>
       <div class="card-body">
-        <div class="chart-container" style="position: relative; height: 350px;">
-          <canvas #ticketChart></canvas>
+        <div class="chart-container" style="position: relative; height: 380px;" [class.d-none]="showTable()">
+          @defer (on idle) {
+            <canvas #ticketChart></canvas>
+          } @placeholder {
+            <div class="d-flex align-items-center justify-content-center h-100">
+              <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
+            </div>
+          }
         </div>
+
+        @if (showTable()) {
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0">
+              <caption class="visually-hidden">Quantidade de tickets por prioridade e status</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Prioridade</th>
+                  @for (status of statusLabels; track status; let i = $index) {
+                    <th scope="col" class="text-end">
+                      <span class="d-inline-block rounded-circle me-1" [style.background-color]="statusColors[i]" style="width: 8px; height: 8px;"></span>
+                      {{ status }}
+                    </th>
+                  }
+                  <th scope="col" class="text-end">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (priority of priorityLabels; track priority; let i = $index) {
+                  <tr>
+                    <th scope="row">{{ priority }}</th>
+                    @for (count of matrix()[i]; track $index) {
+                      <td class="text-end">{{ count }}</td>
+                    }
+                    <td class="text-end fw-semibold">{{ rowTotal(matrix()[i]) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
     </div>
   </div>

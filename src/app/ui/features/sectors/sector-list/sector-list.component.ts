@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SectorsService } from '../../../../application/services/sectors.service';
 import { DepartmentsService } from '../../../../application/services/departments.service';
@@ -8,7 +7,7 @@ import { Sector } from '../../../../domain/models/sector.model';
 /** Tela administrativa de gestão de setores (CRUD). */
 @Component({
     selector: 'app-sector-list',
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [ReactiveFormsModule],
     templateUrl: './sector-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './sector-list.component.css'

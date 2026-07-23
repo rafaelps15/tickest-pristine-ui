@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../../application/services/auth.service';
 import { SessionService } from '../../../../core/services/session.service';
@@ -15,6 +15,17 @@ export class MainLayoutComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   protected readonly sessionService = inject(SessionService);
+
+  /** Controla o menu retrátil (off-canvas) usado abaixo do breakpoint xl — ver main-layout.component.css. */
+  readonly menuOpen = signal(false);
+
+  toggleMenu(): void {
+    this.menuOpen.update(open => !open);
+  }
+
+  closeMenu(): void {
+    this.menuOpen.set(false);
+  }
 
   logout() {
     this.authService.logout();

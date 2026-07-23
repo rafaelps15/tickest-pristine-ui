@@ -1,5 +1,6 @@
 import { inject, Injectable, signal, computed } from "@angular/core";
 import { HttpErrorResponse } from "@angular/common/http";
+import { rxResource } from '@angular/core/rxjs-interop';
 import { AuthRepository } from "../../domain/interfaces/auth.repository";
 import { UserRepository } from "../../domain/interfaces/user.repository";
 import { CreateUserData } from "../../domain/models/create-user-data.model";
@@ -19,10 +20,25 @@ export class UsersService {
     error: null as string | null
   });
 
-  listState = signal({
-    data: [] as UserSummary[],
-    loading: false,
-    error: null as string | null
+  /** Resource de leitura (GET /users) — dispara sozinho na criação e via reload(). */
+  private readonly listResource = rxResource({
+    stream: () => this.userRepository.getAll()
+  });
+
+  /** Erro de uma mutação (assignRoles); a leitura tem o próprio erro, vindo do resource. */
+  private readonly listMutationError = signal<string | null>(null);
+
+  listState = computed(() => {
+    const result = this.listResource.value();
+    const readError = result && !result.isSuccess
+        ? (result.error?.message ?? 'Erro ao carregar usuários')
+        : null;
+
+    return {
+      data: result?.isSuccess ? result.value : [] as UserSummary[],
+      loading: this.listResource.isLoading(),
+      error: this.listMutationError() ?? readError
+    };
   });
 
   users = computed(() => this.listState().data);
@@ -58,33 +74,19 @@ export class UsersService {
 
   /** Carrega todos os usuários cadastrados (GET /users, requer users:manage). */
   loadAll() {
-    this.listState.update(s => ({ ...s, loading: true, error: null }));
-
-    this.userRepository.getAll()
-      .pipe(finalize(() => this.listState.update(s => ({ ...s, loading: false }))))
-      .subscribe({
-        next: (res) => {
-          if (res.isSuccess) {
-            this.listState.update(s => ({ ...s, data: res.value }));
-          } else {
-            this.listState.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao carregar usuários' }));
-          }
-        },
-        error: (err: HttpErrorResponse) => {
-          const message = extractErrorMessage(err, {}, 'Não foi possível carregar os usuários.');
-          this.listState.update(s => ({ ...s, error: message }));
-        }
-      });
+    this.listMutationError.set(null);
+    this.listResource.reload();
   }
 
   /** Atribui um conjunto de roles a um usuário (PUT /users/{userId}/roles). */
   assignRoles(userId: string, roleIds: string[], onSuccess?: () => void) {
     this.userRepository.assignRoles(userId, roleIds).subscribe(res => {
       if (res.isSuccess) {
-        this.loadAll();
+        this.listMutationError.set(null);
+        this.listResource.reload();
         onSuccess?.();
       } else {
-        this.listState.update(s => ({ ...s, error: res.error?.message ?? 'Erro ao atribuir roles' }));
+        this.listMutationError.set(res.error?.message ?? 'Erro ao atribuir funções');
       }
     });
   }
