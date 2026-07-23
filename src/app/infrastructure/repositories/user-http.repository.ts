@@ -16,4 +16,16 @@ export class UserHttpRepository extends UserRepository {
             .get<UserResponseDto>(`${this.apiUrl}/${userId}`)
             .pipe(toResult());
     }
+
+    getAll() {
+        return this.http
+            .get<UserResponseDto[]>(this.apiUrl)
+            .pipe(toResult());
+    }
+
+    assignRoles(userId: string, roleIds: string[]) {
+        return this.http
+            .put<void>(`${this.apiUrl}/${userId}/roles`, { roleIds })
+            .pipe(toResult());
+    }
 }

@@ -9,6 +9,7 @@ import { Result } from '../../domain/models/result.model';
 import { LoginRequestDto } from '../dtos/login-request.dto';
 import { CreateUserRequestDto } from '../dtos/create-user-request.dto';
 import { AccessTokensResponseDto } from '../dtos/access-tokens-response.dto';
+import { RefreshTokenRequestDto } from '../dtos/refresh-token-request.dto';
 import { toResult } from '../mappers/api-result.mapper';
 import { environment } from '../../../environments/environment';
 
@@ -29,6 +30,13 @@ export class AuthHttpRepository extends AuthRepository {
     const dto: CreateUserRequestDto = request;
     return this.http
       .post<string>(`${this.apiUrl}/register`, dto)
+      .pipe(toResult());
+  }
+
+  refresh(refreshToken: string): Observable<Result<AccessTokens>> {
+    const dto: RefreshTokenRequestDto = { refreshToken };
+    return this.http
+      .post<AccessTokensResponseDto>(`${this.apiUrl}/refresh-token`, dto)
       .pipe(toResult());
   }
 }

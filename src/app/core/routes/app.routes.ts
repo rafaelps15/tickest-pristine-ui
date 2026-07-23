@@ -34,10 +34,38 @@ export const routes: Routes = [
           .then(m => m.DashboardComponent)
       },
       {
+        path: 'tickets',
+        loadComponent: () => import('../../ui/features/tickets/ticket-list/ticket-list.component')
+          .then(m => m.TicketListComponent)
+      },
+      {
+        path: 'tickets/novo',
+        loadComponent: () => import('../../ui/features/tickets/ticket-create/ticket-create.component')
+          .then(m => m.TicketCreateComponent)
+      },
+      {
         path: 'usuarios',
         canActivate: [adminMasterGuard],
-        loadComponent: () => import('../../ui/features/user/user-register/user-register.component')
-          .then(m => m.UserRegisterComponent)
+        loadComponent: () => import('../../ui/features/user/user-list/user-list.component')
+          .then(m => m.UserListComponent)
+      },
+      {
+        path: 'departamentos',
+        canActivate: [adminMasterGuard],
+        loadComponent: () => import('../../ui/features/departments/department-list/department-list.component')
+          .then(m => m.DepartmentListComponent)
+      },
+      {
+        path: 'setores',
+        canActivate: [adminMasterGuard],
+        loadComponent: () => import('../../ui/features/sectors/sector-list/sector-list.component')
+          .then(m => m.SectorListComponent)
+      },
+      {
+        path: 'roles',
+        canActivate: [adminMasterGuard],
+        loadComponent: () => import('../../ui/features/roles/role-list/role-list.component')
+          .then(m => m.RoleListComponent)
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

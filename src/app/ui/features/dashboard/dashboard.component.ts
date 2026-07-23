@@ -1,6 +1,7 @@
-import { Component, inject, OnInit, AfterViewInit, ElementRef, ViewChild, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, OnInit, AfterViewInit, ElementRef, ViewChild, PLATFORM_ID, ChangeDetectionStrategy, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService } from '../../../application/services/auth.service';
+import { TicketsService } from '../../../application/services/tickets.service';
 import { Router, RouterLink } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 
@@ -18,49 +19,54 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
+  protected readonly ticketsService = inject(TicketsService);
 
   @ViewChild('ticketChart') ticketChartCanvas!: ElementRef;
 
-  // Estatísticas Mockadas (serão substituídas por dados do back-end futuramente)
-  stats = {
-    total: 124,
-    open: 45,
-    pending: 12,
-    resolved: 67
-  };
+  private chart: Chart | null = null;
+
+  constructor() {
+    // Redesenha o gráfico sempre que a lista de tickets (e portanto as contagens por status) mudar.
+    effect(() => {
+      const total = this.ticketsService.total();
+      const open = this.ticketsService.openCount();
+      const inProgress = this.ticketsService.inProgressCount();
+      const resolved = this.ticketsService.resolvedCount();
+
+      if (isPlatformBrowser(this.platformId) && this.ticketChartCanvas) {
+        this.renderChart(open, inProgress, resolved, total - open - inProgress - resolved);
+      }
+    });
+  }
 
   ngOnInit() {
-    // Inicialização futura aqui
+    this.ticketsService.loadForCurrentUser();
   }
 
   ngAfterViewInit() {
     if (isPlatformBrowser(this.platformId)) {
-      this.initChart();
+      this.renderChart(
+        this.ticketsService.openCount(),
+        this.ticketsService.inProgressCount(),
+        this.ticketsService.resolvedCount(),
+        this.ticketsService.total() - this.ticketsService.openCount() - this.ticketsService.inProgressCount() - this.ticketsService.resolvedCount()
+      );
     }
   }
 
-  private initChart() {
+  private renderChart(open: number, inProgress: number, resolved: number, other: number) {
     const ctx = this.ticketChartCanvas.nativeElement.getContext('2d');
-    
-    // Gradiente para o gráfico
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(105, 108, 255, 0.5)');
-    gradient.addColorStop(1, 'rgba(105, 108, 255, 0)');
 
-    new Chart(ctx, {
-      type: 'line',
+    this.chart?.destroy();
+
+    this.chart = new Chart(ctx, {
+      type: 'doughnut',
       data: {
-        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'],
+        labels: ['Aberto', 'Em Andamento', 'Resolvido', 'Fechado/Cancelado'],
         datasets: [{
-          label: 'Tickets Criados',
-          data: [65, 59, 80, 81, 56, 55, 70],
-          borderColor: '#696cff',
-          backgroundColor: gradient,
-          fill: true,
-          tension: 0.4,
-          pointRadius: 5,
-          pointBackgroundColor: '#696cff',
-          borderWidth: 3
+          data: [open, inProgress, resolved, other],
+          backgroundColor: ['#ffab00', '#03c3ec', '#71dd37', '#a1acb8'],
+          borderWidth: 0
         }]
       },
       options: {
@@ -68,36 +74,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false
-          },
-          tooltip: {
-            backgroundColor: '#fff',
-            titleColor: '#566a7f',
-            bodyColor: '#566a7f',
-            borderColor: '#e7e7ff',
-            borderWidth: 1,
-            padding: 10,
-            displayColors: false
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              display: true,
-              color: '#f0f2f5'
-            },
-            ticks: {
-              color: '#a1acb8'
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            },
-            ticks: {
-              color: '#a1acb8'
-            }
+            position: 'bottom'
           }
         }
       }

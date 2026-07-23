@@ -8,4 +8,5 @@ import { Result } from '../models/result.model';
 export abstract class AuthRepository {
     abstract login(request: LoginCredentials): Observable<Result<AccessTokens>>;
     abstract register(request: CreateUserData): Observable<Result<string>>;
+    abstract refresh(refreshToken: string): Observable<Result<AccessTokens>>;
 }

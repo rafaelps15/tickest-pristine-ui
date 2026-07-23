@@ -4,21 +4,29 @@ import { AccessTokens } from '../../domain/models/access-tokens.model';
 /** Payload decodificado de um JWT. */
 type JwtPayload = Record<string, unknown>;
 
+/** Decodifica um segmento base64url (formato usado pelo JWT, diferente do base64 padrão que `atob` espera). */
+function base64UrlDecode(segment: string): string {
+  const base64 = segment.replace(/-/g, '+').replace(/_/g, '/').padEnd(segment.length + (4 - segment.length % 4) % 4, '=');
+  const binary = atob(base64);
+  const percentEncoded = Array.from(binary, char => '%' + char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+  return decodeURIComponent(percentEncoded);
+}
+
 /** Serviço de gestão de sessão. */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly ACCESS_TOKEN_KEY = 'auth_token';
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
 
-  // Controle interno dos tokens.
   private _token = signal<string | null>(this.getStoredValue(this.ACCESS_TOKEN_KEY));
   private _refreshToken = signal<string | null>(this.getStoredValue(this.REFRESH_TOKEN_KEY));
 
-  // Exposição para leitura.
+  /** Access token atual (somente leitura). */
   token = this._token.asReadonly();
+  /** Refresh token atual (somente leitura). */
   refreshToken = this._refreshToken.asReadonly();
 
-  // Estado de autenticação.
+  /** Indica se há um access token armazenado com formato de JWT válido (3 partes). */
   isAuthenticated = computed(() => {
     const token = this._token();
     return typeof token === 'string' && token.split('.').length === 3;
@@ -36,6 +44,14 @@ export class SessionService {
     const user = this.user();
     if (!user) return null;
     const claim = user['email'] ?? user['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+    return typeof claim === 'string' ? claim : null;
+  });
+
+  /** Id (Guid) do usuário logado, extraído da claim `sub` emitida pelo back-end. */
+  userId = computed(() => {
+    const user = this.user();
+    if (!user) return null;
+    const claim = user['sub'];
     return typeof claim === 'string' ? claim : null;
   });
 
@@ -68,12 +84,12 @@ export class SessionService {
   }
 
   private decodeToken(token: string): JwtPayload | null {
+    const payload = token.split('.')[1];
+    if (!payload) {
+      return null;
+    }
     try {
-      const parts = token.split('.');
-      if (parts.length < 2) {
-        throw new Error('Token format is invalid');
-      }
-      return JSON.parse(atob(parts[1])) as JwtPayload;
+      return JSON.parse(base64UrlDecode(payload)) as JwtPayload;
     } catch {
       return null;
     }

@@ -1,0 +1,59 @@
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex align-items-center justify-content-between">
+      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Início / Meus Tickets /</span> Novo Ticket</h4>
+      <a routerLink="/tickets" class="btn btn-outline-secondary btn-sm">
+        <i class="bx bx-arrow-back me-1"></i> Voltar
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body p-4 p-lg-5">
+    <div class="max-w-700 mx-auto">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        @if (ticketsService.state().error) {
+          <div class="alert alert-danger border-0 shadow-sm mb-4">{{ ticketsService.state().error }}</div>
+        }
+
+        <div class="row g-4">
+          <div class="col-12">
+            <label class="form-label">Título</label>
+            <input type="text" class="form-control" formControlName="title" placeholder="Ex: Impressora não funciona" />
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Descrição</label>
+            <textarea class="form-control" rows="4" formControlName="description" placeholder="Descreva o problema em detalhes"></textarea>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Prioridade</label>
+            <select class="form-select" formControlName="priority">
+              @for (priority of priorities; track priority.value) {
+                <option [ngValue]="priority.value">{{ priority.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Setor</label>
+            <select class="form-select" formControlName="sectorId">
+              <option value="" disabled>Selecione...</option>
+              @for (sector of sectorsService.sectors(); track sector.id) {
+                <option [value]="sector.id">{{ sector.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <button type="submit" class="btn btn-primary w-100" [disabled]="form.invalid">
+            <i class="bx bx-send me-1"></i> Abrir Ticket
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -28,15 +28,43 @@
           </a>
         </li>
 
-        <!-- Gestão -->
+        <li class="menu-item" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          <a routerLink="/tickets" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-ticket"></i>
+            <div>Meus Tickets</div>
+          </a>
+        </li>
+
+        <!-- Administração -->
         <li class="menu-header small text-uppercase">
-          <span class="menu-header-text">Gestão</span>
+          <span class="menu-header-text">Administração</span>
         </li>
 
         <li class="menu-item" routerLinkActive="active">
           <a routerLink="/usuarios" class="menu-link">
             <i class="menu-icon tf-icons bx bx-group"></i>
-            <div>Gestão de Usuários</div>
+            <div>Usuários</div>
+          </a>
+        </li>
+
+        <li class="menu-item" routerLinkActive="active">
+          <a routerLink="/roles" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-shield-quarter"></i>
+            <div>Roles</div>
+          </a>
+        </li>
+
+        <li class="menu-item" routerLinkActive="active">
+          <a routerLink="/departamentos" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-sitemap"></i>
+            <div>Departamentos</div>
+          </a>
+        </li>
+
+        <li class="menu-item" routerLinkActive="active">
+          <a routerLink="/setores" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-git-branch"></i>
+            <div>Setores</div>
           </a>
         </li>
 

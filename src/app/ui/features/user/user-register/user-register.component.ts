@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
 import { UsersService } from "../../../../application/services/users.service";
@@ -37,6 +37,21 @@ export class UserRegisterComponent implements OnInit {
         confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator });
 
+    private redirectedAfterRegister = false;
+
+    constructor() {
+        // Redireciona para o login uma única vez após um auto-registro bem-sucedido.
+        // Usar effect() em vez de polling: reage à mudança de estado e é destruído
+        // automaticamente junto com o componente, sem deixar timers pendurados.
+        effect(() => {
+            const { success } = this.usersService.state();
+            if (this.isSelfRegistration && success && !this.redirectedAfterRegister) {
+                this.redirectedAfterRegister = true;
+                setTimeout(() => this.router.navigate(['/login']), 2000);
+            }
+        });
+    }
+
     ngOnInit(): void {
         this.usersService.resetState();
 
@@ -67,15 +82,5 @@ export class UserRegisterComponent implements OnInit {
             lastName: raw.lastName!,
             password: raw.password!
         });
-
-        if (this.isSelfRegistration) {
-            // Efeito de redirecionamento após sucesso (apenas para auto-registro)
-            const checkSuccess = setInterval(() => {
-                if (this.usersService.state().success) {
-                    clearInterval(checkSuccess);
-                    setTimeout(() => this.router.navigate(['/login']), 2000);
-                }
-            }, 500);
-        }
     }
 }

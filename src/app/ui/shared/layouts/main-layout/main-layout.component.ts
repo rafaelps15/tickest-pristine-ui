@@ -3,6 +3,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../../application/services/auth.service';
 import { SessionService } from '../../../../core/services/session.service';
 
+/** Layout da área autenticada (com navegação e logout), usado pelas rotas protegidas. */
 @Component({
     selector: 'app-main-layout',
     imports: [RouterModule],
