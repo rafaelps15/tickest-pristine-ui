@@ -1,23 +1,23 @@
 import { Routes } from '@angular/router';
-import { authGuard } from '../guards/auth.guard';
-import { adminMasterGuard } from '../guards/admin-master.guard';
+import { authGuard } from '../../shared/guards/auth.guard';
+import { adminMasterGuard } from '../../shared/guards/admin-master.guard';
 
 /** Definição de rotas do sistema. */
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('../../ui/shared/layouts/auth-layout/auth-layout.component')
+    loadComponent: () => import('../../shared/ui/layouts/auth-layout/auth-layout.component')
       .then(m => m.AuthLayoutComponent),
     children: [
       {
         path: 'login',
-        loadComponent: () => import('../../ui/features/auth/login/login.component')
+        loadComponent: () => import('../../shared/feature-login/login.component')
           .then(m => m.LoginComponent)
       },
       {
         path: 'register',
-        loadComponent: () => import('../../ui/features/user/user-register/user-register.component')
-          .then(m => m.UserRegisterComponent)
+        loadComponent: () => import('../../users/feature-register/register.component')
+          .then(m => m.RegisterComponent)
       },
       { path: '', redirectTo: 'login', pathMatch: 'full' }
     ]
@@ -25,50 +25,50 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
-    loadComponent: () => import('../../ui/shared/layouts/main-layout/main-layout.component')
+    loadComponent: () => import('../../shared/ui/layouts/main-layout/main-layout.component')
       .then(m => m.MainLayoutComponent),
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('../../ui/features/dashboard/dashboard.component')
+        loadComponent: () => import('../../dashboard/dashboard.component')
           .then(m => m.DashboardComponent)
       },
       {
         path: 'tickets',
-        loadComponent: () => import('../../ui/features/tickets/ticket-list/ticket-list.component')
+        loadComponent: () => import('../../tickets/feature-ticket-list/ticket-list.component')
           .then(m => m.TicketListComponent)
       },
       {
         path: 'tickets/novo',
-        loadComponent: () => import('../../ui/features/tickets/ticket-create/ticket-create.component')
+        loadComponent: () => import('../../tickets/feature-ticket-create/ticket-create.component')
           .then(m => m.TicketCreateComponent)
       },
       {
         path: 'usuarios',
         canActivate: [adminMasterGuard],
         data: { requiredPermission: 'users:manage' },
-        loadComponent: () => import('../../ui/features/user/user-list/user-list.component')
+        loadComponent: () => import('../../users/feature-user-list/user-list.component')
           .then(m => m.UserListComponent)
       },
       {
         path: 'departamentos',
         canActivate: [adminMasterGuard],
         data: { requiredPermission: 'departments:manage' },
-        loadComponent: () => import('../../ui/features/departments/department-list/department-list.component')
+        loadComponent: () => import('../../departments/feature-department-list/department-list.component')
           .then(m => m.DepartmentListComponent)
       },
       {
         path: 'setores',
         canActivate: [adminMasterGuard],
         data: { requiredPermission: 'sectors:manage' },
-        loadComponent: () => import('../../ui/features/sectors/sector-list/sector-list.component')
+        loadComponent: () => import('../../sectors/feature-sector-list/sector-list.component')
           .then(m => m.SectorListComponent)
       },
       {
         path: 'roles',
         canActivate: [adminMasterGuard],
         data: { requiredPermission: 'roles:manage' },
-        loadComponent: () => import('../../ui/features/roles/role-list/role-list.component')
+        loadComponent: () => import('../../roles/feature-role-list/role-list.component')
           .then(m => m.RoleListComponent)
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }

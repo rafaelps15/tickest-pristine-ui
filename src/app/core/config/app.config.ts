@@ -5,21 +5,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideClientHydration, withNoIncrementalHydration } from '@angular/platform-browser';
 
 import { routes } from '../routes/app.routes';
-import { PermissionRepository } from '../../domain/interfaces/permission.repository';
-import { PermissionHttpRepository } from '../../infrastructure/repositories/permission-http.repository';
-import { RoleRepository } from '../../domain/interfaces/role.repository';
-import { RoleHttpRepository } from '../../infrastructure/repositories/role-http.repository';
-import { UserRepository } from '../../domain/interfaces/user.repository';
-import { UserHttpRepository } from '../../infrastructure/repositories/user-http.repository';
-import { AuthRepository } from '../../domain/interfaces/auth.repository';
-import { AuthHttpRepository } from '../../infrastructure/repositories/auth-http.repository';
-import { TicketRepository } from '../../domain/interfaces/ticket.repository';
-import { TicketHttpRepository } from '../../infrastructure/repositories/ticket-http.repository';
-import { DepartmentRepository } from '../../domain/interfaces/department.repository';
-import { DepartmentHttpRepository } from '../../infrastructure/repositories/department-http.repository';
-import { SectorRepository } from '../../domain/interfaces/sector.repository';
-import { SectorHttpRepository } from '../../infrastructure/repositories/sector-http.repository';
-import { authInterceptor } from '../interceptors/auth.interceptor';
+import { authInterceptor } from '../../shared/interceptors/auth.interceptor';
 
 /** Configuração global da aplicação. */
 export const appConfig: ApplicationConfig = {
@@ -30,13 +16,6 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     provideHttpClient(withFetch(),
       withInterceptors([authInterceptor])
-    ),
-    { provide: PermissionRepository, useClass: PermissionHttpRepository },
-    { provide: RoleRepository, useClass: RoleHttpRepository },
-    { provide: UserRepository, useClass: UserHttpRepository },
-    { provide: AuthRepository, useClass: AuthHttpRepository },
-    { provide: TicketRepository, useClass: TicketHttpRepository },
-    { provide: DepartmentRepository, useClass: DepartmentHttpRepository },
-    { provide: SectorRepository, useClass: SectorHttpRepository }
+    )
   ]
 };

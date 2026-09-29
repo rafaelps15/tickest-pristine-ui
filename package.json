@@ -21,6 +21,7 @@
     "@angular/platform-server": "^22.0.6",
     "@angular/router": "^22.0.6",
     "@angular/ssr": "^22.0.6",
+    "@ngrx/signals": "^22.0.0-beta.0",
     "chart.js": "^4.5.1",
     "express": "^4.18.2",
     "rxjs": "~7.8.0",
