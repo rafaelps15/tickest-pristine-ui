@@ -21,7 +21,7 @@ choice on both axes, decided explicitly with the user on 2026-07-23:
 
 | Axis | This project uses | The alternative Steyer also documents |
 |---|---|---|
-| Boundary enforcement | **Folder convention inside one Angular CLI project** — no Nx workspace, no `nx.json`, no separate lib packages. Domains are `src/app/{domain}/` folders; nothing physically stops a cross-domain import, so `ddd-review` (and code review) is what actually enforces it. | A real **Nx Modulith**: each domain is a separate Nx library, tagged `domain:{name}`/`type:*`, with `depConstraints` in ESLint physically blocking disallowed imports at lint time. This is what the `@angular-architects/ddd` Nx plugin generates. |
+| Boundary enforcement | **Folder convention inside one Angular CLI project** — no Nx workspace, no `nx.json`, no separate lib packages. Domains are `src/app/{domain}/` folders; nothing physically stops a cross-domain import, so `ca-review` (and code review) is what actually enforces it. | A real **Nx Modulith**: each domain is a separate Nx library, tagged `domain:{name}`/`type:*`, with `depConstraints` in ESLint physically blocking disallowed imports at lint time. This is what the `@angular-architects/ddd` Nx plugin generates. |
 | State layer | **NgRx Signal Store** (`@ngrx/signals`): `signalStore(withState, withProps, withComputed, withMethods)`, `resource()`/`rxResource()` inside a store for data loading, everything consumed as plain signals in templates (no `async` pipe). This is Steyer's current recommendation — see his blog series ["The NGRX Signal Store and Your Architecture"](https://www.angulararchitects.io/blog/the-ngrx-signal-store-and-your-architecture/) and ["Using Angular's Resource API with the NGRX Signal Store"](https://www.angulararchitects.io/blog/using-the-resource-api-with-the-ngrx-signal-store/). | Plain `BehaviorSubject`-based Facade (`{name}$: Observable<T>`, `async` pipe) — what the `@angular-architects/ddd` generator's templates still produce as of its latest published release (`22.0.0`), predating Signals. This was this skill pack's original flavor before the 2026-07-23 rewrite; still the shape to expect if you ever *do* run the real Nx generator. |
 
 **Why not the real Nx plugin, given it exists and is actively versioned?** Checked directly
@@ -50,7 +50,7 @@ the architecture as executable scaffolding instead of a conventions doc nobody r
 | **add-context** | `/add-context Booking, with a flight-search screen` | Scaffolds a brand-new domain end to end by hand (no Nx generator exists for this flavor): `src/app/booking/{entities,application,infrastructure}`, the first `feature-flight-search/` folder, shell route wiring. |
 | **add-feature** | `/add-feature reopen a flight` | Adds a new use case to an **existing** domain: a Data Service method, a Store (new or extended), and a routed component or in-place action. |
 | **add-tests** | `/add-tests FlightSearchStore` | Backfills Store unit tests (mocked Data Service) and component tests (mocked Store) for existing code. |
-| **ddd-review** | `/ddd-review` | Reviews pending changes against the Modulith's conventions: folder boundaries, Signal Store pattern, layer responsibilities, test coverage. This is the skill doing the job Nx's `depConstraints` would do physically — treat its findings as blockers, not suggestions. |
+| **ca-review** | `/ca-review` | Reviews pending changes against the Modulith's conventions: folder boundaries, Signal Store pattern, layer responsibilities, test coverage. This is the skill doing the job Nx's `depConstraints` would do physically — treat its findings as blockers, not suggestions. |
 
 You don't have to invoke them explicitly — once installed, Claude Code picks the right skill
 automatically when you say things like "add a screen to reopen a flight."
@@ -72,7 +72,7 @@ your-project/
         ├── add-context/
         ├── add-feature/
         ├── add-tests/
-        └── ddd-review/
+        └── ca-review/
 ```
 
 Then swap the example `booking`/`Flight` domain in the templates for whatever fits your first real
@@ -121,12 +121,12 @@ suit — the skills are the executable version of your team's architecture doc.
   domain with subfolders — same rule as before, just without an Nx library boundary backing it.
 - **One `{UseCase}Store` per use case**, not one Store per entity. Two screens over the same
   entity get two Stores, both injecting the same `{Entity}DataService`.
-- Folder tags, for when `ddd-review` or a human needs to reason about boundaries even without Nx
+- Folder tags, for when `ca-review` or a human needs to reason about boundaries even without Nx
   enforcing them: think of every domain folder as tagged `domain:{name}`, `shared/` as
   `domain:shared`, and `entities|application|infrastructure` as `type:domain-logic`,
   `feature-*/` as `type:feature`, the app shell (`app.routes.ts`, `app.config.ts`,
   `app.component.ts`) as `type:app` — the *rules* from the Nx-tag world still apply (see
-  `ddd-review`), only the *enforcement mechanism* changed from lint-time hard error to reviewed
+  `ca-review`), only the *enforcement mechanism* changed from lint-time hard error to reviewed
   convention.
 
 ---

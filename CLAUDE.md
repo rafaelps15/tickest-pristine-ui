@@ -14,7 +14,7 @@ current recommended state layer, the **NgRx Signal Store** (`@ngrx/signals`), in
 older `BehaviorSubject`-Facade flavor his `@angular-architects/ddd` Nx plugin still generates. See
 `.claude/skills/README.md` for exactly which of his architecture variants this is and why that
 distinction matters, and `.claude/skills/` (`add-context`, `add-feature`, `add-tests`,
-`ddd-review`) for the conventions and how to extend them.
+`ca-review`) for the conventions and how to extend them.
 
 Each bounded context is a top-level `src/app/{domain}/` folder (`entities/`, `application/`
 — the Signal Stores, `infrastructure/` — the Data Services, plus one `feature-{useCase}/` folder

@@ -70,7 +70,7 @@ src/app/booking/feature-flight-search/
    There's no separate `api` folder in this flavor — the domain's own `index.ts` barrel *is* the
    api surface, since there's no Nx package boundary forcing a physically separate artifact for
    it. Keep the barrel narrow on purpose: if you're tempted to export something route- or
-   component-shaped from it, that's the signal it doesn't belong in the barrel (see `ddd-review`).
+   component-shaped from it, that's the signal it doesn't belong in the barrel (see `ca-review`).
 6. **Verify**: run this project's lint/test/build scripts (`npm run lint` / `ng test` / `ng build`
    or whatever `package.json` defines) and manually click through the new route — there's no Nx
    task graph to scope this to just the new folder, so a full run is the only option.
@@ -83,7 +83,7 @@ src/app/booking/feature-flight-search/
   directly.
 - A domain's folders never import another domain's `application/`/`infrastructure/`/`feature-*/`
   directly — only its `index.ts` barrel, and only when there's an actual cross-domain need. There
-  is no lint rule enforcing this automatically (see the README for why) — `ddd-review` is what
+  is no lint rule enforcing this automatically (see the README for why) — `ca-review` is what
   catches a violation, so run it before considering a cross-domain change done.
 - A screen that aggregates several domains (a dashboard) belongs in the shell app
   (`src/app/core/` or wherever the app-shell code lives), not inside any one domain's folders —

@@ -1,5 +1,5 @@
 ---
-name: ddd-review
+name: ca-review
 description: Review pending front-end changes against this Angular Modulith's DDD conventions (Manfred Steyer's Strategic Design, folder-based boundaries, NgRx Signal Store) — folder boundaries, Store pattern, layer responsibilities, and test coverage. Use when the user asks to review front-end changes, check architecture conventions, or audit a domain before committing.
 argument-hint: [optional: specific domain folder to review; defaults to the working-tree diff]
 ---
