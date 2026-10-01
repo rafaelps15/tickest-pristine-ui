@@ -25,7 +25,11 @@ export const UsersStore = signalStore(
     _listResource: rxResource({ stream: () => store._userDataService.getAll() })
   })),
   withComputed((store) => ({
-    users: computed(() => store._listResource.value() ?? []),
+    /** Usuários carregados, com as funções de cada um ordenadas alfabeticamente para exibição consistente na tela. */
+    users: computed(() => (store._listResource.value() ?? []).map(user => ({
+      ...user,
+      roles: [...user.roles].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    }))),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {

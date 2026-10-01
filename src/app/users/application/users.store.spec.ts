@@ -39,6 +39,20 @@ describe('UsersStore', () => {
     expect(store.users()).toEqual(users);
   });
 
+  it('ordena as funções de cada usuário alfabeticamente, independente da ordem recebida da API', async () => {
+    userDataService.getAll.and.returnValue(of([
+      {
+        id: 'u2', email: 'joao@empresa.com', firstName: 'João', lastName: 'Santos',
+        roles: [{ id: 'role-2', name: 'Requester' }, { id: 'role-1', name: 'Agent' }]
+      }
+    ]));
+
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.users()[0].roles.map(role => role.name)).toEqual(['Agent', 'Requester']);
+  });
+
   it('cria um usuário, marca sucesso e recarrega a listagem', async () => {
     authDataService.register.and.returnValue(of('new-id'));
 
