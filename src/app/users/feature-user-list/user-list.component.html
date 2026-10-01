@@ -42,6 +42,9 @@
                 }
               </td>
               <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#userEditModal" (click)="openEditModal(user)">
+                  <i class="bx bx-edit-alt me-1"></i> Editar Cadastro
+                </button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
                   <i class="bx bx-shield-quarter me-1"></i> Atribuir Funções
                 </button>
@@ -101,6 +104,39 @@
             }
             Criar
           </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edição de cadastro -->
+<div class="modal fade" id="userEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Cadastro — {{ selectedUserForEdit()?.firstName }} {{ selectedUserForEdit()?.lastName }}</h5>
+          <button id="userEditModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          @if (store.listState().error) {
+            <div class="alert alert-danger border-0 py-2 small">{{ store.listState().error }}</div>
+          }
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nome</label>
+              <input type="text" class="form-control" formControlName="firstName" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sobrenome</label>
+              <input type="text" class="form-control" formControlName="lastName" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid">Salvar</button>
         </div>
       </form>
     </div>

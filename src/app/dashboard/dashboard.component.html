@@ -167,17 +167,19 @@
             <i class="bx bx-chevron-right"></i>
           </button>
 
-          <button class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-                  routerLink="/usuarios">
-            <div class="d-flex align-items-center">
-              <i class="bx bx-group fs-4 me-3"></i>
-              <div>
-                <div class="fw-bold">Gestão de Usuários</div>
-                <div class="small opacity-75">Controle total de acessos</div>
+          @if (sessionService.hasPermission('users:read')) {
+            <button class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
+                    routerLink="/usuarios">
+              <div class="d-flex align-items-center">
+                <i class="bx bx-group fs-4 me-3"></i>
+                <div>
+                  <div class="fw-bold">Gestão de Usuários</div>
+                  <div class="small opacity-75">Controle total de acessos</div>
+                </div>
               </div>
-            </div>
-            <i class="bx bx-chevron-right"></i>
-          </button>
+              <i class="bx bx-chevron-right"></i>
+            </button>
+          }
         </div>
       </div>
     </div>

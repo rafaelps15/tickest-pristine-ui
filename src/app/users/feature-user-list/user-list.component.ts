@@ -34,8 +34,17 @@ export class UserListComponent implements OnInit {
         confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator });
 
+    /** Formulário de edição de nome/sobrenome do usuário selecionado. */
+    editForm = this.fb.group({
+        firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+        lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]]
+    });
+
     /** Usuário selecionado para atribuição de roles. */
     selectedUser = signal<UserSummary | null>(null);
+
+    /** Usuário selecionado para edição de cadastro (nome/sobrenome). */
+    selectedUserForEdit = signal<UserSummary | null>(null);
 
     /** Roles marcadas no modal de atribuição. */
     selectedRoleIds = signal<Set<string>>(new Set());
@@ -67,6 +76,28 @@ export class UserListComponent implements OnInit {
             lastName: raw.lastName!,
             email: raw.email!,
             password: raw.password!
+        });
+    }
+
+    /** Abre o modal de edição de cadastro pré-preenchendo nome/sobrenome do usuário selecionado. */
+    openEditModal(user: UserSummary): void {
+        this.selectedUserForEdit.set(user);
+        this.editForm.reset({ firstName: user.firstName, lastName: user.lastName });
+    }
+
+    /** Valida e envia a atualização de cadastro (nome/sobrenome) do usuário selecionado. */
+    onEditSubmit(): void {
+        if (this.editForm.invalid) {
+            this.editForm.markAllAsTouched();
+            return;
+        }
+
+        const user = this.selectedUserForEdit();
+        if (!user) return;
+
+        const { firstName, lastName } = this.editForm.getRawValue();
+        this.store.updateProfile(user.id, { firstName: firstName!.trim(), lastName: lastName!.trim() }, () => {
+            document.getElementById('userEditModalCloseButton')?.click();
         });
     }
 

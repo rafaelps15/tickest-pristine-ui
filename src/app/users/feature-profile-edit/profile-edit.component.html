@@ -1,0 +1,161 @@
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex align-items-center justify-content-between">
+      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Conta /</span> Meu Perfil</h4>
+      <button type="button" class="btn btn-outline-secondary btn-sm" routerLink="/dashboard">
+        <i class="bx bx-arrow-back me-1"></i> Voltar ao Painel
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 overflow-hidden">
+  <div class="card-header bg-white py-4 border-bottom">
+    <h5 class="mb-0 fw-bold text-dark">Dados pessoais</h5>
+    <p class="text-muted small mb-0 mt-1">Atualize o nome exibido no sistema.</p>
+  </div>
+
+  <div class="card-body p-4 p-lg-5">
+    @if (store.loading() && !store.profile()) {
+      <div class="text-center py-5">
+        <span class="spinner-border text-primary" role="status"></span>
+      </div>
+    } @else if (store.loadError()) {
+      <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert">
+        <i class="bx bx-error-circle fs-4 me-3"></i>
+        <div class="fw-medium">{{ store.loadError() }}</div>
+      </div>
+    } @else if (store.profile(); as profile) {
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+        @if (store.mutationError()) {
+          <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-error-circle fs-4 me-3"></i>
+            <div class="fw-medium">{{ store.mutationError() }}</div>
+          </div>
+        }
+        @if (store.saved()) {
+          <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-check-circle fs-4 me-3"></i>
+            <div class="fw-medium">Perfil atualizado com sucesso.</div>
+          </div>
+        }
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <label class="form-label" for="firstName">Nome</label>
+            <input id="firstName" type="text" class="form-control" formControlName="firstName"
+                   [class.is-invalid]="isFieldInvalid('firstName')" />
+            <div class="invalid-feedback">O nome é obrigatório.</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="lastName">Sobrenome</label>
+            <input id="lastName" type="text" class="form-control" formControlName="lastName"
+                   [class.is-invalid]="isFieldInvalid('lastName')" />
+            <div class="invalid-feedback">O sobrenome é obrigatório.</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label" for="email">E-mail</label>
+            <input id="email" type="email" class="form-control" [value]="profile.email" disabled />
+            <div class="form-text">O e-mail é usado no login e não pode ser alterado aqui.</div>
+          </div>
+        </div>
+
+        <div class="mt-5 d-flex justify-content-end">
+          <button type="submit" class="btn btn-primary" [disabled]="store.saving() || form.pristine">
+            @if (store.saving()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Salvando...
+            } @else {
+              Salvar alterações
+            }
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 overflow-hidden mt-4">
+  <div class="card-header bg-white py-4 border-bottom">
+    <h5 class="mb-0 fw-bold text-dark">Alterar senha</h5>
+    <p class="text-muted small mb-0 mt-1">Ao trocar a senha, suas demais sessões são desconectadas.</p>
+  </div>
+
+  <div class="card-body p-4 p-lg-5">
+    <form [formGroup]="passwordForm" (ngSubmit)="onChangePassword()" novalidate>
+
+      @if (store.passwordError()) {
+        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+          <i class="bx bx-error-circle fs-4 me-3"></i>
+          <div class="fw-medium">{{ store.passwordError() }}</div>
+        </div>
+      }
+      @if (store.passwordChanged()) {
+        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+          <i class="bx bx-check-circle fs-4 me-3"></i>
+          <div class="fw-medium">Senha alterada com sucesso.</div>
+        </div>
+      }
+
+      <div class="row g-4">
+        <div class="col-md-4">
+          <label class="form-label" for="currentPassword">Senha atual</label>
+          <input id="currentPassword" type="password" class="form-control" formControlName="currentPassword"
+                 [class.is-invalid]="isPasswordFieldInvalid('currentPassword')" />
+          <div class="invalid-feedback">A senha atual é obrigatória.</div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label" for="newPassword">Nova senha</label>
+          <input id="newPassword" type="password" class="form-control" formControlName="newPassword"
+                 [class.is-invalid]="isPasswordFieldInvalid('newPassword')" />
+          @if (isPasswordFieldInvalid('newPassword')) {
+            <div class="form-text text-danger">
+              @if (passwordForm.controls.newPassword.errors?.['required']) {
+                <div>A nova senha é obrigatória.</div>
+              }
+              @if (passwordForm.controls.newPassword.errors?.['minlength']) {
+                <div>A senha deve ter no mínimo 6 caracteres.</div>
+              }
+              @if (passwordForm.controls.newPassword.errors?.['uppercase']) {
+                <div>A senha deve conter pelo menos uma letra maiúscula.</div>
+              }
+              @if (passwordForm.controls.newPassword.errors?.['specialChar']) {
+                <div>A senha deve conter pelo menos um caractere especial (ex.: #, $, %).</div>
+              }
+            </div>
+          }
+          @if (passwordForm.errors?.['sameAsCurrent'] && (passwordForm.controls.newPassword.dirty || passwordForm.controls.newPassword.touched)) {
+            <div class="form-text text-danger">A nova senha deve ser diferente da senha atual.</div>
+          }
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label" for="confirmPassword">Confirmar nova senha</label>
+          <input id="confirmPassword" type="password" class="form-control" formControlName="confirmPassword"
+                 [class.is-invalid]="isPasswordFieldInvalid('confirmPassword') || (passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched)" />
+          @if (isPasswordFieldInvalid('confirmPassword')) {
+            <div class="invalid-feedback">A confirmação de senha é obrigatória.</div>
+          }
+          @if (passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched && passwordForm.controls.confirmPassword.valid) {
+            <div class="form-text text-danger">As senhas não coincidem.</div>
+          }
+        </div>
+      </div>
+
+      <div class="mt-5 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary" [disabled]="store.changingPassword() || passwordForm.pristine">
+          @if (store.changingPassword()) {
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            Alterando...
+          } @else {
+            Alterar senha
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

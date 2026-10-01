@@ -36,14 +36,14 @@
         </li>
 
         <!-- Administração -->
-        @if (sessionService.hasPermission('users:manage') || sessionService.hasPermission('roles:manage') ||
+        @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:manage') ||
              sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
           <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Administração</span>
           </li>
         }
 
-        @if (sessionService.hasPermission('users:manage')) {
+        @if (sessionService.hasPermission('users:read')) {
           <li class="menu-item" routerLinkActive="active">
             <a routerLink="/usuarios" class="menu-link">
               <i class="menu-icon tf-icons bx bx-group"></i>
@@ -122,6 +122,13 @@
                         <small class="text-muted">{{ sessionService.email() }}</small>
                       </div>
                     </div>
+                  </a>
+                </li>
+                <li><div class="dropdown-divider"></div></li>
+                <li>
+                  <a class="dropdown-item" routerLink="/perfil">
+                    <i class="bx bx-user me-2"></i>
+                    <span class="align-middle">Meu Perfil</span>
                   </a>
                 </li>
                 <li><div class="dropdown-divider"></div></li>

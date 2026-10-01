@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
+import { UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
 import { AuthDataService, CreateUserData, extractErrorMessage } from '../../shared';
 
@@ -63,14 +64,32 @@ export const UsersStore = signalStore(
       patchState(store, { loading: false, success: false, error: null });
     },
 
-    /** Carrega todos os usuários cadastrados (GET /users, requer users:manage). */
+    /** Carrega todos os usuários cadastrados (GET /users, requer users:read). */
     loadAll(): void {
       patchState(store, { listMutationError: null });
       store._listResource.reload();
     },
 
+    /** Atualiza nome/sobrenome de um usuário (PUT /users/{userId}/profile) e recarrega a listagem em caso de sucesso. */
+    updateProfile(userId: string, data: UpdateProfileRequest, onSuccess?: () => void): void {
+      patchState(store, { listMutationError: null });
+
+      store._userDataService.updateProfile(userId, data).subscribe({
+        next: () => {
+          patchState(store, { listMutationError: null });
+          store._listResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, { listMutationError: extractErrorMessage(err, {}, 'Erro ao atualizar cadastro') });
+        }
+      });
+    },
+
     /** Atribui um conjunto de roles a um usuário (PUT /users/{userId}/roles). */
     assignRoles(userId: string, roleIds: string[], onSuccess?: () => void): void {
+      patchState(store, { listMutationError: null });
+
       store._userDataService.assignRoles(userId, roleIds).subscribe({
         next: () => {
           patchState(store, { listMutationError: null });

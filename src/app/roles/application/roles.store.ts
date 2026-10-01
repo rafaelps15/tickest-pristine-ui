@@ -3,6 +3,7 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Role } from '../entities/role';
+import { Permission } from '../entities/permission';
 import { RoleDataService } from '../infrastructure/role.data.service';
 import { PermissionDataService } from '../infrastructure/permission.data.service';
 import { extractErrorMessage } from '../../shared';
@@ -36,13 +37,13 @@ export const RolesStore = signalStore(
           : null)
       };
     }),
-    /** Códigos de permissão disponíveis no sistema (GET /permissions). */
-    permissionCodes: computed(() => store._permissionsResource.value() ?? []),
-    /** Estado agregado da listagem de permissões (dados, carregamento e erro). */
+    /** Catálogo de permissões disponíveis no sistema, com nome/descrição/grupo (GET /permissions). */
+    permissions: computed(() => store._permissionsResource.value() ?? []),
+    /** Estado agregado do catálogo de permissões (dados, carregamento e erro). */
     permissionsState: computed(() => {
       const resourceError = store._permissionsResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._permissionsResource.value() ?? ([] as string[]),
+        data: store._permissionsResource.value() ?? ([] as Permission[]),
         loading: store._permissionsResource.isLoading(),
         error: store.permissionsMutationError() ?? (resourceError
           ? extractErrorMessage(resourceError, {}, 'Erro ao carregar permissões')
@@ -50,7 +51,31 @@ export const RolesStore = signalStore(
       };
     })
   })),
+  withComputed((store) => ({
+    /** Catálogo de permissões agrupado por `group`, preservando a ordem de grupos e permissões como vieram da API. */
+    permissionGroups: computed(() => {
+      const groups: { title: string; permissions: Permission[] }[] = [];
+      const indexByTitle = new Map<string, number>();
+
+      for (const permission of store.permissions()) {
+        let index = indexByTitle.get(permission.group);
+        if (index === undefined) {
+          index = groups.length;
+          indexByTitle.set(permission.group, index);
+          groups.push({ title: permission.group, permissions: [] });
+        }
+        groups[index].permissions.push(permission);
+      }
+
+      return groups;
+    })
+  })),
   withMethods((store) => ({
+    /** Nome amigável de um código de permissão; devolve o próprio código se não encontrado no catálogo. */
+    permissionName(code: string): string {
+      return store.permissions().find(permission => permission.code === code)?.name ?? code;
+    },
+
     /** Recarrega a listagem de roles (GET /roles). */
     load(): void {
       patchState(store, { mutationError: null });

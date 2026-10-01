@@ -44,9 +44,14 @@ export const routes: Routes = [
           .then(m => m.TicketCreateComponent)
       },
       {
+        path: 'perfil',
+        loadComponent: () => import('../../users/feature-profile-edit/profile-edit.component')
+          .then(m => m.ProfileEditComponent)
+      },
+      {
         path: 'usuarios',
         canActivate: [adminMasterGuard],
-        data: { requiredPermission: 'users:manage' },
+        data: { requiredPermission: 'users:read' },
         loadComponent: () => import('../../users/feature-user-list/user-list.component')
           .then(m => m.UserListComponent)
       },

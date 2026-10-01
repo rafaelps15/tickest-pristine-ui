@@ -6,7 +6,7 @@ import { SessionService } from '../services/session.service';
  * Guard para rotas administrativas.
  *
  * A rota deve declarar a permissão exigida em `data.requiredPermission` (código
- * igual ao usado pelo back-end em `[HasPermission]`, ex. `"users:manage"`).
+ * igual ao usado pelo back-end em `[HasPermission]`, ex. `"users:read"`).
  * O JWT já carrega a claim `permissions` do usuário (ver SessionService), então
  * aqui validamos autenticação e a posse da permissão antes de liberar a rota —
  * sem isso, o usuário só descobria via 403 da API depois de já estar na tela.

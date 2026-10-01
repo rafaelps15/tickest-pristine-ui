@@ -3,4 +3,6 @@ export interface Role {
   id: string;
   name: string;
   permissionCodes: string[];
+  isDefault: boolean;
+  isAdministrator: boolean;
 }

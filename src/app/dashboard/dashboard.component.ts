@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
 import { TicketsStore, TicketPriority, TICKET_PRIORITY_LABELS, TicketStatus, TICKET_STATUS_LABELS } from '../tickets';
+import { SessionService } from '../shared';
 
 /**
  * Paleta categórica (5 slots, validada com scripts/validate_palette.js do skill dataviz —
@@ -65,6 +66,7 @@ function loadChart(): Promise<typeof import('chart.js')> {
 export class DashboardComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   protected readonly store = inject(TicketsStore);
+  protected readonly sessionService = inject(SessionService);
 
   /** Query de view como signal (Angular 17.3+) — substitui @ViewChild, sem `!` nem ngAfterViewInit. */
   private readonly ticketChartCanvas = viewChild<ElementRef<HTMLCanvasElement>>('ticketChart');

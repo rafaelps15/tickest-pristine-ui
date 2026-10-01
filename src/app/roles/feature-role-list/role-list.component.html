@@ -31,16 +31,26 @@
         } @else {
           @for (role of store.roles(); track role.id) {
             <tr>
-              <td class="fw-semibold">{{ role.name }}</td>
+              <td class="fw-semibold">
+                {{ role.name }}
+                @if (role.isDefault) {
+                  <span class="badge bg-label-secondary ms-1">Padrão para novos colaboradores</span>
+                }
+                @if (role.isAdministrator) {
+                  <span class="badge bg-label-danger ms-1">Administrador</span>
+                }
+              </td>
               <td>
                 @for (code of role.permissionCodes; track code) {
-                  <span class="badge bg-label-info me-1 mb-1">{{ code }}</span>
+                  <span class="badge bg-label-info me-1 mb-1">{{ store.permissionName(code) }}</span>
                 } @empty {
                   <span class="text-muted small">Nenhuma permissão atribuída</span>
                 }
               </td>
               <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#rolePermissionsModal" (click)="openPermissionsModal(role)">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#rolePermissionsModal"
+                        (click)="openPermissionsModal(role)" [disabled]="role.isAdministrator"
+                        [title]="role.isAdministrator ? 'As permissões do administrador são gerenciadas pelo sistema' : ''">
                   <i class="bx bx-lock-alt me-1"></i> Permissões
                 </button>
               </td>
@@ -83,18 +93,27 @@
         <button id="rolePermissionsModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div class="row g-2">
-          @for (code of store.permissionCodes(); track code) {
-            <div class="col-md-6">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" [id]="'perm-' + code"
-                       [checked]="isChecked(code)"
-                       (change)="togglePermission(code, $any($event.target).checked)" />
-                <label class="form-check-label" [for]="'perm-' + code">{{ code }}</label>
+        @for (group of store.permissionGroups(); track group.title) {
+          <h6 class="text-uppercase text-muted small fw-bold mt-3 mb-2">{{ group.title }}</h6>
+          <div class="row g-2 mb-2">
+            @for (permission of group.permissions; track permission.code) {
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" [id]="'perm-' + permission.code"
+                         [checked]="isChecked(permission.code)"
+                         (change)="togglePermission(permission.code, $any($event.target).checked)" />
+                  <label class="form-check-label" [for]="'perm-' + permission.code">
+                    {{ permission.name }}
+                    @if (permission.isAdministrative) {
+                      <span class="badge bg-label-danger ms-1">administrativa</span>
+                    }
+                    <div class="text-muted small">{{ permission.description }}</div>
+                  </label>
+                </div>
               </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
