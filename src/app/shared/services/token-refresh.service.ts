@@ -3,12 +3,14 @@ import { Observable, of } from 'rxjs';
 import { catchError, finalize, map, shareReplay } from 'rxjs/operators';
 import { AuthDataService } from '../infrastructure/auth.data.service';
 import { SessionService } from './session.service';
+import { CurrentUserService } from './current-user.service';
 
 /** Coordena a renovação do access token, evitando chamadas duplicadas de /refresh-token quando várias requisições expiram ao mesmo tempo. */
 @Injectable({ providedIn: 'root' })
 export class TokenRefreshService {
   private readonly authDataService = inject(AuthDataService);
   private readonly session = inject(SessionService);
+  private readonly currentUserService = inject(CurrentUserService);
 
   private inFlight$: Observable<string | null> | null = null;
 
@@ -26,6 +28,8 @@ export class TokenRefreshService {
     this.inFlight$ = this.authDataService.refresh(refreshToken).pipe(
       map(tokens => {
         this.session.saveSession(tokens);
+        // Só inscreve, sem encadear: se /users/me desse 401, esperaria a própria renovação que acabou de terminar.
+        this.currentUserService.load().subscribe();
         return tokens.accessToken;
       }),
       catchError(() => of(null)),

@@ -11,4 +11,7 @@ export interface UserSummary {
   firstName: string;
   lastName: string;
   roles: UserRoleSummary[];
+  isActive: boolean;
+  createdAtUtc: string;
+  deactivatedAtUtc: string | null;
 }

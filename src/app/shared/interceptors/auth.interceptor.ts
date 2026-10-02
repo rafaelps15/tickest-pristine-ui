@@ -2,15 +2,17 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/comm
 import { inject } from '@angular/core';
 import { SessionService } from '../services/session.service';
 import { TokenRefreshService } from '../services/token-refresh.service';
+import { CurrentUserService } from '../services/current-user.service';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
-const AUTH_ENDPOINTS = ['/users/login', '/users/refresh-token'];
+const AUTH_ENDPOINTS = ['/users/login', '/users/refresh-token', '/users/logout'];
 
 /** Interceptor para injeção do token JWT, renovação automática em 401 e tratamento de erros de autorização. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const session = inject(SessionService);
     const tokenRefresh = inject(TokenRefreshService);
+    const currentUserService = inject(CurrentUserService);
     const router = inject(Router);
 
     const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => req.url.includes(endpoint));
@@ -32,10 +34,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                 );
             }
 
-            if (error.status === 401 || error.status === 403) {
-                // Refresh token também inválido/expirado, ou acesso negado: limpa e desloga.
+            if (error.status === 401) {
+                // Refresh token também inválido/expirado (ou 401 na própria chamada de autenticação): desloga.
                 session.clearSession();
                 router.navigate(['/login']);
+            }
+
+            if (error.status === 403) {
+                // 403 é falta de permissão, não sessão inválida — mantém a sessão, só atualiza o menu (a permissão pode ter mudado).
+                currentUserService.load().subscribe();
             }
 
             return throwError(() => error);

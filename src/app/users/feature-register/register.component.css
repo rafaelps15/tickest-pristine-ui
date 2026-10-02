@@ -16,11 +16,11 @@
   font-size: 0.95rem;
   color: #2d3748;
   transition: border-color 0.2s, box-shadow 0.2s;
-  background-color: #ffffff;
+  background-color: var(--tk-surface);
 }
 
 .form-control-premium:focus, .form-select-premium:focus {
-  border-color: #696cff;
+  border-color: var(--tk-primary);
   box-shadow: 0 0 0 4px rgba(105, 108, 255, 0.1);
   outline: none;
 }
@@ -67,7 +67,7 @@
 }
 
 .auth-card {
-  background: #fff;
+  background: var(--tk-surface);
   border-radius: 1.25rem;
   width: 100%;
   max-width: 520px;

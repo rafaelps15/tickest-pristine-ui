@@ -5,7 +5,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, of } from 'rxjs';
 import { ChangePasswordRequest, UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { extractErrorMessage, SessionService } from '../../shared';
+import { extractErrorMessage, SessionService, CurrentUserService } from '../../shared';
 
 /** Store da edição de perfil: carrega o perfil de um usuário e salva nome/sobrenome. */
 export const ProfileEditStore = signalStore(
@@ -21,7 +21,8 @@ export const ProfileEditStore = signalStore(
   }),
   withProps(() => ({
     _userDataService: inject(UserDataService),
-    _session: inject(SessionService)
+    _session: inject(SessionService),
+    _currentUserService: inject(CurrentUserService)
   })),
   withProps((store) => ({
     _profileResource: rxResource({
@@ -62,6 +63,7 @@ export const ProfileEditStore = signalStore(
         next: () => {
           patchState(store, { saved: true });
           store._profileResource.reload();
+          store._currentUserService.load().subscribe();
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {

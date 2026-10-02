@@ -51,6 +51,21 @@ describe('ProfileEditComponent', () => {
     expect(email.disabled).toBeTrue();
   });
 
+  it('alterna os três campos de senha entre oculto e texto claro juntos', async () => {
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+
+    const fieldIds = ['#currentPassword', '#newPassword', '#confirmPassword'];
+    const getTypes = () => fieldIds.map(id => (fixture.nativeElement.querySelector(id) as HTMLInputElement).type);
+
+    expect(getTypes()).toEqual(['password', 'password', 'password']);
+
+    fixture.componentInstance.togglePasswordsVisibility();
+    fixture.detectChanges();
+
+    expect(getTypes()).toEqual(['text', 'text', 'text']);
+  });
+
   it('deve salvar com os valores sem espaços nas pontas', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();

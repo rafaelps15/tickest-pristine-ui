@@ -56,38 +56,38 @@
 
     <div class="row g-4">
       <!-- Seção: Informações Pessoais -->
-      <div class="col-md-6">
-        <label class="form-label-premium">Nome</label>
-        <input type="text" class="form-control form-control-premium" placeholder="Ex: Alberto" formControlName="firstName"
+      <div class="col-12 col-md-6">
+        <label class="form-label-premium" for="registerFirstName">Nome</label>
+        <input id="registerFirstName" type="text" class="form-control form-control-premium" placeholder="Ex: Alberto" formControlName="firstName"
                [class.is-invalid]="isFieldInvalid('firstName')" />
         <div class="invalid-feedback">O nome é obrigatório.</div>
       </div>
 
-      <div class="col-md-6">
-        <label class="form-label-premium">Sobrenome</label>
-        <input type="text" class="form-control form-control-premium" placeholder="Ex: Santos Dumont" formControlName="lastName"
+      <div class="col-12 col-md-6">
+        <label class="form-label-premium" for="registerLastName">Sobrenome</label>
+        <input id="registerLastName" type="text" class="form-control form-control-premium" placeholder="Ex: Santos Dumont" formControlName="lastName"
                [class.is-invalid]="isFieldInvalid('lastName')" />
         <div class="invalid-feedback">O sobrenome é obrigatório.</div>
       </div>
 
       <div class="col-12">
-        <label class="form-label-premium">E-mail Corporativo</label>
-        <input type="email" class="form-control form-control-premium" placeholder="colaborador@empresa.com" formControlName="email"
+        <label class="form-label-premium" for="registerEmail">E-mail Corporativo</label>
+        <input id="registerEmail" type="email" class="form-control form-control-premium" placeholder="colaborador@empresa.com" formControlName="email"
                [class.is-invalid]="isFieldInvalid('email')" />
         <div class="invalid-feedback">E-mail corporativo inválido.</div>
       </div>
 
       <!-- Seção: Segurança -->
-      <div class="col-md-6">
-        <label class="form-label-premium">Senha de Acesso</label>
-        <input type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="password"
+      <div class="col-12 col-md-6">
+        <label class="form-label-premium" for="registerPassword">Senha de Acesso</label>
+        <input id="registerPassword" type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="password"
                [class.is-invalid]="isFieldInvalid('password')" />
         <div class="invalid-feedback">Mínimo de 6 caracteres.</div>
       </div>
 
-      <div class="col-md-6">
-        <label class="form-label-premium">Confirmar Senha</label>
-        <input type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="confirmPassword"
+      <div class="col-12 col-md-6">
+        <label class="form-label-premium" for="registerConfirmPassword">Confirmar Senha</label>
+        <input id="registerConfirmPassword" type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="confirmPassword"
                [class.is-invalid]="isFieldInvalid('confirmPassword') || form.hasError('passwordMismatch')" />
         <div class="invalid-feedback">
           @if (form.hasError('passwordMismatch')) { As senhas não coincidem. }

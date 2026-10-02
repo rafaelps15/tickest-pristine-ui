@@ -63,17 +63,17 @@
 </div>
 
 <!-- Modal de criação -->
-<div class="modal fade" id="roleCreateModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="roleCreateModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="roleCreateModalTitle">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
         <div class="modal-header">
-          <h5 class="modal-title">Nova Função</h5>
+          <h5 class="modal-title" id="roleCreateModalTitle">Nova Função</h5>
           <button id="roleCreateModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
-          <label class="form-label">Nome</label>
-          <input type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
+          <label class="form-label" for="roleName">Nome</label>
+          <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -85,11 +85,11 @@
 </div>
 
 <!-- Modal de atribuição de permissões -->
-<div class="modal fade" id="rolePermissionsModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="rolePermissionsModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="rolePermissionsModalTitle">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Permissões — {{ selectedRole()?.name }}</h5>
+        <h5 class="modal-title" id="rolePermissionsModalTitle">Permissões — {{ selectedRole()?.name }}</h5>
         <button id="rolePermissionsModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
@@ -97,7 +97,7 @@
           <h6 class="text-uppercase text-muted small fw-bold mt-3 mb-2">{{ group.title }}</h6>
           <div class="row g-2 mb-2">
             @for (permission of group.permissions; track permission.code) {
-              <div class="col-md-6">
+              <div class="col-12 col-md-6">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" [id]="'perm-' + permission.code"
                          [checked]="isChecked(permission.code)"

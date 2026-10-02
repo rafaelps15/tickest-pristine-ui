@@ -36,10 +36,10 @@
               <td class="text-muted small">{{ sector.description ?? '—' }}</td>
               <td><span class="badge bg-label-primary">{{ departmentName(sector.departmentId) }}</span></td>
               <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#sectorModal" (click)="openEditModal(sector)">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#sectorModal" (click)="openEditModal(sector)" aria-label="Editar setor">
                   <i class="bx bx-edit"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="onDelete(sector)">
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="onDelete(sector)" aria-label="Excluir setor">
                   <i class="bx bx-trash"></i>
                 </button>
               </td>
@@ -52,26 +52,26 @@
 </div>
 
 <!-- Modal de criação/edição -->
-<div class="modal fade" id="sectorModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="sectorModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="sectorModalTitle">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="modal-header">
-          <h5 class="modal-title">{{ editingSector() ? 'Editar Setor' : 'Novo Setor' }}</h5>
+          <h5 class="modal-title" id="sectorModalTitle">{{ editingSector() ? 'Editar Setor' : 'Novo Setor' }}</h5>
           <button id="sectorModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">Nome</label>
-            <input type="text" class="form-control" formControlName="name" />
+            <label class="form-label" for="sectorName">Nome</label>
+            <input id="sectorName" type="text" class="form-control" formControlName="name" />
           </div>
           <div class="mb-3">
-            <label class="form-label">Descrição</label>
-            <textarea class="form-control" rows="3" formControlName="description"></textarea>
+            <label class="form-label" for="sectorDescription">Descrição</label>
+            <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description"></textarea>
           </div>
           <div class="mb-3">
-            <label class="form-label">Departamento</label>
-            <select class="form-select" formControlName="departmentId">
+            <label class="form-label" for="sectorDepartmentId">Departamento</label>
+            <select id="sectorDepartmentId" class="form-select" formControlName="departmentId">
               <option value="" disabled>Selecione...</option>
               @for (department of departmentsStore.departments(); track department.id) {
                 <option [value]="department.id">{{ department.name }}</option>

@@ -4,7 +4,7 @@ import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { ProfileEditStore } from './profile-edit.store';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { SessionService } from '../../shared';
+import { SessionService, CurrentUserService } from '../../shared';
 import { UserProfile } from '../entities/user-profile';
 
 describe('ProfileEditStore', () => {
@@ -13,17 +13,21 @@ describe('ProfileEditStore', () => {
 
   let store: InstanceType<typeof ProfileEditStore>;
   let dataService: jasmine.SpyObj<UserDataService>;
+  let currentUserService: jasmine.SpyObj<CurrentUserService>;
 
   beforeEach(() => {
     dataService = jasmine.createSpyObj('UserDataService', ['getById', 'updateProfile', 'changePassword']);
     dataService.getById.and.returnValue(of(profile));
+    currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
+    currentUserService.load.and.returnValue(of(true));
 
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         ProfileEditStore,
         { provide: UserDataService, useValue: dataService },
-        { provide: SessionService, useValue: { userId: () => userId } }
+        { provide: SessionService, useValue: { userId: () => userId } },
+        { provide: CurrentUserService, useValue: currentUserService }
       ]
     });
     store = TestBed.inject(ProfileEditStore);
@@ -50,6 +54,7 @@ describe('ProfileEditStore', () => {
     expect(store.saving()).toBeFalse();
     expect(store.mutationError()).toBeNull();
     expect(dataService.getById).toHaveBeenCalledTimes(2);
+    expect(currentUserService.load).toHaveBeenCalled();
   });
 
   it('deve expor a mensagem de erro quando o salvamento falhar com 403', async () => {
@@ -62,6 +67,7 @@ describe('ProfileEditStore', () => {
     expect(store.saved()).toBeFalse();
     expect(store.saving()).toBeFalse();
     expect(store.mutationError()).toBe('Você não tem permissão para editar este perfil.');
+    expect(currentUserService.load).not.toHaveBeenCalled();
   });
 
   it('deve alterar a senha e marcar como alterada', async () => {

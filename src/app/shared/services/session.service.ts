@@ -1,5 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { AccessTokens } from '../entities/access-tokens';
+import { CurrentUser } from '../entities/current-user';
 
 /** Payload decodificado de um JWT. */
 type JwtPayload = Record<string, unknown>;
@@ -20,11 +21,14 @@ export class SessionService {
 
   private _token = signal<string | null>(this.getStoredValue(this.ACCESS_TOKEN_KEY));
   private _refreshToken = signal<string | null>(this.getStoredValue(this.REFRESH_TOKEN_KEY));
+  private _currentUser = signal<CurrentUser | null>(null);
 
   /** Access token atual (somente leitura). */
   token = this._token.asReadonly();
   /** Refresh token atual (somente leitura). */
   refreshToken = this._refreshToken.asReadonly();
+  /** Usuário logado, com roles e permissões atualizadas — carregado via CurrentUserService (GET /users/me). */
+  currentUser = this._currentUser.asReadonly();
 
   /** Indica se há um access token armazenado com formato de JWT válido (3 partes). */
   isAuthenticated = computed(() => {
@@ -55,22 +59,17 @@ export class SessionService {
     return typeof claim === 'string' ? claim : null;
   });
 
-  /**
-   * Códigos de permissão do usuário logado, extraídos da claim `permissions`.
-   * O emissor de JWT serializa múltiplas claims de mesmo nome como array — mas
-   * emite uma string solta (não um array de 1 item) quando há só uma permissão,
-   * então os dois formatos precisam ser tratados aqui.
-   */
-  permissions = computed(() => {
-    const claim = this.user()?.['permissions'];
-    if (Array.isArray(claim)) return new Set(claim.filter((c): c is string => typeof c === 'string'));
-    if (typeof claim === 'string') return new Set([claim]);
-    return new Set<string>();
-  });
+  /** Códigos de permissão do usuário logado, vindos de GET /users/me — mesma fonte que a autorização da API usa. */
+  permissions = computed(() => new Set(this.currentUser()?.permissions ?? []));
 
   /** Indica se o usuário logado possui o código de permissão informado. */
   hasPermission(code: string): boolean {
     return this.permissions().has(code);
+  }
+
+  /** Grava o usuário logado (dados, roles e permissões) carregado via GET /users/me. */
+  setCurrentUser(user: CurrentUser | null): void {
+    this._currentUser.set(user);
   }
 
   /** Salva os tokens da sessão e no local storage. */
@@ -91,6 +90,7 @@ export class SessionService {
     }
     this._token.set(null);
     this._refreshToken.set(null);
+    this._currentUser.set(null);
   }
 
   private getStoredValue(key: string): string | null {

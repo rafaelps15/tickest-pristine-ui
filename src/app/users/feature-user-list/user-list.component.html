@@ -2,7 +2,7 @@
   <div class="col-12">
     <div class="d-flex align-items-center justify-content-between">
       <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Gestão de Usuários</h4>
-      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userCreateModal">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userCreateModal" (click)="store.resetState()">
         <i class="bx bx-plus me-1"></i> Novo Usuário
       </button>
     </div>
@@ -13,6 +13,40 @@
   <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }
 
+<!-- Filtros -->
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body p-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label small" for="userSearch">Buscar</label>
+        <input id="userSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
+               [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="userStatus">Status</label>
+        <select id="userStatus" class="form-select" [value]="store.filters().status" (change)="onStatusChange($any($event.target).value)">
+          <option value="All">Todos</option>
+          <option value="Active">Ativos</option>
+          <option value="Inactive">Inativos</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="userCreatedFrom">Cadastrado de</label>
+        <input id="userCreatedFrom" type="date" class="form-control" [value]="store.filters().createdFrom ?? ''" (change)="onCreatedFromChange($any($event.target).value)" />
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small" for="userCreatedTo">até</label>
+        <input id="userCreatedTo" type="date" class="form-control" [value]="store.filters().createdTo ?? ''" (change)="onCreatedToChange($any($event.target).value)" />
+      </div>
+      <div class="col-6 col-md-2">
+        <button type="button" class="btn btn-outline-secondary w-100" (click)="onClearFilters()">
+          <i class="bx bx-x me-1"></i> Limpar filtros
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
@@ -21,17 +55,29 @@
           <th>Nome</th>
           <th>E-mail</th>
           <th>Funções</th>
+          <th>Status</th>
+          <th>Cadastrado em</th>
+          <th>Desativado em</th>
           <th class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
         @if (store.listState().loading) {
-          <tr><td colspan="4" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
+          <tr><td colspan="7" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
         } @else if (store.users().length === 0) {
-          <tr><td colspan="4" class="text-center py-5 text-muted"><i class="bx bx-group display-6 d-block mb-2 opacity-50"></i>Nenhum usuário cadastrado ainda.</td></tr>
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bx bx-group display-6 d-block mb-2 opacity-50"></i>
+              @if (store.total() === 0 && store.filters().status === 'All' && !store.filters().search && !store.filters().createdFrom && !store.filters().createdTo) {
+                Nenhum usuário cadastrado ainda.
+              } @else {
+                Nenhum usuário encontrado com esses filtros.
+              }
+            </td>
+          </tr>
         } @else {
           @for (user of store.users(); track user.id) {
-            <tr>
+            <tr [class.opacity-75]="isInactive(user)">
               <td class="fw-semibold">{{ user.firstName }} {{ user.lastName }}</td>
               <td class="text-muted small">{{ user.email }}</td>
               <td>
@@ -41,13 +87,39 @@
                   <span class="text-muted small">—</span>
                 }
               </td>
+              <td>
+                @if (user.isActive) {
+                  <span class="badge bg-label-success">Ativo</span>
+                } @else {
+                  <span class="badge bg-label-secondary">Inativo</span>
+                }
+              </td>
+              <td class="text-muted small">{{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td class="text-muted small">
+                @if (user.deactivatedAtUtc) {
+                  {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                } @else {
+                  —
+                }
+              </td>
               <td class="text-end">
                 <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#userEditModal" (click)="openEditModal(user)">
                   <i class="bx bx-edit-alt me-1"></i> Editar Cadastro
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
                   <i class="bx bx-shield-quarter me-1"></i> Atribuir Funções
                 </button>
+                @if (!isCurrentUser(user)) {
+                  @if (isInactive(user)) {
+                    <button type="button" class="btn btn-sm btn-outline-success" [disabled]="store.activating()" (click)="onActivate(user)">
+                      <i class="bx bx-check me-1"></i> Reativar
+                    </button>
+                  } @else {
+                    <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deactivating()" (click)="onDeactivate(user)">
+                      <i class="bx bx-block me-1"></i> Desativar
+                    </button>
+                  }
+                }
               </td>
             </tr>
           }
@@ -55,15 +127,53 @@
       </tbody>
     </table>
   </div>
+
+  @if (store.total() > 0) {
+    <div class="card-footer bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
+      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} usuários</span>
+
+      @if (store.totalPages() > 1) {
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
+            Anterior
+          </button>
+
+          @for (pageNumber of pageNumbers(); track pageNumber) {
+            @if (pageNumber === '…') {
+              <span class="px-1 text-muted">…</span>
+            } @else {
+              <button type="button" class="btn btn-sm" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
+                      (click)="store.goToPage(pageNumber)">
+                {{ pageNumber }}
+              </button>
+            }
+          }
+
+          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
+            Próxima
+          </button>
+        </div>
+      }
+
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label small mb-0" for="userPageSize">Por página</label>
+        <select id="userPageSize" class="form-select form-select-sm w-auto" [value]="store.pageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
+          @for (size of pageSizeOptions; track size) {
+            <option [value]="size">{{ size }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
 </div>
 
 <!-- Modal de criação -->
-<div class="modal fade" id="userCreateModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="userCreateModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userCreateModalTitle">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
         <div class="modal-header">
-          <h5 class="modal-title">Novo Usuário</h5>
+          <h5 class="modal-title" id="userCreateModalTitle">Novo Usuário</h5>
           <button id="userCreateModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
@@ -71,25 +181,37 @@
             <div class="alert alert-danger border-0 py-2 small">{{ store.error() }}</div>
           }
           <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Nome</label>
-              <input type="text" class="form-control" formControlName="firstName" />
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="userCreateFirstName">Nome</label>
+              <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50" />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Sobrenome</label>
-              <input type="text" class="form-control" formControlName="lastName" />
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="userCreateLastName">Sobrenome</label>
+              <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50" />
             </div>
             <div class="col-12">
-              <label class="form-label">E-mail</label>
-              <input type="email" class="form-control" formControlName="email" />
+              <label class="form-label" for="userCreateEmail">E-mail</label>
+              <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="email" />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Senha</label>
-              <input type="password" class="form-control" formControlName="password" />
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="userCreatePassword">Senha</label>
+              <div class="input-group">
+                <input id="userCreatePassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="new-password" />
+                <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+                        [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+                  <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+                </button>
+              </div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Confirmar Senha</label>
-              <input type="password" class="form-control" formControlName="confirmPassword" />
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="userCreateConfirmPassword">Confirmar Senha</label>
+              <div class="input-group">
+                <input id="userCreateConfirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="confirmPassword" autocomplete="new-password" />
+                <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+                        [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+                  <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+                </button>
+              </div>
               @if (createForm.hasError('passwordMismatch')) {
                 <div class="form-text text-danger">As senhas não coincidem.</div>
               }
@@ -111,12 +233,12 @@
 </div>
 
 <!-- Modal de edição de cadastro -->
-<div class="modal fade" id="userEditModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="userEditModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userEditModalTitle">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
         <div class="modal-header">
-          <h5 class="modal-title">Editar Cadastro — {{ selectedUserForEdit()?.firstName }} {{ selectedUserForEdit()?.lastName }}</h5>
+          <h5 class="modal-title" id="userEditModalTitle">Editar Cadastro — {{ selectedUserForEdit()?.firstName }} {{ selectedUserForEdit()?.lastName }}</h5>
           <button id="userEditModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
@@ -124,19 +246,24 @@
             <div class="alert alert-danger border-0 py-2 small">{{ store.listState().error }}</div>
           }
           <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Nome</label>
-              <input type="text" class="form-control" formControlName="firstName" />
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="userEditFirstName">Nome</label>
+              <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50" />
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Sobrenome</label>
-              <input type="text" class="form-control" formControlName="lastName" />
+            <div class="col-12 col-md-6">
+              <label class="form-label" for="userEditLastName">Sobrenome</label>
+              <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50" />
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid">Salvar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || store.updatingProfile()">
+            @if (store.updatingProfile()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Salvar
+          </button>
         </div>
       </form>
     </div>
@@ -144,11 +271,11 @@
 </div>
 
 <!-- Modal de atribuição de roles -->
-<div class="modal fade" id="userRolesModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="userRolesModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userRolesModalTitle">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Atribuir Funções — {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }}</h5>
+        <h5 class="modal-title" id="userRolesModalTitle">Atribuir Funções — {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }}</h5>
         <button id="userRolesModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
@@ -169,7 +296,12 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" (click)="onAssignRolesSubmit()">Salvar</button>
+        <button type="button" class="btn btn-primary" [disabled]="store.assigningRoles()" (click)="onAssignRolesSubmit()">
+          @if (store.assigningRoles()) {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+          }
+          Salvar
+        </button>
       </div>
     </div>
   </div>

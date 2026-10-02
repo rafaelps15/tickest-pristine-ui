@@ -11,7 +11,7 @@ import { RouterModule } from '@angular/router';
       <div class="auth-layout-card border-0">
         <div class="auth-layout-header">
           <div class="brand-wrapper d-flex justify-content-center align-items-center mb-5">
-            <img src="/img/logo/logo_letra.png" alt="Logo" style="width: 48px; height: auto;">
+            <img src="/img/logo/logo_letra.png" alt="Tickest" style="width: 48px; height: auto;">
             <span class="ms-1 text-primary brand-text">ickest</span>
           </div>
         </div>
@@ -49,10 +49,7 @@ import { RouterModule } from '@angular/router';
       text-transform: lowercase;
       line-height: 1;
       font-weight: 700;
-      background: linear-gradient(to right, #696cff, #3a3ca3);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--tk-primary-darker);
     }
     @keyframes auth-card-in {
       from { opacity: 0; transform: translateY(12px) scale(0.98); }

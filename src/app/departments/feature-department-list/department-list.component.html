@@ -44,10 +44,10 @@
                 }
               </td>
               <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#departmentModal" (click)="openEditModal(department)">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#departmentModal" (click)="openEditModal(department)" aria-label="Editar departamento">
                   <i class="bx bx-edit"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="onDelete(department)">
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="onDelete(department)" aria-label="Excluir departamento">
                   <i class="bx bx-trash"></i>
                 </button>
               </td>
@@ -60,22 +60,22 @@
 </div>
 
 <!-- Modal de criação/edição -->
-<div class="modal fade" id="departmentModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="departmentModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="departmentModalTitle">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="modal-header">
-          <h5 class="modal-title">{{ editingDepartment() ? 'Editar Departamento' : 'Novo Departamento' }}</h5>
+          <h5 class="modal-title" id="departmentModalTitle">{{ editingDepartment() ? 'Editar Departamento' : 'Novo Departamento' }}</h5>
           <button id="departmentModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">Nome</label>
-            <input type="text" class="form-control" formControlName="name" />
+            <label class="form-label" for="departmentName">Nome</label>
+            <input id="departmentName" type="text" class="form-control" formControlName="name" />
           </div>
           <div class="mb-3">
-            <label class="form-label">Descrição</label>
-            <textarea class="form-control" rows="3" formControlName="description"></textarea>
+            <label class="form-label" for="departmentDescription">Descrição</label>
+            <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description"></textarea>
           </div>
         </div>
         <div class="modal-footer">

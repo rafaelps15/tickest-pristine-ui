@@ -44,6 +44,11 @@ export const routes: Routes = [
           .then(m => m.TicketCreateComponent)
       },
       {
+        path: 'tickets/:id',
+        loadComponent: () => import('../../tickets/feature-ticket-detail/ticket-detail.component')
+          .then(m => m.TicketDetailComponent)
+      },
+      {
         path: 'perfil',
         loadComponent: () => import('../../users/feature-profile-edit/profile-edit.component')
           .then(m => m.ProfileEditComponent)

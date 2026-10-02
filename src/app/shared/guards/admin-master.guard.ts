@@ -1,18 +1,21 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
+import { map } from 'rxjs';
 import { SessionService } from '../services/session.service';
+import { CurrentUserService } from '../services/current-user.service';
 
 /**
  * Guard para rotas administrativas.
  *
  * A rota deve declarar a permissão exigida em `data.requiredPermission` (código
  * igual ao usado pelo back-end em `[HasPermission]`, ex. `"users:read"`).
- * O JWT já carrega a claim `permissions` do usuário (ver SessionService), então
- * aqui validamos autenticação e a posse da permissão antes de liberar a rota —
+ * As permissões vêm de GET /users/me (ver CurrentUserService/SessionService), por isso
+ * aqui garantimos que o usuário logado já foi carregado antes de checar a permissão —
  * sem isso, o usuário só descobria via 403 da API depois de já estar na tela.
  */
 export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const session = inject(SessionService);
+  const currentUserService = inject(CurrentUserService);
   const router = inject(Router);
 
   if (!session.isAuthenticated()) {
@@ -21,9 +24,12 @@ export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =
 
   const requiredPermission = route.data['requiredPermission'] as string | undefined;
 
-  if (requiredPermission && !session.hasPermission(requiredPermission)) {
-    return router.createUrlTree(['/dashboard']);
-  }
-
-  return true;
+  return currentUserService.ensureLoaded().pipe(
+    map(() => {
+      if (requiredPermission && !session.hasPermission(requiredPermission)) {
+        return router.createUrlTree(['/dashboard']);
+      }
+      return true;
+    })
+  );
 };

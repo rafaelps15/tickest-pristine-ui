@@ -11,7 +11,7 @@
 }
 
 .card-stats {
-    background-color: #ffffff;
+    background-color: var(--tk-surface);
 }
 
 .card-stats .badge.rounded {
@@ -24,7 +24,7 @@
 }
 
 .card-title {
-    color: #566a7f;
+    color: var(--tk-text-secondary);
     font-weight: 500;
 }
 

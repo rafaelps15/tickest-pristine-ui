@@ -1,0 +1,86 @@
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex align-items-center justify-content-between">
+      <h4 class="fw-bold py-3 mb-0">
+        <span class="text-muted fw-light">Meus Tickets /</span> {{ ticket()?.title ?? 'Ticket' }}
+      </h4>
+      <a routerLink="/tickets" class="btn btn-outline-secondary btn-sm">
+        <i class="bx bx-arrow-back me-1"></i> Voltar
+      </a>
+    </div>
+  </div>
+</div>
+
+@if (ticket(); as t) {
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="badge" [ngClass]="statusBadgeClass[t.status]">{{ statusLabels[t.status] }}</span>
+        <span class="badge" [ngClass]="priorityBadgeClass[t.priority]">{{ priorityLabels[t.priority] }}</span>
+      </div>
+      <p class="text-muted mb-0">{{ t.description }}</p>
+    </div>
+  </div>
+} @else {
+  <div class="alert alert-warning border-0 shadow-sm">
+    Não foi possível carregar os dados deste ticket — ele pode não ser seu ou a lista ainda está carregando.
+  </div>
+}
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
+    <h5 class="mb-0 fw-bold text-dark">Anexos</h5>
+    <label class="btn btn-sm btn-primary mb-0" [class.disabled]="store.uploading()">
+      @if (store.uploading()) {
+        <span class="spinner-border spinner-border-sm me-1"></span>
+      } @else {
+        <i class="bx bx-upload me-1"></i>
+      }
+      Anexar arquivo
+      <input type="file" class="d-none" [disabled]="store.uploading()" (change)="onFileSelected($event)" />
+    </label>
+  </div>
+
+  <div class="card-body p-4">
+    @if (fileValidationError()) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ fileValidationError() }}</div>
+    }
+    @if (store.uploadError()) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ store.uploadError() }}</div>
+    }
+    @if (store.downloadError()) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ store.downloadError() }}</div>
+    }
+    @if (store.listState().error) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ store.listState().error }}</div>
+    }
+
+    @if (store.listState().loading) {
+      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+    } @else if (store.attachments().length === 0) {
+      <p class="text-muted small mb-0">Nenhum anexo enviado ainda.</p>
+    } @else {
+      <ul class="list-group list-group-flush">
+        @for (attachment of store.attachments(); track attachment.id) {
+          <li class="list-group-item d-flex align-items-center justify-content-between px-0">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bx bx-file fs-4 text-muted"></i>
+              <div>
+                <div class="fw-semibold">{{ attachment.fileName }}</div>
+                <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+            </div>
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.downloading()" (click)="store.download(attachment)">
+                <i class="bx bx-download"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deleting()" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
+                <i class="bx bx-trash"></i>
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

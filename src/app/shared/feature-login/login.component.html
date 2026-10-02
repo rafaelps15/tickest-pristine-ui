@@ -11,8 +11,10 @@
       type="email"
       class="form-control form-control-lg"
       id="email"
+      name="email"
       formControlName="email"
       placeholder="seu@email.com"
+      autocomplete="email"
       autofocus
       [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
     />
@@ -33,14 +35,17 @@
       <input
         [type]="showPassword() ? 'text' : 'password'"
         id="password"
+        name="password"
         class="form-control form-control-lg"
         formControlName="password"
         placeholder="••••••••••••"
+        autocomplete="current-password"
         [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
       />
-      <span class="input-group-text cursor-pointer" (click)="togglePassword()">
+      <button type="button" class="input-group-text cursor-pointer" (click)="togglePassword()"
+              [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-pressed]="showPassword()">
         <i class="bx" [class.bx-show]="showPassword()" [class.bx-hide]="!showPassword()"></i>
-      </span>
+      </button>
       @if (form.get('password')?.invalid && form.get('password')?.touched) {
         <div class="invalid-feedback">A senha é necessária.</div>
       }

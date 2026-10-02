@@ -1,4 +1,4 @@
-import { Component, inject, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, effect, signal, ChangeDetectionStrategy } from '@angular/core';
 import { AbstractControl, ReactiveFormsModule, FormBuilder, ValidationErrors, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ProfileEditStore } from '../application/profile-edit.store';
@@ -35,10 +35,10 @@ export class ProfileEditComponent {
   private readonly fb = inject(FormBuilder);
   protected readonly store = inject(ProfileEditStore);
 
-  /** Formulário com as mesmas regras do UpdateUserProfileCommandValidator (nome e sobrenome obrigatórios). */
+  /** Formulário com as mesmas regras do UpdateUserProfileCommandValidator, mais o limite de tamanho já usado no cadastro administrativo. */
   readonly form = this.fb.nonNullable.group({
-    firstName: ['', [Validators.required]],
-    lastName: ['', [Validators.required]]
+    firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+    lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]]
   });
 
   /** Formulário com as mesmas regras do ChangeUserPasswordCommandValidator. */
@@ -47,6 +47,9 @@ export class ProfileEditComponent {
     newPassword: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
     confirmPassword: ['', [Validators.required]]
   }, { validators: passwordChangeGroupValidator });
+
+  /** Controla se os três campos de senha são exibidos em texto claro. */
+  readonly showPasswords = signal(false);
 
   constructor() {
     this.store.loadCurrentUser();
@@ -88,6 +91,11 @@ export class ProfileEditComponent {
 
     const { firstName, lastName } = this.form.getRawValue();
     this.store.save({ firstName: firstName.trim(), lastName: lastName.trim() });
+  }
+
+  /** Alterna a exibição em texto claro dos três campos de senha. */
+  togglePasswordsVisibility(): void {
+    this.showPasswords.update(visible => !visible);
   }
 
   /** Envia a troca de senha, ou marca os campos inválidos. */

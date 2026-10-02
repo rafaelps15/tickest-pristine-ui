@@ -147,6 +147,19 @@ body {
   box-shadow: 0 0 0 0.2rem rgba(var(--tk-primary-rgb), 0.15);
 }
 
+.input-group:focus-within .form-control,
+.input-group:focus-within .input-group-text {
+  border-color: var(--tk-primary);
+}
+
+/*
+ * Cursor de clique para elementos interativos que não são <button>/<a> nativos (ex.: o item
+ * "Sair" do menu, o botão de mostrar/ocultar senha) — usada em mais de uma tela, por isso global.
+ */
+.cursor-pointer {
+  cursor: pointer;
+}
+
 /* Modais: mesma linguagem visual dos cards, com mais elevação por ficarem por cima */
 .modal-content {
   border: none;

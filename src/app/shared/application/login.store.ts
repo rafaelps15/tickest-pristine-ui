@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { LoginCredentials } from '../entities/login-credentials';
 import { AuthDataService } from '../infrastructure/auth.data.service';
 import { SessionService } from '../services/session.service';
+import { CurrentUserService } from '../services/current-user.service';
 import { extractErrorMessage } from '../utils/http-error.util';
 
 /** Store da tela de login: autentica e inicia a sessão em caso de sucesso. */
@@ -15,10 +16,11 @@ export const LoginStore = signalStore(
   withProps(() => ({
     _authDataService: inject(AuthDataService),
     _session: inject(SessionService),
+    _currentUserService: inject(CurrentUserService),
     _router: inject(Router)
   })),
   withMethods((store) => ({
-    /** Autentica com as credenciais informadas e, se bem-sucedido, navega para o dashboard. */
+    /** Autentica com as credenciais informadas e, se bem-sucedido, carrega o usuário logado antes de navegar para o dashboard. */
     login(credentials: LoginCredentials): void {
       patchState(store, { loading: true, error: null });
 
@@ -27,13 +29,15 @@ export const LoginStore = signalStore(
       ).subscribe({
         next: (tokens) => {
           store._session.saveSession(tokens);
-          store._router.navigate(['/dashboard']);
+          store._currentUserService.load().subscribe(() => {
+            store._router.navigate(['/dashboard']);
+          });
         },
         error: (err: HttpErrorResponse) => {
-          // Login responde 404 (UserErrors.NotFoundByEmail) tanto para usuário
+          // Login responde 400 (UserErrors.InvalidCredentials) tanto para usuário
           // inexistente quanto para senha incorreta, para não vazar qual dos dois é o caso.
           const message = extractErrorMessage(err, {
-            404: 'E-mail ou senha incorretos.',
+            400: 'E-mail ou senha incorretos.',
             500: 'Erro interno no servidor.'
           }, 'E-mail ou senha incorretos.');
           patchState(store, { error: message });
