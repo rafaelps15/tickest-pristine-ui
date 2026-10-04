@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { TicketDetailComponent } from './ticket-detail.component';
 import { TicketsStore } from '../application/tickets.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
@@ -8,6 +9,7 @@ import { Ticket } from '../entities/ticket';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
+import { ConfirmDialogService } from '../../shared';
 
 describe('TicketDetailComponent', () => {
   const ticket: Ticket = {
@@ -45,10 +47,12 @@ describe('TicketDetailComponent', () => {
 
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let attachmentsStoreFake: ReturnType<typeof createAttachmentsStoreFake>;
+  let confirmDialogServiceFake: { confirm: jasmine.Spy };
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
     attachmentsStoreFake = createAttachmentsStoreFake();
+    confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
 
     await TestBed.configureTestingModule({
       imports: [TicketDetailComponent],
@@ -57,7 +61,8 @@ describe('TicketDetailComponent', () => {
         provideRouter([]),
         { provide: TicketsStore, useValue: ticketsStoreFake },
         { provide: TicketAttachmentsStore, useValue: attachmentsStoreFake },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }) } } }
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }) } } },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
       ]
     }).compileComponents();
   });
@@ -122,7 +127,7 @@ describe('TicketDetailComponent', () => {
   });
 
   it('exclui o anexo quando confirmado', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -132,7 +137,7 @@ describe('TicketDetailComponent', () => {
   });
 
   it('não exclui o anexo quando a confirmação for cancelada', async () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 

@@ -21,10 +21,12 @@ describe('DashboardComponent', () => {
 
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
+  let currentUser: ReturnType<typeof signal<{ firstName: string } | null>>;
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
     hasPermission = jasmine.createSpy('hasPermission').and.returnValue(false);
+    currentUser = signal<{ firstName: string } | null>({ firstName: 'Maria' });
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -32,9 +34,24 @@ describe('DashboardComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketsStore, useValue: ticketsStoreFake },
-        { provide: SessionService, useValue: { hasPermission } }
+        { provide: SessionService, useValue: { hasPermission, currentUser } }
       ]
     }).compileComponents();
+  });
+
+  it('dá boas-vindas ao usuário logado pelo primeiro nome', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Seja bem-vindo(a), Maria!');
+  });
+
+  it('mostra uma saudação genérica quando o usuário logado ainda não foi carregado', async () => {
+    currentUser.set(null);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Seja bem-vindo(a)!');
   });
 
   it('carrega os tickets do usuário logado ao inicializar', async () => {

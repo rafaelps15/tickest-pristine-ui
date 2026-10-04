@@ -40,9 +40,11 @@ confirmado — não inventar um agora; registrar quando decidido.
 
 ## Operating Context
 
-Departamentos e setores típicos já mapeados nos dados de exemplo do back-end: TI (Helpdesk,
+Departamentos e setores típicos, criados pela estrutura inicial do back-end: TI (Helpdesk,
 Infraestrutura), RH (Recrutamento, Departamento Pessoal), Financeiro (Contas a Pagar,
 Contabilidade), Comercial (Vendas, Atendimento ao Cliente), Facilities (Manutenção, Logística).
+Setor sempre pertence a um departamento; na interface, os setores são cadastrados dentro do
+departamento, na tela "Departamentos e setores".
 
 Fluxo do chamado: Aberto → Em Andamento → Resolvido → Fechado, com Cancelamento e Reabertura.
 
@@ -64,8 +66,9 @@ Fluxo do chamado: Aberto → Em Andamento → Resolvido → Fechado, com Cancela
 
 ## Evidence on Hand
 
-- Dados de exemplo (seed de desenvolvimento, back-end): departamentos/setores acima e 8 tickets
-  de exemplo cobrindo todos os departamentos.
+- Estrutura inicial (seed do back-end, todos os ambientes, só num banco sem departamentos):
+  departamentos/setores acima. Chamados fictícios só em desenvolvimento (`Seeding:SampleData`),
+  distribuídos pelos setores existentes.
 - Logo existente em `public/img/logo/logo.png` e `public/img/logo/logo_letra.png`.
 - Nenhum case, depoimento ou dado de cliente real documentado — não inventar.
 

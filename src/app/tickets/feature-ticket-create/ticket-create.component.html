@@ -41,7 +41,7 @@
             <label class="form-label" for="ticketDepartmentId">Departamento</label>
             <select id="ticketDepartmentId" class="form-select" formControlName="departmentId">
               <option value="" disabled>Selecione...</option>
-              @for (department of departmentsStore.departments(); track department.id) {
+              @for (department of departmentsWithSectors(); track department.id) {
                 <option [value]="department.id">{{ department.name }}</option>
               }
             </select>

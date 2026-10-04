@@ -6,4 +6,5 @@ export * from './entities/current-user';
 export * from './infrastructure/auth.data.service';
 export * from './services/session.service';
 export * from './services/current-user.service';
+export * from './services/confirm-dialog.service';
 export * from './utils/http-error.util';

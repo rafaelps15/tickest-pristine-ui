@@ -1,4 +1,5 @@
-import { Component, inject, signal, ElementRef, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, ElementRef, AfterViewInit, OnInit, OnDestroy, PLATFORM_ID, ChangeDetectionStrategy } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { SessionService } from '../../../services/session.service';
@@ -17,14 +18,34 @@ declare const bootstrap: {
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./main-layout.component.css']
 })
-export class MainLayoutComponent implements AfterViewInit {
+export class MainLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly authDataService = inject(AuthDataService);
+  private readonly platformId = inject(PLATFORM_ID);
   protected readonly sessionService = inject(SessionService);
 
   /** Controla o menu retrátil (off-canvas) usado abaixo do breakpoint xl — ver main-layout.component.css. */
   readonly menuOpen = signal(false);
+
+  private darkModeQuery: MediaQueryList | null = null;
+  private readonly applyDarkModePreference = (query: MediaQueryList | MediaQueryListEvent): void => {
+    document.documentElement.setAttribute('data-bs-theme', query.matches ? 'dark' : 'light');
+  };
+
+  /**
+   * Área autenticada segue a preferência de tema do SO (claro/escuro) — login/registro ficam
+   * sempre no visual de marca claro (ver AuthLayoutComponent), só a área de trabalho se adapta.
+   * Sem toggle manual por enquanto: se o usuário pedir, dá pra persistir uma escolha explícita
+   * depois sem precisar tocar nos tokens, já que tudo já está em `[data-bs-theme="dark"]`.
+   */
+  ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    this.darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    this.applyDarkModePreference(this.darkModeQuery);
+    this.darkModeQuery.addEventListener('change', this.applyDarkModePreference);
+  }
 
   /**
    * Força o dropdown do perfil a se posicionar com estratégia `fixed` (relativa à viewport),
@@ -39,6 +60,11 @@ export class MainLayoutComponent implements AfterViewInit {
         popperConfig: (defaultConfig: Record<string, unknown>) => ({ ...defaultConfig, strategy: 'fixed' })
       });
     }
+  }
+
+  /** Remove o listener de preferência de tema para não vazar entre navegações. */
+  ngOnDestroy(): void {
+    this.darkModeQuery?.removeEventListener('change', this.applyDarkModePreference);
   }
 
   toggleMenu(): void {

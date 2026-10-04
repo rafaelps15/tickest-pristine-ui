@@ -30,11 +30,30 @@
   font-weight: 400;
 }
 
+/*
+ * Este formulário é reaproveitado tanto na página pública de autorregistro (AuthLayout, sempre
+ * clara) quanto na tela administrativa "Gestão de Usuários" dentro do MainLayout (que acompanha
+ * o dark mode) — por isso precisa da própria variante escura, e não só dos tokens --tk-*.
+ */
+[data-bs-theme="dark"] .form-label-premium {
+  color: var(--tk-text-secondary);
+}
+
+[data-bs-theme="dark"] .form-control-premium,
+[data-bs-theme="dark"] .form-select-premium {
+  border-color: var(--tk-border);
+  color: var(--tk-text-primary);
+}
+
+[data-bs-theme="dark"] .form-control-premium::placeholder {
+  color: var(--tk-text-muted);
+}
+
 .btn-premium {
   padding: 1rem;
   border-radius: 0.6rem;
   font-weight: 700;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Sora', sans-serif;
   letter-spacing: 1px;
   text-transform: uppercase;
   font-size: 0.9rem;

@@ -33,7 +33,10 @@ const PRIORITY_ORDER = [
     TicketPriority.Urgent
 ] as const;
 
-const CHART_SURFACE = '#fcfcfb';
+const CHART_SURFACE_LIGHT = '#fcfcfb';
+const CHART_SURFACE_DARK = '#212529';
+const CHART_TEXT_LIGHT = '#666';
+const CHART_TEXT_DARK = '#adb5bd';
 
 /**
  * Carrega o Chart.js sob demanda (import dinâmico) em vez de embutido no chunk do dashboard —
@@ -112,10 +115,18 @@ export class DashboardComponent implements OnInit {
     return row.reduce((sum, count) => sum + count, 0);
   }
 
-  /** Desenha (ou redesenha) o gráfico de barras empilhadas de tickets por prioridade/status. */
+  /**
+   * Desenha (ou redesenha) o gráfico de barras empilhadas de tickets por prioridade/status.
+   * Cores de texto/borda são lidas de `data-bs-theme` no momento do desenho — se o SO mudar de
+   * tema enquanto o dashboard já está aberto, o gráfico só reflete isso no próximo redesenho
+   * (nova lista de tickets ou reabertura da tela), não ao vivo.
+   */
   private async renderChart(canvasRef: ElementRef<HTMLCanvasElement>, matrix: number[][]) {
     const { Chart } = await loadChart();
     const ctx = canvasRef.nativeElement.getContext('2d');
+    const isDarkTheme = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    const surfaceColor = isDarkTheme ? CHART_SURFACE_DARK : CHART_SURFACE_LIGHT;
+    const textColor = isDarkTheme ? CHART_TEXT_DARK : CHART_TEXT_LIGHT;
 
     this.chart?.destroy();
 
@@ -127,7 +138,7 @@ export class DashboardComponent implements OnInit {
           label: TICKET_STATUS_LABELS[status],
           data: matrix.map(row => row[statusIndex]),
           backgroundColor: STATUS_COLORS[status],
-          borderColor: CHART_SURFACE,
+          borderColor: surfaceColor,
           borderWidth: 2,
           stack: 'tickets'
         }))
@@ -135,19 +146,21 @@ export class DashboardComponent implements OnInit {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        color: textColor,
         scales: {
           x: {
             stacked: true,
-            grid: { display: false }
+            grid: { display: false },
+            ticks: { color: textColor }
           },
           y: {
             stacked: true,
             beginAtZero: true,
-            ticks: { precision: 0 }
+            ticks: { precision: 0, color: textColor }
           }
         },
         plugins: {
-          legend: { position: 'bottom' },
+          legend: { position: 'bottom', labels: { color: textColor } },
           tooltip: { mode: 'index', intersect: false }
         }
       }

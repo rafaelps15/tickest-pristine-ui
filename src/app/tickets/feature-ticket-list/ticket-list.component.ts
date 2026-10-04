@@ -5,6 +5,7 @@ import { TicketsStore } from '../application/tickets.store';
 import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
+import { ConfirmDialogService } from '../../shared';
 
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
@@ -16,6 +17,7 @@ import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities
 })
 export class TicketListComponent implements OnInit {
     protected readonly store = inject(TicketsStore);
+    private readonly confirmDialogService = inject(ConfirmDialogService);
 
     readonly statusLabels = TICKET_STATUS_LABELS;
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
@@ -41,8 +43,13 @@ export class TicketListComponent implements OnInit {
 
     /** Confirma e exclui o ticket selecionado. */
     onDelete(ticket: Ticket): void {
-        if (confirm(`Tem certeza que deseja excluir o ticket "${ticket.title}"?`)) {
-            this.store.remove(ticket.id);
-        }
+        this.confirmDialogService.confirm({
+            title: `Excluir o ticket "${ticket.title}"?`,
+            message: 'Essa ação não pode ser desfeita.',
+            confirmLabel: 'Excluir',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (confirmed) this.store.remove(ticket.id);
+        });
     }
 }

@@ -6,6 +6,7 @@ import { TicketAttachmentsStore } from '../application/ticket-attachments.store'
 import { TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
+import { ConfirmDialogService } from '../../shared';
 
 /** Tela de detalhe de um ticket: dados básicos (do que já está carregado na listagem) e os anexos. */
 @Component({
@@ -18,6 +19,7 @@ export class TicketDetailComponent implements OnInit {
     private readonly route = inject(ActivatedRoute);
     protected readonly ticketsStore = inject(TicketsStore);
     protected readonly store = inject(TicketAttachmentsStore);
+    private readonly confirmDialogService = inject(ConfirmDialogService);
 
     protected readonly statusLabels = TICKET_STATUS_LABELS;
     protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
@@ -72,9 +74,13 @@ export class TicketDetailComponent implements OnInit {
 
     /** Confirma e exclui o anexo selecionado. */
     onDeleteAttachment(attachmentId: string, fileName: string): void {
-        const confirmed = confirm(`Excluir o anexo "${fileName}"? Essa ação não pode ser desfeita.`);
-        if (!confirmed) return;
-
-        this.store.delete(attachmentId);
+        this.confirmDialogService.confirm({
+            title: `Excluir o anexo "${fileName}"?`,
+            message: 'Essa ação não pode ser desfeita.',
+            confirmLabel: 'Excluir',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (confirmed) this.store.delete(attachmentId);
+        });
     }
 }

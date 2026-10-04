@@ -4,10 +4,14 @@ import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { UsersStore } from '../application/users.store';
-import { UserSummary } from '../entities/user-summary';
+import { UserSummary, UserRoleSummary } from '../entities/user-summary';
 import { UserStatus } from '../entities/user-filters';
 import { RolesStore } from '../../roles';
-import { SessionService } from '../../shared';
+import { SessionService, ConfirmDialogService } from '../../shared';
+import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
+
+/** Quantidade de badges de função exibidos antes de agrupar o restante em "+N". */
+const MAX_VISIBLE_ROLE_BADGES = 2;
 
 /** Validador customizado para confirmar se as senhas coincidem. */
 const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -21,15 +25,17 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
     selector: 'app-user-list',
-    imports: [ReactiveFormsModule, DatePipe],
+    imports: [ReactiveFormsModule, DatePipe, DropdownFixedPositionDirective],
     templateUrl: './user-list.component.html',
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    styleUrl: './user-list.component.css'
 })
 export class UserListComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     protected readonly store = inject(UsersStore);
     protected readonly rolesStore = inject(RolesStore);
     private readonly sessionService = inject(SessionService);
+    private readonly confirmDialogService = inject(ConfirmDialogService);
 
     createForm = this.fb.group({
         firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
@@ -160,6 +166,21 @@ export class UserListComponent implements OnInit {
         return !user.isActive;
     }
 
+    /** Até {@link MAX_VISIBLE_ROLE_BADGES} funções exibidas como badge; o restante vira um badge "+N". */
+    visibleRoles(user: UserSummary): UserRoleSummary[] {
+        return user.roles.slice(0, MAX_VISIBLE_ROLE_BADGES);
+    }
+
+    /** Quantidade de funções além das já exibidas como badge. */
+    hiddenRolesCount(user: UserSummary): number {
+        return Math.max(0, user.roles.length - MAX_VISIBLE_ROLE_BADGES);
+    }
+
+    /** Nomes das funções ocultas no badge "+N", para exibir no `title` (tooltip nativo). */
+    hiddenRolesNames(user: UserSummary): string {
+        return user.roles.slice(MAX_VISIBLE_ROLE_BADGES).map(role => role.name).join(', ');
+    }
+
     /** Impede desativar/reativar a própria conta logada, que travaria a sessão atual sem recuperação pela UI. */
     isCurrentUser(user: UserSummary): boolean {
         return user.id === this.sessionService.userId();
@@ -167,18 +188,26 @@ export class UserListComponent implements OnInit {
 
     /** Confirma e desativa o usuário selecionado, bloqueando o login dele. */
     onDeactivate(user: UserSummary): void {
-        const confirmed = confirm(`Desativar "${user.firstName} ${user.lastName}"? O login dele será bloqueado imediatamente.`);
-        if (!confirmed) return;
-
-        this.store.deactivate(user.id);
+        this.confirmDialogService.confirm({
+            title: `Desativar "${user.firstName} ${user.lastName}"?`,
+            message: 'O login dele será bloqueado imediatamente.',
+            confirmLabel: 'Desativar',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (confirmed) this.store.deactivate(user.id);
+        });
     }
 
     /** Confirma e reativa o usuário selecionado, liberando o login dele de novo. */
     onActivate(user: UserSummary): void {
-        const confirmed = confirm(`Reativar "${user.firstName} ${user.lastName}"? O login dele voltará a funcionar.`);
-        if (!confirmed) return;
-
-        this.store.activate(user.id);
+        this.confirmDialogService.confirm({
+            title: `Reativar "${user.firstName} ${user.lastName}"?`,
+            message: 'O login dele voltará a funcionar.',
+            confirmLabel: 'Reativar',
+            variant: 'success'
+        }).subscribe(confirmed => {
+            if (confirmed) this.store.activate(user.id);
+        });
     }
 
     /** Muda o filtro de status da listagem. */

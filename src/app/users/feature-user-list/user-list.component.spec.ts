@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { of } from 'rxjs';
 import { UserListComponent } from './user-list.component';
 import { UsersStore } from '../application/users.store';
 import { RolesStore } from '../../roles';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { Role } from '../../roles';
-import { SessionService } from '../../shared';
+import { SessionService, ConfirmDialogService } from '../../shared';
 
 describe('UserListComponent', () => {
   const activeUser: UserSummary = {
@@ -61,11 +62,13 @@ describe('UserListComponent', () => {
   let usersStoreFake: ReturnType<typeof createUsersStoreFake>;
   let rolesStoreFake: { roles: ReturnType<typeof signal<Role[]>>; load: jasmine.Spy };
   let sessionServiceFake: { userId: jasmine.Spy };
+  let confirmDialogServiceFake: { confirm: jasmine.Spy };
 
   beforeEach(async () => {
     usersStoreFake = createUsersStoreFake();
     rolesStoreFake = { roles: signal<Role[]>([role]), load: jasmine.createSpy('load') };
     sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id') };
+    confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
 
     await TestBed.configureTestingModule({
       imports: [UserListComponent],
@@ -73,7 +76,8 @@ describe('UserListComponent', () => {
         provideZonelessChangeDetection(),
         { provide: UsersStore, useValue: usersStoreFake },
         { provide: RolesStore, useValue: rolesStoreFake },
-        { provide: SessionService, useValue: sessionServiceFake }
+        { provide: SessionService, useValue: sessionServiceFake },
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
       ]
     }).compileComponents();
   });
@@ -97,6 +101,25 @@ describe('UserListComponent', () => {
     expect(text).toContain('Agent');
     expect(text).toContain('Ativo');
     expect(text).toContain('01/01/2026');
+  });
+
+  it('mostra no máximo 2 badges de função e agrupa o restante em "+N"', async () => {
+    const userWithManyRoles: UserSummary = {
+      ...activeUser,
+      roles: [
+        { id: 'role-1', name: 'Agent' },
+        { id: 'role-2', name: 'Supervisor' },
+        { id: 'role-3', name: 'Financeiro' }
+      ]
+    };
+    usersStoreFake.users.set([userWithManyRoles]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.visibleRoles(userWithManyRoles).map(r => r.name)).toEqual(['Agent', 'Supervisor']);
+    expect(fixture.componentInstance.hiddenRolesCount(userWithManyRoles)).toBe(1);
+    expect(fixture.componentInstance.hiddenRolesNames(userWithManyRoles)).toBe('Financeiro');
+    expect(fixture.nativeElement.textContent).toContain('+1');
   });
 
   it('busca com debounce de 300ms após parar de digitar', async () => {
@@ -321,7 +344,7 @@ describe('UserListComponent', () => {
   });
 
   it('desativa o usuário quando confirmado', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
@@ -331,7 +354,7 @@ describe('UserListComponent', () => {
   });
 
   it('não desativa o usuário quando a confirmação for cancelada', async () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
@@ -341,7 +364,7 @@ describe('UserListComponent', () => {
   });
 
   it('reativa o usuário quando confirmado', async () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
     usersStoreFake.users.set([inactiveUser]);
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
@@ -352,7 +375,7 @@ describe('UserListComponent', () => {
   });
 
   it('não reativa o usuário quando a confirmação for cancelada', async () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
@@ -369,8 +392,8 @@ describe('UserListComponent', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Desativar');
     expect(text).toContain('Reativar');
-    expect(fixture.nativeElement.querySelector('.btn-outline-danger')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.btn-outline-success')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.dropdown-item.text-danger')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.dropdown-item.text-success')).not.toBeNull();
   });
 
   it('não mostra nem Desativar nem Reativar para a própria conta logada', async () => {
@@ -378,8 +401,8 @@ describe('UserListComponent', () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('.btn-outline-danger')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.btn-outline-success')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.dropdown-item.text-danger')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.dropdown-item.text-success')).toBeNull();
   });
 
   it('deixa a linha de um usuário inativo mais apagada', async () => {

@@ -1,5 +1,5 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-
+import { Component, ChangeDetectionStrategy, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
 /** Layout para as páginas de autenticação (Login, Registro, etc). */
@@ -45,7 +45,7 @@ import { RouterModule } from '@angular/router';
     .brand-text {
       font-size: 3rem;
       letter-spacing: -2px;
-      font-family: 'Montserrat', sans-serif;
+      font-family: 'Sora', sans-serif;
       text-transform: lowercase;
       line-height: 1;
       font-weight: 700;
@@ -57,4 +57,16 @@ import { RouterModule } from '@angular/router';
     }
   `]
 })
-export class AuthLayoutComponent {}
+export class AuthLayoutComponent implements OnInit {
+  private readonly platformId = inject(PLATFORM_ID);
+
+  /**
+   * Força sempre o tema claro — login/registro mantêm o visual de marca fixo independente da
+   * preferência de SO; só a área autenticada (MainLayoutComponent) acompanha o dark mode.
+   */
+  ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+    }
+  }
+}

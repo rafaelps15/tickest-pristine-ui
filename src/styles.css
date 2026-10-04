@@ -30,6 +30,28 @@
   --tk-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/*
+ * Dark mode: só se aplica dentro da área autenticada (MainLayout ativa `data-bs-theme="dark"`
+ * no <html> conforme a preferência do SO). Login/registro ficam fixos no visual de marca claro
+ * (AuthLayout força sempre "light") — padrão comum: a porta de entrada mantém a identidade
+ * visual fixa, a área de trabalho respeita a preferência do usuário. Os valores abaixo
+ * acompanham a escala de cinza nativa do dark theme do Bootstrap 5.3 para não haver costura
+ * visível entre os tokens --tk-* e os componentes nativos (card, modal, dropdown, table).
+ */
+[data-bs-theme="dark"] {
+  --tk-page-bg: #1a1d20;
+  --tk-surface: #212529;
+  --tk-border: #3a3f44;
+
+  --tk-text-primary: #e9ecef;
+  --tk-text-secondary: #adb5bd;
+  --tk-text-muted: #868e96;
+
+  --tk-shadow-sm: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.3);
+  --tk-shadow-md: 0 0.375rem 1.25rem rgba(0, 0, 0, 0.4);
+  --tk-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.55);
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--tk-primary-rgb), 0.3) transparent;
@@ -152,12 +174,31 @@ body {
   border-color: var(--tk-primary);
 }
 
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  border-color: var(--tk-border);
+}
+
 /*
  * Cursor de clique para elementos interativos que não são <button>/<a> nativos (ex.: o item
  * "Sair" do menu, o botão de mostrar/ocultar senha) — usada em mais de uma tela, por isso global.
  */
 .cursor-pointer {
   cursor: pointer;
+}
+
+/*
+ * Botão só com ícone (sem texto): tamanho fixo e conteúdo centralizado. Usar sempre com
+ * `.rounded-circle` (utilitário do Bootstrap) para a forma circular — ex. editar/excluir setor,
+ * editar/excluir departamento, menu de ações "⋮" por linha de tabela.
+ */
+.btn-icon {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Modais: mesma linguagem visual dos cards, com mais elevação por ficarem por cima */
@@ -217,6 +258,37 @@ body {
 .bg-label-secondary {
   background-color: #eceef1 !important;
   color: #697a8d !important;
+}
+
+/* Variantes escuras dos badges "soft" — fundo pastel claro ficaria estourado sobre página escura. */
+[data-bs-theme="dark"] .bg-label-primary {
+  background-color: rgba(105, 108, 255, 0.18) !important;
+  color: #b3b5ff !important;
+}
+
+[data-bs-theme="dark"] .bg-label-success {
+  background-color: rgba(113, 221, 55, 0.14) !important;
+  color: #8ee25c !important;
+}
+
+[data-bs-theme="dark"] .bg-label-warning {
+  background-color: rgba(255, 171, 0, 0.16) !important;
+  color: #ffc670 !important;
+}
+
+[data-bs-theme="dark"] .bg-label-info {
+  background-color: rgba(3, 195, 236, 0.16) !important;
+  color: #5fd9f2 !important;
+}
+
+[data-bs-theme="dark"] .bg-label-danger {
+  background-color: rgba(255, 62, 29, 0.16) !important;
+  color: #ff8669 !important;
+}
+
+[data-bs-theme="dark"] .bg-label-secondary {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #c3c9d1 !important;
 }
 
 /* Alertas */

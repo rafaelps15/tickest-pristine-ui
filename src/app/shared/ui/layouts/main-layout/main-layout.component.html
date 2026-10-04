@@ -61,20 +61,11 @@
           </li>
         }
 
-        @if (sessionService.hasPermission('departments:manage')) {
+        @if (sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
           <li class="menu-item" routerLinkActive="active">
             <a routerLink="/departamentos" class="menu-link">
               <i class="menu-icon tf-icons bx bx-sitemap"></i>
-              <div>Departamentos</div>
-            </a>
-          </li>
-        }
-
-        @if (sessionService.hasPermission('sectors:manage')) {
-          <li class="menu-item" routerLinkActive="active">
-            <a routerLink="/setores" class="menu-link">
-              <i class="menu-icon tf-icons bx bx-git-branch"></i>
-              <div>Setores</div>
+              <div>Departamentos e setores</div>
             </a>
           </li>
         }

@@ -1,7 +1,8 @@
-/** Setor resumido, como aninhado na resposta de listagem de departamentos. */
+/** Setor ativo do departamento, como aninhado na resposta de listagem de departamentos. */
 export interface DepartmentSector {
   id: string;
   name: string;
+  description: string | null;
 }
 
 /** Modelo de dados do departamento, conforme retornado por GET /departments. */

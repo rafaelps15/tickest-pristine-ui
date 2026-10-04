@@ -3,17 +3,23 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Department, DepartmentData } from '../entities/department';
+import { CreateSectorData, UpdateSectorData } from '../entities/sector';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
+import { SectorDataService } from '../infrastructure/sector.data.service';
 import { extractErrorMessage } from '../../shared';
 
-/** Store de departamentos: listagem e mutações (criação, atualização e exclusão). */
+/**
+ * Store de departamentos e dos setores dentro deles: listagem (GET /departments, com os setores aninhados)
+ * e mutações de ambos. Toda mutação de setor recarrega a listagem de departamentos.
+ */
 export const DepartmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
     mutationError: null as string | null
   }),
   withProps(() => ({
-    _departmentDataService: inject(DepartmentDataService)
+    _departmentDataService: inject(DepartmentDataService),
+    _sectorDataService: inject(SectorDataService)
   })),
   withProps((store) => ({
     _listResource: rxResource({ stream: () => store._departmentDataService.getAll() })
@@ -77,6 +83,52 @@ export const DepartmentsStore = signalStore(
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir departamento') });
         }
       });
+    },
+
+    /** Cria um setor dentro de um departamento e recarrega a listagem em caso de sucesso (POST /sectors). */
+    createSector(data: CreateSectorData, onSuccess?: () => void): void {
+      store._sectorDataService.create(data).subscribe({
+        next: () => {
+          patchState(store, { mutationError: null });
+          store._listResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar setor') });
+        }
+      });
+    },
+
+    /** Atualiza um setor existente e recarrega a listagem em caso de sucesso (PUT /sectors/{sectorId}). */
+    updateSector(sectorId: string, data: UpdateSectorData, onSuccess?: () => void): void {
+      store._sectorDataService.update(sectorId, data).subscribe({
+        next: () => {
+          patchState(store, { mutationError: null });
+          store._listResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao atualizar setor') });
+        }
+      });
+    },
+
+    /** Exclui um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}). */
+    deleteSector(sectorId: string): void {
+      store._sectorDataService.delete(sectorId).subscribe({
+        next: () => {
+          patchState(store, { mutationError: null });
+          store._listResource.reload();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir setor') });
+        }
+      });
+    },
+
+    /** Limpa o erro da última mutação (ex.: ao abrir um formulário novo). */
+    clearMutationError(): void {
+      patchState(store, { mutationError: null });
     }
   }))
 );

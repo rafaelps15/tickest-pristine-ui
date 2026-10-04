@@ -1,0 +1,72 @@
+/* Cabeçalho: respiro entre o rótulo "Administração" e o título, sem pesar no layout. */
+.page-subtitle {
+  color: var(--tk-text-secondary);
+  max-width: 48rem;
+}
+
+/* Card de filtros: mais discreto que o card da tabela, que é o conteúdo principal da tela. */
+.filters-card {
+  box-shadow: none;
+  border: 1px solid var(--tk-border);
+}
+
+.filters-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Botão "Limpar filtros": ação secundária de baixa frequência, não deve competir com "Novo Usuário". */
+.btn-clear-filters {
+  color: var(--tk-text-secondary);
+  font-weight: 500;
+}
+
+.btn-clear-filters:hover {
+  color: var(--tk-text-primary);
+}
+
+/* Ponto colorido antes do texto do badge de status — reforça a leitura rápida por cor, não só por texto. */
+.status-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  background-color: currentColor;
+}
+
+/* Badge "+N": mesma linguagem visual dos badges de função, mas sem cor própria — é só contagem. */
+.badge-roles-overflow {
+  cursor: default;
+}
+
+/*
+ * Botão de ações (⋮) por linha: discreto até o hover/foco, pra não pesar a tabela com N linhas.
+ * O tamanho vem da classe global `.btn-icon` (styles.css) — aqui só a aparência "fantasma".
+ */
+.btn-row-actions {
+  border-color: transparent;
+  color: var(--tk-text-secondary);
+}
+
+.btn-row-actions:hover,
+.btn-row-actions:focus {
+  border-color: var(--tk-border);
+  color: var(--tk-text-primary);
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus {
+  background-color: rgba(255, 62, 29, 0.08);
+}
+
+.dropdown-item.text-success:hover,
+.dropdown-item.text-success:focus {
+  background-color: rgba(113, 221, 55, 0.1);
+}

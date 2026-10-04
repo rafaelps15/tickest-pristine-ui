@@ -1,9 +1,12 @@
 <!-- Cabeçalho -->
 <div class="row mb-4">
   <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Início /</span> Dashboard</h4>
-    </div>
+    @if (sessionService.currentUser(); as user) {
+      <h4 class="fw-bold mb-1">Seja bem-vindo(a), {{ user.firstName }}!</h4>
+    } @else {
+      <h4 class="fw-bold mb-1">Seja bem-vindo(a)!</h4>
+    }
+    <p class="text-muted small mb-0">Aqui está um resumo dos seus tickets.</p>
   </div>
 </div>
 

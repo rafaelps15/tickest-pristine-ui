@@ -12,7 +12,7 @@ describe('adminMasterGuard', () => {
   let router: jasmine.SpyObj<Router>;
   let urlTree: UrlTree;
 
-  function routeWithPermission(requiredPermission?: string): ActivatedRouteSnapshot {
+  function routeWithPermission(requiredPermission?: string | string[]): ActivatedRouteSnapshot {
     return { data: { requiredPermission } } as unknown as ActivatedRouteSnapshot;
   }
 
@@ -66,6 +66,34 @@ describe('adminMasterGuard', () => {
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBe(urlTree);
       expect(router.createUrlTree).toHaveBeenCalledWith(['/dashboard']);
+      done();
+    });
+  });
+
+  it('deve liberar a rota quando o usuário tiver qualquer uma das permissões da lista', (done) => {
+    session.isAuthenticated.and.returnValue(true);
+    session.hasPermission.and.callFake(code => code === 'sectors:manage');
+    currentUserService.ensureLoaded.and.returnValue(of(true));
+
+    const result = TestBed.runInInjectionContext(() =>
+      adminMasterGuard(routeWithPermission(['departments:manage', 'sectors:manage']), {} as never));
+
+    (result as Observable<boolean | UrlTree>).subscribe(value => {
+      expect(value).toBeTrue();
+      done();
+    });
+  });
+
+  it('deve redirecionar para o dashboard quando faltar todas as permissões da lista', (done) => {
+    session.isAuthenticated.and.returnValue(true);
+    session.hasPermission.and.returnValue(false);
+    currentUserService.ensureLoaded.and.returnValue(of(true));
+
+    const result = TestBed.runInInjectionContext(() =>
+      adminMasterGuard(routeWithPermission(['departments:manage', 'sectors:manage']), {} as never));
+
+    (result as Observable<boolean | UrlTree>).subscribe(value => {
+      expect(value).toBe(urlTree);
       done();
     });
   });

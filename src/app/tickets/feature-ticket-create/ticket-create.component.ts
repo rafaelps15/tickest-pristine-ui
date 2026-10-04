@@ -37,6 +37,10 @@ export class TicketCreateComponent implements OnInit {
 
     private readonly selectedDepartmentId = toSignal(this.form.controls.departmentId.valueChanges, { initialValue: '' });
 
+    /** Departamentos que têm pelo menos um setor — sem setor não há para onde abrir o chamado. */
+    readonly departmentsWithSectors = computed(() =>
+        this.departmentsStore.departments().filter(d => d.sectors.length > 0));
+
     /** Setores do departamento selecionado, para o cascading de Departamento -> Setor. */
     readonly availableSectors = computed(() => {
         const department = this.departmentsStore.departments()

@@ -63,17 +63,12 @@ export const routes: Routes = [
       {
         path: 'departamentos',
         canActivate: [adminMasterGuard],
-        data: { requiredPermission: 'departments:manage' },
+        data: { requiredPermission: ['departments:manage', 'sectors:manage'] },
         loadComponent: () => import('../../departments/feature-department-list/department-list.component')
           .then(m => m.DepartmentListComponent)
       },
-      {
-        path: 'setores',
-        canActivate: [adminMasterGuard],
-        data: { requiredPermission: 'sectors:manage' },
-        loadComponent: () => import('../../sectors/feature-sector-list/sector-list.component')
-          .then(m => m.SectorListComponent)
-      },
+      // Setores ficam dentro da tela de departamentos; mantém o endereço antigo funcionando.
+      { path: 'setores', redirectTo: 'departamentos', pathMatch: 'full' },
       {
         path: 'roles',
         canActivate: [adminMasterGuard],
