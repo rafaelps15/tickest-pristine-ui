@@ -10,7 +10,7 @@ import { Permission } from '../entities/permission';
 
 describe('RolesStore', () => {
   const roles: Role[] = [
-    { id: 'role-1', name: 'Agent', permissionCodes: ['tickets:manage'], isDefault: false, isAdministrator: false }
+    { name: 'Agent', permissionCodes: ['tickets:manage'], isDefault: false, isAdministrator: false }
   ];
   const permissions: Permission[] = [
     { code: 'tickets:manage', name: 'Gerenciar tickets', description: 'Gerencia todos os tickets', group: 'Chamados', isAdministrative: false },
@@ -87,35 +87,59 @@ describe('RolesStore', () => {
 
     expect(roleDataService.create).toHaveBeenCalledWith('Supervisor');
     expect(onSuccess).toHaveBeenCalled();
-    expect(store.listState().error).toBeNull();
+    expect(store.createError()).toBeNull();
   });
 
-  it('expõe a mensagem de erro quando a criação de role falhar', async () => {
+  it('expõe a mensagem de erro quando a criação de role falhar, sem vazar pra fora do modal', async () => {
     roleDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
 
     store.create('Agent');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBeTruthy();
+    expect(store.createError()).toBeTruthy();
+    expect(store.listState().error).toBeNull();
   });
 
   it('atribui permissões a uma role e recarrega a listagem em caso de sucesso', async () => {
     roleDataService.assignPermissions.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
-    store.assignPermissions('role-1', ['tickets:manage', 'tickets:create'], onSuccess);
+    store.assignPermissions('Agent', ['tickets:manage', 'tickets:create'], onSuccess);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(roleDataService.assignPermissions).toHaveBeenCalledWith('role-1', ['tickets:manage', 'tickets:create']);
+    expect(roleDataService.assignPermissions).toHaveBeenCalledWith('Agent', ['tickets:manage', 'tickets:create']);
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('expõe a mensagem de erro quando a atribuição de permissões falhar', async () => {
+  it('expõe a mensagem de erro quando a atribuição de permissões falhar, sem vazar pra fora do modal', async () => {
     roleDataService.assignPermissions.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
-    store.assignPermissions('role-1', ['tickets:manage']);
+    store.assignPermissions('Agent', ['tickets:manage']);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBeTruthy();
+    expect(store.assignPermissionsError()).toBeTruthy();
+    expect(store.listState().error).toBeNull();
+  });
+
+  it('limpa o erro de criação ao chamar clearCreateError', async () => {
+    roleDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    store.create('Agent');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.createError()).toBeTruthy();
+
+    store.clearCreateError();
+
+    expect(store.createError()).toBeNull();
+  });
+
+  it('limpa o erro de atribuição de permissões ao chamar clearAssignPermissionsError', async () => {
+    roleDataService.assignPermissions.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    store.assignPermissions('Agent', ['tickets:manage']);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.assignPermissionsError()).toBeTruthy();
+
+    store.clearAssignPermissionsError();
+
+    expect(store.assignPermissionsError()).toBeNull();
   });
 });

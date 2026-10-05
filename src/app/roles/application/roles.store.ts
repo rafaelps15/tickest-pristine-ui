@@ -12,8 +12,12 @@ import { extractErrorMessage } from '../../shared';
 export const RolesStore = signalStore(
   { providedIn: 'root' },
   withState({
-    mutationError: null as string | null,
-    permissionsMutationError: null as string | null
+    /** Erro de criação de role — exibido dentro do modal "Nova Função", não na página. */
+    createError: null as string | null,
+    /** Erro de atribuição de permissões — exibido dentro do modal "Permissões", não na página. */
+    assignPermissionsError: null as string | null,
+    /** Erro ao carregar o catálogo de permissões (GET /permissions). */
+    permissionsLoadError: null as string | null
   }),
   withProps(() => ({
     _roleDataService: inject(RoleDataService),
@@ -26,15 +30,13 @@ export const RolesStore = signalStore(
   withComputed((store) => ({
     /** Roles carregadas (GET /roles), usadas tanto na tela de roles quanto no checklist de atribuição de usuários. */
     roles: computed(() => store._listResource.value() ?? []),
-    /** Estado agregado da listagem de roles (dados, carregamento e erro). */
+    /** Estado agregado da listagem de roles (dados, carregamento e erro de carregamento — não de mutação). */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
         data: store._listResource.value() ?? ([] as Role[]),
         loading: store._listResource.isLoading(),
-        error: store.mutationError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar funções')
-          : null)
+        error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar funções') : null
       };
     }),
     /** Catálogo de permissões disponíveis no sistema, com nome/descrição/grupo (GET /permissions). */
@@ -45,7 +47,7 @@ export const RolesStore = signalStore(
       return {
         data: store._permissionsResource.value() ?? ([] as Permission[]),
         loading: store._permissionsResource.isLoading(),
-        error: store.permissionsMutationError() ?? (resourceError
+        error: store.permissionsLoadError() ?? (resourceError
           ? extractErrorMessage(resourceError, {}, 'Erro ao carregar permissões')
           : null)
       };
@@ -78,40 +80,49 @@ export const RolesStore = signalStore(
 
     /** Recarrega a listagem de roles (GET /roles). */
     load(): void {
-      patchState(store, { mutationError: null });
       store._listResource.reload();
     },
 
     /** Recarrega os códigos de permissão disponíveis (GET /permissions). */
     loadPermissions(): void {
-      patchState(store, { permissionsMutationError: null });
+      patchState(store, { permissionsLoadError: null });
       store._permissionsResource.reload();
+    },
+
+    /** Limpa o erro de criação — chamado ao abrir o modal "Nova Função", pra não mostrar o erro de uma tentativa anterior. */
+    clearCreateError(): void {
+      patchState(store, { createError: null });
+    },
+
+    /** Limpa o erro de atribuição de permissões — chamado ao abrir o modal "Permissões" de outra role. */
+    clearAssignPermissionsError(): void {
+      patchState(store, { assignPermissionsError: null });
     },
 
     /** Cria uma nova role (POST /roles) e recarrega a listagem em caso de sucesso. */
     create(name: string, onSuccess?: () => void): void {
       store._roleDataService.create(name).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
+          patchState(store, { createError: null });
           store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar função') });
+          patchState(store, { createError: extractErrorMessage(err, {}, 'Erro ao criar função') });
         }
       });
     },
 
-    /** Substitui as permissões associadas a uma role (PUT /roles/{id}/permissions) e recarrega a listagem em caso de sucesso. */
-    assignPermissions(roleId: string, permissionCodes: string[], onSuccess?: () => void): void {
-      store._roleDataService.assignPermissions(roleId, permissionCodes).subscribe({
+    /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions) e recarrega a listagem em caso de sucesso. */
+    assignPermissions(roleName: string, permissionCodes: string[], onSuccess?: () => void): void {
+      store._roleDataService.assignPermissions(roleName, permissionCodes).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
+          patchState(store, { assignPermissionsError: null });
           store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao atribuir permissões') });
+          patchState(store, { assignPermissionsError: extractErrorMessage(err, {}, 'Erro ao atribuir permissões') });
         }
       });
     }

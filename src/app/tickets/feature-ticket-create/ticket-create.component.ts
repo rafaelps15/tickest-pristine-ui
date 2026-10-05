@@ -57,6 +57,12 @@ export class TicketCreateComponent implements OnInit {
         });
     }
 
+    /** Verifica se um campo está inválido e já foi tocado, pra só mostrar o erro depois da primeira interação. */
+    isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
+        const control = this.form.controls[fieldName];
+        return control.invalid && (control.dirty || control.touched);
+    }
+
     onSubmit(): void {
         if (this.form.invalid) {
             this.form.markAllAsTouched();

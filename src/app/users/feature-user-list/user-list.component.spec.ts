@@ -7,12 +7,12 @@ import { RolesStore } from '../../roles';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { Role } from '../../roles';
-import { SessionService, ConfirmDialogService } from '../../shared';
+import { SessionService, ConfirmDialogService, ToastService } from '../../shared';
 
 describe('UserListComponent', () => {
   const activeUser: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva',
-    roles: [{ id: 'role-1', name: 'Agent' }],
+    roles: [{ name: 'Agent' }],
     isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
   };
   const inactiveUser: UserSummary = {
@@ -20,7 +20,7 @@ describe('UserListComponent', () => {
     roles: [],
     isActive: false, createdAtUtc: '2026-01-02T12:00:00Z', deactivatedAtUtc: '2026-02-01T12:00:00Z'
   };
-  const role: Role = { id: 'role-1', name: 'Agent', permissionCodes: [], isDefault: false, isAdministrator: false };
+  const role: Role = { name: 'Agent', permissionCodes: [], isDefault: false, isAdministrator: false };
   const defaultFilters: UserFilters = { status: 'All', page: 1, pageSize: 20 };
 
   /** Cria um store de usuários falso com signals reais, para o template reagir como no store verdadeiro. */
@@ -63,12 +63,14 @@ describe('UserListComponent', () => {
   let rolesStoreFake: { roles: ReturnType<typeof signal<Role[]>>; load: jasmine.Spy };
   let sessionServiceFake: { userId: jasmine.Spy };
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
+  let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
     usersStoreFake = createUsersStoreFake();
     rolesStoreFake = { roles: signal<Role[]>([role]), load: jasmine.createSpy('load') };
     sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id') };
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
+    toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
       imports: [UserListComponent],
@@ -77,7 +79,8 @@ describe('UserListComponent', () => {
         { provide: UsersStore, useValue: usersStoreFake },
         { provide: RolesStore, useValue: rolesStoreFake },
         { provide: SessionService, useValue: sessionServiceFake },
-        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -103,13 +106,34 @@ describe('UserListComponent', () => {
     expect(text).toContain('01/01/2026');
   });
 
+  it('mantém a lista atual visível (só esmaecida) ao recarregar com filtro/página, em vez de sumir com tudo', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    usersStoreFake.listState.set({ loading: true, error: null });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Maria Silva');
+    expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
+  });
+
+  it('mostra o spinner no lugar da tabela só quando ainda não há nenhum usuário carregado', async () => {
+    usersStoreFake.users.set([]);
+    usersStoreFake.listState.set({ loading: true, error: null });
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum usuário');
+  });
+
   it('mostra no máximo 2 badges de função e agrupa o restante em "+N"', async () => {
     const userWithManyRoles: UserSummary = {
       ...activeUser,
       roles: [
-        { id: 'role-1', name: 'Agent' },
-        { id: 'role-2', name: 'Supervisor' },
-        { id: 'role-3', name: 'Financeiro' }
+        { name: 'Agent' },
+        { name: 'Supervisor' },
+        { name: 'Financeiro' }
       ]
     };
     usersStoreFake.users.set([userWithManyRoles]);
@@ -308,7 +332,7 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.openAssignRolesModal(activeUser);
 
-    expect(fixture.componentInstance.isChecked('role-1')).toBeTrue();
+    expect(fixture.componentInstance.isChecked('Agent')).toBeTrue();
   });
 
   it('envia a atribuição de roles marcadas', async () => {
@@ -316,10 +340,22 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     fixture.componentInstance.openAssignRolesModal(activeUser);
-    fixture.componentInstance.toggleRole('role-2', true);
+    fixture.componentInstance.toggleRole('Supervisor', true);
     fixture.componentInstance.onAssignRolesSubmit();
 
-    expect(usersStoreFake.assignRoles).toHaveBeenCalledWith('u1', ['role-1', 'role-2'], jasmine.any(Function));
+    expect(usersStoreFake.assignRoles).toHaveBeenCalledWith('u1', ['Agent', 'Supervisor'], jasmine.any(Function));
+  });
+
+  it('mostra um toast de sucesso ao atribuir funções', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openAssignRolesModal(activeUser);
+    fixture.componentInstance.onAssignRolesSubmit();
+    const onSuccess = usersStoreFake.assignRoles.calls.mostRecent().args[2];
+    onSuccess();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Funções de "Maria Silva" atualizadas.');
   });
 
   it('envia a criação de usuário quando o formulário for válido', async () => {
@@ -350,7 +386,19 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.onDeactivate(activeUser);
 
-    expect(usersStoreFake.deactivate).toHaveBeenCalledWith('u1');
+    expect(usersStoreFake.deactivate).toHaveBeenCalledWith('u1', jasmine.any(Function));
+  });
+
+  it('mostra um toast de sucesso ao desativar', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const onSuccess = usersStoreFake.deactivate.calls.mostRecent().args[1];
+    onSuccess();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('"Maria Silva" foi desativado.');
   });
 
   it('não desativa o usuário quando a confirmação for cancelada', async () => {
@@ -371,7 +419,20 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.onActivate(inactiveUser);
 
-    expect(usersStoreFake.activate).toHaveBeenCalledWith('u2');
+    expect(usersStoreFake.activate).toHaveBeenCalledWith('u2', jasmine.any(Function));
+  });
+
+  it('mostra um toast de sucesso ao reativar', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    usersStoreFake.users.set([inactiveUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onActivate(inactiveUser);
+    const onSuccess = usersStoreFake.activate.calls.mostRecent().args[1];
+    onSuccess();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('"João Santos" foi reativado.');
   });
 
   it('não reativa o usuário quando a confirmação for cancelada', async () => {
@@ -394,6 +455,15 @@ describe('UserListComponent', () => {
     expect(text).toContain('Reativar');
     expect(fixture.nativeElement.querySelector('.dropdown-item.text-danger')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.dropdown-item.text-success')).not.toBeNull();
+  });
+
+  it('desabilita de verdade o botão de Desativar enquanto a mutação está em andamento', async () => {
+    usersStoreFake.deactivating.set(true);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('.dropdown-item.text-danger') as HTMLButtonElement;
+    expect(button.disabled).toBeTrue();
   });
 
   it('não mostra nem Desativar nem Reativar para a própria conta logada', async () => {

@@ -5,6 +5,7 @@ import { LoginCredentials } from '../entities/login-credentials';
 import { CreateUserData } from '../entities/create-user-data';
 import { AccessTokens } from '../entities/access-tokens';
 import { CurrentUser } from '../entities/current-user';
+import { ChangeRequiredPasswordData } from '../entities/change-required-password-data';
 import { environment } from '../../../environments/environment';
 
 /** Acesso HTTP aos endpoints de autenticação/identidade (login, registro, renovação de token). */
@@ -16,6 +17,11 @@ export class AuthDataService {
   /** Autentica com email/senha e retorna os tokens de acesso (POST /users/login). */
   login(credentials: LoginCredentials): Observable<AccessTokens> {
     return this.http.post<AccessTokens>(`${this.apiUrl}/login`, credentials);
+  }
+
+  /** Troca a senha provisória e já retorna os tokens de acesso (POST /users/login/new-password). */
+  changeRequiredPassword(data: ChangeRequiredPasswordData): Observable<AccessTokens> {
+    return this.http.post<AccessTokens>(`${this.apiUrl}/login/new-password`, data);
   }
 
   /** Registra um novo usuário — único caminho de criação exposto pelo back-end (POST /users/register). */

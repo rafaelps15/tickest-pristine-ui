@@ -6,7 +6,7 @@ import { CurrentUserService } from '../services/current-user.service';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
-const AUTH_ENDPOINTS = ['/users/login', '/users/refresh-token', '/users/logout'];
+const AUTH_ENDPOINTS = ['/users/login', '/users/login/new-password', '/users/refresh-token', '/users/logout'];
 
 /** Interceptor para injeção do token JWT, renovação automática em 401 e tratamento de erros de autorização. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -40,8 +40,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                 router.navigate(['/login']);
             }
 
-            if (error.status === 403) {
+            if (error.status === 403 && !isAuthEndpoint) {
                 // 403 é falta de permissão, não sessão inválida — mantém a sessão, só atualiza o menu (a permissão pode ter mudado).
+                // Num endpoint de autenticação o 403 é regra de negócio (ex.: troca de senha pendente) e ainda não há sessão.
                 currentUserService.load().subscribe();
             }
 

@@ -9,7 +9,8 @@ import { LoginStore } from '../application/login.store';
     imports: [ReactiveFormsModule, RouterModule],
     templateUrl: './login.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrls: ['./login.component.css']
+    // Visual compartilhado com a tela de primeiro acesso (ver shared/ui/auth-form.css).
+    styleUrls: ['../ui/auth-form.css']
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);

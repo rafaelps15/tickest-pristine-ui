@@ -1,6 +1,5 @@
-/** Role resumida do usuário logado, conforme retornado por GET /users/me. */
+/** Role resumida do usuário logado, conforme retornado por GET /users/me — identificada pelo nome, sem id. */
 export interface CurrentUserRole {
-  id: string;
   name: string;
 }
 

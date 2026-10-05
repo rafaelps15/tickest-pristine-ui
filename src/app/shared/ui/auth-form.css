@@ -1,60 +1,15 @@
-.authentication-wrapper {
-  display: flex;
-  flex-basis: 100%;
-  min-height: 100vh;
-  width: 100%;
-  background: linear-gradient(135deg, #696cff 0%, #3a3ca3 100%);
-  position: relative;
-  overflow: hidden;
-  align-items: center;
-  justify-content: center;
+/*
+ * Visual compartilhado das telas de autenticação (login, primeiro acesso) — ambas rodam dentro
+ * do card do AuthLayoutComponent e usam a mesma linguagem de formulário "premium": inputs com
+ * cantos bem arredondados, botão primário em gradiente, alerta de erro suave.
+ */
+h4 {
+  color: #32325d;
+  font-weight: 700;
 }
 
-/* Bolhas decorativas para o fundo premium */
-.authentication-wrapper::before,
-.authentication-wrapper::after {
-  content: "";
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  z-index: 0;
-}
-
-.authentication-wrapper::before {
-  top: -150px;
-  left: -150px;
-}
-
-.authentication-wrapper::after {
-  bottom: -150px;
-  right: -150px;
-}
-
-.authentication-inner {
-  max-width: 450px;
-  width: 100%;
-  z-index: 1;
-  padding: 1rem;
-}
-
-.card {
-  border: none;
-  border-radius: 1.5rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-  overflow: hidden;
-}
-
-.card-body {
-  padding: 3rem 2.5rem;
-}
-
-.app-brand-text {
-  color: var(--tk-primary-darker);
-  font-weight: 800 !important;
+p.text-muted {
+  font-size: 0.95rem;
 }
 
 .form-label {
@@ -114,15 +69,6 @@
 .input-group:focus-within .form-control,
 .input-group:focus-within .input-group-text {
   border-color: var(--tk-primary);
-}
-
-h4 {
-  color: #32325d;
-  font-weight: 700;
-}
-
-p.text-muted {
-  font-size: 0.95rem;
 }
 
 .alert-danger {

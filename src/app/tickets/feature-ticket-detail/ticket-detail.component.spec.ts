@@ -25,6 +25,7 @@ describe('TicketDetailComponent', () => {
   function createTicketsStoreFake() {
     return {
       tickets: signal<Ticket[]>([ticket]),
+      state: signal({ loading: false, error: null as string | null }),
       loadForCurrentUser: jasmine.createSpy('loadForCurrentUser')
     };
   }
@@ -151,6 +152,16 @@ describe('TicketDetailComponent', () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Não foi possível carregar os dados deste ticket');
+    expect(fixture.nativeElement.textContent).toContain('Não encontramos esse ticket');
+  });
+
+  it('mostra um spinner — não o aviso de não encontrado — enquanto a listagem ainda está carregando', async () => {
+    ticketsStoreFake.tickets.set([]);
+    ticketsStoreFake.state.set({ loading: true, error: null });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Não encontramos esse ticket');
   });
 });

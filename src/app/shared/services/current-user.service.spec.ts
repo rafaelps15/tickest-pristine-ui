@@ -12,7 +12,7 @@ describe('CurrentUserService', () => {
     email: 'maria@empresa.com',
     firstName: 'Maria',
     lastName: 'Silva',
-    roles: [{ id: 'role-1', name: 'Admin' }],
+    roles: [{ name: 'Admin' }],
     permissions: ['users:read']
   };
 

@@ -11,7 +11,13 @@
   </div>
 </div>
 
-@if (ticket(); as t) {
+@if (ticketsStore.state().loading) {
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body p-4 text-center py-5">
+      <span class="spinner-border spinner-border-sm text-primary"></span>
+    </div>
+  </div>
+} @else if (ticket(); as t) {
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body p-4">
       <div class="d-flex align-items-center gap-2 mb-3">
@@ -23,7 +29,7 @@
   </div>
 } @else {
   <div class="alert alert-warning border-0 shadow-sm">
-    Não foi possível carregar os dados deste ticket — ele pode não ser seu ou a lista ainda está carregando.
+    Não encontramos esse ticket — ele pode não ser seu, ou pode ter sido removido.
   </div>
 }
 

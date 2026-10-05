@@ -51,8 +51,8 @@ export class UserDataService {
     }
 
     /** Substitui os papéis (roles) de um usuário (PUT /users/{id}/roles). */
-    assignRoles(userId: string, roleIds: string[]): Observable<void> {
-        return this.http.put<void>(`${this.apiUrl}/${userId}/roles`, { roleIds });
+    assignRoles(userId: string, roleNames: string[]): Observable<void> {
+        return this.http.put<void>(`${this.apiUrl}/${userId}/roles`, { roleNames });
     }
 
     /** Desativa um usuário, bloqueando seu login (PUT /users/{id}/deactivate). */

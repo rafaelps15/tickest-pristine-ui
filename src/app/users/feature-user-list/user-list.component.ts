@@ -7,7 +7,7 @@ import { UsersStore } from '../application/users.store';
 import { UserSummary, UserRoleSummary } from '../entities/user-summary';
 import { UserStatus } from '../entities/user-filters';
 import { RolesStore } from '../../roles';
-import { SessionService, ConfirmDialogService } from '../../shared';
+import { SessionService, ConfirmDialogService, ToastService } from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
 
 /** Quantidade de badges de função exibidos antes de agrupar o restante em "+N". */
@@ -36,6 +36,7 @@ export class UserListComponent implements OnInit {
     protected readonly rolesStore = inject(RolesStore);
     private readonly sessionService = inject(SessionService);
     private readonly confirmDialogService = inject(ConfirmDialogService);
+    private readonly toastService = inject(ToastService);
 
     createForm = this.fb.group({
         firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
@@ -57,8 +58,8 @@ export class UserListComponent implements OnInit {
     /** Usuário selecionado para edição de cadastro (nome/sobrenome). */
     selectedUserForEdit = signal<UserSummary | null>(null);
 
-    /** Roles marcadas no modal de atribuição. */
-    selectedRoleIds = signal<Set<string>>(new Set());
+    /** Roles marcadas no modal de atribuição (por nome). */
+    selectedRoleNames = signal<Set<string>>(new Set());
 
     /** Controla se os campos de senha do modal de criação são exibidos em texto claro. */
     showPasswords = signal(false);
@@ -137,17 +138,17 @@ export class UserListComponent implements OnInit {
     openAssignRolesModal(user: UserSummary): void {
         this.store.clearListMutationError();
         this.selectedUser.set(user);
-        this.selectedRoleIds.set(new Set(user.roles.map(role => role.id)));
+        this.selectedRoleNames.set(new Set(user.roles.map(role => role.name)));
     }
 
-    isChecked(roleId: string): boolean {
-        return this.selectedRoleIds().has(roleId);
+    isChecked(roleName: string): boolean {
+        return this.selectedRoleNames().has(roleName);
     }
 
-    toggleRole(roleId: string, checked: boolean): void {
-        this.selectedRoleIds.update(current => {
+    toggleRole(roleName: string, checked: boolean): void {
+        this.selectedRoleNames.update(current => {
             const next = new Set(current);
-            if (checked) next.add(roleId); else next.delete(roleId);
+            if (checked) next.add(roleName); else next.delete(roleName);
             return next;
         });
     }
@@ -156,8 +157,9 @@ export class UserListComponent implements OnInit {
         const user = this.selectedUser();
         if (!user) return;
 
-        this.store.assignRoles(user.id, Array.from(this.selectedRoleIds()), () => {
+        this.store.assignRoles(user.id, Array.from(this.selectedRoleNames()), () => {
             document.getElementById('userRolesModalCloseButton')?.click();
+            this.toastService.show(`Funções de "${user.firstName} ${user.lastName}" atualizadas.`);
         });
     }
 
@@ -194,7 +196,11 @@ export class UserListComponent implements OnInit {
             confirmLabel: 'Desativar',
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (confirmed) this.store.deactivate(user.id);
+            if (confirmed) {
+                this.store.deactivate(user.id, () => {
+                    this.toastService.show(`"${user.firstName} ${user.lastName}" foi desativado.`);
+                });
+            }
         });
     }
 
@@ -206,7 +212,11 @@ export class UserListComponent implements OnInit {
             confirmLabel: 'Reativar',
             variant: 'success'
         }).subscribe(confirmed => {
-            if (confirmed) this.store.activate(user.id);
+            if (confirmed) {
+                this.store.activate(user.id, () => {
+                    this.toastService.show(`"${user.firstName} ${user.lastName}" foi reativado.`);
+                });
+            }
         });
     }
 

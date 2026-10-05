@@ -1,28 +1,8 @@
 import { Component, inject, effect, signal, ChangeDetectionStrategy } from '@angular/core';
-import { AbstractControl, ReactiveFormsModule, FormBuilder, ValidationErrors, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ProfileEditStore } from '../application/profile-edit.store';
-
-/** Valida que a senha tem ao menos 1 maiúscula e 1 caractere especial (mesma regra do back-end). */
-function strongPasswordValidator(control: AbstractControl): ValidationErrors | null {
-  const value: string = control.value ?? '';
-  const errors: ValidationErrors = {};
-  if (!/\p{Lu}/u.test(value)) errors['uppercase'] = true;
-  if (!/[^\p{L}\p{N}\s]/u.test(value)) errors['specialChar'] = true;
-  return Object.keys(errors).length ? errors : null;
-}
-
-/** Valida que a nova senha é diferente da atual (mesma regra do back-end) e que a confirmação bate. */
-function passwordChangeGroupValidator(group: AbstractControl): ValidationErrors | null {
-  const currentPassword = group.get('currentPassword')?.value;
-  const newPassword = group.get('newPassword')?.value;
-  const confirmPassword = group.get('confirmPassword')?.value;
-
-  const errors: ValidationErrors = {};
-  if (currentPassword && newPassword && currentPassword === newPassword) errors['sameAsCurrent'] = true;
-  if (newPassword !== confirmPassword) errors['mismatch'] = true;
-  return Object.keys(errors).length ? errors : null;
-}
+import { passwordChangeValidator, strongPasswordValidator } from '../../shared';
 
 /** Tela de edição do perfil do usuário logado (nome e sobrenome). */
 @Component({
@@ -46,7 +26,7 @@ export class ProfileEditComponent {
     currentPassword: ['', [Validators.required]],
     newPassword: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
     confirmPassword: ['', [Validators.required]]
-  }, { validators: passwordChangeGroupValidator });
+  }, { validators: passwordChangeValidator(group => group.get('currentPassword')?.value) });
 
   /** Controla se os três campos de senha são exibidos em texto claro. */
   readonly showPasswords = signal(false);

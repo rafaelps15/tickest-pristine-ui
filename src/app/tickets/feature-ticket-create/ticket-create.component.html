@@ -20,12 +20,32 @@
         <div class="row g-4">
           <div class="col-12">
             <label class="form-label" for="ticketTitle">Título</label>
-            <input id="ticketTitle" type="text" class="form-control" formControlName="title" placeholder="Ex: Impressora não funciona" />
+            <input id="ticketTitle" type="text" class="form-control" formControlName="title" placeholder="Ex: Impressora não funciona"
+                   [class.is-invalid]="isFieldInvalid('title')" />
+            @if (isFieldInvalid('title')) {
+              <div class="invalid-feedback">
+                @if (form.controls.title.errors?.['required']) {
+                  O título é obrigatório.
+                } @else if (form.controls.title.errors?.['maxlength']) {
+                  O título deve ter no máximo 200 caracteres.
+                }
+              </div>
+            }
           </div>
 
           <div class="col-12">
             <label class="form-label" for="ticketDescription">Descrição</label>
-            <textarea id="ticketDescription" class="form-control" rows="4" formControlName="description" placeholder="Descreva o problema em detalhes"></textarea>
+            <textarea id="ticketDescription" class="form-control" rows="4" formControlName="description" placeholder="Descreva o problema em detalhes"
+                      [class.is-invalid]="isFieldInvalid('description')"></textarea>
+            @if (isFieldInvalid('description')) {
+              <div class="invalid-feedback">
+                @if (form.controls.description.errors?.['required']) {
+                  A descrição é obrigatória.
+                } @else if (form.controls.description.errors?.['maxlength']) {
+                  A descrição deve ter no máximo 500 caracteres.
+                }
+              </div>
+            }
           </div>
 
           <div class="col-12 col-md-4">
@@ -39,22 +59,30 @@
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="ticketDepartmentId">Departamento</label>
-            <select id="ticketDepartmentId" class="form-select" formControlName="departmentId">
+            <select id="ticketDepartmentId" class="form-select" formControlName="departmentId"
+                    [class.is-invalid]="isFieldInvalid('departmentId')">
               <option value="" disabled>Selecione...</option>
               @for (department of departmentsWithSectors(); track department.id) {
                 <option [value]="department.id">{{ department.name }}</option>
               }
             </select>
+            @if (isFieldInvalid('departmentId')) {
+              <div class="invalid-feedback">Selecione o departamento.</div>
+            }
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="ticketSectorId">Setor</label>
-            <select id="ticketSectorId" class="form-select" formControlName="sectorId">
+            <select id="ticketSectorId" class="form-select" formControlName="sectorId"
+                    [class.is-invalid]="isFieldInvalid('sectorId')">
               <option value="" disabled>Selecione...</option>
               @for (sector of availableSectors(); track sector.id) {
                 <option [value]="sector.id">{{ sector.name }}</option>
               }
             </select>
+            @if (isFieldInvalid('sectorId')) {
+              <div class="invalid-feedback">Selecione o setor.</div>
+            }
           </div>
         </div>
 

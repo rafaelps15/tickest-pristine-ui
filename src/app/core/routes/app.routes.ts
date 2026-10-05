@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../../shared/guards/auth.guard';
 import { adminMasterGuard } from '../../shared/guards/admin-master.guard';
+import { pendingPasswordChangeGuard } from '../../shared/guards/pending-password-change.guard';
 
 /** Definição de rotas do sistema. */
 export const routes: Routes = [
@@ -13,6 +14,12 @@ export const routes: Routes = [
         path: 'login',
         loadComponent: () => import('../../shared/feature-login/login.component')
           .then(m => m.LoginComponent)
+      },
+      {
+        path: 'primeiro-acesso',
+        canActivate: [pendingPasswordChangeGuard],
+        loadComponent: () => import('../../shared/feature-first-access/first-access.component')
+          .then(m => m.FirstAccessComponent)
       },
       {
         path: 'register',

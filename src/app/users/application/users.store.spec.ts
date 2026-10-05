@@ -68,7 +68,7 @@ describe('UsersStore', () => {
     userDataService.getAll.and.returnValue(of(buildPage([
       {
         ...user,
-        roles: [{ id: 'role-2', name: 'Requester' }, { id: 'role-1', name: 'Agent' }]
+        roles: [{ name: 'Requester' }, { name: 'Agent' }]
       }
     ])));
 
@@ -203,7 +203,7 @@ describe('UsersStore', () => {
 
   it('não deixa um erro de atribuição de funções aparecer numa tentativa de atualização de cadastro seguinte', async () => {
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-    store.assignRoles('u1', ['role-1']);
+    store.assignRoles('u1', ['Agent']);
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.listState().error).toBe('Erro ao atribuir funções');
 
@@ -218,10 +218,10 @@ describe('UsersStore', () => {
     userDataService.assignRoles.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
-    store.assignRoles('u1', ['role-1', 'role-2'], onSuccess);
+    store.assignRoles('u1', ['Agent', 'Requester'], onSuccess);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(userDataService.assignRoles).toHaveBeenCalledWith('u1', ['role-1', 'role-2']);
+    expect(userDataService.assignRoles).toHaveBeenCalledWith('u1', ['Agent', 'Requester']);
     expect(onSuccess).toHaveBeenCalled();
   });
 

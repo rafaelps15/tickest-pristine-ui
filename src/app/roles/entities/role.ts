@@ -1,6 +1,5 @@
-/** Modelo de dados da role, conforme retornado por GET /roles. */
+/** Modelo de dados da role, conforme retornado por GET /roles — identificada pelo nome, sem id. */
 export interface Role {
-  id: string;
   name: string;
   permissionCodes: string[];
   isDefault: boolean;

@@ -160,10 +160,10 @@ export const UsersStore = signalStore(
     },
 
     /** Atribui um conjunto de roles a um usuário (PUT /users/{userId}/roles). */
-    assignRoles(userId: string, roleIds: string[], onSuccess?: () => void): void {
+    assignRoles(userId: string, roleNames: string[], onSuccess?: () => void): void {
       patchState(store, { listMutationError: null, assigningRoles: true });
 
-      store._userDataService.assignRoles(userId, roleIds).pipe(
+      store._userDataService.assignRoles(userId, roleNames).pipe(
         finalize(() => patchState(store, { assigningRoles: false }))
       ).subscribe({
         next: () => {

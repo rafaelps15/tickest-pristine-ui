@@ -74,6 +74,34 @@ describe('TicketCreateComponent', () => {
     expect(component.availableSectors()).toEqual(informationTechnology.sectors);
   });
 
+  it('mostra erro de validação por campo depois de tocado e inválido', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    expect(component.isFieldInvalid('title')).toBeFalse();
+
+    component.form.controls.title.markAsTouched();
+    fixture.detectChanges();
+
+    expect(component.isFieldInvalid('title')).toBeTrue();
+    const titleInput = fixture.nativeElement.querySelector('#ticketTitle') as HTMLInputElement;
+    expect(titleInput.classList).toContain('is-invalid');
+    expect(fixture.nativeElement.textContent).toContain('O título é obrigatório.');
+  });
+
+  it('marca todos os campos como tocados ao tentar enviar um formulário inválido', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.onSubmit();
+
+    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(component.form.controls.title.touched).toBeTrue();
+    expect(component.form.controls.departmentId.touched).toBeTrue();
+  });
+
   it('abre o chamado no setor escolhido', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();

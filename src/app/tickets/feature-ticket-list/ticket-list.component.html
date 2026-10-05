@@ -45,17 +45,33 @@
               <td><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
               <td><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
               <td class="text-end">
-                <a [routerLink]="['/tickets', ticket.id]" class="btn btn-sm btn-outline-secondary me-2">
-                  <i class="bx bx-paperclip"></i>
-                </a>
-                @if (canReopen(ticket)) {
-                  <button type="button" class="btn btn-sm btn-outline-success me-2" (click)="onReopen(ticket)">
-                    <i class="bx bx-refresh"></i>
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
+                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
+                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
+                    <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
-                }
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="onDelete(ticket)">
-                  <i class="bx bx-trash"></i>
-                </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <a [routerLink]="['/tickets', ticket.id]" class="dropdown-item">
+                        <i class="bx bx-paperclip me-2"></i>Ver detalhes
+                      </a>
+                    </li>
+                    @if (canReopen(ticket)) {
+                      <li>
+                        <a href="javascript:void(0);" class="dropdown-item text-success" (click)="onReopen(ticket)">
+                          <i class="bx bx-refresh me-2"></i>Reabrir
+                        </a>
+                      </li>
+                    }
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <a href="javascript:void(0);" class="dropdown-item text-danger" (click)="onDelete(ticket)">
+                        <i class="bx bx-trash me-2"></i>Excluir
+                      </a>
+                    </li>
+                  </ul>
+                </div>
               </td>
             </tr>
           }

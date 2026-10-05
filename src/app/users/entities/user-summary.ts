@@ -1,6 +1,5 @@
-/** Role resumida, como aninhada na resposta de listagem de usuários. */
+/** Role resumida, como aninhada na resposta de listagem de usuários — identificada pelo nome, sem id. */
 export interface UserRoleSummary {
-  id: string;
   name: string;
 }
 

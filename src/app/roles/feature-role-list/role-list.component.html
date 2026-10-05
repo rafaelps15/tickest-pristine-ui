@@ -2,7 +2,7 @@
   <div class="col-12">
     <div class="d-flex align-items-center justify-content-between">
       <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Funções</h4>
-      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#roleCreateModal">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#roleCreateModal" (click)="openCreateModal()">
         <i class="bx bx-plus me-1"></i> Nova Função
       </button>
     </div>
@@ -29,7 +29,7 @@
         } @else if (store.roles().length === 0) {
           <tr><td colspan="3" class="text-center py-5 text-muted"><i class="bx bx-shield-quarter display-6 d-block mb-2 opacity-50"></i>Nenhuma função cadastrada ainda.</td></tr>
         } @else {
-          @for (role of store.roles(); track role.id) {
+          @for (role of store.roles(); track role.name) {
             <tr>
               <td class="fw-semibold">
                 {{ role.name }}
@@ -41,10 +41,15 @@
                 }
               </td>
               <td>
-                @for (code of role.permissionCodes; track code) {
+                @for (code of visiblePermissionCodes(role); track code) {
                   <span class="badge bg-label-info me-1 mb-1">{{ store.permissionName(code) }}</span>
                 } @empty {
                   <span class="text-muted small">Nenhuma permissão atribuída</span>
+                }
+                @if (hiddenPermissionCount(role) > 0) {
+                  <span class="badge bg-label-secondary mb-1" [title]="hiddenPermissionNames(role)">
+                    +{{ hiddenPermissionCount(role) }}
+                  </span>
                 }
               </td>
               <td class="text-end">
@@ -72,6 +77,9 @@
           <button id="roleCreateModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
         </div>
         <div class="modal-body">
+          @if (store.createError()) {
+            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.createError() }}</div>
+          }
           <label class="form-label" for="roleName">Nome</label>
           <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
         </div>
@@ -93,6 +101,9 @@
         <button id="rolePermissionsModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
+        @if (store.assignPermissionsError()) {
+          <div class="alert alert-danger border-0 py-2 small mb-3" role="alert">{{ store.assignPermissionsError() }}</div>
+        }
         @for (group of store.permissionGroups(); track group.title) {
           <h6 class="text-uppercase text-muted small fw-bold mt-3 mb-2">{{ group.title }}</h6>
           <div class="row g-2 mb-2">
