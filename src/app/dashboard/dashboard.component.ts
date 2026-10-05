@@ -100,9 +100,21 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  /** Carrega os tickets do usuário logado ao inicializar a tela. */
+  /** Carrega os tickets do usuário logado ao inicializar a tela — só quando o papel dele de fato lida com tickets. */
   ngOnInit() {
-    this.store.loadForCurrentUser();
+    if (this.hasTicketAccess()) {
+      this.store.loadForCurrentUser();
+    }
+  }
+
+  /**
+   * Indica se o usuário logado abre ou atende chamados (Agent/Requester) — mesmo que também
+   * seja Admin. Um Admin Master puro (sem nenhuma dessas roles) não tem tickets próprios
+   * (confirmado no PRODUCT.md), então a tela de boas-vindas dele não fala de "seus tickets".
+   */
+  protected hasTicketAccess(): boolean {
+    const roles = this.sessionService.currentUser()?.roles ?? [];
+    return roles.some(role => role.name === 'Agent' || role.name === 'Requester');
   }
 
   /** Alterna entre exibir o gráfico e a tabela acessível equivalente. */

@@ -32,8 +32,8 @@ describe('UserListComponent', () => {
       loading: signal(false),
       updatingProfile: signal(false),
       assigningRoles: signal(false),
-      deactivating: signal(false),
-      activating: signal(false),
+      deactivatingIds: signal<string[]>([]),
+      activatingIds: signal<string[]>([]),
       success: signal(false),
       error: signal<string | null>(null),
       currentPage: signal(1),
@@ -49,6 +49,7 @@ describe('UserListComponent', () => {
       updateProfile: jasmine.createSpy('updateProfile'),
       assignRoles: jasmine.createSpy('assignRoles'),
       deactivate: jasmine.createSpy('deactivate'),
+      deactivateMany: jasmine.createSpy('deactivateMany'),
       activate: jasmine.createSpy('activate'),
       setSearch: jasmine.createSpy('setSearch'),
       setStatus: jasmine.createSpy('setStatus'),
@@ -208,6 +209,21 @@ describe('UserListComponent', () => {
     pageTwoButton?.click();
 
     expect(usersStoreFake.goToPage).toHaveBeenCalledWith(2);
+  });
+
+  it('marca a página atual com aria-current, pra ser anunciada por leitor de tela', async () => {
+    usersStoreFake.totalPages.set(3);
+    usersStoreFake.currentPage.set(1);
+    usersStoreFake.hasNextPage.set(true);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const pageButtons = Array.from(fixture.nativeElement.querySelectorAll('.card-footer button') as NodeListOf<HTMLButtonElement>);
+    const pageOneButton = pageButtons.find(button => button.textContent?.trim() === '1');
+    const pageTwoButton = pageButtons.find(button => button.textContent?.trim() === '2');
+
+    expect(pageOneButton?.getAttribute('aria-current')).toBe('page');
+    expect(pageTwoButton?.getAttribute('aria-current')).toBeNull();
   });
 
   it('não mostra os controles de paginação quando há só uma página', async () => {
@@ -379,6 +395,36 @@ describe('UserListComponent', () => {
     });
   });
 
+  it('mostra um toast de sucesso ao criar um usuário', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.createForm.setValue({
+      firstName: 'Ana',
+      lastName: 'Costa',
+      email: 'ana@empresa.com',
+      password: 'Password123!',
+      confirmPassword: 'Password123!'
+    });
+    usersStoreFake.success.set(true);
+    await fixture.whenStable();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('"Ana Costa" criado com sucesso.');
+  });
+
+  it('mostra um toast de sucesso ao editar o cadastro de um usuário', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(activeUser);
+    fixture.componentInstance.editForm.setValue({ firstName: 'Ana', lastName: 'Costa' });
+    fixture.componentInstance.onEditSubmit();
+    const onSuccess = usersStoreFake.updateProfile.calls.mostRecent().args[2];
+    onSuccess();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Cadastro de "Ana Costa" atualizado.');
+  });
+
   it('desativa o usuário quando confirmado', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(UserListComponent);
@@ -458,12 +504,24 @@ describe('UserListComponent', () => {
   });
 
   it('desabilita de verdade o botão de Desativar enquanto a mutação está em andamento', async () => {
-    usersStoreFake.deactivating.set(true);
+    usersStoreFake.deactivatingIds.set(['u1']);
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     const button = fixture.nativeElement.querySelector('.dropdown-item.text-danger') as HTMLButtonElement;
     expect(button.disabled).toBeTrue();
+  });
+
+  it('não desabilita o botão de Desativar de outro usuário enquanto só um está em andamento', async () => {
+    const activeUser2: UserSummary = { ...activeUser, id: 'u3', firstName: 'Ana', lastName: 'Costa' };
+    usersStoreFake.users.set([activeUser, activeUser2]);
+    usersStoreFake.deactivatingIds.set(['u1']);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.dropdown-item.text-danger') as NodeListOf<HTMLButtonElement>;
+    expect(buttons[0].disabled).toBeTrue();
+    expect(buttons[1].disabled).toBeFalse();
   });
 
   it('não mostra nem Desativar nem Reativar para a própria conta logada', async () => {
@@ -473,6 +531,152 @@ describe('UserListComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.dropdown-item.text-danger')).toBeNull();
     expect(fixture.nativeElement.querySelector('.dropdown-item.text-success')).toBeNull();
+  });
+
+  it('só mostra checkbox de seleção em lote para usuários ativos e diferentes da própria conta logada', async () => {
+    const activeUser2: UserSummary = { ...activeUser, id: 'u3', firstName: 'Ana', lastName: 'Costa' };
+    sessionServiceFake.userId.and.returnValue('u3');
+    usersStoreFake.users.set([activeUser, inactiveUser, activeUser2]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.canSelectForBulk(activeUser)).toBeTrue();
+    expect(fixture.componentInstance.canSelectForBulk(inactiveUser)).toBeFalse();
+    expect(fixture.componentInstance.canSelectForBulk(activeUser2)).toBeFalse();
+  });
+
+  it('marca e desmarca usuários na seleção em lote', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    expect(fixture.componentInstance.isSelected('u1')).toBeTrue();
+    expect(fixture.componentInstance.selectedCount()).toBe(1);
+
+    fixture.componentInstance.toggleSelection('u1', false);
+    expect(fixture.componentInstance.isSelected('u1')).toBeFalse();
+    expect(fixture.componentInstance.selectedCount()).toBe(0);
+  });
+
+  it('"selecionar todos" marca só os elegíveis da página, e fica indeterminado com seleção parcial', async () => {
+    const activeUser2: UserSummary = { ...activeUser, id: 'u3', firstName: 'Ana', lastName: 'Costa' };
+    usersStoreFake.users.set([activeUser, inactiveUser, activeUser2]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelectAll(true);
+    expect(fixture.componentInstance.selectedCount()).toBe(2);
+    expect(fixture.componentInstance.allEligibleSelected()).toBeTrue();
+
+    fixture.componentInstance.toggleSelection('u1', false);
+    expect(fixture.componentInstance.someEligibleSelected()).toBeTrue();
+    expect(fixture.componentInstance.allEligibleSelected()).toBeFalse();
+
+    fixture.componentInstance.toggleSelectAll(false);
+    expect(fixture.componentInstance.selectedCount()).toBe(0);
+  });
+
+  it('limpa a seleção em lote ao trocar qualquer filtro', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    expect(fixture.componentInstance.selectedCount()).toBe(1);
+
+    usersStoreFake.filters.set({ status: 'Inactive', page: 1, pageSize: 20 });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedCount()).toBe(0);
+  });
+
+  it('pede confirmação e desativa em lote os usuários selecionados', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const activeUser2: UserSummary = { ...activeUser, id: 'u3', firstName: 'Ana', lastName: 'Costa' };
+    usersStoreFake.users.set([activeUser, activeUser2]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelectAll(true);
+    fixture.componentInstance.onBulkDeactivate();
+
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0];
+    expect(options.title).toContain('2 usuários selecionados');
+    expect(options.message).toContain('Maria Silva');
+    expect(options.message).toContain('Ana Costa');
+    expect(usersStoreFake.deactivateMany).toHaveBeenCalledWith(['u1', 'u3'], jasmine.any(Function));
+  });
+
+  it('não desativa em lote quando a confirmação é cancelada', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+
+    expect(usersStoreFake.deactivateMany).not.toHaveBeenCalled();
+  });
+
+  it('não faz nada ao chamar a desativação em lote sem nenhuma seleção', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onBulkDeactivate();
+
+    expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+    expect(usersStoreFake.deactivateMany).not.toHaveBeenCalled();
+  });
+
+  it('limpa a seleção e mostra um toast ao concluir a desativação em lote sem falhas', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    const onDone = usersStoreFake.deactivateMany.calls.mostRecent().args[1];
+    onDone(1, 0);
+
+    expect(fixture.componentInstance.selectedCount()).toBe(0);
+    expect(toastServiceFake.show).toHaveBeenCalledWith('1 usuário desativado.');
+  });
+
+  it('mostra um toast informando falha parcial na desativação em lote', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    const onDone = usersStoreFake.deactivateMany.calls.mostRecent().args[1];
+    onDone(1, 1);
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('1 de 2 usuários desativados.', 'info');
+  });
+
+  it('mostra a barra de ação em lote só quando há seleção ativa', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.bulk-actions-bar')).toBeNull();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.bulk-actions-bar')).not.toBeNull();
+  });
+
+  it('mostra a data de desativação dentro da célula de cadastro, só quando o usuário foi desativado', async () => {
+    usersStoreFake.users.set([activeUser, inactiveUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr');
+    expect((rows[0] as HTMLElement).textContent).not.toContain('Desativado em');
+    expect((rows[1] as HTMLElement).textContent).toContain('Desativado em');
+    expect((rows[1] as HTMLElement).textContent).toContain('01/02/2026');
   });
 
   it('deixa a linha de um usuário inativo mais apagada', async () => {

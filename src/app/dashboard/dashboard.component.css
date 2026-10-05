@@ -20,7 +20,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.85rem !important;
+    border-radius: var(--tk-radius-md) !important;
 }
 
 .card-title {

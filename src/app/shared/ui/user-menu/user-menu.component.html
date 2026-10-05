@@ -1,0 +1,38 @@
+<div class="dropdown">
+  <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" appDropdownFixedPosition>
+    <div class="avatar avatar-online">
+      <img src="https://ui-avatars.com/api/?name=User&background=696cff&color=fff" alt="Foto de perfil do usuário logado" class="w-px-40 h-auto rounded-circle" />
+    </div>
+  </a>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li>
+      <a class="dropdown-item" href="#">
+        <div class="d-flex">
+          <div class="flex-shrink-0 me-3">
+            <div class="avatar avatar-online">
+              <img src="https://ui-avatars.com/api/?name=User&background=696cff&color=fff" alt="Foto de perfil do usuário logado" class="w-px-40 h-auto rounded-circle" />
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <span class="fw-semibold d-block">Usuário</span>
+            <small class="text-muted">{{ sessionService.email() }}</small>
+          </div>
+        </div>
+      </a>
+    </li>
+    <li><div class="dropdown-divider"></div></li>
+    <li>
+      <a class="dropdown-item" routerLink="/perfil">
+        <i class="bx bx-user me-2"></i>
+        <span class="align-middle">Meu Perfil</span>
+      </a>
+    </li>
+    <li><div class="dropdown-divider"></div></li>
+    <li>
+      <a href="javascript:void(0);" class="dropdown-item cursor-pointer" (click)="logout()">
+        <i class="bx bx-power-off me-2"></i>
+        <span class="align-middle">Sair</span>
+      </a>
+    </li>
+  </ul>
+</div>

@@ -6,7 +6,13 @@
     } @else {
       <h4 class="fw-bold mb-1">Seja bem-vindo(a)!</h4>
     }
-    <p class="text-muted small mb-0">Aqui está um resumo dos seus tickets.</p>
+    <p class="text-muted small mb-0">
+      @if (hasTicketAccess()) {
+        Aqui está um resumo dos seus tickets.
+      } @else {
+        Acesso rápido às ferramentas de administração.
+      }
+    </p>
   </div>
 </div>
 
@@ -14,6 +20,7 @@
   <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">{{ store.state().error }}</div>
 }
 
+@if (hasTicketAccess()) {
 <!-- Cards de Estatísticas -->
 <div class="row">
   <div class="col-12 col-sm-6 col-md-6 col-lg-3 mb-4">
@@ -36,7 +43,7 @@
   </div>
 
   <div class="col-12 col-sm-6 col-md-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100 border-start border-warning border-4">
+    <div class="card card-stats h-100">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div class="content-left">
@@ -55,7 +62,7 @@
   </div>
 
   <div class="col-12 col-sm-6 col-md-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100 border-start border-info border-4">
+    <div class="card card-stats h-100">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div class="content-left">
@@ -74,7 +81,7 @@
   </div>
 
   <div class="col-12 col-sm-6 col-md-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100 border-start border-success border-4">
+    <div class="card card-stats h-100">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div class="content-left">
@@ -148,14 +155,14 @@
     </div>
   </div>
 
-  <!-- Ações Rápidas Administrativas -->
+  <!-- Ações Rápidas -->
   <div class="col-12 col-lg-4 mb-4">
     <div class="card h-100 border-0 shadow-sm">
       <div class="card-header bg-white py-3">
-        <h5 class="card-title m-0 fw-bold text-dark">Painel de Controle</h5>
+        <h5 class="card-title m-0 fw-bold text-dark">Ações Rápidas</h5>
       </div>
       <div class="card-body">
-        <p class="text-muted small">Acesso direto às ferramentas de administração.</p>
+        <p class="text-muted small">Acesso direto às tarefas mais usadas.</p>
 
         <div class="d-grid gap-3 mt-4">
           <button class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between border-2"
@@ -188,3 +195,68 @@
     </div>
   </div>
 </div>
+} @else {
+<!-- Painel de Controle: conteúdo principal pra quem não abre/atende chamados (Admin Master puro) -->
+<div class="row">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title m-0 fw-bold text-dark">Painel de Controle</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">Acesso direto às ferramentas de administração.</p>
+
+        <div class="row g-3 mt-2">
+          @if (sessionService.hasPermission('users:read')) {
+            <div class="col-12 col-md-4">
+              <button class="btn btn-outline-primary text-start p-3 h-100 w-100 d-flex align-items-center justify-content-between border-2"
+                      routerLink="/usuarios">
+                <div class="d-flex align-items-center">
+                  <i class="bx bx-group fs-4 me-3"></i>
+                  <div>
+                    <div class="fw-bold">Usuários</div>
+                    <div class="small opacity-75">Controle total de acessos</div>
+                  </div>
+                </div>
+                <i class="bx bx-chevron-right"></i>
+              </button>
+            </div>
+          }
+
+          @if (sessionService.hasPermission('roles:manage')) {
+            <div class="col-12 col-md-4">
+              <button class="btn btn-outline-primary text-start p-3 h-100 w-100 d-flex align-items-center justify-content-between border-2"
+                      routerLink="/roles">
+                <div class="d-flex align-items-center">
+                  <i class="bx bx-shield-quarter fs-4 me-3"></i>
+                  <div>
+                    <div class="fw-bold">Funções</div>
+                    <div class="small opacity-75">Permissões por função</div>
+                  </div>
+                </div>
+                <i class="bx bx-chevron-right"></i>
+              </button>
+            </div>
+          }
+
+          @if (sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
+            <div class="col-12 col-md-4">
+              <button class="btn btn-outline-primary text-start p-3 h-100 w-100 d-flex align-items-center justify-content-between border-2"
+                      routerLink="/departamentos">
+                <div class="d-flex align-items-center">
+                  <i class="bx bx-sitemap fs-4 me-3"></i>
+                  <div>
+                    <div class="fw-bold">Departamentos e setores</div>
+                    <div class="small opacity-75">Estrutura organizacional</div>
+                  </div>
+                </div>
+                <i class="bx bx-chevron-right"></i>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+}

@@ -22,6 +22,10 @@ describe('UsersStore', () => {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva', roles: [],
     isActive: true, createdAtUtc: '2026-01-01T00:00:00Z', deactivatedAtUtc: null
   };
+  const user2: UserSummary = {
+    id: 'u2', email: 'joao@empresa.com', firstName: 'João', lastName: 'Santos', roles: [],
+    isActive: true, createdAtUtc: '2026-01-02T00:00:00Z', deactivatedAtUtc: null
+  };
 
   let store: InstanceType<typeof UsersStore>;
   let userDataService: jasmine.SpyObj<UserDataService>;
@@ -234,7 +238,7 @@ describe('UsersStore', () => {
 
     expect(userDataService.deactivate).toHaveBeenCalledWith('u1');
     expect(onSuccess).toHaveBeenCalled();
-    expect(store.deactivating()).toBeFalse();
+    expect(store.deactivatingIds()).toEqual([]);
   });
 
   it('expõe a mensagem de erro quando o usuário já estiver desativado', async () => {
@@ -244,7 +248,7 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.listState().error).toBe('Este usuário já está desativado.');
-    expect(store.deactivating()).toBeFalse();
+    expect(store.deactivatingIds()).toEqual([]);
   });
 
   it('reativa um usuário e recarrega a listagem em caso de sucesso', async () => {
@@ -256,7 +260,7 @@ describe('UsersStore', () => {
 
     expect(userDataService.activate).toHaveBeenCalledWith('u1');
     expect(onSuccess).toHaveBeenCalled();
-    expect(store.activating()).toBeFalse();
+    expect(store.activatingIds()).toEqual([]);
   });
 
   it('expõe a mensagem de erro quando o usuário já estiver ativo', async () => {
@@ -266,20 +270,81 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.listState().error).toBe('Este usuário já está ativo.');
-    expect(store.activating()).toBeFalse();
+    expect(store.activatingIds()).toEqual([]);
   });
 
-  it('mantém activating marcado enquanto a chamada está em andamento, e desmarca ao concluir', async () => {
+  it('desativa vários usuários em lote, em paralelo, e recarrega a listagem quando todos têm sucesso', async () => {
+    userDataService.getAll.and.returnValue(of(buildPage([user, user2])));
+    userDataService.deactivate.and.returnValue(of(undefined));
+    const onDone = jasmine.createSpy('onDone');
+
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.deactivateMany(['u1', 'u2'], onDone);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.deactivate).toHaveBeenCalledWith('u1');
+    expect(userDataService.deactivate).toHaveBeenCalledWith('u2');
+    expect(onDone).toHaveBeenCalledWith(2, 0);
+    expect(store.listState().error).toBeNull();
+    expect(store.deactivatingIds()).toEqual([]);
+    expect(userDataService.getAll).toHaveBeenCalledTimes(2);
+  });
+
+  it('reporta falha parcial com o nome de quem falhou, sem desfazer quem teve sucesso', async () => {
+    userDataService.getAll.and.returnValue(of(buildPage([user, user2])));
+    userDataService.deactivate.and.callFake((userId: string) =>
+      userId === 'u1' ? of(undefined) : throwError(() => new HttpErrorResponse({ status: 500 }))
+    );
+    const onDone = jasmine.createSpy('onDone');
+
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.deactivateMany(['u1', 'u2'], onDone);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(onDone).toHaveBeenCalledWith(1, 1);
+    expect(store.listState().error).toBe('Não foi possível desativar: João Santos.');
+  });
+
+  it('não chama a API quando a lista de ids selecionados estiver vazia', () => {
+    store.deactivateMany([]);
+
+    expect(userDataService.deactivate).not.toHaveBeenCalled();
+  });
+
+  it('mantém o id em activatingIds enquanto a chamada está em andamento, e remove ao concluir', async () => {
     const subject = new Subject<void>();
     userDataService.activate.and.returnValue(subject);
 
     store.activate('u1');
-    expect(store.activating()).toBeTrue();
+    expect(store.activatingIds()).toEqual(['u1']);
 
     subject.next();
     subject.complete();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.activating()).toBeFalse();
+    expect(store.activatingIds()).toEqual([]);
+  });
+
+  it('marca só o id afetado em deactivatingIds, sem travar outros usuários em andamento ao mesmo tempo', async () => {
+    const subject = new Subject<void>();
+    userDataService.deactivate.and.callFake((userId: string) => userId === 'u1' ? subject : of(undefined));
+
+    store.deactivate('u1');
+    expect(store.deactivatingIds()).toEqual(['u1']);
+
+    store.deactivate('u2');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.deactivatingIds()).toEqual(['u1']);
+
+    subject.next();
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.deactivatingIds()).toEqual([]);
   });
 });

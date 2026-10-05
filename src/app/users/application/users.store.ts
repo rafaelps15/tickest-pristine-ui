@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin, of, catchError, map } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
@@ -23,8 +23,8 @@ export const UsersStore = signalStore(
     listMutationError: null as string | null,
     updatingProfile: false,
     assigningRoles: false,
-    deactivating: false,
-    activating: false
+    deactivatingIds: [] as string[],
+    activatingIds: [] as string[]
   }),
   withProps(() => ({
     _userDataService: inject(UserDataService),
@@ -184,10 +184,10 @@ export const UsersStore = signalStore(
 
     /** Desativa um usuário (bloqueia o login dele) e recarrega a listagem em caso de sucesso. */
     deactivate(userId: string, onSuccess?: () => void): void {
-      patchState(store, { listMutationError: null, deactivating: true });
+      patchState(store, { listMutationError: null, deactivatingIds: [...store.deactivatingIds(), userId] });
 
       store._userDataService.deactivate(userId).pipe(
-        finalize(() => patchState(store, { deactivating: false }))
+        finalize(() => patchState(store, { deactivatingIds: store.deactivatingIds().filter(id => id !== userId) }))
       ).subscribe({
         next: () => {
           patchState(store, { listMutationError: null });
@@ -206,12 +206,57 @@ export const UsersStore = signalStore(
       });
     },
 
+    /**
+     * Desativa vários usuários em lote, em paralelo, com melhor esforço: cada chamada usa o
+     * mesmo endpoint individual de desativação (não há endpoint de lote no back-end), falhas de
+     * uma não cancelam as demais. Reporta nomes dos que falharam no erro da listagem e recarrega
+     * só se pelo menos um teve sucesso.
+     */
+    deactivateMany(userIds: string[], onDone?: (succeededCount: number, failedCount: number) => void): void {
+      if (userIds.length === 0) return;
+
+      patchState(store, { listMutationError: null, deactivatingIds: [...store.deactivatingIds(), ...userIds] });
+
+      const requests = userIds.map(userId =>
+        store._userDataService.deactivate(userId).pipe(
+          map(() => ({ userId, ok: true as const })),
+          catchError(() => of({ userId, ok: false as const }))
+        )
+      );
+
+      forkJoin(requests).pipe(
+        finalize(() => patchState(store, {
+          deactivatingIds: store.deactivatingIds().filter(id => !userIds.includes(id))
+        }))
+      ).subscribe(results => {
+        const succeededIds = results.filter(result => result.ok).map(result => result.userId);
+        const failedIds = results.filter(result => !result.ok).map(result => result.userId);
+
+        if (failedIds.length > 0) {
+          const failedNames = store.users()
+            .filter(user => failedIds.includes(user.id))
+            .map(user => `${user.firstName} ${user.lastName}`);
+          patchState(store, {
+            listMutationError: failedNames.length > 0
+              ? `Não foi possível desativar: ${failedNames.join(', ')}.`
+              : 'Não foi possível desativar um ou mais usuários selecionados.'
+          });
+        }
+
+        if (succeededIds.length > 0) {
+          store._listResource.reload();
+        }
+
+        onDone?.(succeededIds.length, failedIds.length);
+      });
+    },
+
     /** Reativa um usuário (libera o login dele de novo) e recarrega a listagem em caso de sucesso. */
     activate(userId: string, onSuccess?: () => void): void {
-      patchState(store, { listMutationError: null, activating: true });
+      patchState(store, { listMutationError: null, activatingIds: [...store.activatingIds(), userId] });
 
       store._userDataService.activate(userId).pipe(
-        finalize(() => patchState(store, { activating: false }))
+        finalize(() => patchState(store, { activatingIds: store.activatingIds().filter(id => id !== userId) }))
       ).subscribe({
         next: () => {
           patchState(store, { listMutationError: null });

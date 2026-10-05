@@ -1,0 +1,49 @@
+/* Garante o canto direito da navbar sem depender de nenhuma classe utilitária de template externo. */
+:host {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.avatar img {
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  transition: box-shadow 200ms ease;
+}
+
+.avatar-online {
+  position: relative;
+}
+
+.avatar-online::after {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #71dd37;
+  border: 2px solid var(--tk-surface);
+}
+
+.dropdown-toggle:hover .avatar img {
+  box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.2);
+}
+
+.dropdown-menu {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.5rem 2rem rgba(105, 108, 255, 0.18);
+  padding: 0.5rem;
+}
+
+.dropdown-item {
+  border-radius: 0.5rem;
+  transition: background-color 150ms ease;
+}

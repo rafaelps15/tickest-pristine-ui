@@ -31,6 +31,16 @@
   color: var(--tk-text-primary);
 }
 
+/* Largura fixa da coluna de seleção em lote — só o suficiente pro checkbox, sem empurrar o resto. */
+.col-select {
+  width: 2.5rem;
+}
+
+/* Data de desativação: linha secundária dentro de "Cadastrado em", só quando existe — evita uma coluna própria que ficaria vazia ("—") na maioria das linhas. */
+.deactivated-at {
+  font-size: 0.72rem;
+}
+
 /* Ponto colorido antes do texto do badge de status — reforça a leitura rápida por cor, não só por texto. */
 .status-dot {
   display: inline-block;
@@ -39,6 +49,21 @@
   border-radius: 50%;
   margin-right: 0.35rem;
   background-color: currentColor;
+}
+
+/*
+ * Barra de ação em lote: aparece só com seleção ativa, entre os filtros e a tabela. Fundo em
+ * Índigo Confiança bem diluído (The One Accent Rule) — sinaliza "modo contextual" sem inventar
+ * uma cor nova nem recorrer a borda lateral colorida.
+ */
+.bulk-actions-bar {
+  background-color: rgba(var(--tk-primary-rgb), 0.08);
+  border-radius: var(--tk-radius-md);
+  padding: 0.65rem 1rem;
+}
+
+.bulk-actions-bar .bx-check-square {
+  color: var(--tk-primary);
 }
 
 /* Badge "+N": mesma linguagem visual dos badges de função, mas sem cor própria — é só contagem. */

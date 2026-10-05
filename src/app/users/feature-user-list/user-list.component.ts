@@ -67,13 +67,18 @@ export class UserListComponent implements OnInit {
     /** Texto digitado na busca, antes do debounce — ver o effect de busca no construtor. */
     searchInput = signal('');
 
+    /** Ids dos usuários marcados para ação em lote, na página atual. */
+    selectedUserIds = signal<Set<string>>(new Set());
+
     readonly pageSizeOptions = [10, 20, 50, 100];
 
     constructor() {
         effect(() => {
             if (this.store.success()) {
+                const { firstName, lastName } = this.createForm.getRawValue();
                 this.createForm.reset({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
                 document.getElementById('userCreateModalCloseButton')?.click();
+                this.toastService.show(`"${firstName} ${lastName}" criado com sucesso.`);
             }
         });
 
@@ -83,6 +88,12 @@ export class UserListComponent implements OnInit {
             distinctUntilChanged(),
             takeUntilDestroyed()
         ).subscribe(search => this.store.setSearch(search));
+
+        // Qualquer troca de página, tamanho de página ou filtro invalida a seleção em lote da página anterior.
+        effect(() => {
+            this.store.filters();
+            this.selectedUserIds.set(new Set());
+        });
     }
 
     ngOnInit(): void {
@@ -124,8 +135,11 @@ export class UserListComponent implements OnInit {
         if (!user) return;
 
         const { firstName, lastName } = this.editForm.getRawValue();
-        this.store.updateProfile(user.id, { firstName: firstName!.trim(), lastName: lastName!.trim() }, () => {
+        const trimmedFirstName = firstName!.trim();
+        const trimmedLastName = lastName!.trim();
+        this.store.updateProfile(user.id, { firstName: trimmedFirstName, lastName: trimmedLastName }, () => {
             document.getElementById('userEditModalCloseButton')?.click();
+            this.toastService.show(`Cadastro de "${trimmedFirstName} ${trimmedLastName}" atualizado.`);
         });
     }
 
@@ -218,6 +232,89 @@ export class UserListComponent implements OnInit {
                 });
             }
         });
+    }
+
+    /** Indica se o usuário pode ser marcado para ação em lote: ativo e diferente da própria conta logada. */
+    canSelectForBulk(user: UserSummary): boolean {
+        return user.isActive && !this.isCurrentUser(user);
+    }
+
+    /** Indica se o usuário está marcado na seleção em lote. */
+    isSelected(userId: string): boolean {
+        return this.selectedUserIds().has(userId);
+    }
+
+    /** Marca ou desmarca um usuário na seleção em lote. */
+    toggleSelection(userId: string, checked: boolean): void {
+        this.selectedUserIds.update(current => {
+            const next = new Set(current);
+            if (checked) next.add(userId); else next.delete(userId);
+            return next;
+        });
+    }
+
+    /** Quantidade de usuários selecionados. */
+    selectedCount(): number {
+        return this.selectedUserIds().size;
+    }
+
+    /** Indica se todos os usuários elegíveis da página estão selecionados — estado do checkbox "selecionar todos". */
+    allEligibleSelected(): boolean {
+        const eligible = this.eligibleUsersForBulk();
+        return eligible.length > 0 && eligible.every(user => this.selectedUserIds().has(user.id));
+    }
+
+    /** Indica se o checkbox "selecionar todos" deve ficar indeterminado (alguns, não todos, marcados). */
+    someEligibleSelected(): boolean {
+        const eligible = this.eligibleUsersForBulk();
+        return eligible.some(user => this.selectedUserIds().has(user.id)) && !this.allEligibleSelected();
+    }
+
+    /** Marca ou desmarca de uma vez todos os usuários elegíveis da página atual. */
+    toggleSelectAll(checked: boolean): void {
+        this.selectedUserIds.set(checked ? new Set(this.eligibleUsersForBulk().map(user => user.id)) : new Set());
+    }
+
+    /** Limpa a seleção em lote. */
+    clearSelection(): void {
+        this.selectedUserIds.set(new Set());
+    }
+
+    /** Confirma e desativa em lote todos os usuários selecionados. */
+    onBulkDeactivate(): void {
+        const userIds = Array.from(this.selectedUserIds());
+        if (userIds.length === 0) return;
+
+        const names = this.store.users()
+            .filter(user => this.selectedUserIds().has(user.id))
+            .map(user => `${user.firstName} ${user.lastName}`);
+        const label = userIds.length === 1 ? '1 usuário selecionado' : `${userIds.length} usuários selecionados`;
+        const message = names.length <= 8
+            ? `${names.join(', ')}. O login deles será bloqueado imediatamente.`
+            : 'O login deles será bloqueado imediatamente.';
+
+        this.confirmDialogService.confirm({
+            title: `Desativar ${label}?`,
+            message,
+            confirmLabel: 'Desativar',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (!confirmed) return;
+
+            this.store.deactivateMany(userIds, (succeededCount, failedCount) => {
+                this.clearSelection();
+                if (failedCount === 0) {
+                    this.toastService.show(succeededCount === 1 ? '1 usuário desativado.' : `${succeededCount} usuários desativados.`);
+                } else if (succeededCount > 0) {
+                    this.toastService.show(`${succeededCount} de ${succeededCount + failedCount} usuários desativados.`, 'info');
+                }
+            });
+        });
+    }
+
+    /** Usuários elegíveis para seleção em lote na página atual. */
+    private eligibleUsersForBulk(): UserSummary[] {
+        return this.store.users().filter(user => this.canSelectForBulk(user));
     }
 
     /** Muda o filtro de status da listagem. */

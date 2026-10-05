@@ -55,18 +55,40 @@
   </div>
 </div>
 
+@if (selectedCount() > 0) {
+  <div class="bulk-actions-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bx bx-check-square fs-5"></i>
+      <span class="fw-semibold" aria-live="polite">{{ selectedCount() === 1 ? '1 selecionado' : selectedCount() + ' selecionados' }}</span>
+      <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="clearSelection()">
+        Limpar seleção
+      </button>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deactivatingIds().length > 0" (click)="onBulkDeactivate()">
+      @if (store.deactivatingIds().length > 0) {
+        <span class="spinner-border spinner-border-sm me-1"></span>
+      }
+      <i class="bx bx-block me-1"></i>Desativar selecionados
+    </button>
+  </div>
+}
+
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0"
            [class.is-refreshing]="store.listState().loading && store.users().length > 0">
       <thead>
         <tr>
+          <th class="col-select">
+            <input type="checkbox" class="form-check-input" aria-label="Selecionar todos os usuários elegíveis desta página"
+                   [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()"
+                   (change)="toggleSelectAll($any($event.target).checked)" />
+          </th>
           <th>Nome</th>
           <th>E-mail</th>
           <th>Funções</th>
           <th>Status</th>
           <th>Cadastrado em</th>
-          <th>Desativado em</th>
           <th class="text-end">Ações</th>
         </tr>
       </thead>
@@ -87,6 +109,12 @@
         } @else {
           @for (user of store.users(); track user.id) {
             <tr [class.opacity-75]="isInactive(user)">
+              <td>
+                @if (canSelectForBulk(user)) {
+                  <input type="checkbox" class="form-check-input" [attr.aria-label]="'Selecionar ' + user.firstName + ' ' + user.lastName"
+                         [checked]="isSelected(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
+                }
+              </td>
               <td class="fw-semibold">{{ user.firstName }} {{ user.lastName }}</td>
               <td class="text-muted small">{{ user.email }}</td>
               <td>
@@ -109,12 +137,10 @@
                   <span class="badge bg-label-secondary"><span class="status-dot"></span>Inativo</span>
                 }
               </td>
-              <td class="text-muted small">{{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
               <td class="text-muted small">
+                {{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
                 @if (user.deactivatedAtUtc) {
-                  {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}
-                } @else {
-                  —
+                  <div class="text-danger deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
                 }
               </td>
               <td class="text-end">
@@ -139,11 +165,11 @@
                       <li><hr class="dropdown-divider" /></li>
                       <li>
                         @if (isInactive(user)) {
-                          <button type="button" class="dropdown-item text-success" [disabled]="store.activating()" (click)="onActivate(user)">
+                          <button type="button" class="dropdown-item text-success" [disabled]="store.activatingIds().includes(user.id)" (click)="onActivate(user)">
                             <i class="bx bx-check me-2"></i>Reativar
                           </button>
                         } @else {
-                          <button type="button" class="dropdown-item text-danger" [disabled]="store.deactivating()" (click)="onDeactivate(user)">
+                          <button type="button" class="dropdown-item text-danger" [disabled]="store.deactivatingIds().includes(user.id)" (click)="onDeactivate(user)">
                             <i class="bx bx-block me-2"></i>Desativar
                           </button>
                         }
@@ -174,6 +200,7 @@
               <span class="px-1 text-muted">…</span>
             } @else {
               <button type="button" class="btn btn-sm" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
+                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
                       (click)="store.goToPage(pageNumber)">
                 {{ pageNumber }}
               </button>

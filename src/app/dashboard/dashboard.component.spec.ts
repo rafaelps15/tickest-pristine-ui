@@ -19,14 +19,16 @@ describe('DashboardComponent', () => {
     };
   }
 
+  type CurrentUserFake = { firstName: string; roles: { name: string }[] } | null;
+
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
-  let currentUser: ReturnType<typeof signal<{ firstName: string } | null>>;
+  let currentUser: ReturnType<typeof signal<CurrentUserFake>>;
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
     hasPermission = jasmine.createSpy('hasPermission').and.returnValue(false);
-    currentUser = signal<{ firstName: string } | null>({ firstName: 'Maria' });
+    currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Requester' }] });
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -93,5 +95,36 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Novo Ticket');
+  });
+
+  it('não carrega tickets nem mostra os cards/gráfico de tickets para um Admin Master puro (sem role de Agent/Requester)', async () => {
+    currentUser.set({ firstName: 'Carlos', roles: [{ name: 'Admin' }] });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(ticketsStoreFake.loadForCurrentUser).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).not.toContain('Total de Tickets');
+    expect(fixture.nativeElement.textContent).not.toContain('Novo Ticket');
+    expect(fixture.nativeElement.textContent).toContain('Acesso rápido às ferramentas de administração.');
+  });
+
+  it('mantém a visão de tickets para quem é Admin e também Agent/Requester ao mesmo tempo', async () => {
+    currentUser.set({ firstName: 'Carlos', roles: [{ name: 'Admin' }, { name: 'Agent' }] });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(ticketsStoreFake.loadForCurrentUser).toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Total de Tickets');
+  });
+
+  it('mostra os atalhos administrativos no Painel de Controle promovido, conforme a permissão', async () => {
+    currentUser.set({ firstName: 'Carlos', roles: [{ name: 'Admin' }] });
+    hasPermission.and.callFake((code: string) => code === 'roles:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Funções');
+    expect(text).not.toContain('Departamentos e setores');
   });
 });
