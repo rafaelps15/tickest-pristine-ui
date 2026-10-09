@@ -5,9 +5,15 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, of } from 'rxjs';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
-import { extractErrorMessage } from '../../shared';
+import { CursorPage, extractErrorMessage } from '../../shared';
 
-/** Store dos anexos de um ticket: listagem, upload, download e exclusão. */
+/** Página vazia, usada antes de um ticket ser definido. */
+const EMPTY_PAGE: CursorPage<TicketAttachment> = { items: [], nextCursorDate: null, nextCursorId: null, hasNextPage: false };
+
+/**
+ * Store dos anexos de um ticket: listagem paginada por cursor ("carregar mais"), upload, download e exclusão.
+ * O resource traz a primeira página; as seguintes são acumuladas em {@link olderAttachments}.
+ */
 export const TicketAttachmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
@@ -17,7 +23,12 @@ export const TicketAttachmentsStore = signalStore(
     uploadError: null as string | null,
     downloading: false,
     downloadError: null as string | null,
-    deleting: false
+    deleting: false,
+    /** Anexos das páginas carregadas depois da primeira, na ordem em que chegaram. */
+    olderAttachments: [] as TicketAttachment[],
+    /** Última página carregada por "carregar mais" (nula enquanto só a primeira foi carregada). */
+    lastPage: null as CursorPage<TicketAttachment> | null,
+    loadingMore: false
   }),
   withProps(() => ({
     _ticketAttachmentDataService: inject(TicketAttachmentDataService)
@@ -27,12 +38,14 @@ export const TicketAttachmentsStore = signalStore(
       params: () => store.ticketId(),
       stream: ({ params }) => params !== undefined
         ? store._ticketAttachmentDataService.getAll(params)
-        : of([])
+        : of(EMPTY_PAGE)
     })
   })),
   withComputed((store) => ({
-    /** Anexos do ticket atual, do mais antigo pro mais novo (ordem já aplicada pelo back-end). */
-    attachments: computed(() => store._listResource.value() ?? []),
+    /** Anexos já carregados do ticket atual, do mais novo para o mais antigo (ordem aplicada pelo back-end). */
+    attachments: computed(() => [...(store._listResource.value()?.items ?? []), ...store.olderAttachments()]),
+    /** Página de onde sai o cursor da próxima: a última carregada por "carregar mais" ou, antes disso, a primeira. */
+    currentPage: computed(() => store.lastPage() ?? store._listResource.value()),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
@@ -45,10 +58,46 @@ export const TicketAttachmentsStore = signalStore(
       };
     })
   })),
+  withComputed((store) => ({
+    /** Indica se ainda há anexos mais antigos para carregar. */
+    hasMore: computed(() => store.currentPage()?.hasNextPage ?? false)
+  })),
+  withMethods((store) => {
+    /** Volta para a primeira página: descarta as páginas acumuladas e recarrega o resource. */
+    const reloadFirstPage = () => {
+      patchState(store, { olderAttachments: [], lastPage: null });
+      store._listResource.reload();
+    };
+
+    return { _reloadFirstPage: reloadFirstPage };
+  }),
   withMethods((store) => ({
-    /** Define o ticket cujos anexos devem ser carregados, disparando o resource. */
+    /** Define o ticket cujos anexos devem ser carregados, disparando o resource da primeira página. */
     loadForTicket(ticketId: string): void {
-      patchState(store, { ticketId, mutationError: null });
+      patchState(store, { ticketId, mutationError: null, olderAttachments: [], lastPage: null });
+    },
+
+    /** Carrega a próxima página de anexos (mais antigos) e acrescenta à lista já exibida. */
+    loadMore(): void {
+      const ticketId = store.ticketId();
+      const page = store.currentPage();
+      if (!ticketId || !page?.hasNextPage || !page.nextCursorDate || !page.nextCursorId || store.loadingMore()) return;
+
+      patchState(store, { loadingMore: true, mutationError: null });
+
+      store._ticketAttachmentDataService.getAll(ticketId, { cursorDate: page.nextCursorDate, cursorId: page.nextCursorId }).pipe(
+        finalize(() => patchState(store, { loadingMore: false }))
+      ).subscribe({
+        next: (nextPage) => {
+          patchState(store, {
+            olderAttachments: [...store.olderAttachments(), ...nextPage.items],
+            lastPage: nextPage
+          });
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao carregar mais anexos') });
+        }
+      });
     },
 
     /** Envia um novo anexo e recarrega a listagem em caso de sucesso. */
@@ -62,7 +111,7 @@ export const TicketAttachmentsStore = signalStore(
         finalize(() => patchState(store, { uploading: false }))
       ).subscribe({
         next: () => {
-          store._listResource.reload();
+          store._reloadFirstPage();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
@@ -110,7 +159,7 @@ export const TicketAttachmentsStore = signalStore(
       ).subscribe({
         next: () => {
           patchState(store, { mutationError: null });
-          store._listResource.reload();
+          store._reloadFirstPage();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {

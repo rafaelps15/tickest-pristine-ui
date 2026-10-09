@@ -22,8 +22,8 @@ function hasErrorCode(err: HttpErrorResponse, status: number, code: string): boo
 }
 
 /**
- * Store do fluxo de login: autentica e, quando a senha é provisória, guarda as credenciais só em memória até a
- * troca no primeiro acesso.
+ * Store do ciclo de vida da sessão: login (guardando as credenciais só em memória quando a senha é provisória,
+ * até a troca no primeiro acesso) e logout.
  */
 export const LoginStore = signalStore(
   { providedIn: 'root' },
@@ -115,6 +115,24 @@ export const LoginStore = signalStore(
       cancelPasswordChange(): void {
         patchState(store, { pendingCredentials: null, error: null });
         store._router.navigate(['/login']);
+      },
+
+      /** Encerra a sessão: revoga o refresh token no servidor (se houver) e, com sucesso ou erro, limpa a sessão local e volta para o login. */
+      logout(): void {
+        const refreshToken = store._session.refreshToken();
+        const finishLogout = () => {
+          store._session.clearSession();
+          store._router.navigate(['/login']);
+        };
+
+        if (!refreshToken) {
+          finishLogout();
+          return;
+        }
+
+        store._authDataService.logout(refreshToken).pipe(
+          finalize(finishLogout)
+        ).subscribe({ error: () => {} });
       }
     };
   })

@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { TicketAttachmentsStore } from './ticket-attachments.store';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
 import { TicketAttachment } from '../entities/ticket-attachment';
+import { CursorPage } from '../../shared';
 
 describe('TicketAttachmentsStore', () => {
   const attachment: TicketAttachment = {
@@ -13,12 +14,18 @@ describe('TicketAttachmentsStore', () => {
     uploadedAtUtc: '2026-01-01T12:00:00Z'
   };
 
+  /** Monta uma página por cursor com os anexos informados; o cursor aponta para o último. */
+  function pageOf(items: TicketAttachment[], hasNextPage = false): CursorPage<TicketAttachment> {
+    const last = items[items.length - 1];
+    return { items, nextCursorDate: last?.uploadedAtUtc ?? null, nextCursorId: last?.id ?? null, hasNextPage };
+  }
+
   let store: InstanceType<typeof TicketAttachmentsStore>;
   let dataService: jasmine.SpyObj<TicketAttachmentDataService>;
 
   beforeEach(() => {
     dataService = jasmine.createSpyObj('TicketAttachmentDataService', ['getAll', 'upload', 'download', 'delete']);
-    dataService.getAll.and.returnValue(of([attachment]));
+    dataService.getAll.and.returnValue(of(pageOf([attachment])));
 
     TestBed.configureTestingModule({
       providers: [
@@ -40,6 +47,49 @@ describe('TicketAttachmentsStore', () => {
 
   it('não chama a API antes de um ticket ser definido', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
+  });
+
+  it('carrega a próxima página pelo cursor e acrescenta os anexos aos já exibidos', async () => {
+    const older: TicketAttachment = { ...attachment, id: 'a0', fileName: 'antigo.pdf', uploadedAtUtc: '2025-12-01T12:00:00Z' };
+    dataService.getAll.and.returnValues(of(pageOf([attachment], true)), of(pageOf([older])));
+
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.hasMore()).toBeTrue();
+
+    store.loadMore();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith('t1', { cursorDate: attachment.uploadedAtUtc, cursorId: 'a1' });
+    expect(store.attachments()).toEqual([attachment, older]);
+    expect(store.hasMore()).toBeFalse();
+    expect(store.loadingMore()).toBeFalse();
+  });
+
+  it('não chama a API ao carregar mais quando não há próxima página', async () => {
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.loadMore();
+
+    expect(dataService.getAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('volta para a primeira página depois de enviar um anexo, descartando as páginas acumuladas', async () => {
+    const older: TicketAttachment = { ...attachment, id: 'a0', fileName: 'antigo.pdf' };
+    dataService.getAll.and.returnValues(of(pageOf([attachment], true)), of(pageOf([older])), of(pageOf([attachment], true)));
+    dataService.upload.and.returnValue(of('new-attachment-id'));
+
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+    store.loadMore();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.upload(new File(['x'], 'novo.pdf', { type: 'application/pdf' }));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.attachments()).toEqual([attachment]);
+    expect(store.hasMore()).toBeTrue();
   });
 
   it('envia um novo anexo e recarrega a listagem em caso de sucesso', async () => {

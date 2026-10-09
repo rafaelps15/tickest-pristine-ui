@@ -1,0 +1,64 @@
+/* Cabeçalho: respiro entre o rótulo "Administração" e o título, sem pesar no layout. */
+.page-subtitle {
+  color: var(--tk-text-secondary);
+  max-width: 48rem;
+}
+
+/* Cards de resumo de SLA: mesmo visual dos cards de estatística do Dashboard. */
+.card-stats {
+  background-color: var(--tk-surface);
+}
+
+/*
+ * Cards de resumo como botão: cada um filtra a tabela pelo mesmo SLA que mostra. Reset de
+ * `<button>` nativo (borda, fundo, alinhamento) pra herdar só o visual do `.card`; o estado
+ * selecionado usa tingimento de fundo no Índigo Confiança (não uma borda colorida — banida
+ * pelo craft-floor), o mesmo acento usado no item ativo do menu lateral.
+ */
+.card-stats-btn {
+  width: 100%;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--tk-transition);
+}
+
+.card-stats-btn:hover {
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.card-stats-btn:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+.card-stats-btn[aria-pressed="true"] {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+}
+
+/* Card de filtros: mais discreto que o card da tabela, que é o conteúdo principal da tela. */
+.filters-card {
+  box-shadow: none;
+  border: 1px solid var(--tk-border);
+}
+
+.filters-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Botão "Limpar filtros": ação secundária de baixa frequência. */
+.btn-clear-filters {
+  color: var(--tk-text-secondary);
+  font-weight: 500;
+}
+
+.btn-clear-filters:hover {
+  color: var(--tk-text-primary);
+}

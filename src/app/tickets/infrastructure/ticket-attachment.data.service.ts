@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TicketAttachment } from '../entities/ticket-attachment';
+import { CursorPage, PageCursor } from '../../shared';
 import { environment } from '../../../environments/environment';
 
 /** Acesso HTTP aos anexos de ticket (listagem, upload, download e exclusão). */
@@ -10,9 +11,23 @@ export class TicketAttachmentDataService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrl;
 
-  /** Lista os anexos de um ticket (GET /tickets/{ticketId}/attachments). */
-  getAll(ticketId: string): Observable<TicketAttachment[]> {
-    return this.http.get<TicketAttachment[]>(`${this.apiUrl}/tickets/${ticketId}/attachments`);
+  /**
+   * Busca uma página dos anexos de um ticket, do mais novo para o mais antigo (GET /tickets/{ticketId}/attachments).
+   * Sem cursor, devolve a primeira página; com o cursor da página anterior, devolve a seguinte.
+   */
+  getAll(ticketId: string, cursor?: PageCursor, pageSize?: number): Observable<CursorPage<TicketAttachment>> {
+    let params = new HttpParams();
+
+    if (cursor) {
+      params = params
+        .set('cursorDate', cursor.cursorDate)
+        .set('cursorId', cursor.cursorId);
+    }
+    if (pageSize) {
+      params = params.set('pageSize', pageSize);
+    }
+
+    return this.http.get<CursorPage<TicketAttachment>>(`${this.apiUrl}/tickets/${ticketId}/attachments`, { params });
   }
 
   /** Envia um novo anexo pro ticket (POST /tickets/{ticketId}/attachments, multipart/form-data). */

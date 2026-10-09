@@ -29,7 +29,7 @@ export class TicketCreateComponent implements OnInit {
 
     form = this.fb.group({
         title: ['', [Validators.required, Validators.maxLength(200)]],
-        description: ['', [Validators.required, Validators.maxLength(500)]],
+        description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
         priority: [TicketPriority.Medium, [Validators.required]],
         departmentId: ['', [Validators.required]],
         sectorId: [{ value: '', disabled: true }, [Validators.required]]

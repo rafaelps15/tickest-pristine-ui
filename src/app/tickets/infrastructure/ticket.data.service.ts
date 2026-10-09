@@ -1,10 +1,20 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateTicketData, Ticket, UpdateTicketData } from '../entities/ticket';
+import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
+import { TicketMonitorItem } from '../entities/ticket-monitor-item';
+import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
+import { TicketSlaSummary } from '../entities/ticket-sla-summary';
+import { TicketStatusCounts } from '../entities/ticket-status-counts';
+import { TicketVolumeGrouping, TicketVolumePoint } from '../entities/ticket-volume';
+import { PagedResponse } from '../../shared';
 import { environment } from '../../../environments/environment';
 
-/** Acesso HTTP aos tickets (listagem por usuário, criação, atualização, reabertura e exclusão). */
+/**
+ * Acesso HTTP aos tickets: listagem paginada por usuário, listagem de todos os tickets do sistema
+ * (para quem administra a fila), detalhe, resumos (inclusive os da empresa inteira, para o
+ * dashboard), criação, atualização, reabertura e exclusão.
+ */
 @Injectable({ providedIn: 'root' })
 export class TicketDataService {
   private readonly http = inject(HttpClient);
@@ -30,8 +40,66 @@ export class TicketDataService {
     return this.http.delete<void>(`${this.apiUrl}/${ticketId}`);
   }
 
-  /** Busca os tickets de um usuário (GET /tickets/users/{userId}). */
-  getByUser(userId: string): Observable<Ticket[]> {
-    return this.http.get<Ticket[]>(`${this.apiUrl}/users/${userId}`);
+  /**
+   * Busca uma página dos tickets abertos pelo usuário logado, do mais novo para o mais antigo (GET /tickets/mine).
+   * O back-end identifica o usuário pelo token, por isso nenhum id vai na URL.
+   */
+  getMine(page: number, pageSize: number): Observable<PagedResponse<Ticket>> {
+    const params = new HttpParams()
+      .set('page', page)
+      .set('pageSize', pageSize);
+
+    return this.http.get<PagedResponse<Ticket>>(`${this.apiUrl}/mine`, { params });
+  }
+
+  /** Busca o detalhe de um ticket (GET /tickets/{id}). */
+  getById(ticketId: string): Observable<TicketDetail> {
+    return this.http.get<TicketDetail>(`${this.apiUrl}/${ticketId}`);
+  }
+
+  /**
+   * Busca uma página de todos os tickets do sistema, com filtros (GET /tickets) — exige a
+   * permissão `tickets:manage`. Requer a role Administrador ou Atendente.
+   */
+  getAll(filters: TicketMonitorFilters): Observable<PagedResponse<TicketMonitorItem>> {
+    let params = new HttpParams()
+      .set('page', filters.page)
+      .set('pageSize', filters.pageSize)
+      .set('sort', filters.sort);
+
+    if (filters.status !== undefined) {
+      params = params.set('status', filters.status);
+    }
+    if (filters.priority !== undefined) {
+      params = params.set('priority', filters.priority);
+    }
+    if (filters.sectorId) {
+      params = params.set('sectorId', filters.sectorId);
+    }
+    if (filters.slaStatus !== undefined) {
+      params = params.set('slaStatus', filters.slaStatus);
+    }
+    if (filters.search) {
+      params = params.set('search', filters.search);
+    }
+
+    return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params });
+  }
+
+  /** Busca as contagens de SLA dos chamados ativos, opcionalmente de um só setor (GET /tickets/sla-summary). */
+  getSlaSummary(sectorId?: string): Observable<TicketSlaSummary> {
+    const params = sectorId ? new HttpParams().set('sectorId', sectorId) : undefined;
+    return this.http.get<TicketSlaSummary>(`${this.apiUrl}/sla-summary`, { params });
+  }
+
+  /** Busca os totais de tickets por status de toda a empresa, para qualquer usuário logado (GET /tickets/stats/status). */
+  getStatusCounts(): Observable<TicketStatusCounts> {
+    return this.http.get<TicketStatusCounts>(`${this.apiUrl}/stats/status`);
+  }
+
+  /** Busca o volume de tickets abertos por período, de toda a empresa (GET /tickets/stats/volume). */
+  getVolume(groupBy: TicketVolumeGrouping): Observable<TicketVolumePoint[]> {
+    const params = new HttpParams().set('groupBy', groupBy);
+    return this.http.get<TicketVolumePoint[]>(`${this.apiUrl}/stats/volume`, { params });
   }
 }

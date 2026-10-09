@@ -10,6 +10,7 @@ target_fingerprint: "sha256:fbdac1b2b1a94877ed4e8a64aebe878f0a596315e29a5165dc05
 target_path: "C:\\dev\\tickest-pristine-front\\src\\app\\dashboard\\dashboard.component.html"
 timestamp: 2026-10-05T13-46-00Z
 slug: src-app-dashboard-dashboard-component-html
+closed: true
 ---
 Method: dual-agent (A: af42beb6b5ea777a9 · B: acb8a7f4d68d85cca)
 

@@ -41,6 +41,8 @@
               <div class="invalid-feedback">
                 @if (form.controls.description.errors?.['required']) {
                   A descrição é obrigatória.
+                } @else if (form.controls.description.errors?.['minlength']) {
+                  A descrição deve ter pelo menos 10 caracteres.
                 } @else if (form.controls.description.errors?.['maxlength']) {
                   A descrição deve ter no máximo 500 caracteres.
                 }

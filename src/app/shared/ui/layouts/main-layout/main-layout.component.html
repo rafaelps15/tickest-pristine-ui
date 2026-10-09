@@ -37,9 +37,19 @@
 
         <!-- Administração -->
         @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:manage') ||
-             sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
+             sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage') ||
+             sessionService.hasPermission('tickets:manage')) {
           <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Administração</span>
+          </li>
+        }
+
+        @if (sessionService.hasPermission('tickets:manage')) {
+          <li class="menu-item" routerLinkActive="active">
+            <a routerLink="/tickets/monitorar" class="menu-link">
+              <i class="menu-icon tf-icons bx bx-list-check"></i>
+              <div>Monitorar Tickets</div>
+            </a>
           </li>
         }
 

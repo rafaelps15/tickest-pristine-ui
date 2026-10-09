@@ -11,7 +11,7 @@ colors:
   danger: "#ff3e1d"
   text-primary: "#2b2c40"
   text-secondary: "#697a8d"
-  text-muted: "#a1acb8"
+  text-muted: "#6b7684"
   surface: "#ffffff"
   page-bg: "#f5f5f9"
   border: "#e7e7ff"
@@ -21,6 +21,11 @@ colors:
   surface-dark: "#212529"
   page-bg-dark: "#1a1d20"
   border-dark: "#3a3f44"
+  success-text: "#2e7d14"
+  warning-text: "#92400e"
+  info-text: "#0c6478"
+  danger-text: "#991b1b"
+  secondary-text: "#5a6b7d"
 typography:
   display:
     fontFamily: "Sora, sans-serif"
@@ -54,23 +59,27 @@ components:
     backgroundColor: "{colors.primary-dark}"
   badge-primary:
     backgroundColor: "#e7e7ff"
-    textColor: "{colors.primary}"
+    textColor: "{colors.primary-darker}"
     rounded: "{rounded.pill}"
   badge-success:
     backgroundColor: "#e8fadf"
-    textColor: "{colors.success}"
+    textColor: "{colors.success-text}"
     rounded: "{rounded.pill}"
   badge-warning:
     backgroundColor: "#fff2e2"
-    textColor: "{colors.warning}"
+    textColor: "{colors.warning-text}"
     rounded: "{rounded.pill}"
   badge-info:
     backgroundColor: "#e5f5fa"
-    textColor: "{colors.info}"
+    textColor: "{colors.info-text}"
     rounded: "{rounded.pill}"
   badge-danger:
     backgroundColor: "#ffe5e5"
-    textColor: "{colors.danger}"
+    textColor: "{colors.danger-text}"
+    rounded: "{rounded.pill}"
+  badge-secondary:
+    backgroundColor: "#eceef1"
+    textColor: "{colors.secondary-text}"
     rounded: "{rounded.pill}"
   card:
     backgroundColor: "{colors.surface}"
@@ -132,7 +141,10 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 ### Neutral
 - **Grafite Texto** (`#2b2c40`): texto principal (claro).
 - **Ardósia Secundária** (`#697a8d`): texto secundário/rótulos de formulário (claro).
-- **Névoa Terciária** (`#a1acb8`): texto terciário/placeholder, cabeçalho de tabela (claro).
+- **Névoa Terciária** (`#6b7684`): texto terciário/placeholder, cabeçalho de tabela (claro).
+  Escurecido em 2026-10-08 (era `#a1acb8`, ~2,31:1) pra passar 4,5:1 WCAG AA — auditado no
+  Dashboard. `--tk-text-secondary` (`#697a8d`, ~4,40:1) ficou próximo do limite nessa correção e
+  também merece revisão numa próxima rodada.
 - **Branco Superfície** (`#ffffff`): fundo de cards, modais, inputs (claro).
 - **Lavanda Nebulosa** (`#f5f5f9`): fundo de página, por trás dos cards (claro).
 - **Contorno Lavanda** (`#e7e7ff`): bordas sutis entre superfícies (claro).
@@ -142,11 +154,25 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
   (`#3a3f44`): equivalentes de superfície/fundo/borda no modo escuro.
 
 ### Semantic (status e prioridade — nunca decorativas)
-- **Verde Resolução** (`#71dd37`): status "Ativo"/"Resolvido", ação de reativar.
-- **Âmbar Atenção** (`#ffab00`): status "Aberto", prioridade "Alta".
-- **Ciano Andamento** (`#03c3ec`): status "Em Andamento".
+- **Verde Resolução** (`#71dd37`): status "Ativo"/"Resolvido", ação de reativar. Em gráficos,
+  ícones e qualquer uso de área (não texto pequeno).
+- **Âmbar Atenção** (`#ffab00`): status "Aberto", prioridade "Alta". Mesma ressalva de uso acima.
+- **Ciano Andamento** (`#03c3ec`): status "Em Andamento". Mesma ressalva de uso acima.
 - **Vermelho Alerta** (`#ff3e1d`): status "Cancelado", ação destrutiva (excluir, desativar),
-  prioridade "Urgente".
+  prioridade "Urgente". Mesma ressalva de uso acima.
+
+### Semantic Text (texto de badge "soft" — contraste AA sobre o fundo pastel)
+A cor semântica "pura" acima, usada direto como texto sobre o próprio fundo pastel do badge,
+mede entre 1,6:1 e 3,8:1 de contraste — falha WCAG AA (4,5:1). Auditado e corrigido em
+2026-10-08: estas são versões escurecidas do mesmo matiz, só para texto pequeno sobre fundo claro.
+- **Verde Resolução Texto** (`#2e7d14`): ~4,7:1 sobre `#e8fadf`.
+- **Âmbar Atenção Texto** (`#92400e`): ~6,4:1 sobre `#fff2e2`.
+- **Ciano Andamento Texto** (`#0c6478`): ~6,0:1 sobre `#e5f5fa`.
+- **Vermelho Alerta Texto** (`#991b1b`): ~7,0:1 sobre `#ffe5e5`.
+- **Ardósia Secundária Texto** (`#5a6b7d`): ~4,7:1 sobre `#eceef1` (badge neutro).
+- Badge primário reusa o Índigo Profundo (`#3a3ca3`) já existente — ~7,3:1 sobre `#e7e7ff`.
+- As variantes de modo escuro dos badges (texto mais claro sobre fundo de baixa opacidade) já
+  media 6:1+ antes desta correção e não foram alteradas.
 
 ### Named Rules
 **The One Accent Rule.** O Índigo Confiança é a única cor não-semântica do sistema. Se um
@@ -154,9 +180,10 @@ elemento precisa de cor e não é status/prioridade, a resposta é índigo ou ne
 nova inventada para aquela tela.
 
 **The Badge Pair Rule.** Toda cor semântica (success/warning/info/danger) existe em dois pares:
-um "soft" (fundo pastel claro + texto saturado) para o modo claro, e um "soft dark" (fundo do
-mesmo matiz em baixa opacidade sobre fundo escuro + texto mais claro) para o modo escuro. Nunca
-usar o par claro diretamente sobre fundo escuro — fica estourado.
+um "soft" (fundo pastel claro + texto na variante escurecida do matiz, ver **Semantic Text**
+acima — não a cor semântica pura, que falha contraste sobre o próprio fundo pastel) para o modo
+claro, e um "soft dark" (fundo do mesmo matiz em baixa opacidade sobre fundo escuro + texto mais
+claro) para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro — fica estourado.
 
 ## Typography
 
@@ -245,8 +272,9 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
   primário da tela.
 
 ### Badges
-- **Style:** fundo "soft" (pastel no claro, baixa opacidade no escuro) + texto saturado na cor
-  semântica, sempre em pílula (999px). Ver **The Badge Pair Rule** em Colors.
+- **Style:** fundo "soft" (pastel no claro, baixa opacidade no escuro) + texto na variante
+  escurecida da cor semântica (AA, ver **Semantic Text**), sempre em pílula (999px). Ver
+  **The Badge Pair Rule** em Colors.
 - **Uso:** status de usuário/ticket, prioridade de ticket, papel/função atribuída. Uma célula com
   múltiplos badges (ex. funções de um usuário) mostra no máximo 2 e agrupa o resto num badge
   "+N" neutro com tooltip nativo — nunca deixa a linha da tabela esticar.

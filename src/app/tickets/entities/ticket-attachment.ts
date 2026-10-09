@@ -1,4 +1,4 @@
-/** Anexo de um ticket, conforme retornado por GET /tickets/{ticketId}/attachments. */
+/** Anexo de um ticket, conforme retornado (paginado por cursor) por GET /tickets/{ticketId}/attachments. */
 export interface TicketAttachment {
   id: string;
   ticketId: string;

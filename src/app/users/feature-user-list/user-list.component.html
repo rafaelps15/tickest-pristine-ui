@@ -79,17 +79,17 @@
            [class.is-refreshing]="store.listState().loading && store.users().length > 0">
       <thead>
         <tr>
-          <th class="col-select">
+          <th scope="col" class="col-select">
             <input type="checkbox" class="form-check-input" aria-label="Selecionar todos os usuários elegíveis desta página"
                    [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()"
                    (change)="toggleSelectAll($any($event.target).checked)" />
           </th>
-          <th>Nome</th>
-          <th>E-mail</th>
-          <th>Funções</th>
-          <th>Status</th>
-          <th>Cadastrado em</th>
-          <th class="text-end">Ações</th>
+          <th scope="col">Nome</th>
+          <th scope="col">E-mail</th>
+          <th scope="col">Funções</th>
+          <th scope="col">Status</th>
+          <th scope="col">Cadastrado em</th>
+          <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -191,7 +191,7 @@
 
       @if (store.totalPages() > 1) {
         <div class="d-flex align-items-center gap-2">
-          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
+          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
             Anterior
           </button>
 
@@ -199,7 +199,7 @@
             @if (pageNumber === '…') {
               <span class="px-1 text-muted">…</span>
             } @else {
-              <button type="button" class="btn btn-sm" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
+              <button type="button" class="btn btn-sm btn-page" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
                       [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
                       (click)="store.goToPage(pageNumber)">
                 {{ pageNumber }}
@@ -207,7 +207,7 @@
             }
           }
 
-          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
+          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
             Próxima
           </button>
         </div>

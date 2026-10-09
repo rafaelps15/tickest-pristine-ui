@@ -21,8 +21,8 @@ describe('LoginStore', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('AuthDataService', ['login', 'changeRequiredPassword']);
-    session = jasmine.createSpyObj('SessionService', ['saveSession']);
+    dataService = jasmine.createSpyObj('AuthDataService', ['login', 'changeRequiredPassword', 'logout']);
+    session = jasmine.createSpyObj('SessionService', ['saveSession', 'refreshToken', 'clearSession']);
     currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
     currentUserService.load.and.returnValue(of(true));
     router = jasmine.createSpyObj('Router', ['navigate']);
@@ -135,6 +135,37 @@ describe('LoginStore', () => {
     store.cancelPasswordChange();
 
     expect(store.pendingCredentials()).toBeNull();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('deve revogar o refresh token, limpar a sessão e voltar ao login ao sair', () => {
+    session.refreshToken.and.returnValue('refresh-token');
+    dataService.logout.and.returnValue(of(undefined));
+
+    store.logout();
+
+    expect(dataService.logout).toHaveBeenCalledWith('refresh-token');
+    expect(session.clearSession).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('deve limpar a sessão e voltar ao login mesmo se a revogação falhar no servidor', () => {
+    session.refreshToken.and.returnValue('refresh-token');
+    dataService.logout.and.returnValue(throwError(() => new Error('offline')));
+
+    store.logout();
+
+    expect(session.clearSession).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('não chama a API de logout quando não há refresh token, mas limpa a sessão e volta ao login igual', () => {
+    session.refreshToken.and.returnValue(null);
+
+    store.logout();
+
+    expect(dataService.logout).not.toHaveBeenCalled();
+    expect(session.clearSession).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 });

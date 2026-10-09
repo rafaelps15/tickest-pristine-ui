@@ -51,6 +51,14 @@ export const routes: Routes = [
           .then(m => m.TicketCreateComponent)
       },
       {
+        // Precisa vir antes de 'tickets/:id' — senão o router casaria "monitorar" como se fosse um id.
+        path: 'tickets/monitorar',
+        canActivate: [adminMasterGuard],
+        data: { requiredPermission: 'tickets:manage' },
+        loadComponent: () => import('../../tickets/feature-ticket-monitor/ticket-monitor.component')
+          .then(m => m.TicketMonitorComponent)
+      },
+      {
         path: 'tickets/:id',
         loadComponent: () => import('../../tickets/feature-ticket-detail/ticket-detail.component')
           .then(m => m.TicketDetailComponent)

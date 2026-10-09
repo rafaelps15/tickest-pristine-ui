@@ -1,14 +1,15 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, computed, signal } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TicketsStore } from '../application/tickets.store';
+import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
+import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { ConfirmDialogService } from '../../shared';
 
-/** Tela de detalhe de um ticket: dados básicos (do que já está carregado na listagem) e os anexos. */
+/** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}) e os anexos. */
 @Component({
     selector: 'app-ticket-detail',
     imports: [DatePipe, NgClass, RouterLink],
@@ -17,7 +18,7 @@ import { ConfirmDialogService } from '../../shared';
 })
 export class TicketDetailComponent implements OnInit {
     private readonly route = inject(ActivatedRoute);
-    protected readonly ticketsStore = inject(TicketsStore);
+    protected readonly detailStore = inject(TicketDetailStore);
     protected readonly store = inject(TicketAttachmentsStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
 
@@ -25,20 +26,20 @@ export class TicketDetailComponent implements OnInit {
     protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
     protected readonly priorityLabels = TICKET_PRIORITY_LABELS;
     protected readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
+    protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
+    protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
 
     readonly ticketId = this.route.snapshot.paramMap.get('id')!;
 
     /** Mensagem de erro de validação (tamanho/tipo) do arquivo escolhido, antes de enviar. */
     fileValidationError = signal<string | null>(null);
 
-    /**
-     * Dados básicos do ticket, a partir do que já está carregado em TicketsStore — não existe
-     * GET /tickets/{id} no back-end, só a listagem do usuário logado.
-     */
-    protected readonly ticket = computed(() => this.ticketsStore.tickets().find(t => t.id === this.ticketId));
+    /** Detalhe do ticket carregado pelo id da rota. */
+    protected readonly ticket = this.detailStore.ticket;
 
+    /** Carrega o detalhe do ticket e a primeira página de anexos ao inicializar a tela. */
     ngOnInit(): void {
-        this.ticketsStore.loadForCurrentUser();
+        this.detailStore.loadTicket(this.ticketId);
         this.store.loadForTicket(this.ticketId);
     }
 

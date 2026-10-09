@@ -3,18 +3,23 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { TicketDetailComponent } from './ticket-detail.component';
-import { TicketsStore } from '../application/tickets.store';
+import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
-import { Ticket } from '../entities/ticket';
+import { TicketDetail } from '../entities/ticket';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
+import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { ConfirmDialogService } from '../../shared';
 
 describe('TicketDetailComponent', () => {
-  const ticket: Ticket = {
+  const ticket: TicketDetail = {
     id: 't1', title: 'Impressora não funciona', description: 'A impressora do 3º andar não imprime.',
-    priority: TicketPriority.Medium, status: TicketStatus.Open, openedByUserId: 'u1', assignedToUserId: null
+    priority: TicketPriority.Medium, status: TicketStatus.Open,
+    openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null,
+    sectorId: 's1', sectorName: 'Suporte',
+    createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
+    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
   const attachment: TicketAttachment = {
     id: 'a1', ticketId: 't1', uploadedByUserId: 'u1',
@@ -22,17 +27,21 @@ describe('TicketDetailComponent', () => {
     uploadedAtUtc: '2026-01-01T12:00:00Z'
   };
 
-  function createTicketsStoreFake() {
+  /** Cria um store de detalhe falso com signals reais. */
+  function createDetailStoreFake() {
     return {
-      tickets: signal<Ticket[]>([ticket]),
+      ticket: signal<TicketDetail | undefined>(ticket),
       state: signal({ loading: false, error: null as string | null }),
-      loadForCurrentUser: jasmine.createSpy('loadForCurrentUser')
+      loadTicket: jasmine.createSpy('loadTicket')
     };
   }
 
   function createAttachmentsStoreFake() {
     return {
       attachments: signal<TicketAttachment[]>([attachment]),
+      hasMore: signal(false),
+      loadingMore: signal(false),
+      loadMore: jasmine.createSpy('loadMore'),
       listState: signal({ loading: false, error: null as string | null }),
       uploading: signal(false),
       uploadError: signal<string | null>(null),
@@ -46,12 +55,12 @@ describe('TicketDetailComponent', () => {
     };
   }
 
-  let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
+  let detailStoreFake: ReturnType<typeof createDetailStoreFake>;
   let attachmentsStoreFake: ReturnType<typeof createAttachmentsStoreFake>;
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
 
   beforeEach(async () => {
-    ticketsStoreFake = createTicketsStoreFake();
+    detailStoreFake = createDetailStoreFake();
     attachmentsStoreFake = createAttachmentsStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
 
@@ -60,7 +69,7 @@ describe('TicketDetailComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
-        { provide: TicketsStore, useValue: ticketsStoreFake },
+        { provide: TicketDetailStore, useValue: detailStoreFake },
         { provide: TicketAttachmentsStore, useValue: attachmentsStoreFake },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }) } } },
         { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
@@ -68,13 +77,49 @@ describe('TicketDetailComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega o ticket (da listagem já em cache) e os anexos ao inicializar', async () => {
+  it('carrega o ticket pelo id da rota e os anexos ao inicializar', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
-    expect(ticketsStoreFake.loadForCurrentUser).toHaveBeenCalled();
+    expect(detailStoreFake.loadTicket).toHaveBeenCalledWith('t1');
     expect(attachmentsStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
     expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
+  });
+
+  it('mostra a situação do SLA com texto, e não só com a cor', async () => {
+    detailStoreFake.ticket.set({ ...ticket, slaStatus: TicketSlaStatus.Breached });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const badge = Array.from(fixture.nativeElement.querySelectorAll('.badge') as NodeListOf<HTMLElement>)
+      .find(b => b.textContent?.includes('SLA'));
+    expect(badge?.textContent?.trim()).toBe('SLA: Atrasado');
+    expect(badge?.classList).toContain('bg-label-danger');
+  });
+
+  it('mostra quem abriu, o setor e o responsável (ou que ainda não foi atribuído)', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Maria Souza');
+    expect(text).toContain('Suporte');
+    expect(text).toContain('Ainda não atribuído');
+  });
+
+  it('mostra o botão de carregar mais anexos só quando há mais páginas, e carrega ao clicar', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).not.toContain('Carregar mais anexos');
+
+    attachmentsStoreFake.hasMore.set(true);
+    await fixture.whenStable();
+
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Carregar mais anexos'));
+    button!.click();
+
+    expect(attachmentsStoreFake.loadMore).toHaveBeenCalled();
   });
 
   it('renderiza os anexos carregados', async () => {
@@ -147,17 +192,26 @@ describe('TicketDetailComponent', () => {
     expect(attachmentsStoreFake.delete).not.toHaveBeenCalled();
   });
 
-  it('mostra um aviso quando o ticket não é encontrado na listagem em cache', async () => {
-    ticketsStoreFake.tickets.set([]);
+  it('mostra a mensagem de erro do store quando o ticket não pode ser carregado (ex.: 403)', async () => {
+    detailStoreFake.ticket.set(undefined);
+    detailStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este ticket.' });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este ticket.');
+  });
+
+  it('mostra um aviso de não encontrado quando não há ticket nem erro', async () => {
+    detailStoreFake.ticket.set(undefined);
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Não encontramos esse ticket');
   });
 
-  it('mostra um spinner — não o aviso de não encontrado — enquanto a listagem ainda está carregando', async () => {
-    ticketsStoreFake.tickets.set([]);
-    ticketsStoreFake.state.set({ loading: true, error: null });
+  it('mostra um spinner — não o aviso de não encontrado — enquanto o ticket ainda está carregando', async () => {
+    detailStoreFake.ticket.set(undefined);
+    detailStoreFake.state.set({ loading: true, error: null });
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 

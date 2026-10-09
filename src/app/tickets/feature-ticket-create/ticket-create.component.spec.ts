@@ -90,6 +90,19 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('O título é obrigatório.');
   });
 
+  it('exige pelo menos 10 caracteres na descrição', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.form.controls.description.setValue('curta');
+    component.form.controls.description.markAsTouched();
+    fixture.detectChanges();
+
+    expect(component.isFieldInvalid('description')).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('A descrição deve ter pelo menos 10 caracteres.');
+  });
+
   it('marca todos os campos como tocados ao tentar enviar um formulário inválido', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();

@@ -11,7 +11,7 @@
   </div>
 </div>
 
-@if (ticketsStore.state().loading) {
+@if (detailStore.state().loading) {
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body p-4 text-center py-5">
       <span class="spinner-border spinner-border-sm text-primary"></span>
@@ -23,13 +23,31 @@
       <div class="d-flex align-items-center gap-2 mb-3">
         <span class="badge" [ngClass]="statusBadgeClass[t.status]">{{ statusLabels[t.status] }}</span>
         <span class="badge" [ngClass]="priorityBadgeClass[t.priority]">{{ priorityLabels[t.priority] }}</span>
+        <span class="badge" [ngClass]="slaStatusBadgeClass[t.slaStatus]">SLA: {{ slaStatusLabels[t.slaStatus] }}</span>
       </div>
-      <p class="text-muted mb-0">{{ t.description }}</p>
+      <p class="text-muted mb-4">{{ t.description }}</p>
+
+      <dl class="row small mb-0">
+        <dt class="col-sm-3 text-muted fw-normal">Aberto por</dt>
+        <dd class="col-sm-9">{{ t.openedByName }}</dd>
+
+        <dt class="col-sm-3 text-muted fw-normal">Responsável</dt>
+        <dd class="col-sm-9">{{ t.assignedToName ?? 'Ainda não atribuído' }}</dd>
+
+        <dt class="col-sm-3 text-muted fw-normal">Setor</dt>
+        <dd class="col-sm-9">{{ t.sectorName }}</dd>
+
+        <dt class="col-sm-3 text-muted fw-normal">Aberto em</dt>
+        <dd class="col-sm-9">{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+
+        <dt class="col-sm-3 text-muted fw-normal">Prazo</dt>
+        <dd class="col-sm-9 mb-0">{{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+      </dl>
     </div>
   </div>
 } @else {
   <div class="alert alert-warning border-0 shadow-sm">
-    Não encontramos esse ticket — ele pode não ser seu, ou pode ter sido removido.
+    {{ detailStore.state().error ?? 'Não encontramos esse ticket — ele pode ter sido removido.' }}
   </div>
 }
 
@@ -87,6 +105,17 @@
           </li>
         }
       </ul>
+
+      @if (store.hasMore()) {
+        <div class="text-center mt-3">
+          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.loadingMore()" (click)="store.loadMore()">
+            @if (store.loadingMore()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Carregar mais anexos
+          </button>
+        </div>
+      }
     }
   </div>
 </div>
