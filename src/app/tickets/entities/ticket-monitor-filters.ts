@@ -10,6 +10,8 @@ export interface TicketMonitorFilters {
   sectorId?: string;
   slaStatus?: TicketSlaStatus;
   search?: string;
+  /** Mostra só chamados sem responsável atribuído. */
+  unassignedOnly?: boolean;
   sort: TicketSortOrder;
   page: number;
   pageSize: number;

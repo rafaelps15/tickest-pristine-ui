@@ -53,8 +53,7 @@ export const TicketMonitorStore = signalStore(
       };
     }),
     /** Resumo de SLA dos chamados ativos, respeitando o filtro de setor atual. */
-    slaSummary: computed(() => store._slaSummaryResource.value()),
-    slaSummaryLoading: computed(() => store._slaSummaryResource.isLoading())
+    slaSummary: computed(() => store._slaSummaryResource.value())
   })),
   withComputed((store) => ({
     /** Página atual (1-based). */
@@ -99,6 +98,11 @@ export const TicketMonitorStore = signalStore(
     /** Muda o termo de busca e volta para a primeira página. */
     setSearch(search: string): void {
       patchState(store, { filters: { ...store.filters(), search: search || undefined, page: 1 } });
+    },
+
+    /** Alterna o filtro "só sem responsável" e volta para a primeira página. */
+    setUnassignedOnly(unassignedOnly: boolean): void {
+      patchState(store, { filters: { ...store.filters(), unassignedOnly, page: 1 } });
     },
 
     /** Muda a ordenação e volta para a primeira página. */

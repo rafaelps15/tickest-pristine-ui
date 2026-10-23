@@ -85,10 +85,10 @@
                    (change)="toggleSelectAll($any($event.target).checked)" />
           </th>
           <th scope="col">Nome</th>
-          <th scope="col">E-mail</th>
+          <th scope="col" class="d-none d-md-table-cell">E-mail</th>
           <th scope="col">Funções</th>
           <th scope="col">Status</th>
-          <th scope="col">Cadastrado em</th>
+          <th scope="col" class="d-none d-md-table-cell">Cadastrado em</th>
           <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
@@ -115,8 +115,11 @@
                          [checked]="isSelected(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
                 }
               </td>
-              <td class="fw-semibold">{{ user.firstName }} {{ user.lastName }}</td>
-              <td class="text-muted small">{{ user.email }}</td>
+              <td class="fw-semibold">
+                {{ user.firstName }} {{ user.lastName }}
+                <div class="text-muted small fw-normal d-md-none">{{ user.email }}</div>
+              </td>
+              <td class="text-muted small d-none d-md-table-cell">{{ user.email }}</td>
               <td>
                 @for (role of visibleRoles(user); track role.name) {
                   <span class="badge bg-label-primary me-1">{{ role.name }}</span>
@@ -137,7 +140,7 @@
                   <span class="badge bg-label-secondary"><span class="status-dot"></span>Inativo</span>
                 }
               </td>
-              <td class="text-muted small">
+              <td class="text-muted small d-none d-md-table-cell">
                 {{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
                 @if (user.deactivatedAtUtc) {
                   <div class="text-danger deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>

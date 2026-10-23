@@ -1,0 +1,11 @@
+/*
+ * Lista de setores dentro do card do departamento: sem borda entre os itens — a sombra do card já
+ * separa o departamento do resto da tela, e uma borda extra aqui deixava o aninhamento pesado,
+ * contrariando a regra do DESIGN.md (sem borda, só sombra). Mais respiro vertical no lugar da
+ * borda pra manter os setores distinguíveis.
+ */
+.list-group-item {
+  border: none;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}

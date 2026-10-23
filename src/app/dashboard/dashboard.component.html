@@ -6,7 +6,7 @@
     } @else {
       <h4 class="fw-bold mb-1">Seja bem-vindo(a)!</h4>
     }
-    <p class="text-muted small mb-0">Veja como estão os tickets de toda a empresa, ao vivo.</p>
+    <p class="text-muted small mb-0">Resumo da empresa e dos seus tickets.</p>
   </div>
 </div>
 
@@ -97,29 +97,16 @@
 <div class="row">
   <div class="col-12 col-lg-8 mb-4">
     <div class="card">
-      <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <h5 class="card-title m-0">Tickets Abertos por Período</h5>
-        <div class="d-flex align-items-center gap-2">
-          <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
-            @for (option of groupByOptions; track option) {
-              <button type="button" class="btn"
-                      [class.btn-primary]="store.groupBy() === option"
-                      [class.btn-outline-secondary]="store.groupBy() !== option"
-                      [attr.aria-pressed]="store.groupBy() === option"
-                      (click)="setGroupBy(option)">
-                {{ groupByLabels[option] }}
-              </button>
-            }
-          </div>
-          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleTable()">
-            <i class="bx bx-table me-1"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
-          </button>
-        </div>
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5 class="card-title m-0">Seus Tickets por Prioridade e Status</h5>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleTable()">
+          <i class="bx bx-table me-1"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
+        </button>
       </div>
       <div class="card-body">
         <div class="chart-container" style="position: relative; height: 380px;" [class.d-none]="showTable()">
           @defer (on idle) {
-            <canvas #volumeChart></canvas>
+            <canvas #ticketChart></canvas>
           } @placeholder {
             <div class="d-flex align-items-center justify-content-center h-100">
               <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
@@ -130,18 +117,27 @@
         @if (showTable()) {
           <div class="table-responsive">
             <table class="table table-sm table-bordered align-middle mb-0">
-              <caption class="visually-hidden">Quantidade de tickets abertos por período</caption>
+              <caption class="visually-hidden">Quantidade dos seus tickets por prioridade e status</caption>
               <thead>
                 <tr>
-                  <th scope="col">Período</th>
-                  <th scope="col" class="text-end">Tickets abertos</th>
+                  <th scope="col">Prioridade</th>
+                  @for (status of statusLabels; track status; let i = $index) {
+                    <th scope="col" class="text-end">
+                      <span class="d-inline-block rounded-circle me-1" [style.background-color]="statusColors[i]" style="width: 8px; height: 8px;"></span>
+                      {{ status }}
+                    </th>
+                  }
+                  <th scope="col" class="text-end">Total</th>
                 </tr>
               </thead>
               <tbody>
-                @for (point of store.volume(); track point.periodStart; let i = $index) {
+                @for (priority of priorityLabels; track priority; let i = $index) {
                   <tr>
-                    <th scope="row">{{ periodLabels()[i] }}</th>
-                    <td class="text-end">{{ point.count }}</td>
+                    <th scope="row">{{ priority }}</th>
+                    @for (count of matrix()[i]; track $index) {
+                      <td class="text-end">{{ count }}</td>
+                    }
+                    <td class="text-end fw-semibold">{{ rowTotal(matrix()[i]) }}</td>
                   </tr>
                 }
               </tbody>

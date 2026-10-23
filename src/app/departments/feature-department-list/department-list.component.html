@@ -21,18 +21,18 @@
 @if (store.departments().length > 0) {
   <div class="row mb-3">
     <div class="col-12 col-md-4">
+      <label class="form-label small" for="departmentSearch">Buscar</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bx bx-search"></i></span>
-        <input type="text" class="form-control" placeholder="Buscar departamento ou setor"
-               [value]="searchInput()" (input)="searchInput.set($any($event.target).value)"
-               aria-label="Buscar departamento ou setor" />
+        <input id="departmentSearch" type="text" class="form-control" placeholder="Departamento ou setor"
+               [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
       </div>
     </div>
   </div>
 }
 
 @if (store.listState().loading && store.departments().length === 0) {
-  <div class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+  <div class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando…</span></span></div>
 } @else if (store.departments().length === 0) {
   <div class="card shadow-sm border-0">
     <div class="card-body text-center py-5 text-muted">
@@ -51,7 +51,7 @@
   <div class="row g-4">
     @for (department of filteredDepartments(); track department.id) {
       <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
+        <div class="card shadow-sm border-0">
           <div class="card-header d-flex align-items-start justify-content-between gap-3">
             <div>
               <h5 class="mb-1 fw-bold">

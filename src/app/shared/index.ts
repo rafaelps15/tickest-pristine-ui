@@ -13,3 +13,4 @@ export * from './services/toast.service';
 export * from './utils/http-error.util';
 export * from './utils/password.validators';
 export * from './utils/chart-loader.util';
+export * from './utils/role-badges.util';

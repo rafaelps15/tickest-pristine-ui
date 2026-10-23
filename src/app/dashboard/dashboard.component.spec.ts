@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { DashboardComponent } from './dashboard.component';
-import { TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint } from '../tickets';
+import { TicketSummaryStore, TicketPersonalSummaryStore, TicketCount, TicketPriority, TicketStatus } from '../tickets';
 import { SessionService } from '../shared';
 
 describe('DashboardComponent', () => {
@@ -14,24 +14,31 @@ describe('DashboardComponent', () => {
       openCount: signal(3),
       inProgressCount: signal(2),
       resolvedCount: signal(4),
-      groupBy: signal<TicketVolumeGrouping>('Day'),
-      volume: signal<TicketVolumePoint[]>([
-        { periodStart: '2026-01-05', count: 2 },
-        { periodStart: '2026-01-06', count: 5 }
+      load: jasmine.createSpy('load')
+    };
+  }
+
+  /** Cria um store de resumo pessoal falso com signals reais. */
+  function createPersonalSummaryStoreFake() {
+    return {
+      counts: signal<TicketCount[]>([
+        { priority: TicketPriority.High, status: TicketStatus.Open, count: 2 },
+        { priority: TicketPriority.Low, status: TicketStatus.Resolved, count: 3 }
       ]),
-      load: jasmine.createSpy('load'),
-      setGroupBy: jasmine.createSpy('setGroupBy')
+      state: signal({ loading: false, error: null as string | null })
     };
   }
 
   type CurrentUserFake = { firstName: string; roles: { name: string }[] } | null;
 
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
+  let personalSummaryStoreFake: ReturnType<typeof createPersonalSummaryStoreFake>;
   let hasPermission: jasmine.Spy;
   let currentUser: ReturnType<typeof signal<CurrentUserFake>>;
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
+    personalSummaryStoreFake = createPersonalSummaryStoreFake();
     hasPermission = jasmine.createSpy('hasPermission').and.returnValue(false);
     currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Colaborador' }] });
 
@@ -41,7 +48,8 @@ describe('DashboardComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketSummaryStore, useValue: ticketsStoreFake },
-        { provide: SessionService, useValue: { hasPermission, currentUser } }
+        { provide: TicketPersonalSummaryStore, useValue: personalSummaryStoreFake },
+        { provide: SessionService, useValue: { hasPermission, currentUser, userId: signal('u1') } }
       ]
     }).compileComponents();
   });
@@ -61,12 +69,20 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Seja bem-vindo(a)!');
   });
 
-  it('carrega o resumo da empresa ao inicializar, para qualquer papel', async () => {
+  it('carrega o resumo da empresa (para os cards) ao inicializar, para qualquer papel', async () => {
     currentUser.set({ firstName: 'Carlos', roles: [{ name: 'Administrador' }] });
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
     expect(ticketsStoreFake.load).toHaveBeenCalled();
+  });
+
+  it('mostra o alerta de erro quando o resumo da empresa falhar', async () => {
+    ticketsStoreFake.state.set({ loading: false, error: 'Erro ao carregar o resumo dos tickets' });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o resumo dos tickets');
   });
 
   it('renderiza os cards de estatísticas com os valores do store', async () => {
@@ -80,18 +96,7 @@ describe('DashboardComponent', () => {
     expect(text).toContain('4');
   });
 
-  it('muda o agrupamento do gráfico ao clicar em Semana/Mês', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const monthButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find(b => b.textContent?.trim() === 'Mês');
-    monthButton?.click();
-
-    expect(ticketsStoreFake.setGroupBy).toHaveBeenCalledWith('Month');
-  });
-
-  it('mostra a tabela acessível com o volume por período ao alternar "Ver como tabela"', async () => {
+  it('mostra a tabela acessível de Prioridade x Status ao alternar "Ver como tabela"', async () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
@@ -101,9 +106,9 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Quantidade de tickets abertos por período');
-    expect(text).toContain('05/01');
-    expect(text).toContain('5');
+    expect(text).toContain('Quantidade dos seus tickets por prioridade e status');
+    expect(text).toContain('Alta');
+    expect(text).toContain('2');
   });
 
   it('não mostra o atalho de Gestão de Usuários sem a permissão users:read', async () => {

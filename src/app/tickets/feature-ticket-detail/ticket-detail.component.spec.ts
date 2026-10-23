@@ -5,12 +5,15 @@ import { of } from 'rxjs';
 import { TicketDetailComponent } from './ticket-detail.component';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
+import { TicketHistoryStore } from '../application/ticket-history.store';
 import { TicketDetail } from '../entities/ticket';
 import { TicketAttachment } from '../entities/ticket-attachment';
+import { TicketHistoryAction, TicketHistoryEntry } from '../entities/ticket-history';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
-import { ConfirmDialogService } from '../../shared';
+import { ConfirmDialogService, SessionService } from '../../shared';
+import { UserSummary } from '../../users';
 
 describe('TicketDetailComponent', () => {
   const ticket: TicketDetail = {
@@ -26,13 +29,46 @@ describe('TicketDetailComponent', () => {
     fileName: 'foto.png', contentType: 'image/png', fileSizeBytes: 1024,
     uploadedAtUtc: '2026-01-01T12:00:00Z'
   };
+  const historyEntry: TicketHistoryEntry = {
+    id: 'h1', ticketId: 't1', changedByUserId: 'u1',
+    action: TicketHistoryAction.Created, description: 'Chamado criado',
+    oldValue: null, newValue: null, occurredAtUtc: '2026-01-01T12:00:00Z'
+  };
+  const candidate: UserSummary = {
+    id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
+    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null
+  };
 
   /** Cria um store de detalhe falso com signals reais. */
   function createDetailStoreFake() {
     return {
       ticket: signal<TicketDetail | undefined>(ticket),
       state: signal({ loading: false, error: null as string | null }),
-      loadTicket: jasmine.createSpy('loadTicket')
+      mutationError: signal<string | null>(null),
+      removingAssignee: signal(false),
+      assigningTicket: signal(false),
+      assigneeCandidates: signal<UserSummary[]>([]),
+      searchingAssignees: signal(false),
+      assigneeSearchError: signal<string | null>(null),
+      loadTicket: jasmine.createSpy('loadTicket'),
+      removeAssignee: jasmine.createSpy('removeAssignee'),
+      assignTicket: jasmine.createSpy('assignTicket'),
+      searchAssignees: jasmine.createSpy('searchAssignees'),
+      clearAssigneeSearch: jasmine.createSpy('clearAssigneeSearch'),
+      clearMutationError: jasmine.createSpy('clearMutationError')
+    };
+  }
+
+  function createHistoryStoreFake() {
+    return {
+      entries: signal<TicketHistoryEntry[]>([historyEntry]),
+      state: signal({ loading: false, error: null as string | null }),
+      hasMore: signal(false),
+      loadingMore: signal(false),
+      loadMoreError: signal<string | null>(null),
+      loadForTicket: jasmine.createSpy('loadForTicket'),
+      reload: jasmine.createSpy('reload'),
+      loadMore: jasmine.createSpy('loadMore')
     };
   }
 
@@ -57,12 +93,16 @@ describe('TicketDetailComponent', () => {
 
   let detailStoreFake: ReturnType<typeof createDetailStoreFake>;
   let attachmentsStoreFake: ReturnType<typeof createAttachmentsStoreFake>;
+  let historyStoreFake: ReturnType<typeof createHistoryStoreFake>;
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
+  let sessionServiceFake: { hasPermission: jasmine.Spy };
 
   beforeEach(async () => {
     detailStoreFake = createDetailStoreFake();
     attachmentsStoreFake = createAttachmentsStoreFake();
+    historyStoreFake = createHistoryStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
+    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
 
     await TestBed.configureTestingModule({
       imports: [TicketDetailComponent],
@@ -71,17 +111,20 @@ describe('TicketDetailComponent', () => {
         provideRouter([]),
         { provide: TicketDetailStore, useValue: detailStoreFake },
         { provide: TicketAttachmentsStore, useValue: attachmentsStoreFake },
+        { provide: TicketHistoryStore, useValue: historyStoreFake },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }) } } },
-        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
+        { provide: SessionService, useValue: sessionServiceFake }
       ]
     }).compileComponents();
   });
 
-  it('carrega o ticket pelo id da rota e os anexos ao inicializar', async () => {
+  it('carrega o ticket pelo id da rota, o histórico e os anexos ao inicializar', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
     expect(detailStoreFake.loadTicket).toHaveBeenCalledWith('t1');
+    expect(historyStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
     expect(attachmentsStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
     expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
   });
@@ -217,5 +260,345 @@ describe('TicketDetailComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Não encontramos esse ticket');
+  });
+
+  describe('remover responsável', () => {
+    function findRemoveButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
+      return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Remover responsável'));
+    }
+
+    it('mostra o botão quando o usuário tem permissão, o chamado está ativo e tem responsável', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToName: 'João Pedro' });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findRemoveButton(fixture)).not.toBeUndefined();
+    });
+
+    it('não mostra o botão sem a permissão tickets:manage', async () => {
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToName: 'João Pedro' });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findRemoveButton(fixture)).toBeUndefined();
+    });
+
+    it('não mostra o botão quando o chamado não está ativo (Resolvido)', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved, assignedToName: 'João Pedro' });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findRemoveButton(fixture)).toBeUndefined();
+    });
+
+    it('não mostra o botão quando não há responsável atribuído', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findRemoveButton(fixture)).toBeUndefined();
+    });
+
+    it('pede confirmação e remove o responsável, recarregando o histórico em caso de sucesso', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'João Pedro' });
+      confirmDialogServiceFake.confirm.and.returnValue(of(true));
+      detailStoreFake.removeAssignee.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findRemoveButton(fixture)!.click();
+
+      expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+      expect(detailStoreFake.removeAssignee).toHaveBeenCalledWith('t1', jasmine.any(Function));
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+
+    it('não remove o responsável quando a confirmação for cancelada', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'João Pedro' });
+      confirmDialogServiceFake.confirm.and.returnValue(of(false));
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findRemoveButton(fixture)!.click();
+
+      expect(detailStoreFake.removeAssignee).not.toHaveBeenCalled();
+    });
+
+    it('mostra a mensagem de erro da mutação quando a remoção falhar', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'João Pedro' });
+      detailStoreFake.mutationError.set('O chamado não está ativo.');
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('O chamado não está ativo.');
+    });
+  });
+
+  describe('atribuir responsável', () => {
+    function findAssignButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
+      return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Atribuir responsável') || b.textContent?.includes('Alterar responsável'));
+    }
+
+    it('mostra "Atribuir responsável" quando o chamado está ativo e sem responsável', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findAssignButton(fixture)?.textContent).toContain('Atribuir responsável');
+    });
+
+    it('mostra "Alterar responsável" quando o chamado já tem responsável', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToName: 'Maria Souza' });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findAssignButton(fixture)?.textContent).toContain('Alterar responsável');
+    });
+
+    it('não mostra o botão sem a permissão tickets:manage', async () => {
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findAssignButton(fixture)).toBeUndefined();
+    });
+
+    it('não mostra o botão quando o chamado não está ativo (Resolvido)', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findAssignButton(fixture)).toBeUndefined();
+    });
+
+    it('reseta a busca, a seleção e o erro de mutação ao abrir o modal', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.assigneeSearchInput.set('joão');
+      fixture.componentInstance.selectedAssigneeId.set('u2');
+
+      findAssignButton(fixture)!.click();
+
+      expect(fixture.componentInstance.assigneeSearchInput()).toBe('');
+      expect(fixture.componentInstance.selectedAssigneeId()).toBeNull();
+      expect(detailStoreFake.clearMutationError).toHaveBeenCalled();
+      expect(detailStoreFake.clearAssigneeSearch).toHaveBeenCalled();
+    });
+
+    it('busca com debounce de 300ms após parar de digitar', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.assigneeSearchInput.set('joão');
+      await new Promise(resolve => setTimeout(resolve, 350));
+
+      expect(detailStoreFake.searchAssignees).toHaveBeenCalledWith('joão');
+    });
+
+    it('não dispara a busca antes dos 300ms', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.assigneeSearchInput.set('joão');
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      expect(detailStoreFake.searchAssignees).not.toHaveBeenCalled();
+      await new Promise(resolve => setTimeout(resolve, 300));
+    });
+
+    it('mostra os candidatos encontrados e permite selecionar um deles', async () => {
+      detailStoreFake.assigneeCandidates.set([candidate]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.assigneeSearchInput.set('joão');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('João Pedro');
+
+      const candidateRow = Array.from(fixture.nativeElement.querySelectorAll('li') as NodeListOf<HTMLElement>)
+        .find(li => li.textContent?.includes('joao.pedro@empresa.com'));
+      candidateRow!.click();
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.selectedAssigneeId()).toBe('u2');
+      expect(candidateRow!.classList).toContain('is-selected');
+      expect(candidateRow!.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('mostra no máximo 2 badges de função por candidato, agrupando o resto num badge "+N"', async () => {
+      const multiRoleCandidate: UserSummary = {
+        ...candidate,
+        roles: [{ name: 'Atendente' }, { name: 'Administrador' }, { name: 'Supervisor' }]
+      };
+      detailStoreFake.assigneeCandidates.set([multiRoleCandidate]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.assigneeSearchInput.set('joão');
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Atendente');
+      expect(text).toContain('Administrador');
+      expect(text).not.toContain('Supervisor');
+      expect(text).toContain('+1');
+    });
+
+    it('desmarca o candidato ao clicar de novo nele', async () => {
+      detailStoreFake.assigneeCandidates.set([candidate]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.onSelectAssignee('u2', 0);
+
+      fixture.componentInstance.onSelectAssignee('u2', 0);
+
+      expect(fixture.componentInstance.selectedAssigneeId()).toBeNull();
+    });
+
+    it('navega entre os candidatos com as setas e move o foco circulante', async () => {
+      const other: UserSummary = { ...candidate, id: 'u3', firstName: 'Ana', lastName: 'Lima', email: 'ana.lima@empresa.com' };
+      detailStoreFake.assigneeCandidates.set([candidate, other]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.assigneeSearchInput.set('a');
+      await fixture.whenStable();
+
+      fixture.componentInstance.onAssigneeListKeydown({ key: 'ArrowDown', preventDefault: () => {} } as KeyboardEvent, 2);
+      expect(fixture.componentInstance.focusedAssigneeIndex()).toBe(1);
+
+      fixture.componentInstance.onAssigneeListKeydown({ key: 'ArrowDown', preventDefault: () => {} } as KeyboardEvent, 2);
+      expect(fixture.componentInstance.focusedAssigneeIndex()).toBe(0);
+
+      fixture.componentInstance.onAssigneeListKeydown({ key: 'ArrowUp', preventDefault: () => {} } as KeyboardEvent, 2);
+      expect(fixture.componentInstance.focusedAssigneeIndex()).toBe(1);
+    });
+
+    it('mostra uma mensagem para digitar quando o campo de busca está vazio', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Digite para buscar um usuário ativo.');
+    });
+
+    it('mostra uma mensagem quando a busca não encontra ninguém', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.assigneeSearchInput.set('inexistente');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Nenhum usuário encontrado.');
+    });
+
+    it('mostra o erro de busca (ex.: sem permissão users:read) em vez da lista', async () => {
+      detailStoreFake.assigneeSearchError.set('Você não tem permissão para buscar usuários.');
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para buscar usuários.');
+    });
+
+    it('não confirma a atribuição sem um candidato selecionado', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onConfirmAssign();
+
+      expect(detailStoreFake.assignTicket).not.toHaveBeenCalled();
+    });
+
+    it('atribui o candidato selecionado e recarrega o histórico em caso de sucesso', async () => {
+      detailStoreFake.assignTicket.and.callFake((_id: string, _userId: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.selectedAssigneeId.set('u2');
+
+      fixture.componentInstance.onConfirmAssign();
+
+      expect(detailStoreFake.assignTicket).toHaveBeenCalledWith('t1', 'u2', jasmine.any(Function));
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+
+    it('mostra a mensagem de erro da mutação quando a atribuição falhar', async () => {
+      detailStoreFake.mutationError.set('O usuário não atende chamados e não pode ser o responsável.');
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('O usuário não atende chamados e não pode ser o responsável.');
+    });
+
+    it('o botão de confirmação diz "Atribuir" numa primeira atribuição e "Reatribuir" ao trocar o responsável', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
+      const fixtureSemResponsavel = TestBed.createComponent(TicketDetailComponent);
+      await fixtureSemResponsavel.whenStable();
+      expect(fixtureSemResponsavel.nativeElement.textContent).toContain('Atribuir');
+      expect(fixtureSemResponsavel.nativeElement.textContent).not.toContain('Reatribuir');
+
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'Maria Souza' });
+      const fixtureComResponsavel = TestBed.createComponent(TicketDetailComponent);
+      await fixtureComResponsavel.whenStable();
+      expect(fixtureComResponsavel.nativeElement.textContent).toContain('Reatribuir');
+    });
+
+    it('avisa que a atribuição substitui o responsável atual quando um candidato está selecionado', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'Maria Souza' });
+      detailStoreFake.assigneeCandidates.set([candidate]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent).not.toContain('Isso substitui');
+
+      fixture.componentInstance.onSelectAssignee('u2', 0);
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Isso substitui');
+      expect(text).toContain('Maria Souza');
+      expect(text).toContain('João Pedro');
+    });
+  });
+
+  describe('histórico', () => {
+    it('mostra os eventos carregados', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Chamado criado');
+    });
+
+    it('mostra uma mensagem quando não há eventos', async () => {
+      historyStoreFake.entries.set([]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Nenhum evento registrado ainda.');
+    });
+
+    it('mostra um spinner enquanto o histórico carrega', async () => {
+      historyStoreFake.state.set({ loading: true, error: null });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelectorAll('.spinner-border').length).toBeGreaterThan(0);
+    });
+
+    it('mostra o botão de carregar mais eventos só quando há mais páginas, e carrega ao clicar', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent).not.toContain('Carregar mais eventos');
+
+      historyStoreFake.hasMore.set(true);
+      await fixture.whenStable();
+
+      const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Carregar mais eventos'));
+      button!.click();
+
+      expect(historyStoreFake.loadMore).toHaveBeenCalled();
+    });
+
+    it('mostra a mensagem de erro do histórico quando o carregamento falhar', async () => {
+      historyStoreFake.state.set({ loading: false, error: 'Erro ao carregar o histórico' });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o histórico');
+    });
   });
 });

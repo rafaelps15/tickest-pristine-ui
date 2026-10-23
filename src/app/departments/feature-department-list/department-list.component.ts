@@ -12,6 +12,7 @@ import { ConfirmDialogService, SessionService } from '../../shared';
     selector: 'app-department-list',
     imports: [ReactiveFormsModule],
     templateUrl: './department-list.component.html',
+    styleUrl: './department-list.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DepartmentListComponent implements OnInit {

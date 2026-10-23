@@ -66,11 +66,6 @@
   color: var(--tk-primary);
 }
 
-/* Badge "+N": mesma linguagem visual dos badges de função, mas sem cor própria — é só contagem. */
-.badge-roles-overflow {
-  cursor: default;
-}
-
 /*
  * Botão de ações (⋮) por linha: discreto até o hover/foco, pra não pesar a tabela com N linhas.
  * O tamanho vem da classe global `.btn-icon` (styles.css) — aqui só a aparência "fantasma".

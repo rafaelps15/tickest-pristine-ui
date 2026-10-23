@@ -10,6 +10,7 @@ target_fingerprint: "sha256:da0085c5076879bb0e92d0ce9b098f59e9393e9763c088c96ad7
 target_path: "C:\\dev\\tickest-pristine-front\\src\\app\\tickets\\feature-ticket-monitor\\ticket-monitor.component.html"
 timestamp: 2026-10-08T20-49-09Z
 slug: ket-monitor-ticket-monitor-component-html-46a93591
+closed: true
 ---
 Method: dual-agent (A: a9df199871130060b · B: ab1713b2034b6e9fe)
 

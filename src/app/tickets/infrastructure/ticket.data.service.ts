@@ -1,19 +1,20 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
+import { CreateTicketData, Ticket, TicketCount, TicketDetail, UpdateTicketData } from '../entities/ticket';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketStatusCounts } from '../entities/ticket-status-counts';
 import { TicketVolumeGrouping, TicketVolumePoint } from '../entities/ticket-volume';
-import { PagedResponse } from '../../shared';
+import { TicketHistoryEntry } from '../entities/ticket-history';
+import { CursorPage, PageCursor, PagedResponse } from '../../shared';
 import { environment } from '../../../environments/environment';
 
 /**
  * Acesso HTTP aos tickets: listagem paginada por usuário, listagem de todos os tickets do sistema
- * (para quem administra a fila), detalhe, resumos (inclusive os da empresa inteira, para o
- * dashboard), criação, atualização, reabertura e exclusão.
+ * (para quem administra a fila), detalhe, histórico, resumos (inclusive os da empresa inteira,
+ * para o dashboard), criação, atualização, reabertura, atribuição/remoção de responsável e exclusão.
  */
 @Injectable({ providedIn: 'root' })
 export class TicketDataService {
@@ -58,6 +59,52 @@ export class TicketDataService {
   }
 
   /**
+   * Busca uma página do histórico de um ticket, do mais recente para o mais antigo
+   * (GET /tickets/{ticketId}/history). Sem cursor, devolve a primeira página; com o cursor da
+   * página anterior, devolve a seguinte.
+   */
+  getHistory(ticketId: string, cursor?: PageCursor, pageSize?: number): Observable<CursorPage<TicketHistoryEntry>> {
+    let params = new HttpParams();
+
+    if (cursor) {
+      params = params
+        .set('cursorDate', cursor.cursorDate)
+        .set('cursorId', cursor.cursorId);
+    }
+    if (pageSize) {
+      params = params.set('pageSize', pageSize);
+    }
+
+    return this.http.get<CursorPage<TicketHistoryEntry>>(`${this.apiUrl}/${ticketId}/history`, { params });
+  }
+
+  /**
+   * Remove o responsável atual do ticket (DELETE /tickets/{ticketId}/assignee) — exige a permissão
+   * `tickets:manage` e que o chamado esteja ativo (Aberto ou Em Andamento).
+   */
+  removeAssignee(ticketId: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${ticketId}/assignee`);
+  }
+
+  /**
+   * Atribui (ou reatribui) o responsável do ticket (PUT /tickets/{ticketId}/assignee) — exige a
+   * permissão `tickets:manage`, tanto de quem atribui quanto do usuário atribuído, e que o chamado
+   * esteja ativo (Aberto ou Em Andamento).
+   */
+  assignTicket(ticketId: string, assignedToUserId: string): Observable<void> {
+    return this.http.put<void>(`${this.apiUrl}/${ticketId}/assignee`, { assignedToUserId });
+  }
+
+  /**
+   * Busca as quantidades de tickets do usuário logado por prioridade e status (GET /tickets/mine/summary).
+   * Reintroduzido a pedido do usuário para comparar o gráfico antigo (Prioridade×Status, por usuário)
+   * lado a lado com o novo gráfico de volume por período, da empresa inteira.
+   */
+  getMySummary(): Observable<TicketCount[]> {
+    return this.http.get<TicketCount[]>(`${this.apiUrl}/mine/summary`);
+  }
+
+  /**
    * Busca uma página de todos os tickets do sistema, com filtros (GET /tickets) — exige a
    * permissão `tickets:manage`. Requer a role Administrador ou Atendente.
    */
@@ -81,6 +128,9 @@ export class TicketDataService {
     }
     if (filters.search) {
       params = params.set('search', filters.search);
+    }
+    if (filters.unassignedOnly) {
+      params = params.set('unassignedOnly', filters.unassignedOnly);
     }
 
     return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params });

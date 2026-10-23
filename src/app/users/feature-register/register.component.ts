@@ -3,6 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { UsersStore } from '../application/users.store';
+import { strongPasswordValidator } from '../../shared';
 
 /** Validador customizado para confirmar se as senhas coincidem. */
 export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -34,7 +35,7 @@ export class RegisterComponent implements OnInit {
         firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
         lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
         email: ['', [Validators.required, Validators.email]],
-        password: ['', [Validators.required, Validators.minLength(6)]],
+        password: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
         confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator });
 

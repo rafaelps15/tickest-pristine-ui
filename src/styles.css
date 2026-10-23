@@ -309,6 +309,15 @@ body {
   color: #c3c9d1 !important;
 }
 
+/*
+ * Badge "+N" de funções ocultas: mesma linguagem visual dos badges de função, mas sem cor
+ * própria — é só contagem. Usada em mais de uma tela (Gestão de Usuários, atribuição de
+ * responsável), por isso global.
+ */
+.badge-roles-overflow {
+  cursor: default;
+}
+
 /* Alertas */
 .alert {
   border: none;

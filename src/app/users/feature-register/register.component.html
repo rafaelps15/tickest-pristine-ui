@@ -24,8 +24,8 @@
   </div>
 
   <div class="card shadow-sm border-0 overflow-hidden">
-    <div class="card-header bg-white py-4 border-bottom">
-      <h5 class="mb-0 fw-bold text-dark">Módulo de Gestão de Usuários</h5>
+    <div class="card-header py-4">
+      <h5 class="mb-0 fw-bold">Módulo de Gestão de Usuários</h5>
       <p class="text-muted small mb-0 mt-1">Gerencie permissões, edite dados ou cadastre novos colaboradores.</p>
     </div>
     <div class="card-body p-4 p-lg-5">
@@ -82,7 +82,19 @@
         <label class="form-label-premium" for="registerPassword">Senha de Acesso</label>
         <input id="registerPassword" type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="password"
                [class.is-invalid]="isFieldInvalid('password')" />
-        <div class="invalid-feedback">Mínimo de 6 caracteres.</div>
+        @if (isFieldInvalid('password')) {
+          <div class="invalid-feedback">
+            @if (form.controls.password.errors?.['required']) {
+              Informe a senha.
+            } @else if (form.controls.password.errors?.['minlength']) {
+              A senha deve ter no mínimo 6 caracteres.
+            } @else if (form.controls.password.errors?.['uppercase']) {
+              A senha deve conter pelo menos uma letra maiúscula.
+            } @else if (form.controls.password.errors?.['specialChar']) {
+              A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
+            }
+          </div>
+        }
       </div>
 
       <div class="col-12 col-md-6">

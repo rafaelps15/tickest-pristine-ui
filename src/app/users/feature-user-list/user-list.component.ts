@@ -7,11 +7,11 @@ import { UsersStore } from '../application/users.store';
 import { UserSummary, UserRoleSummary } from '../entities/user-summary';
 import { UserStatus } from '../entities/user-filters';
 import { RolesStore } from '../../roles';
-import { SessionService, ConfirmDialogService, ToastService } from '../../shared';
+import {
+    SessionService, ConfirmDialogService, ToastService,
+    visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames
+} from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
-
-/** Quantidade de badges de função exibidos antes de agrupar o restante em "+N". */
-const MAX_VISIBLE_ROLE_BADGES = 2;
 
 /** Validador customizado para confirmar se as senhas coincidem. */
 const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -182,19 +182,19 @@ export class UserListComponent implements OnInit {
         return !user.isActive;
     }
 
-    /** Até {@link MAX_VISIBLE_ROLE_BADGES} funções exibidas como badge; o restante vira um badge "+N". */
+    /** Até 2 funções exibidas como badge; o restante vira um badge "+N" (regra compartilhada, ver `shared/utils/role-badges.util`). */
     visibleRoles(user: UserSummary): UserRoleSummary[] {
-        return user.roles.slice(0, MAX_VISIBLE_ROLE_BADGES);
+        return sharedVisibleRoles(user.roles);
     }
 
     /** Quantidade de funções além das já exibidas como badge. */
     hiddenRolesCount(user: UserSummary): number {
-        return Math.max(0, user.roles.length - MAX_VISIBLE_ROLE_BADGES);
+        return sharedHiddenRolesCount(user.roles);
     }
 
     /** Nomes das funções ocultas no badge "+N", para exibir no `title` (tooltip nativo). */
     hiddenRolesNames(user: UserSummary): string {
-        return user.roles.slice(MAX_VISIBLE_ROLE_BADGES).map(role => role.name).join(', ');
+        return sharedHiddenRolesNames(user.roles);
     }
 
     /** Impede desativar/reativar a própria conta logada, que travaria a sessão atual sem recuperação pela UI. */

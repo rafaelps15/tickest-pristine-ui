@@ -29,7 +29,6 @@ describe('TicketMonitorComponent', () => {
       tickets: signal<TicketMonitorItem[]>([ticket]),
       listState: signal({ loading: false, error: null as string | null }),
       slaSummary: signal<TicketSlaSummary | undefined>(slaSummary),
-      slaSummaryLoading: signal(false),
       currentPage: signal(1),
       currentPageSize: signal(20),
       total: signal(1),
@@ -42,6 +41,7 @@ describe('TicketMonitorComponent', () => {
       setSectorId: jasmine.createSpy('setSectorId'),
       setSlaStatus: jasmine.createSpy('setSlaStatus'),
       setSearch: jasmine.createSpy('setSearch'),
+      setUnassignedOnly: jasmine.createSpy('setUnassignedOnly'),
       setSort: jasmine.createSpy('setSort'),
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
@@ -169,6 +169,26 @@ describe('TicketMonitorComponent', () => {
     select.dispatchEvent(new Event('change'));
 
     expect(storeFake.setStatus).toHaveBeenCalledWith(TicketStatus.Open);
+  });
+
+  it('alterna o filtro "Só sem responsável"', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const toggle = fixture.nativeElement.querySelector('#monitorUnassignedOnly') as HTMLInputElement;
+    toggle.checked = true;
+    toggle.dispatchEvent(new Event('change'));
+
+    expect(storeFake.setUnassignedOnly).toHaveBeenCalledWith(true);
+  });
+
+  it('anuncia o carregamento da tabela por leitor de tela e tem uma legenda acessível', async () => {
+    storeFake.listState.set({ loading: true, error: null });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('table caption')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.spinner-border')?.getAttribute('role')).toBe('status');
   });
 
   it('limpa os filtros', async () => {

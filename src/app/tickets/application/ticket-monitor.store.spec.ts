@@ -111,6 +111,15 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'impressora' }));
   });
 
+  it('filtra só por chamados sem responsável', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.setUnassignedOnly(true);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ unassignedOnly: true, page: 1 }));
+  });
+
   it('muda a ordenação', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
