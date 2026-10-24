@@ -24,6 +24,10 @@ describe('TicketSummaryStore', () => {
   beforeEach(async () => {
     dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume']);
     dataService.getStatusCounts.and.returnValue(of(statusCounts));
+    dataService.getVolume.and.returnValue(of([
+      { periodStart: '2026-01-05', count: 2 },
+      { periodStart: '2026-01-06', count: 5 }
+    ]));
 
     TestBed.configureTestingModule({
       providers: [
@@ -35,9 +39,9 @@ describe('TicketSummaryStore', () => {
     store = await createStore();
   });
 
-  it('busca os totais por status de toda a empresa, sem buscar o volume (sem consumidor hoje)', () => {
+  it('busca os totais por status e o volume (agrupado por dia, por padrão) de toda a empresa', () => {
     expect(dataService.getStatusCounts).toHaveBeenCalled();
-    expect(dataService.getVolume).not.toHaveBeenCalled();
+    expect(dataService.getVolume).toHaveBeenCalledWith('Day');
   });
 
   it('expõe os totais dos cards a partir dos totais por status', () => {
@@ -45,6 +49,22 @@ describe('TicketSummaryStore', () => {
     expect(store.openCount()).toBe(3);
     expect(store.inProgressCount()).toBe(2);
     expect(store.resolvedCount()).toBe(4);
+    expect(store.closedCount()).toBe(1);
+    expect(store.canceledCount()).toBe(0);
+  });
+
+  it('expõe os pontos de volume retornados pela API', () => {
+    expect(store.volume()).toEqual([
+      { periodStart: '2026-01-05', count: 2 },
+      { periodStart: '2026-01-06', count: 5 }
+    ]);
+  });
+
+  it('refaz a busca do volume com o novo agrupamento ao mudar o período', async () => {
+    store.setGroupBy('Month');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getVolume).toHaveBeenCalledWith('Month');
   });
 
   it('expõe mensagem de erro quando a busca dos totais por status falhar', async () => {
@@ -54,6 +74,16 @@ describe('TicketSummaryStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.state().error).toBe('Erro ao carregar o resumo dos tickets');
+    expect(store.state().loading).toBeFalse();
+  });
+
+  it('expõe mensagem de erro quando a busca do volume falhar', async () => {
+    dataService.getVolume.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.state().error).toBe('Erro ao carregar o volume de tickets');
     expect(store.state().loading).toBeFalse();
   });
 });

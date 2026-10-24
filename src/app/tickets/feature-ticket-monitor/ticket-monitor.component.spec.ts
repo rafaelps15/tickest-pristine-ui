@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TicketMonitorComponent } from './ticket-monitor.component';
 import { TicketMonitorStore } from '../application/ticket-monitor.store';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
@@ -75,6 +75,26 @@ describe('TicketMonitorComponent', () => {
     expect(departmentsStoreFake.load).not.toHaveBeenCalled();
   });
 
+  it('aplica o filtro de status vindo da URL (?status=, usado pelos cards do Dashboard) ao inicializar', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ status: String(TicketStatus.Open) }) } }
+    });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.setStatus).toHaveBeenCalledWith(TicketStatus.Open);
+  });
+
+  it('aplica o filtro "só sem responsável" vindo da URL (?unassignedOnly=true, usado pelo atalho do Dashboard) ao inicializar', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ unassignedOnly: 'true' }) } }
+    });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.setUnassignedOnly).toHaveBeenCalledWith(true);
+  });
+
   it('lista os setores do departamento no filtro, a partir do que já está no DepartmentsStore', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -97,6 +117,14 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('Alta');
     expect(text).toContain('Aberto');
     expect(text).toContain('No prazo');
+  });
+
+  it('o link "Ver detalhes" leva pro ticket com ?from=monitor, pra o detalhe saber de onde o usuário veio', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const detailLink = fixture.nativeElement.querySelector('a[aria-label^="Ver detalhes"]') as HTMLAnchorElement;
+    expect(detailLink.getAttribute('href')).toBe('/tickets/t1?from=monitor');
   });
 
   it('mostra "Não atribuído" quando o ticket não tem atendente, e o nome quando tem', async () => {

@@ -1,10 +1,10 @@
 <div class="row mb-4">
   <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0">
-        <span class="text-muted fw-light">Meus Tickets /</span> {{ ticket()?.title ?? 'Ticket' }}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h4 class="fw-bold py-3 mb-0 text-break">
+        <span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Ticket' }}
       </h4>
-      <a routerLink="/tickets" class="btn btn-outline-secondary btn-sm">
+      <a [routerLink]="backLink" class="btn btn-outline-secondary btn-sm">
         <i class="bx bx-arrow-back me-1"></i> Voltar
       </a>
     </div>
@@ -14,7 +14,7 @@
 @if (detailStore.state().loading) {
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body p-4 text-center py-5">
-      <span class="spinner-border spinner-border-sm text-primary"></span>
+      <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando o chamado…</span></span>
     </div>
   </div>
 } @else if (ticket(); as t) {
@@ -42,7 +42,7 @@
           @if (canRemoveAssignee(t.status, t.assignedToName)) {
             <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.removingAssignee()" (click)="onRemoveAssignee(t.assignedToName!)">
               @if (detailStore.removingAssignee()) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
               Remover responsável
             </button>
@@ -56,69 +56,80 @@
         <dd class="col-sm-9">{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
 
         <dt class="col-sm-3 text-muted fw-normal">Prazo</dt>
-        <dd class="col-sm-9 mb-0">{{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        <dd class="col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
+          {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+          @if (dueRelativeLabel(t); as relative) {
+            <span class="fw-semibold">— {{ relative }}</span>
+          }
+        </dd>
       </dl>
 
       @if (detailStore.mutationError()) {
-        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0 max-w-700">{{ detailStore.mutationError() }}</div>
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0 max-w-700" role="alert">{{ detailStore.mutationError() }}</div>
       }
     </div>
   </div>
 } @else {
-  <div class="alert alert-warning border-0 shadow-sm">
-    {{ detailStore.state().error ?? 'Não encontramos esse ticket — ele pode ter sido removido.' }}
+  <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
+    <span>{{ detailStore.state().error ?? 'Não encontramos esse ticket — ele pode ter sido removido.' }}</span>
+    @if (detailStore.state().error) {
+      <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="detailStore.loadTicket(ticketId)">Tentar novamente</button>
+    }
   </div>
 }
 
 <div class="card shadow-sm border-0">
   <div class="card-header py-3 d-flex align-items-center justify-content-between">
     <h5 class="mb-0 fw-bold">Anexos</h5>
-    <label class="btn btn-sm btn-primary mb-0" [class.disabled]="store.uploading()">
+    <button type="button" class="btn btn-sm btn-primary mb-0" [disabled]="store.uploading()" (click)="openFilePicker()">
       @if (store.uploading()) {
-        <span class="spinner-border spinner-border-sm me-1"></span>
+        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
       } @else {
         <i class="bx bx-upload me-1"></i>
       }
       Anexar arquivo
-      <input type="file" class="d-none" [disabled]="store.uploading()" (change)="onFileSelected($event)" />
-    </label>
+    </button>
+    <input #fileInput type="file" class="d-none" [disabled]="store.uploading()" (change)="onFileSelected($event)" />
   </div>
 
   <div class="card-body p-4">
     @if (fileValidationError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ fileValidationError() }}</div>
+      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ fileValidationError() }}</div>
     }
     @if (store.uploadError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ store.uploadError() }}</div>
+      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ store.uploadError() }}</div>
     }
     @if (store.downloadError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ store.downloadError() }}</div>
+      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ store.downloadError() }}</div>
     }
     @if (store.listState().error) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ store.listState().error }}</div>
+      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+        <span>{{ store.listState().error }}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForTicket(ticketId)">Tentar novamente</button>
+      </div>
     }
 
     @if (store.listState().loading) {
-      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando anexos…</span></span></div>
     } @else if (store.attachments().length === 0) {
       <p class="text-muted small mb-0">Nenhum anexo enviado ainda.</p>
     } @else {
       <ul class="list-group list-group-flush">
         @for (attachment of store.attachments(); track attachment.id) {
           <li class="list-group-item d-flex align-items-center justify-content-between px-0">
-            <div class="d-flex align-items-center gap-2">
-              <i class="bx bx-file fs-4 text-muted"></i>
-              <div>
+            <div class="d-flex align-items-center gap-2 attachment-info">
+              <i class="bx bx-file fs-4 text-muted flex-shrink-0"></i>
+              <div class="text-break">
                 <div class="fw-semibold">{{ attachment.fileName }}</div>
                 <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
               </div>
             </div>
-            <div class="d-flex gap-1">
-              <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.downloading()" (click)="store.download(attachment)">
-                <i class="bx bx-download"></i>
+            <div class="d-flex gap-1 flex-shrink-0">
+              <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="store.download(attachment)">
+                <i class="bx bx-download" aria-hidden="true"></i>
               </button>
-              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deleting()" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
-                <i class="bx bx-trash"></i>
+              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deleting()" [attr.aria-label]="'Excluir ' + attachment.fileName" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
+                <i class="bx bx-trash" aria-hidden="true"></i>
               </button>
             </div>
           </li>
@@ -129,7 +140,7 @@
         <div class="text-center mt-3">
           <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.loadingMore()" (click)="store.loadMore()">
             @if (store.loadingMore()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             }
             Carregar mais anexos
           </button>
@@ -146,11 +157,14 @@
 
   <div class="card-body p-4">
     @if (historyStore.state().error) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small">{{ historyStore.state().error }}</div>
+      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+        <span>{{ historyStore.state().error }}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="historyStore.loadForTicket(ticketId)">Tentar novamente</button>
+      </div>
     }
 
     @if (historyStore.state().loading) {
-      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando histórico…</span></span></div>
     } @else if (historyStore.entries().length === 0) {
       <p class="text-muted small mb-0">Nenhum evento registrado ainda.</p>
     } @else {
@@ -167,14 +181,14 @@
         <div class="text-center mt-3">
           <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="historyStore.loadingMore()" (click)="historyStore.loadMore()">
             @if (historyStore.loadingMore()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             }
             Carregar mais eventos
           </button>
         </div>
       }
       @if (historyStore.loadMoreError()) {
-        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0">{{ historyStore.loadMoreError() }}</div>
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ historyStore.loadMoreError() }}</div>
       }
     }
   </div>
@@ -208,9 +222,9 @@
         </div>
 
         @if (detailStore.assigneeSearchError()) {
-          <div class="alert alert-danger border-0 shadow-sm py-2 small mb-0">{{ detailStore.assigneeSearchError() }}</div>
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mb-0" role="alert">{{ detailStore.assigneeSearchError() }}</div>
         } @else if (detailStore.searchingAssignees()) {
-          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary"></span></div>
+          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
         } @else if (assigneeSearchInput().trim().length === 0) {
           <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
         } @else if (detailStore.assigneeCandidates().length === 0) {
@@ -258,7 +272,7 @@
         }
 
         @if (detailStore.mutationError()) {
-          <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0">{{ detailStore.mutationError() }}</div>
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ detailStore.mutationError() }}</div>
         }
       </div>
       <div class="modal-footer flex-column align-items-stretch">
@@ -269,7 +283,7 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="button" class="btn btn-primary" [disabled]="!selectedAssigneeId() || detailStore.assigningTicket()" (click)="onConfirmAssign()">
             @if (detailStore.assigningTicket()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             }
             {{ ticket()?.assignedToName ? 'Reatribuir' : 'Atribuir' }}
           </button>

@@ -231,7 +231,7 @@
               <td><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
               <td class="text-nowrap small" [class.text-danger]="isOverdue(ticket)">{{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
               <td class="text-end">
-                <a [routerLink]="['/tickets', ticket.id]" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
+                <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
                   <i class="bx bx-show"></i>
                 </a>
               </td>

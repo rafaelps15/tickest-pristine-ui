@@ -28,19 +28,38 @@ import { RouterModule } from '@angular/router';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f4f7f9; /* Fundo sóbrio e limpo */
-      background-image: radial-gradient(#d1d9e6 1px, transparent 1px);
-      background-size: 40px 40px;
+      /*
+       * Único gradiente de fundo do sistema — reservado pro momento de entrada (ver DESIGN.md).
+       * Dois brilhos suaves em índigo (o próprio acento da marca, não uma cor nova) dão ao vidro
+       * da frente algo de verdade pra desfocar — sem eles, o blur não tem nada pra revelar.
+       */
+      background:
+        radial-gradient(circle at 15% 20%, rgba(var(--tk-primary-rgb), 0.35) 0%, transparent 45%),
+        radial-gradient(circle at 85% 80%, rgba(var(--tk-primary-rgb), 0.28) 0%, transparent 45%),
+        linear-gradient(135deg, var(--tk-page-bg) 0%, var(--tk-border) 100%);
       padding: 1.5rem;
     }
     .auth-layout-card {
       width: 100%;
       max-width: 520px;
-      background: #ffffff;
-      border-radius: 1.25rem;
+      /* Vidro de verdade: fundo translúcido + blur sobre o gradiente — único lugar do sistema com esse efeito. */
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: var(--tk-radius-lg);
       padding: 3.5rem 3rem;
-      box-shadow: 0 1.5rem 4rem rgba(105, 108, 255, 0.16), 0 0.25rem 0.75rem rgba(0, 0, 0, 0.04);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
       animation: auth-card-in 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Em telas bem estreitas, o padding generoso do card deixa pouco espaço de verdade pro formulário. */
+    @media (max-width: 480px) {
+      .auth-layout-card {
+        padding: 2rem 1.5rem;
+      }
+    }
+    .brand-wrapper img {
+      /* O logo some no fundo sem nenhuma profundidade própria — um brilho sutil na cor da marca resolve. */
+      filter: drop-shadow(0 0 24px rgba(var(--tk-primary-rgb), 0.35));
     }
     .brand-text {
       font-size: 3rem;

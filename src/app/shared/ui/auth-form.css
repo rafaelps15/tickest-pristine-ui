@@ -1,10 +1,11 @@
 /*
  * Visual compartilhado das telas de autenticação (login, primeiro acesso) — ambas rodam dentro
- * do card do AuthLayoutComponent e usam a mesma linguagem de formulário "premium": inputs com
- * cantos bem arredondados, botão primário em gradiente, alerta de erro suave.
+ * do card do AuthLayoutComponent. Reaproveita os tokens/componentes globais (styles.css) onde
+ * já existem — rótulo, botão primário, input, alerta — só com o tamanho "lg" próprio da entrada
+ * da marca; nenhum valor aqui deveria reinventar o que o sistema já define.
  */
 h4 {
-  color: #32325d;
+  color: var(--tk-text-primary);
   font-weight: 700;
 }
 
@@ -13,42 +14,42 @@ p.text-muted {
 }
 
 .form-label {
-  font-weight: 600;
-  color: #566a7f;
-  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--tk-text-secondary);
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   margin-bottom: 0.6rem;
 }
 
 .form-control {
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: var(--tk-radius-sm);
   border: 1.5px solid #d9dee3;
   transition: all 0.2s ease-in-out;
 }
 
 .form-control:focus {
   border-color: var(--tk-primary);
-  box-shadow: 0 0 0 0.25rem rgba(105, 108, 255, 0.1);
+  box-shadow: 0 0 0 0.2rem rgba(var(--tk-primary-rgb), 0.15);
   transform: translateY(-1px);
 }
 
 .btn-primary {
   padding: 0.8rem;
   font-weight: 700;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, #696cff, #5f61e6);
+  border-radius: var(--tk-radius-sm);
+  background: linear-gradient(to right, var(--tk-primary), var(--tk-primary-dark));
   border: none;
-  box-shadow: 0 4px 15px rgba(105, 108, 255, 0.3);
+  box-shadow: 0 0.25rem 0.75rem rgba(var(--tk-primary-rgb), 0.3);
   transition: all 0.3s ease;
   margin-top: 1rem;
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(105, 108, 255, 0.4);
-  background: linear-gradient(to right, #5f61e6, #696cff);
+  box-shadow: 0 0.5rem 1.1rem rgba(var(--tk-primary-rgb), 0.4);
+  background: linear-gradient(to right, var(--tk-primary-dark), var(--tk-primary));
 }
 
 .btn-primary:active:not(:disabled) {
@@ -56,7 +57,7 @@ p.text-muted {
 }
 
 .input-group-text {
-  border-radius: 0 0.75rem 0.75rem 0;
+  border-radius: 0 var(--tk-radius-sm) var(--tk-radius-sm) 0;
   background-color: transparent;
   border: 1.5px solid #d9dee3;
   border-left: none;
@@ -72,9 +73,8 @@ p.text-muted {
 }
 
 .alert-danger {
-  border-radius: 0.75rem;
   border: none;
-  background-color: #ffe0db;
-  color: #ff3e1d;
+  background-color: #ffe5e5;
+  color: #991b1b;
   font-weight: 600;
 }

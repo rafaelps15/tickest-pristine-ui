@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TicketMonitorStore } from '../application/ticket-monitor.store';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
@@ -20,6 +20,7 @@ import { DepartmentsStore } from '../../departments';
 export class TicketMonitorComponent implements OnInit {
     protected readonly store = inject(TicketMonitorStore);
     protected readonly departmentsStore = inject(DepartmentsStore);
+    private readonly route = inject(ActivatedRoute);
 
     /** Exposto pro template clicar nos cards de resumo de SLA e filtrar a tabela pelo mesmo valor. */
     protected readonly TicketSlaStatus = TicketSlaStatus;
@@ -43,8 +44,17 @@ export class TicketMonitorComponent implements OnInit {
      * Carrega a primeira página de tickets e o resumo de SLA ao inicializar. Os departamentos
      * (para o filtro de setor) não são recarregados aqui: o `DepartmentsStore` já os busca
      * sozinho ao ser injetado pela primeira vez na sessão, e esta tela só lê esse dado.
+     * Um `?status=` ou `?unassignedOnly=` na URL (vindo dos cards/atalhos do Dashboard) já
+     * aplica o filtro correspondente antes da primeira busca.
      */
     ngOnInit(): void {
+        const statusParam = this.route.snapshot.queryParamMap.get('status');
+        if (statusParam) {
+            this.store.setStatus(Number(statusParam) as TicketStatus);
+        }
+        if (this.route.snapshot.queryParamMap.get('unassignedOnly') === 'true') {
+            this.store.setUnassignedOnly(true);
+        }
         this.store.load();
     }
 

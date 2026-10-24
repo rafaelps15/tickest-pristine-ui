@@ -112,7 +112,10 @@ describe('TicketDetailComponent', () => {
         { provide: TicketDetailStore, useValue: detailStoreFake },
         { provide: TicketAttachmentsStore, useValue: attachmentsStoreFake },
         { provide: TicketHistoryStore, useValue: historyStoreFake },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }), queryParamMap: convertToParamMap({}) } }
+        },
         { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
         { provide: SessionService, useValue: sessionServiceFake }
       ]
@@ -129,6 +132,29 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
   });
 
+  it('mostra "Meus Tickets" no trilho e volta pra /tickets por padrão, sem ?from na URL', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Meus Tickets /');
+    const backLink = fixture.nativeElement.querySelector('a.btn-outline-secondary') as HTMLAnchorElement;
+    expect(backLink.getAttribute('href')).toBe('/tickets');
+  });
+
+  it('mostra "Monitorar Tickets" no trilho e volta pra /tickets/monitorar quando chega com ?from=monitor', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        snapshot: { paramMap: convertToParamMap({ id: 't1' }), queryParamMap: convertToParamMap({ from: 'monitor' }) }
+      }
+    });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Monitorar Tickets /');
+    const backLink = fixture.nativeElement.querySelector('a.btn-outline-secondary') as HTMLAnchorElement;
+    expect(backLink.getAttribute('href')).toBe('/tickets/monitorar');
+  });
+
   it('mostra a situação do SLA com texto, e não só com a cor', async () => {
     detailStoreFake.ticket.set({ ...ticket, slaStatus: TicketSlaStatus.Breached });
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -138,6 +164,37 @@ describe('TicketDetailComponent', () => {
       .find(b => b.textContent?.includes('SLA'));
     expect(badge?.textContent?.trim()).toBe('SLA: Atrasado');
     expect(badge?.classList).toContain('bg-label-danger');
+  });
+
+  it('mostra a urgência relativa do prazo e destaca em vermelho quando o SLA está violado', async () => {
+    const overdueBy3Hours = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    detailStoreFake.ticket.set({ ...ticket, dueAtUtc: overdueBy3Hours, slaStatus: TicketSlaStatus.Breached, resolvedAtUtc: null });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Atrasado há 3 horas');
+    const prazoDd = fixture.nativeElement.querySelector('dd.text-danger');
+    expect(prazoDd).withContext('a linha de Prazo deve ficar vermelha quando o SLA está violado').toBeTruthy();
+  });
+
+  it('mostra "vence em" e destaca em amarelo quando o SLA está em risco, sem destaque quando está no prazo', async () => {
+    const dueIn40Minutes = new Date(Date.now() + 40 * 60 * 1000).toISOString();
+    detailStoreFake.ticket.set({ ...ticket, dueAtUtc: dueIn40Minutes, slaStatus: TicketSlaStatus.AtRisk, resolvedAtUtc: null });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Vence em 40 minutos');
+    expect(fixture.nativeElement.querySelector('dd.text-warning')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('dd.text-danger')).toBeFalsy();
+  });
+
+  it('não mostra urgência de prazo pra um chamado já resolvido', async () => {
+    detailStoreFake.ticket.set({ ...ticket, resolvedAtUtc: '2026-01-02T10:00:00Z', slaStatus: TicketSlaStatus.Met });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Vence em');
+    expect(fixture.nativeElement.textContent).not.toContain('Atrasado há');
   });
 
   it('mostra quem abriu, o setor e o responsável (ou que ainda não foi atribuído)', async () => {
@@ -171,6 +228,31 @@ describe('TicketDetailComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('foto.png');
     expect(fixture.nativeElement.textContent).toContain('1 KB');
+  });
+
+  it('o botão "Anexar arquivo" é um <button> real (alcançável por teclado) que abre o seletor de arquivo oculto', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const uploadButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Anexar arquivo'));
+    expect(uploadButton).withContext('o botão de upload deve ser um <button>, não um <label>').toBeTruthy();
+
+    const fileInput = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = spyOn(fileInput, 'click');
+    uploadButton?.click();
+
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it('os botões de baixar/excluir anexo têm aria-label (são ícone-apenas)', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const downloadButton = fixture.nativeElement.querySelector('button[aria-label^="Baixar"]');
+    const deleteButton = fixture.nativeElement.querySelector('button[aria-label^="Excluir"]');
+    expect(downloadButton?.getAttribute('aria-label')).toBe('Baixar foto.png');
+    expect(deleteButton?.getAttribute('aria-label')).toBe('Excluir foto.png');
   });
 
   it('rejeita um arquivo maior que o limite, sem chamar o store', async () => {
@@ -250,6 +332,38 @@ describe('TicketDetailComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Não encontramos esse ticket');
+  });
+
+  it('recarrega o ticket ao clicar em "Tentar novamente" quando falhar, mas não mostra o botão quando é só "não encontrado"', async () => {
+    detailStoreFake.ticket.set(undefined);
+    detailStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este ticket.' });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const retryButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Tentar novamente'));
+    retryButton?.click();
+    expect(detailStoreFake.loadTicket).toHaveBeenCalledWith('t1');
+
+    detailStoreFake.state.set({ loading: false, error: null });
+    fixture.detectChanges();
+    expect(Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .some(b => b.textContent?.includes('Tentar novamente'))).toBeFalse();
+  });
+
+  it('recarrega os anexos e o histórico ao clicar em "Tentar novamente" nos respectivos erros', async () => {
+    attachmentsStoreFake.listState.set({ loading: false, error: 'Erro ao carregar anexos' });
+    historyStoreFake.state.set({ loading: false, error: 'Erro ao carregar histórico' });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const retryButtons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .filter(b => b.textContent?.includes('Tentar novamente'));
+    expect(retryButtons.length).toBe(2);
+    retryButtons.forEach(b => b.click());
+
+    expect(attachmentsStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
+    expect(historyStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
   });
 
   it('mostra um spinner — não o aviso de não encontrado — enquanto o ticket ainda está carregando', async () => {

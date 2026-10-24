@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateTicketData, Ticket, TicketCount, TicketDetail, UpdateTicketData } from '../entities/ticket';
+import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
@@ -93,15 +93,6 @@ export class TicketDataService {
    */
   assignTicket(ticketId: string, assignedToUserId: string): Observable<void> {
     return this.http.put<void>(`${this.apiUrl}/${ticketId}/assignee`, { assignedToUserId });
-  }
-
-  /**
-   * Busca as quantidades de tickets do usuário logado por prioridade e status (GET /tickets/mine/summary).
-   * Reintroduzido a pedido do usuário para comparar o gráfico antigo (Prioridade×Status, por usuário)
-   * lado a lado com o novo gráfico de volume por período, da empresa inteira.
-   */
-  getMySummary(): Observable<TicketCount[]> {
-    return this.http.get<TicketCount[]>(`${this.apiUrl}/mine/summary`);
   }
 
   /**

@@ -1,5 +1,40 @@
 .card-stats {
     background-color: var(--tk-surface);
+    position: relative;
+}
+
+/*
+ * Documentado em DESIGN.md (Cards/Containers): cards de estatística do dashboard sobem para uma
+ * sombra maior e elevam 5px no hover — `.card` já tem a transition pronta em styles.css. Restrito
+ * a `.card-stats-clickable` (não a `.card-stats` em geral): o card "Total de Tickets" nunca é
+ * clicável, e os 3 cards de status só são pra quem tem o papel administrativo — elevar os outros
+ * do mesmo jeito é afordância falsa (convida ao clique, não faz nada). Achado no critique de
+ * 2026-10-24.
+ */
+.card-stats-clickable:hover {
+    box-shadow: var(--tk-shadow-md);
+    transform: translateY(-5px);
+}
+
+/*
+ * Cards de status com permissão tickets:manage: card inteiro clicável via .stretched-link (link
+ * invisível cobrindo o card, idiom do Bootstrap) pra "Monitorar Tickets" já filtrado pelo mesmo
+ * status — mesmo tingimento de fundo índigo do .card-stats-btn do Monitorar Tickets (que filtra
+ * dentro da própria tela); aqui é navegação entre telas, por isso <a>, não <button>.
+ */
+.card-stats-clickable .stretched-link {
+    transition: background-color var(--tk-transition);
+}
+
+.card-stats-clickable .stretched-link:hover,
+.card-stats-clickable .stretched-link:focus-visible {
+    background-color: rgba(var(--tk-primary-rgb), 0.06);
+    border-radius: inherit;
+}
+
+.card-stats-clickable .stretched-link:focus-visible {
+    outline: 2px solid var(--tk-primary);
+    outline-offset: 2px;
 }
 
 .card-stats .badge.rounded {
@@ -9,6 +44,21 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--tk-radius-md) !important;
+}
+
+/*
+ * Ícone colorido de cada item de Ações Rápidas — mesma linguagem visual do badge-ícone dos cards
+ * de estatística (bg-label-*), só circular e menor, pra caber numa linha de lista em vez de um
+ * card grande. Pedido do usuário em 2026-10-24 pra deixar a tela mais colorida além do gráfico;
+ * reaproveita cores semânticas já existentes no design system (nunca inventa uma cor nova).
+ */
+.quick-action-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .card-title {

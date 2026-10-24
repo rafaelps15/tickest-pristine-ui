@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin, of, catchError, map } from 'rxjs';
+import { finalize, from, mergeMap, toArray, of, catchError, map } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
@@ -11,6 +11,9 @@ import { AuthDataService, CreateUserData, extractErrorMessage } from '../../shar
 
 /** Filtros e paginação padrão: todos os status, primeira página, 20 itens por página. */
 const DEFAULT_FILTERS: UserFilters = { status: 'All', page: 1, pageSize: 20 };
+
+/** Máximo de desativações em lote em voo ao mesmo tempo — evita 100 requisições simultâneas ao selecionar "todos" com pageSize 100. */
+const BULK_DEACTIVATE_CONCURRENCY = 10;
 
 /** Store de usuários administrados: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 export const UsersStore = signalStore(
@@ -207,24 +210,27 @@ export const UsersStore = signalStore(
     },
 
     /**
-     * Desativa vários usuários em lote, em paralelo, com melhor esforço: cada chamada usa o
-     * mesmo endpoint individual de desativação (não há endpoint de lote no back-end), falhas de
-     * uma não cancelam as demais. Reporta nomes dos que falharam no erro da listagem e recarrega
-     * só se pelo menos um teve sucesso.
+     * Desativa vários usuários em lote, com melhor esforço: cada chamada usa o mesmo endpoint
+     * individual de desativação (não há endpoint de lote no back-end), no máximo
+     * {@link BULK_DEACTIVATE_CONCURRENCY} em voo ao mesmo tempo — selecionar "todos" com
+     * pageSize 100 não deve disparar 100 requisições simultâneas — e falhas de uma não cancelam
+     * as demais. Reporta nomes dos que falharam no erro da listagem e recarrega só se pelo menos
+     * um teve sucesso.
      */
     deactivateMany(userIds: string[], onDone?: (succeededCount: number, failedCount: number) => void): void {
       if (userIds.length === 0) return;
 
       patchState(store, { listMutationError: null, deactivatingIds: [...store.deactivatingIds(), ...userIds] });
 
-      const requests = userIds.map(userId =>
-        store._userDataService.deactivate(userId).pipe(
-          map(() => ({ userId, ok: true as const })),
-          catchError(() => of({ userId, ok: false as const }))
-        )
-      );
-
-      forkJoin(requests).pipe(
+      from(userIds).pipe(
+        mergeMap(userId =>
+          store._userDataService.deactivate(userId).pipe(
+            map(() => ({ userId, ok: true as const })),
+            catchError(() => of({ userId, ok: false as const }))
+          ),
+          BULK_DEACTIVATE_CONCURRENCY
+        ),
+        toArray(),
         finalize(() => patchState(store, {
           deactivatingIds: store.deactivatingIds().filter(id => !userIds.includes(id))
         }))

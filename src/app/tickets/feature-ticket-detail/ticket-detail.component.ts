@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef } from '@angular/core';
 import { DatePipe, NgClass } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,7 +8,8 @@ import { TicketAttachmentsStore } from '../application/ticket-attachments.store'
 import { TicketHistoryStore } from '../application/ticket-history.store';
 import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
-import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TicketDetail } from '../entities/ticket';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { ConfirmDialogService, SessionService, visibleRoles, hiddenRolesCount, hiddenRolesNames } from '../../shared';
 import { UserSummary } from '../../users';
@@ -41,8 +42,37 @@ export class TicketDetailComponent implements OnInit {
 
     readonly ticketId = this.route.snapshot.paramMap.get('id')!;
 
+    /**
+     * De onde o usuário chegou nesta tela — hoje só distingue Monitorar Tickets (fila de todos os
+     * chamados, usada por quem tem `tickets:manage`) do padrão "Meus Tickets" (lista pessoal do
+     * próprio Solicitante/Atendente). Vem de `?from=monitor` na URL, passado pelos dois pontos de
+     * entrada (`ticket-list`/`ticket-monitor`), não de permissão — reflete de onde a pessoa
+     * efetivamente navegou, não quem ela é, já que o mesmo usuário pode chegar aqui pelos dois
+     * caminhos em momentos diferentes.
+     */
+    protected readonly cameFromMonitor = this.route.snapshot.queryParamMap.get('from') === 'monitor';
+
+    /** Texto do trilho de navegação, coerente com a tela de onde o usuário realmente veio. */
+    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Monitorar Tickets /' : 'Meus Tickets /';
+
+    /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
+    protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';
+
     /** Mensagem de erro de validação (tamanho/tipo) do arquivo escolhido, antes de enviar. */
     fileValidationError = signal<string | null>(null);
+
+    /**
+     * Referência ao `<input type="file">` oculto, pra abrir o seletor de arquivo a partir de um
+     * `<button>` real em vez de um `<label>` envolvendo o input — um `<label>` sem `tabindex` não
+     * entra na ordem de tabulação, então o upload era inalcançável por teclado (achado no critique
+     * de 2026-10-24).
+     */
+    private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
+
+    /** Abre o seletor de arquivo do sistema, disparado pelo botão "Anexar arquivo". */
+    protected openFilePicker(): void {
+        this.fileInput().nativeElement.click();
+    }
 
     /** Texto digitado na busca de candidatos a responsável, antes do debounce. */
     assigneeSearchInput = signal('');
@@ -73,6 +103,54 @@ export class TicketDetailComponent implements OnInit {
         this.detailStore.loadTicket(this.ticketId);
         this.historyStore.loadForTicket(this.ticketId);
         this.store.loadForTicket(this.ticketId);
+    }
+
+    /**
+     * Classe de cor da linha de Prazo — mesmo tratamento que a tabela de Monitorar Tickets já
+     * aplica na data (`[class.text-danger]="isOverdue(ticket)"`), agora também no detalhe, e um
+     * pouco mais fino: distingue "em risco" (amarelo) de "atrasado"/"violado" (vermelho) em vez de
+     * só um booleano, já que o `slaStatus` do back-end já traz essa granularidade.
+     */
+    protected slaUrgencyClass(slaStatus: TicketSlaStatus): string {
+        if (slaStatus === TicketSlaStatus.Breached || slaStatus === TicketSlaStatus.Missed) {
+            return 'text-danger';
+        }
+        if (slaStatus === TicketSlaStatus.AtRisk) {
+            return 'text-warning';
+        }
+        return '';
+    }
+
+    /**
+     * Urgência do prazo em texto relativo pt-BR ("Vence em 40 minutos"/"Atrasado há 3 horas"), pra
+     * não obrigar quem está lendo a calcular a diferença a partir de uma data/hora absoluta. Null
+     * quando o chamado já foi resolvido — o prazo deixou de importar, a data absoluta já basta
+     * como registro.
+     */
+    protected dueRelativeLabel(t: TicketDetail): string | null {
+        if (t.resolvedAtUtc) {
+            return null;
+        }
+
+        const diffMs = new Date(t.dueAtUtc).getTime() - Date.now();
+        const duration = this.formatDuration(Math.abs(diffMs));
+        return diffMs < 0 ? `Atrasado há ${duration}` : `Vence em ${duration}`;
+    }
+
+    /** Formata uma duração em milissegundos como "N minuto(s)"/"N hora(s)"/"N dia(s)", em pt-BR. */
+    private formatDuration(ms: number): string {
+        const minutes = Math.round(ms / 60_000);
+        if (minutes < 60) {
+            return minutes === 1 ? '1 minuto' : `${minutes} minutos`;
+        }
+
+        const hours = Math.round(minutes / 60);
+        if (hours < 24) {
+            return hours === 1 ? '1 hora' : `${hours} horas`;
+        }
+
+        const days = Math.round(hours / 24);
+        return days === 1 ? '1 dia' : `${days} dias`;
     }
 
     /** Indica se o botão "Atribuir/Alterar responsável" deve aparecer: só pra quem administra, com o chamado ativo. */

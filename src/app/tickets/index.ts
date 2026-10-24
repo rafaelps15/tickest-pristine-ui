@@ -14,7 +14,6 @@ export * from './infrastructure/ticket.data.service';
 export * from './infrastructure/ticket-attachment.data.service';
 export * from './application/tickets.store';
 export * from './application/ticket-summary.store';
-export * from './application/ticket-personal-summary.store';
 export * from './application/ticket-detail.store';
 export * from './application/ticket-attachments.store';
 export * from './application/ticket-history.store';

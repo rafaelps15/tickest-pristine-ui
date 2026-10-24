@@ -2,16 +2,19 @@
 <div class="row mb-4">
   <div class="col-12">
     @if (sessionService.currentUser(); as user) {
-      <h4 class="fw-bold mb-1">Seja bem-vindo(a), {{ user.firstName }}!</h4>
+      <h4 class="fw-bold mb-1">Seja bem-vindo(a), <span class="text-primary">{{ user.firstName }}</span>!</h4>
     } @else {
       <h4 class="fw-bold mb-1">Seja bem-vindo(a)!</h4>
     }
-    <p class="text-muted small mb-0">Resumo da empresa e dos seus tickets.</p>
+    <p class="text-muted small mb-0">Veja como estão os tickets de toda a empresa, ao vivo.</p>
   </div>
 </div>
 
 @if (store.state().error) {
-  <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">{{ store.state().error }}</div>
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
+    <span>{{ store.state().error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
+  </div>
 }
 
 <!-- Cards de Estatísticas -->
@@ -23,11 +26,19 @@
           <div class="content-left">
             <span class="text-muted">Total de Tickets</span>
             <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2">{{ store.total() }}</h3>
+              @if (store.state().loading) {
+                <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando total de tickets…</span></span>
+              } @else {
+                <h3 class="mb-0 me-2">{{ store.total() }}</h3>
+              }
             </div>
-            <small class="text-muted">Tickets da empresa</small>
+            @if (totalBreakdownLabel(store.closedCount(), store.canceledCount()); as breakdown) {
+              <small class="text-muted">Tickets da empresa — {{ breakdown }}</small>
+            } @else {
+              <small class="text-muted">Tickets da empresa</small>
+            }
           </div>
-          <span class="badge bg-label-primary rounded p-2">
+          <span class="badge bg-label-primary rounded p-2 flex-shrink-0">
             <i class="bx bx-ticket fs-3"></i>
           </span>
         </div>
@@ -36,59 +47,95 @@
   </div>
 
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100">
+    <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div class="content-left">
             <span class="text-muted">Em Aberto</span>
             <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-warning">{{ store.openCount() }}</h3>
+              @if (store.state().loading) {
+                <span class="spinner-border spinner-border-sm text-warning" role="status"><span class="visually-hidden">Carregando tickets em aberto…</span></span>
+              } @else {
+                <h3 class="mb-0 me-2 text-warning">{{ store.openCount() }}</h3>
+              }
             </div>
-            <small class="text-muted">Aguardando atendimento</small>
+            @if (sessionService.hasPermission('tickets:manage')) {
+              <small class="text-muted">Aguardando atendimento — toque para ver na fila</small>
+            } @else {
+              <small class="text-muted">Aguardando atendimento</small>
+            }
           </div>
-          <span class="badge bg-label-warning rounded p-2">
+          <span class="badge bg-label-warning rounded p-2 flex-shrink-0">
             <i class="bx bx-error-circle fs-3"></i>
           </span>
         </div>
       </div>
+      @if (sessionService.hasPermission('tickets:manage')) {
+        <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.Open }"
+           aria-label="Ver tickets em aberto na fila de monitoramento"></a>
+      }
     </div>
   </div>
 
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100">
+    <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div class="content-left">
             <span class="text-muted">Em Andamento</span>
             <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-info">{{ store.inProgressCount() }}</h3>
+              @if (store.state().loading) {
+                <span class="spinner-border spinner-border-sm text-info" role="status"><span class="visually-hidden">Carregando tickets em andamento…</span></span>
+              } @else {
+                <h3 class="mb-0 me-2 text-info">{{ store.inProgressCount() }}</h3>
+              }
             </div>
-            <small class="text-muted">Em atendimento</small>
+            @if (sessionService.hasPermission('tickets:manage')) {
+              <small class="text-muted">Em atendimento — toque para ver na fila</small>
+            } @else {
+              <small class="text-muted">Em atendimento</small>
+            }
           </div>
-          <span class="badge bg-label-info rounded p-2">
+          <span class="badge bg-label-info rounded p-2 flex-shrink-0">
             <i class="bx bx-time-five fs-3"></i>
           </span>
         </div>
       </div>
+      @if (sessionService.hasPermission('tickets:manage')) {
+        <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.InProgress }"
+           aria-label="Ver tickets em andamento na fila de monitoramento"></a>
+      }
     </div>
   </div>
 
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100">
+    <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div class="content-left">
             <span class="text-muted">Resolvidos</span>
             <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-success">{{ store.resolvedCount() }}</h3>
+              @if (store.state().loading) {
+                <span class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Carregando tickets resolvidos…</span></span>
+              } @else {
+                <h3 class="mb-0 me-2 text-success">{{ store.resolvedCount() }}</h3>
+              }
             </div>
-            <small class="text-muted">Finalizados</small>
+            @if (sessionService.hasPermission('tickets:manage')) {
+              <small class="text-muted">Finalizados — toque para ver na fila</small>
+            } @else {
+              <small class="text-muted">Finalizados</small>
+            }
           </div>
-          <span class="badge bg-label-success rounded p-2">
+          <span class="badge bg-label-success rounded p-2 flex-shrink-0">
             <i class="bx bx-check-double fs-3"></i>
           </span>
         </div>
       </div>
+      @if (sessionService.hasPermission('tickets:manage')) {
+        <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.Resolved }"
+           aria-label="Ver tickets resolvidos na fila de monitoramento"></a>
+      }
     </div>
   </div>
 </div>
@@ -97,48 +144,69 @@
 <div class="row">
   <div class="col-12 col-lg-8 mb-4">
     <div class="card">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <h5 class="card-title m-0">Seus Tickets por Prioridade e Status</h5>
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleTable()">
-          <i class="bx bx-table me-1"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
-        </button>
+      <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <h5 class="card-title m-0">Tickets Abertos por Período</h5>
+        <div class="d-flex align-items-center gap-2">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
+            @for (option of groupByOptions; track option) {
+              <button type="button" class="btn"
+                      [class.btn-primary]="store.groupBy() === option"
+                      [class.btn-outline-secondary]="store.groupBy() !== option"
+                      [attr.aria-pressed]="store.groupBy() === option"
+                      (click)="setGroupBy(option)">
+                {{ groupByLabels[option] }}
+              </button>
+            }
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" [attr.aria-pressed]="showTable()" (click)="toggleTable()">
+            <i class="bx bx-table me-1"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <div class="chart-container" style="position: relative; height: 380px;" [class.d-none]="showTable()">
-          @defer (on idle) {
-            <canvas #ticketChart></canvas>
-          } @placeholder {
+          @if (store.state().loading) {
             <div class="d-flex align-items-center justify-content-center h-100">
-              <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
+              <span class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span>
             </div>
+          } @else if (store.volume().length === 0) {
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted text-center">
+              <i class="bx bx-bar-chart-alt-2 display-6 d-block mb-2 opacity-50"></i>
+              Nenhum ticket aberto neste período ainda.
+            </div>
+          } @else {
+            @defer (on idle) {
+              <canvas #volumeChart></canvas>
+            } @placeholder {
+              <div class="d-flex align-items-center justify-content-center h-100">
+                <span class="spinner-border text-primary" aria-hidden="true"></span>
+              </div>
+            }
           }
         </div>
 
         @if (showTable()) {
           <div class="table-responsive">
             <table class="table table-sm table-bordered align-middle mb-0">
-              <caption class="visually-hidden">Quantidade dos seus tickets por prioridade e status</caption>
+              <caption class="visually-hidden">Quantidade de tickets abertos por período</caption>
               <thead>
                 <tr>
-                  <th scope="col">Prioridade</th>
-                  @for (status of statusLabels; track status; let i = $index) {
-                    <th scope="col" class="text-end">
-                      <span class="d-inline-block rounded-circle me-1" [style.background-color]="statusColors[i]" style="width: 8px; height: 8px;"></span>
-                      {{ status }}
-                    </th>
-                  }
-                  <th scope="col" class="text-end">Total</th>
+                  <th scope="col">Período</th>
+                  <th scope="col" class="text-end">Tickets abertos</th>
                 </tr>
               </thead>
               <tbody>
-                @for (priority of priorityLabels; track priority; let i = $index) {
-                  <tr>
-                    <th scope="row">{{ priority }}</th>
-                    @for (count of matrix()[i]; track $index) {
-                      <td class="text-end">{{ count }}</td>
-                    }
-                    <td class="text-end fw-semibold">{{ rowTotal(matrix()[i]) }}</td>
-                  </tr>
+                @if (store.state().loading) {
+                  <tr><td colspan="2" class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span></td></tr>
+                } @else if (store.volume().length === 0) {
+                  <tr><td colspan="2" class="text-center py-4 text-muted">Nenhum ticket aberto neste período ainda.</td></tr>
+                } @else {
+                  @for (point of store.volume(); track point.periodStart; let i = $index) {
+                    <tr>
+                      <th scope="row">{{ periodLabels()[i] }}</th>
+                      <td class="text-end">{{ point.count }}</td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>
@@ -155,77 +223,57 @@
         <h5 class="card-title m-0 fw-bold">Ações Rápidas</h5>
       </div>
       <div class="card-body">
-        <p class="text-muted small">Acesso direto às tarefas mais usadas.</p>
+        @if (isAdministrative()) {
+          <p class="text-muted small">Quem ainda precisa de atenção, direto da fila.</p>
 
-        <div class="d-grid gap-3 mt-4">
-          <a class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between border-2"
-             routerLink="/tickets/novo">
-            <div class="d-flex align-items-center">
-              <i class="bx bx-plus-circle fs-4 me-3"></i>
-              <div>
-                <div class="fw-bold">Novo Ticket</div>
-                <div class="small opacity-75">Abrir uma nova solicitação</div>
-              </div>
-            </div>
-            <i class="bx bx-chevron-right"></i>
-          </a>
-
-          @if (sessionService.hasPermission('tickets:manage')) {
+          <div class="d-grid gap-3 mt-4">
             <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-               routerLink="/tickets/monitorar">
+               routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
               <div class="d-flex align-items-center">
-                <i class="bx bx-list-check fs-4 me-3"></i>
+                <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-user-x fs-4"></i>
+                </span>
                 <div>
-                  <div class="fw-bold">Monitorar Tickets</div>
-                  <div class="small opacity-75">Todos os chamados do sistema</div>
+                  <div class="fw-bold">Tickets sem responsável</div>
+                  <div class="small opacity-75">Fila sem atendente definido</div>
                 </div>
               </div>
               <i class="bx bx-chevron-right"></i>
             </a>
-          }
+          </div>
+        } @else {
+          <p class="text-muted small">Continue direto do que você acabou de ver nos números acima.</p>
 
-          @if (sessionService.hasPermission('users:read')) {
-            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-               routerLink="/usuarios">
+          <div class="d-grid gap-3 mt-4">
+            <a class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between border-2"
+               routerLink="/tickets/novo">
               <div class="d-flex align-items-center">
-                <i class="bx bx-group fs-4 me-3"></i>
+                <span class="badge bg-label-primary rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-plus-circle fs-4"></i>
+                </span>
                 <div>
-                  <div class="fw-bold">Gestão de Usuários</div>
-                  <div class="small opacity-75">Controle total de acessos</div>
+                  <div class="fw-bold">Novo Ticket</div>
+                  <div class="small opacity-75">Abrir uma nova solicitação</div>
                 </div>
               </div>
               <i class="bx bx-chevron-right"></i>
             </a>
-          }
 
-          @if (sessionService.hasPermission('roles:manage')) {
             <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-               routerLink="/roles">
+               routerLink="/tickets">
               <div class="d-flex align-items-center">
-                <i class="bx bx-shield-quarter fs-4 me-3"></i>
+                <span class="badge bg-label-info rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-ticket fs-4"></i>
+                </span>
                 <div>
-                  <div class="fw-bold">Funções</div>
-                  <div class="small opacity-75">Permissões por função</div>
+                  <div class="fw-bold">Meus Tickets</div>
+                  <div class="small opacity-75">Acompanhar minhas solicitações</div>
                 </div>
               </div>
               <i class="bx bx-chevron-right"></i>
             </a>
-          }
-
-          @if (sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
-            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-               routerLink="/departamentos">
-              <div class="d-flex align-items-center">
-                <i class="bx bx-sitemap fs-4 me-3"></i>
-                <div>
-                  <div class="fw-bold">Departamentos e setores</div>
-                  <div class="small opacity-75">Estrutura organizacional</div>
-                </div>
-              </div>
-              <i class="bx bx-chevron-right"></i>
-            </a>
-          }
-        </div>
+          </div>
+        }
       </div>
     </div>
   </div>

@@ -20,6 +20,17 @@
   /* Escurecido em 2026-10-08 (era #a1acb8, ~2,31:1) pra passar 4,5:1 WCAG AA sobre --tk-surface — auditado no Dashboard. */
   --tk-text-muted: #6b7684;
 
+  /*
+   * Variantes escurecidas das cores semânticas "puras" — mesmos hex já usados como texto dos
+   * badges "soft" abaixo (.bg-label-*), agora como variável reutilizável. A cor semântica pura
+   * (--bs-success/-warning/-info, não retematizadas por este projeto) falha contraste como texto
+   * grande sobre fundo claro; estas variantes já são AA-seguras (~4,5:1 a 7:1).
+   */
+  --tk-success-text: #2e7d14;
+  --tk-warning-text: #92400e;
+  --tk-info-text: #0c6478;
+  --tk-danger-text: #991b1b;
+
   --tk-shadow-sm: 0 0.125rem 0.375rem rgba(105, 108, 255, 0.08);
   --tk-shadow-md: 0 0.375rem 1.25rem rgba(105, 108, 255, 0.12);
   --tk-shadow-lg: 0 1rem 3rem rgba(105, 108, 255, 0.18);
@@ -47,6 +58,12 @@
   --tk-text-primary: #e9ecef;
   --tk-text-secondary: #adb5bd;
   --tk-text-muted: #868e96;
+
+  /* Mesmos hex já usados como texto dos badges "soft" escuros abaixo (.bg-label-*). */
+  --tk-success-text: #8ee25c;
+  --tk-warning-text: #ffc670;
+  --tk-info-text: #5fd9f2;
+  --tk-danger-text: #ff8669;
 
   --tk-shadow-sm: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.3);
   --tk-shadow-md: 0 0.375rem 1.25rem rgba(0, 0, 0, 0.4);
@@ -255,22 +272,22 @@ body {
 
 .bg-label-success {
   background-color: #e8fadf !important;
-  color: #2e7d14 !important;
+  color: var(--tk-success-text) !important;
 }
 
 .bg-label-warning {
   background-color: #fff2e2 !important;
-  color: #92400e !important;
+  color: var(--tk-warning-text) !important;
 }
 
 .bg-label-info {
   background-color: #e5f5fa !important;
-  color: #0c6478 !important;
+  color: var(--tk-info-text) !important;
 }
 
 .bg-label-danger {
   background-color: #ffe5e5 !important;
-  color: #991b1b !important;
+  color: var(--tk-danger-text) !important;
 }
 
 .bg-label-secondary {
@@ -286,22 +303,22 @@ body {
 
 [data-bs-theme="dark"] .bg-label-success {
   background-color: rgba(113, 221, 55, 0.14) !important;
-  color: #8ee25c !important;
+  color: var(--tk-success-text) !important;
 }
 
 [data-bs-theme="dark"] .bg-label-warning {
   background-color: rgba(255, 171, 0, 0.16) !important;
-  color: #ffc670 !important;
+  color: var(--tk-warning-text) !important;
 }
 
 [data-bs-theme="dark"] .bg-label-info {
   background-color: rgba(3, 195, 236, 0.16) !important;
-  color: #5fd9f2 !important;
+  color: var(--tk-info-text) !important;
 }
 
 [data-bs-theme="dark"] .bg-label-danger {
   background-color: rgba(255, 62, 29, 0.16) !important;
-  color: #ff8669 !important;
+  color: var(--tk-danger-text) !important;
 }
 
 [data-bs-theme="dark"] .bg-label-secondary {
@@ -324,9 +341,54 @@ body {
   border-radius: var(--tk-radius-sm);
 }
 
+/*
+ * Utilitários de cor .text-primary/.border-primary do Bootstrap vêm com !important — sem essa
+ * sobrescrita, qualquer `class="text-primary"`/`class="border-primary"` do template renderiza no
+ * azul padrão do Bootstrap (--bs-primary), não no índigo da marca, porque nenhuma regra sem
+ * !important consegue vencer um utilitário. Achado em 2026-10-24 ao investigar por que o wordmark
+ * do login nunca tinha ficado índigo. `.spinner-border.text-primary` abaixo era o único caso já
+ * coberto; os outros (wordmark, link "Crie sua conta"/"Fazer login") dependiam só desta regra.
+ */
+.text-primary {
+  color: var(--tk-primary) !important;
+}
+
+.border-primary {
+  border-color: var(--tk-primary) !important;
+}
+
 /* Spinners no tom da marca */
 .spinner-border.text-primary {
   color: var(--tk-primary) !important;
+}
+
+/*
+ * Mesmo problema do bloco .text-primary acima, agora para .text-success/.text-warning/.text-info:
+ * sem esta sobrescrita, essas classes renderizam a cor semântica "pura" do Bootstrap
+ * (--bs-success/-warning/-info), que falha contraste AA como texto sobre fundo claro — o projeto
+ * já resolveu isso para os badges .bg-label-* (--tk-success-text etc.), mas nunca para o
+ * utilitário de texto puro. Achado em 2026-10-24 no critique do Dashboard (P0: números dos cards
+ * "Em Aberto"/"Em Andamento"/"Resolvidos").
+ */
+.text-success {
+  color: var(--tk-success-text) !important;
+}
+
+.text-warning {
+  color: var(--tk-warning-text) !important;
+}
+
+.text-info {
+  color: var(--tk-info-text) !important;
+}
+
+/*
+ * Mesmo problema do bloco .text-success/.text-warning/.text-info acima, agora para .text-danger —
+ * achado em 2026-10-24 no critique do Detalhe do Chamado (P1: linha de Prazo sem nenhuma escalada
+ * visual quando o SLA está violado).
+ */
+.text-danger {
+  color: var(--tk-danger-text) !important;
 }
 
 /* Fade-in leve ao entrar cada rota — dá vida sem ser chamativo */

@@ -46,3 +46,8 @@
 .assignee-candidate-info {
   min-width: 0;
 }
+
+/* Mesmo problema do `.assignee-candidate-info` acima, agora pro nome de arquivo de anexo — achado no critique de 2026-10-24 (P3). */
+.attachment-info {
+  min-width: 0;
+}

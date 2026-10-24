@@ -34,13 +34,6 @@ export interface TicketDetail {
   slaStatus: TicketSlaStatus;
 }
 
-/** Quantidade de tickets numa combinação de prioridade e status, conforme GET /tickets/mine/summary. */
-export interface TicketCount {
-  priority: TicketPriority;
-  status: TicketStatus;
-  count: number;
-}
-
 /** Dados para abertura de um novo ticket (POST /tickets). */
 export interface CreateTicketData {
   title: string;

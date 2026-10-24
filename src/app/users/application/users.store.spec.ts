@@ -309,6 +309,33 @@ describe('UsersStore', () => {
     expect(store.listState().error).toBe('Não foi possível desativar: João Santos.');
   });
 
+  it('limita a 10 desativações em voo ao mesmo tempo, mesmo selecionando mais usuários que isso', async () => {
+    const ids = Array.from({ length: 15 }, (_, i) => `u${i + 1}`);
+    const subjects = new Map(ids.map(id => [id, new Subject<void>()]));
+    userDataService.deactivate.and.callFake((userId: string) => subjects.get(userId)!.asObservable());
+    const onDone = jasmine.createSpy('onDone');
+
+    store.deactivateMany(ids, onDone);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.deactivate).toHaveBeenCalledTimes(10); // no máximo 10 em voo, mesmo com 15 selecionados
+
+    subjects.get('u1')!.next();
+    subjects.get('u1')!.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.deactivate).toHaveBeenCalledTimes(11); // uma vaga liberada, a 11ª entra
+
+    ids.slice(1).forEach(id => {
+      subjects.get(id)!.next();
+      subjects.get(id)!.complete();
+    });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.deactivate).toHaveBeenCalledTimes(15);
+    expect(onDone).toHaveBeenCalledWith(15, 0);
+  });
+
   it('não chama a API quando a lista de ids selecionados estiver vazia', () => {
     store.deactivateMany([]);
 
