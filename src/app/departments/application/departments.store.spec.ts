@@ -5,7 +5,9 @@ import { of, throwError } from 'rxjs';
 import { DepartmentsStore } from './departments.store';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
-import { Department } from '../entities/department';
+import { Department, DepartmentDetail } from '../entities/department';
+import { UserDataService, UserSummary } from '../../users';
+import { PagedResponse } from '../../shared';
 
 describe('DepartmentsStore', () => {
   const departments: Department[] = [
@@ -18,13 +20,24 @@ describe('DepartmentsStore', () => {
     }
   ];
 
+  const candidate: UserSummary = {
+    id: 'u-1', email: 'carlos@empresa.com', firstName: 'Carlos', lastName: 'Souza',
+    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+  };
+
+  function pageOf(items: UserSummary[]): PagedResponse<UserSummary> {
+    return { items, page: 1, pageSize: 8, totalCount: items.length, totalPages: 1, hasPreviousPage: false, hasNextPage: false };
+  }
+
   let store: InstanceType<typeof DepartmentsStore>;
   let departmentDataService: jasmine.SpyObj<DepartmentDataService>;
   let sectorDataService: jasmine.SpyObj<SectorDataService>;
+  let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    departmentDataService = jasmine.createSpyObj('DepartmentDataService', ['getAll', 'create', 'update', 'delete']);
+    departmentDataService = jasmine.createSpyObj('DepartmentDataService', ['getAll', 'getById', 'create', 'update', 'delete']);
     sectorDataService = jasmine.createSpyObj('SectorDataService', ['create', 'update', 'delete']);
+    userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
     departmentDataService.getAll.and.returnValue(of(departments));
 
     TestBed.configureTestingModule({
@@ -32,7 +45,8 @@ describe('DepartmentsStore', () => {
         provideZonelessChangeDetection(),
         DepartmentsStore,
         { provide: DepartmentDataService, useValue: departmentDataService },
-        { provide: SectorDataService, useValue: sectorDataService }
+        { provide: SectorDataService, useValue: sectorDataService },
+        { provide: UserDataService, useValue: userDataService }
       ]
     });
     store = TestBed.inject(DepartmentsStore);
@@ -116,6 +130,66 @@ describe('DepartmentsStore', () => {
     store.deleteSector('sec-1');
 
     expect(store.mutationError()).toBe('Erro ao excluir setor');
+  });
+
+  it('busca o detalhe de um departamento e devolve pro callback', async () => {
+    const detail: DepartmentDetail = { id: 'dep-1', name: 'TI', description: 'Equipamentos', responsibleUserId: 'u-1' };
+    departmentDataService.getById.and.returnValue(of(detail));
+    const onLoaded = jasmine.createSpy('onLoaded');
+
+    store.getDepartmentDetail('dep-1', onLoaded);
+
+    expect(departmentDataService.getById).toHaveBeenCalledWith('dep-1');
+    expect(onLoaded).toHaveBeenCalledWith(detail);
+  });
+
+  it('expõe a mensagem de erro quando buscar o detalhe do departamento falhar, sem chamar o callback', () => {
+    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+    const onLoaded = jasmine.createSpy('onLoaded');
+
+    store.getDepartmentDetail('dep-1', onLoaded);
+
+    expect(store.mutationError()).toBe('Erro ao carregar o departamento');
+    expect(onLoaded).not.toHaveBeenCalled();
+  });
+
+  it('busca candidatos a responsável por nome/e-mail', async () => {
+    userDataService.getAll.and.returnValue(of(pageOf([candidate])));
+
+    store.searchResponsibleCandidates('carlos');
+
+    expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'carlos', page: 1, pageSize: 8 });
+    expect(store.responsibleCandidates()).toEqual([candidate]);
+  });
+
+  it('limpa os candidatos quando a busca de responsável fica vazia, sem chamar a API', () => {
+    userDataService.getAll.and.returnValue(of(pageOf([candidate])));
+    store.searchResponsibleCandidates('carlos');
+    userDataService.getAll.calls.reset();
+
+    store.searchResponsibleCandidates('   ');
+
+    expect(userDataService.getAll).not.toHaveBeenCalled();
+    expect(store.responsibleCandidates()).toEqual([]);
+  });
+
+  it('expõe a mensagem de erro quando a busca de responsável falhar', () => {
+    userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.searchResponsibleCandidates('carlos');
+
+    expect(store.responsibleSearchError()).toBe('Erro ao buscar usuários');
+    expect(store.responsibleCandidates()).toEqual([]);
+  });
+
+  it('limpa a busca e os candidatos a responsável', () => {
+    userDataService.getAll.and.returnValue(of(pageOf([candidate])));
+    store.searchResponsibleCandidates('carlos');
+
+    store.clearResponsibleSearch();
+
+    expect(store.responsibleCandidates()).toEqual([]);
+    expect(store.responsibleSearchError()).toBeNull();
   });
 
   it('limpa o erro de mutação', () => {

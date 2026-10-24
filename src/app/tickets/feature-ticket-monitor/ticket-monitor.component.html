@@ -6,11 +6,14 @@
 </div>
 
 <!-- Resumo de SLA -->
+<p class="text-muted small mb-2">
+  Resumo do setor selecionado, com todos os status e prioridades — não muda com os outros filtros da tabela abaixo.
+</p>
 <div class="row">
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
     <button type="button" class="card card-stats card-stats-btn h-100"
             [attr.aria-pressed]="store.filters().slaStatus === undefined"
-            (click)="store.setSlaStatus(undefined)">
+            (click)="onSlaCardClick(undefined)">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div>
@@ -29,7 +32,7 @@
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
     <button type="button" class="card card-stats card-stats-btn h-100"
             [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.OnTime"
-            (click)="store.setSlaStatus(TicketSlaStatus.OnTime)">
+            (click)="onSlaCardClick(TicketSlaStatus.OnTime)">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div>
@@ -48,7 +51,7 @@
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
     <button type="button" class="card card-stats card-stats-btn h-100"
             [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.AtRisk"
-            (click)="store.setSlaStatus(TicketSlaStatus.AtRisk)">
+            (click)="onSlaCardClick(TicketSlaStatus.AtRisk)">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div>
@@ -67,7 +70,7 @@
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
     <button type="button" class="card card-stats card-stats-btn h-100"
             [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.Breached"
-            (click)="store.setSlaStatus(TicketSlaStatus.Breached)">
+            (click)="onSlaCardClick(TicketSlaStatus.Breached)">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
           <div>
@@ -139,9 +142,16 @@
         <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
                 (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
           <option value="">Todos</option>
-          @for (slaStatus of slaStatusOptions; track slaStatus) {
-            <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
-          }
+          <optgroup label="Em monitoramento">
+            @for (slaStatus of liveSlaStatusOptions; track slaStatus) {
+              <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
+            }
+          </optgroup>
+          <optgroup label="Já resolvidos">
+            @for (slaStatus of resolvedSlaStatusOptions; track slaStatus) {
+              <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
+            }
+          </optgroup>
         </select>
       </div>
       <div class="col-12 col-md-2">
@@ -173,6 +183,10 @@
     <span>{{ store.listState().error }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
   </div>
+}
+
+@if (store.mutationError()) {
+  <div class="alert alert-danger" role="alert">{{ store.mutationError() }}</div>
 }
 
 <div class="card">
@@ -229,11 +243,30 @@
               <td><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
               <td><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
               <td><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
-              <td class="text-nowrap small" [class.text-danger]="isOverdue(ticket)">{{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td class="text-nowrap small" [class.text-danger]="isOverdue(ticket)">
+                @if (isOverdue(ticket)) {
+                  <i class="bx bx-error-circle me-1" aria-hidden="true"></i>
+                }
+                {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+              </td>
               <td class="text-end">
-                <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
-                  <i class="bx bx-show"></i>
-                </a>
+                <div class="d-flex gap-1 justify-content-end">
+                  @if (canAssignToMe(ticket)) {
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-icon rounded-circle"
+                            [disabled]="store.assigningToMeIds().includes(ticket.id)"
+                            [attr.aria-label]="'Atribuir o ticket ' + ticket.title + ' a mim'"
+                            (click)="onAssignToMe(ticket.id)">
+                      @if (store.assigningToMeIds().includes(ticket.id)) {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      } @else {
+                        <i class="bx bx-user-plus"></i>
+                      }
+                    </button>
+                  }
+                  <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
+                    <i class="bx bx-show"></i>
+                  </a>
+                </div>
               </td>
             </tr>
           }

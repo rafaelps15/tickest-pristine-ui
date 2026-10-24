@@ -1,10 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Department, DepartmentData } from '../entities/department';
+import { Department, DepartmentData, DepartmentDetail } from '../entities/department';
 import { environment } from '../../../environments/environment';
 
-/** Acesso HTTP aos departamentos (listagem, criação, atualização e exclusão). */
+/** Acesso HTTP aos departamentos (listagem, detalhe, criação, atualização e exclusão). */
 @Injectable({ providedIn: 'root' })
 export class DepartmentDataService {
     private readonly http = inject(HttpClient);
@@ -13,6 +13,11 @@ export class DepartmentDataService {
     /** Lista todos os departamentos (GET /departments). */
     getAll(): Observable<Department[]> {
         return this.http.get<Department[]>(this.apiUrl);
+    }
+
+    /** Busca um departamento pelo id, incluindo o id do responsável (GET /departments/{departmentId}). */
+    getById(departmentId: string): Observable<DepartmentDetail> {
+        return this.http.get<DepartmentDetail>(`${this.apiUrl}/${departmentId}`);
     }
 
     /** Cria um novo departamento (POST /departments). */

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { TicketMonitorStore } from './ticket-monitor.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
@@ -31,7 +31,7 @@ describe('TicketMonitorStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getSlaSummary']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getSlaSummary', 'assignTicket']);
     dataService.getAll.and.returnValue(of(pageOf([ticket])));
     dataService.getSlaSummary.and.returnValue(of(slaSummary));
 
@@ -147,6 +147,50 @@ describe('TicketMonitorStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ pageSize: 50, page: 1 }));
+  });
+
+  it('atribui o chamado ao usuário informado e recarrega a listagem', async () => {
+    dataService.assignTicket.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+    dataService.getAll.calls.reset();
+
+    store.assignToMe('t1', 'u-current');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.assignTicket).toHaveBeenCalledWith('t1', 'u-current');
+    expect(dataService.getAll).toHaveBeenCalled();
+    expect(store.mutationError()).toBeNull();
+    expect(store.assigningToMeIds()).toEqual([]);
+  });
+
+  it('marca só o ticket em questão como "atribuindo", sem afetar outros, enquanto a atribuição está em voo', async () => {
+    let resolveAssign!: () => void;
+    dataService.assignTicket.and.returnValue(new Observable<void>(subscriber => {
+      resolveAssign = () => { subscriber.next(); subscriber.complete(); };
+    }));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.assignToMe('t1', 'u-current');
+
+    expect(store.assigningToMeIds()).toEqual(['t1']);
+    expect(store.assigningToMeIds()).not.toContain('t2');
+
+    resolveAssign();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.assigningToMeIds()).toEqual([]);
+  });
+
+  it('mostra uma mensagem específica por código de erro ao falhar a atribuição, sem recarregar a listagem', async () => {
+    dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+    dataService.getAll.calls.reset();
+
+    store.assignToMe('t1', 'u-current');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutationError()).toContain('já ter outro responsável');
+    expect(store.assigningToMeIds()).toEqual([]);
+    expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
   it('limpa os filtros, voltando ao estado padrão', async () => {

@@ -2,6 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -16,12 +17,17 @@ const DEFAULT_FILTERS: TicketMonitorFilters = { sort: TicketSortOrder.Newest, pa
 /**
  * Store de "Monitorar Tickets": listagem paginada e filtrável de todos os chamados do sistema,
  * mais o resumo de SLA dos chamados ativos — os dois somente leitura, para quem administra a
- * fila (`tickets:manage`). O resumo de SLA acompanha o filtro de setor da listagem.
+ * fila (`tickets:manage`), mais a atribuição rápida "pra mim" de um chamado sem responsável direto
+ * na linha da tabela. O resumo de SLA acompanha o filtro de setor da listagem.
  */
 export const TicketMonitorStore = signalStore(
   { providedIn: 'root' },
   withState({
-    filters: DEFAULT_FILTERS
+    filters: DEFAULT_FILTERS,
+    /** Ids de chamados com uma atribuição "pra mim" em andamento — desabilita só a linha, não a tabela inteira. */
+    assigningToMeIds: [] as string[],
+    /** Erro da última tentativa de "Atribuir a mim", separado dos erros de leitura da listagem/resumo de SLA. */
+    mutationError: null as string | null
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService)
@@ -123,6 +129,33 @@ export const TicketMonitorStore = signalStore(
     /** Limpa todos os filtros, voltando ao estado padrão. */
     clearFilters(): void {
       patchState(store, { filters: DEFAULT_FILTERS });
+    },
+
+    /**
+     * Atribui o usuário logado como responsável do chamado, direto na linha da tabela — sem abrir
+     * o modal de busca do detalhe do chamado. Resolve o backlog que o filtro "Só sem responsável"
+     * identifica (achado do critique de 2026-10-24, P2): até aqui, atribuir um chamado sem
+     * responsável exigia ida completa à tela de detalhe pra cada um.
+     */
+    assignToMe(ticketId: string, currentUserId: string): void {
+      patchState(store, { mutationError: null, assigningToMeIds: [...store.assigningToMeIds(), ticketId] });
+
+      store._ticketDataService.assignTicket(ticketId, currentUserId).pipe(
+        finalize(() => patchState(store, {
+          assigningToMeIds: store.assigningToMeIds().filter(id => id !== ticketId)
+        }))
+      ).subscribe({
+        next: () => store._listResource.reload(),
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            mutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão pra ser responsável por este ticket.',
+              404: 'Ticket não encontrado.',
+              409: 'Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.'
+            }, 'Erro ao atribuir o ticket a você.')
+          });
+        }
+      });
     }
   }))
 );

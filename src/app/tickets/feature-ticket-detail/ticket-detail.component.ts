@@ -6,7 +6,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TicketHistoryStore } from '../application/ticket-history.store';
-import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
+import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_ACTIVE_STATUSES } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketDetail } from '../entities/ticket';
@@ -14,8 +14,6 @@ import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { ConfirmDialogService, SessionService, visibleRoles, hiddenRolesCount, hiddenRolesNames } from '../../shared';
 import { UserSummary } from '../../users';
 
-/** Status em que o ticket ainda está ativo (aceita mudanças como atribuir/remover o responsável). */
-const ACTIVE_STATUSES: ReadonlySet<TicketStatus> = new Set([TicketStatus.Open, TicketStatus.InProgress]);
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
 @Component({
@@ -155,12 +153,12 @@ export class TicketDetailComponent implements OnInit {
 
     /** Indica se o botão "Atribuir/Alterar responsável" deve aparecer: só pra quem administra, com o chamado ativo. */
     canAssignTicket(status: TicketStatus): boolean {
-        return this.sessionService.hasPermission('tickets:manage') && ACTIVE_STATUSES.has(status);
+        return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(status);
     }
 
     /** Indica se o botão "Remover responsável" deve aparecer: só pra quem administra, com o chamado ativo e com responsável atual. */
     canRemoveAssignee(status: TicketStatus, assignedToName: string | null): boolean {
-        return this.sessionService.hasPermission('tickets:manage') && ACTIVE_STATUSES.has(status) && assignedToName !== null;
+        return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(status) && assignedToName !== null;
     }
 
     /** Confirma e remove o responsável atual do ticket, recarregando o detalhe e o histórico em caso de sucesso. */

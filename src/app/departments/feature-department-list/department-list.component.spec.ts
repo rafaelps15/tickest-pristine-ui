@@ -3,8 +3,9 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { of } from 'rxjs';
 import { DepartmentListComponent } from './department-list.component';
 import { DepartmentsStore } from '../application/departments.store';
-import { Department } from '../entities/department';
+import { Department, DepartmentDetail } from '../entities/department';
 import { ConfirmDialogService, SessionService } from '../../shared';
+import { UserSummary } from '../../users';
 
 describe('DepartmentListComponent', () => {
   const informationTechnology: Department = {
@@ -25,12 +26,20 @@ describe('DepartmentListComponent', () => {
     sectors: []
   };
 
+  const candidate: UserSummary = {
+    id: 'u-1', email: 'carlos@empresa.com', firstName: 'Carlos', lastName: 'Souza',
+    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+  };
+
   /** Cria um store falso com signals reais, para o template reagir como no store verdadeiro. */
   function createStoreFake() {
     return {
       departments: signal<Department[]>([informationTechnology, commercial]),
       listState: signal({ data: [informationTechnology, commercial], loading: false, error: null as string | null }),
       mutationError: signal<string | null>(null),
+      responsibleCandidates: signal<UserSummary[]>([]),
+      searchingResponsible: signal(false),
+      responsibleSearchError: signal<string | null>(null),
       load: jasmine.createSpy('load'),
       create: jasmine.createSpy('create'),
       update: jasmine.createSpy('update'),
@@ -38,7 +47,10 @@ describe('DepartmentListComponent', () => {
       createSector: jasmine.createSpy('createSector'),
       updateSector: jasmine.createSpy('updateSector'),
       deleteSector: jasmine.createSpy('deleteSector'),
-      clearMutationError: jasmine.createSpy('clearMutationError')
+      clearMutationError: jasmine.createSpy('clearMutationError'),
+      getDepartmentDetail: jasmine.createSpy('getDepartmentDetail'),
+      searchResponsibleCandidates: jasmine.createSpy('searchResponsibleCandidates'),
+      clearResponsibleSearch: jasmine.createSpy('clearResponsibleSearch')
     };
   }
 
@@ -108,6 +120,76 @@ describe('DepartmentListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum departamento ou setor encontrado para "inexistente".');
+  });
+
+  it('ao abrir o modal de edição, mostra o nome do responsável já conhecido e busca o id dele', async () => {
+    const withResponsible: Department = { ...informationTechnology, responsibleUserName: 'Carlos Souza' };
+    const detail: DepartmentDetail = { id: 'dep-1', name: 'TI', description: 'Tecnologia da Informação', responsibleUserId: 'u-1' };
+    storeFake.getDepartmentDetail.and.callFake((_id: string, onLoaded: (d: DepartmentDetail) => void) => onLoaded(detail));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(withResponsible);
+
+    expect(fixture.componentInstance.selectedResponsibleName()).toBe('Carlos Souza');
+    expect(storeFake.getDepartmentDetail).toHaveBeenCalledWith('dep-1', jasmine.any(Function));
+    expect(fixture.componentInstance.selectedResponsibleId()).toBe('u-1');
+    expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
+  });
+
+  it('seleciona um candidato da busca como responsável, e limpa a busca', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.responsibleSearchInput.set('carlos');
+    fixture.componentInstance.onSelectResponsible(candidate);
+
+    expect(fixture.componentInstance.selectedResponsibleId()).toBe('u-1');
+    expect(fixture.componentInstance.selectedResponsibleName()).toBe('Carlos Souza');
+    expect(fixture.componentInstance.responsibleSearchInput()).toBe('');
+    expect(storeFake.clearResponsibleSearch).toHaveBeenCalled();
+  });
+
+  it('remove o responsável selecionado, voltando a "sem responsável"', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onSelectResponsible(candidate);
+    fixture.componentInstance.onClearResponsible();
+
+    expect(fixture.componentInstance.selectedResponsibleId()).toBeNull();
+    expect(fixture.componentInstance.selectedResponsibleName()).toBeNull();
+  });
+
+  it('inclui o responsável selecionado ao criar um departamento', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateModal();
+    component.onSelectResponsible(candidate);
+    component.form.setValue({ name: 'Operações', description: 'Logística' });
+    component.onSubmit();
+
+    expect(storeFake.create).toHaveBeenCalledWith(
+      { name: 'Operações', description: 'Logística', responsibleUserId: 'u-1' },
+      jasmine.any(Function)
+    );
+  });
+
+  it('envia responsibleUserId indefinido ao salvar sem nenhum responsável selecionado', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateModal();
+    component.form.setValue({ name: 'Operações', description: 'Logística' });
+    component.onSubmit();
+
+    expect(storeFake.create).toHaveBeenCalledWith(
+      { name: 'Operações', description: 'Logística', responsibleUserId: undefined },
+      jasmine.any(Function)
+    );
   });
 
   it('cria o setor no departamento do card em que foi aberto o modal', async () => {

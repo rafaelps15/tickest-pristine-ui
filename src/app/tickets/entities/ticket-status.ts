@@ -24,3 +24,6 @@ export const TICKET_STATUS_BADGE_CLASS: Record<TicketStatus, string> = {
   [TicketStatus.Closed]: 'bg-label-secondary',
   [TicketStatus.Canceled]: 'bg-label-danger'
 };
+
+/** Status em que o ticket ainda está ativo (aceita atribuir/remover responsável). */
+export const TICKET_ACTIVE_STATUSES: ReadonlySet<TicketStatus> = new Set([TicketStatus.Open, TicketStatus.InProgress]);

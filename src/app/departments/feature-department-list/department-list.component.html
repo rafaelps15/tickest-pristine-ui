@@ -138,6 +138,50 @@
             <label class="form-label" for="departmentDescription">Descrição</label>
             <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"></textarea>
           </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="departmentResponsibleSearch">Responsável <span class="text-muted fw-normal">(opcional)</span></label>
+
+            @if (loadingCurrentResponsible()) {
+              <div class="small text-muted mb-2">
+                <span class="spinner-border spinner-border-sm me-1" role="status"><span class="visually-hidden">Carregando responsável atual…</span></span>
+                Carregando responsável atual…
+              </div>
+            } @else if (selectedResponsibleName(); as currentName) {
+              <p class="small mb-2">
+                Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-2 align-baseline" (click)="onClearResponsible()">Remover</button>
+              </p>
+            } @else {
+              <p class="text-muted small mb-2">Nenhum responsável selecionado.</p>
+            }
+
+            <div class="input-group mb-2">
+              <span class="input-group-text"><i class="bx bx-search"></i></span>
+              <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
+                     [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
+            </div>
+
+            @if (store.responsibleSearchError()) {
+              <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.responsibleSearchError() }}</div>
+            } @else if (store.searchingResponsible()) {
+              <div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
+            } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
+              <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+            } @else if (store.responsibleCandidates().length > 0) {
+              <ul class="list-group">
+                @for (candidate of store.responsibleCandidates(); track candidate.id) {
+                  <li class="list-group-item p-0">
+                    <button type="button" class="btn w-100 text-start p-2 rounded-0" (click)="onSelectResponsible(candidate)">
+                      <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
+                      <div class="small text-muted">{{ candidate.email }}</div>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
           @if (!editingDepartment()) {
             <p class="text-muted small mb-0">Depois de salvar, adicione os setores do departamento no próprio card dele.</p>
           }

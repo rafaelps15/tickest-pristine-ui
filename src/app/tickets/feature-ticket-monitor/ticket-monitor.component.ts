@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TicketMonitorStore } from '../application/ticket-monitor.store';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
-import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
+import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_ACTIVE_STATUSES } from '../entities/ticket-status';
 import { TicketPriority, TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketSortOrder, TICKET_SORT_ORDER_LABELS } from '../entities/ticket-sort-order';
 import { DepartmentsStore } from '../../departments';
+import { SessionService } from '../../shared';
 
 /** Tela de "Monitorar Tickets": todos os chamados do sistema, com filtros e resumo de SLA (role Administrador/Atendente, permissão tickets:manage). */
 @Component({
@@ -20,6 +21,7 @@ import { DepartmentsStore } from '../../departments';
 export class TicketMonitorComponent implements OnInit {
     protected readonly store = inject(TicketMonitorStore);
     protected readonly departmentsStore = inject(DepartmentsStore);
+    protected readonly sessionService = inject(SessionService);
     private readonly route = inject(ActivatedRoute);
 
     /** Exposto pro template clicar nos cards de resumo de SLA e filtrar a tabela pelo mesmo valor. */
@@ -35,7 +37,21 @@ export class TicketMonitorComponent implements OnInit {
 
     readonly statusOptions = Object.values(TicketStatus).filter((v): v is TicketStatus => typeof v === 'number');
     readonly priorityOptions = Object.values(TicketPriority).filter((v): v is TicketPriority => typeof v === 'number');
-    readonly slaStatusOptions = Object.values(TicketSlaStatus).filter((v): v is TicketSlaStatus => typeof v === 'number');
+
+    /**
+     * Estados "em monitoramento" (chamado ainda ativo, relógio do SLA correndo) — os mesmos que os
+     * 4 cards de resumo reconhecem e destacam via `aria-pressed`. Separado dos estados "já
+     * resolvidos" abaixo num `<optgroup>` próprio: antes, o dropdown oferecia os 6 valores do enum
+     * juntos e escolher um estado pós-resolução (Cumprido/Violado/Sem SLA) deixava os 4 cards sem
+     * nenhum destaque, um filtro aplicado sem feedback visual em nenhum lugar (achado no critique
+     * de 2026-10-24). Agrupar deixa explícito que são duas perguntas diferentes, sem remover a
+     * capacidade de filtrar por desfecho histórico de SLA.
+     */
+    readonly liveSlaStatusOptions: TicketSlaStatus[] = [TicketSlaStatus.OnTime, TicketSlaStatus.AtRisk, TicketSlaStatus.Breached];
+
+    /** Estados de chamados já resolvidos (desfecho final do SLA), separados dos "em monitoramento" acima. */
+    readonly resolvedSlaStatusOptions: TicketSlaStatus[] = [TicketSlaStatus.Met, TicketSlaStatus.Missed, TicketSlaStatus.NotApplicable];
+
     readonly sortOptions = Object.values(TicketSortOrder).filter((v): v is TicketSortOrder => typeof v === 'number');
 
     readonly pageSizeOptions = [10, 20, 50];
@@ -56,6 +72,19 @@ export class TicketMonitorComponent implements OnInit {
             this.store.setUnassignedOnly(true);
         }
         this.store.load();
+    }
+
+    /**
+     * Filtra pelo balde de SLA clicado E ordena por prazo mais próximo — confirmado com o back-end
+     * que, pra chamados ativos, ordenar por `DueAtUtc` ascendente já é matematicamente idêntico a
+     * "mais urgente primeiro" (não existe nem precisa existir um "score de urgência" separado).
+     * O que faltava não era uma ordenação nova, era a composição: os cards de SLA (que o critique
+     * de 2026-10-24 apontou como sem jeito de ordenar por urgência) já tinham a peça certa
+     * (`TicketSortOrder.DueDate`) disponível, só não a acionavam.
+     */
+    onSlaCardClick(slaStatus: TicketSlaStatus | undefined): void {
+        this.store.setSlaStatus(slaStatus);
+        this.store.setSort(TicketSortOrder.DueDate);
     }
 
     /** Índice (1-based) do primeiro item exibido na página atual, para o texto "Exibindo X–Y de Z". */
@@ -103,5 +132,18 @@ export class TicketMonitorComponent implements OnInit {
     /** Indica se o chamado já passou do prazo e ainda não foi resolvido, para destacar a data na tabela. */
     isOverdue(ticket: TicketMonitorItem): boolean {
         return !ticket.resolvedAtUtc && new Date(ticket.dueAtUtc).getTime() < Date.now();
+    }
+
+    /** Indica se o botão "Atribuir a mim" deve aparecer: chamado ativo, sem responsável, pra quem administra a fila. */
+    canAssignToMe(ticket: TicketMonitorItem): boolean {
+        return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(ticket.status) && ticket.assignedToUserId === null;
+    }
+
+    /** Atribui o chamado ao usuário logado, direto na linha da tabela. */
+    onAssignToMe(ticketId: string): void {
+        const currentUserId = this.sessionService.currentUser()?.id;
+        if (!currentUserId) return;
+
+        this.store.assignToMe(ticketId, currentUserId);
     }
 }

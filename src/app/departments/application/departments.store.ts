@@ -2,24 +2,32 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { Department, DepartmentData } from '../entities/department';
+import { finalize } from 'rxjs';
+import { Department, DepartmentData, DepartmentDetail } from '../entities/department';
 import { CreateSectorData, UpdateSectorData } from '../entities/sector';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
 import { extractErrorMessage } from '../../shared';
+import { UserDataService, UserSummary } from '../../users';
 
 /**
  * Store de departamentos e dos setores dentro deles: listagem (GET /departments, com os setores aninhados)
- * e mutações de ambos. Toda mutação de setor recarrega a listagem de departamentos.
+ * e mutações de ambos, mais a busca de usuário candidato a responsável do departamento (GET /users).
+ * Toda mutação de setor recarrega a listagem de departamentos.
  */
 export const DepartmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
-    mutationError: null as string | null
+    mutationError: null as string | null,
+    /** Candidatos a responsável encontrados na busca do formulário de departamento. */
+    responsibleCandidates: [] as UserSummary[],
+    searchingResponsible: false,
+    responsibleSearchError: null as string | null
   }),
   withProps(() => ({
     _departmentDataService: inject(DepartmentDataService),
-    _sectorDataService: inject(SectorDataService)
+    _sectorDataService: inject(SectorDataService),
+    _userDataService: inject(UserDataService)
   })),
   withProps((store) => ({
     _listResource: rxResource({ stream: () => store._departmentDataService.getAll() })
@@ -70,6 +78,46 @@ export const DepartmentsStore = signalStore(
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao atualizar departamento') });
         }
       });
+    },
+
+    /**
+     * Busca o detalhe de um departamento, incluindo o id do responsável (GET /departments/{id}) —
+     * a listagem só traz o nome dele. Usado ao abrir o modal de edição, pra saber quem já está
+     * selecionado antes do admin trocar.
+     */
+    getDepartmentDetail(departmentId: string, onLoaded: (detail: DepartmentDetail) => void): void {
+      store._departmentDataService.getById(departmentId).subscribe({
+        next: onLoaded,
+        error: (err: HttpErrorResponse) => {
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao carregar o departamento') });
+        }
+      });
+    },
+
+    /** Busca usuários ativos candidatos a responsável do departamento, pelo nome/sobrenome/e-mail (GET /users). */
+    searchResponsibleCandidates(search: string): void {
+      const trimmed = search.trim();
+      if (!trimmed) {
+        patchState(store, { responsibleCandidates: [], searchingResponsible: false, responsibleSearchError: null });
+        return;
+      }
+
+      patchState(store, { searchingResponsible: true, responsibleSearchError: null });
+
+      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
+        finalize(() => patchState(store, { searchingResponsible: false }))
+      ).subscribe({
+        next: (page) => patchState(store, { responsibleCandidates: page.items }),
+        error: (err: HttpErrorResponse) => patchState(store, {
+          responsibleCandidates: [],
+          responsibleSearchError: extractErrorMessage(err, {}, 'Erro ao buscar usuários')
+        })
+      });
+    },
+
+    /** Limpa a busca e os candidatos a responsável (ex.: ao fechar/reabrir o modal de departamento). */
+    clearResponsibleSearch(): void {
+      patchState(store, { responsibleCandidates: [], responsibleSearchError: null });
     },
 
     /** Exclui um departamento e recarrega a listagem em caso de sucesso (DELETE /departments/{id}). */

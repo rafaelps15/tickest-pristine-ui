@@ -10,6 +10,7 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { Department, DepartmentsStore } from '../../departments';
+import { SessionService } from '../../shared';
 
 describe('TicketMonitorComponent', () => {
   const ticket: TicketMonitorItem = {
@@ -35,6 +36,8 @@ describe('TicketMonitorComponent', () => {
       totalPages: signal(1),
       hasPreviousPage: signal(false),
       hasNextPage: signal(false),
+      assigningToMeIds: signal<string[]>([]),
+      mutationError: signal<string | null>(null),
       load: jasmine.createSpy('load'),
       setStatus: jasmine.createSpy('setStatus'),
       setPriority: jasmine.createSpy('setPriority'),
@@ -45,16 +48,21 @@ describe('TicketMonitorComponent', () => {
       setSort: jasmine.createSpy('setSort'),
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
-      clearFilters: jasmine.createSpy('clearFilters')
+      clearFilters: jasmine.createSpy('clearFilters'),
+      assignToMe: jasmine.createSpy('assignToMe')
     };
   }
 
   let storeFake: ReturnType<typeof createStoreFake>;
   let departmentsStoreFake: { departments: ReturnType<typeof signal<Department[]>>; load: jasmine.Spy };
+  let hasPermission: jasmine.Spy;
+  let sessionServiceFake: { hasPermission: jasmine.Spy; currentUser: ReturnType<typeof signal<{ id: string } | null>> };
 
   beforeEach(async () => {
     storeFake = createStoreFake();
     departmentsStoreFake = { departments: signal<Department[]>([department]), load: jasmine.createSpy('load') };
+    hasPermission = jasmine.createSpy('hasPermission').and.returnValue(true);
+    sessionServiceFake = { hasPermission, currentUser: signal({ id: 'u-current' }) };
 
     await TestBed.configureTestingModule({
       imports: [TicketMonitorComponent],
@@ -62,7 +70,8 @@ describe('TicketMonitorComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketMonitorStore, useValue: storeFake },
-        { provide: DepartmentsStore, useValue: departmentsStoreFake }
+        { provide: DepartmentsStore, useValue: departmentsStoreFake },
+        { provide: SessionService, useValue: sessionServiceFake }
       ]
     }).compileComponents();
   });
@@ -140,6 +149,54 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('Carlos Souza');
   });
 
+  it('mostra "Atribuir a mim" só pra chamado ativo sem responsável, e chama store.assignToMe com o usuário logado', async () => {
+    storeFake.tickets.set([
+      { ...ticket, id: 't1', assignedToUserId: null, status: TicketStatus.Open },
+      { ...ticket, id: 't2', assignedToUserId: 'u2', assignedToName: 'Carlos Souza', status: TicketStatus.Open },
+      { ...ticket, id: 't3', assignedToUserId: null, status: TicketStatus.Resolved }
+    ]);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const assignButtons = fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o ticket"]') as NodeListOf<HTMLButtonElement>;
+    expect(assignButtons.length).withContext('só o ticket t1 (ativo e sem responsável) deve ter o botão').toBe(1);
+
+    assignButtons[0].click();
+    expect(storeFake.assignToMe).toHaveBeenCalledWith('t1', 'u-current');
+  });
+
+  it('não mostra "Atribuir a mim" sem a permissão tickets:manage', async () => {
+    hasPermission.and.returnValue(false);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir o ticket"]')).toBeNull();
+  });
+
+  it('desabilita e mostra um spinner só no botão do ticket que está sendo atribuído', async () => {
+    storeFake.tickets.set([
+      { ...ticket, id: 't1', assignedToUserId: null, status: TicketStatus.Open },
+      { ...ticket, id: 't2', assignedToUserId: null, status: TicketStatus.Open }
+    ]);
+    storeFake.assigningToMeIds.set(['t1']);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const assignButtons = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o ticket"]') as NodeListOf<HTMLButtonElement>);
+    expect(assignButtons[0].disabled).toBeTrue();
+    expect(assignButtons[0].querySelector('.spinner-border')).toBeTruthy();
+    expect(assignButtons[1].disabled).toBeFalse();
+    expect(assignButtons[1].querySelector('.spinner-border')).toBeFalsy();
+  });
+
+  it('mostra a mensagem de erro de atribuição quando falhar', async () => {
+    storeFake.mutationError.set('Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.');
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('já ter outro responsável');
+  });
+
   it('renderiza os cards de resumo de SLA', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -149,6 +206,27 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('6');
     expect(text).toContain('3');
     expect(text).toContain('1');
+  });
+
+  it('explica que o resumo de SLA não muda com os filtros da tabela (só com o setor)', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('não muda com os outros filtros da tabela abaixo');
+  });
+
+  it('separa os estados de SLA "em monitoramento" dos "já resolvidos" no dropdown, em optgroups distintos', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const groups = Array.from(fixture.nativeElement.querySelectorAll('#monitorSla optgroup') as NodeListOf<HTMLOptGroupElement>);
+    expect(groups.map(g => g.label)).toEqual(['Em monitoramento', 'Já resolvidos']);
+
+    const liveOptions = Array.from(groups[0].querySelectorAll('option') as NodeListOf<HTMLOptionElement>).map(o => o.textContent?.trim());
+    expect(liveOptions).toEqual(['No prazo', 'Em risco', 'Atrasado']);
+
+    const resolvedOptions = Array.from(groups[1].querySelectorAll('option') as NodeListOf<HTMLOptionElement>).map(o => o.textContent?.trim());
+    expect(resolvedOptions).toEqual(['Cumprido', 'Violado', 'Sem SLA']);
   });
 
   it('mostra o estado vazio quando não há tickets', async () => {
@@ -186,6 +264,17 @@ describe('TicketMonitorComponent', () => {
 
     cards[0].click(); // "Ativos" limpa o filtro de SLA
     expect(storeFake.setSlaStatus).toHaveBeenCalledWith(undefined);
+  });
+
+  it('ao clicar num card de resumo de SLA, também ordena por prazo mais próximo (urgência)', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const cards = fixture.nativeElement.querySelectorAll('.card-stats-btn') as NodeListOf<HTMLButtonElement>;
+    cards[2].click(); // "Em Risco"
+
+    expect(storeFake.setSlaStatus).toHaveBeenCalledWith(TicketSlaStatus.AtRisk);
+    expect(storeFake.setSort).toHaveBeenCalledWith(TicketSortOrder.DueDate);
   });
 
   it('muda o status selecionado', async () => {
@@ -273,5 +362,14 @@ describe('TicketMonitorComponent', () => {
 
     expect(fixture.componentInstance.isOverdue(overdueTicket)).toBeTrue();
     expect(fixture.componentInstance.isOverdue(resolvedTicket)).toBeFalse();
+  });
+
+  it('mostra um ícone de alerta na célula de prazo atrasado, não só a cor', async () => {
+    storeFake.tickets.set([{ ...ticket, dueAtUtc: '2020-01-01T00:00:00Z', resolvedAtUtc: null }]);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const dueDateCell = fixture.nativeElement.querySelector('td.text-danger');
+    expect(dueDateCell?.querySelector('.bx-error-circle')).withContext('a célula atrasada deve ter um ícone, não só cor').toBeTruthy();
   });
 });
