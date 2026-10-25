@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { UserListComponent } from './user-list.component';
 import { UsersStore } from '../application/users.store';
@@ -56,7 +57,8 @@ describe('UserListComponent', () => {
       setPeriod: jasmine.createSpy('setPeriod'),
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
-      clearFilters: jasmine.createSpy('clearFilters')
+      clearFilters: jasmine.createSpy('clearFilters'),
+      hydrateFiltersFromUrl: jasmine.createSpy('hydrateFiltersFromUrl')
     };
   }
 
@@ -77,6 +79,7 @@ describe('UserListComponent', () => {
       imports: [UserListComponent],
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
         { provide: UsersStore, useValue: usersStoreFake },
         { provide: RolesStore, useValue: rolesStoreFake },
         { provide: SessionService, useValue: sessionServiceFake },
@@ -93,6 +96,271 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.resetState).toHaveBeenCalled();
     expect(usersStoreFake.loadAll).toHaveBeenCalled();
     expect(rolesStoreFake.load).toHaveBeenCalled();
+  });
+
+  it('restaura status, período, página e tamanho de página a partir da query string ao inicializar', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        snapshot: {
+          queryParamMap: convertToParamMap({
+            status: 'Inactive', createdFrom: '2026-01-01', createdTo: '2026-01-31', page: '3', pageSize: '50'
+          })
+        }
+      }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(usersStoreFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
+      status: 'Inactive', createdFrom: '2026-01-01', createdTo: '2026-01-31', page: 3, pageSize: 50
+    });
+  });
+
+  it('volta ao padrão quando um parâmetro da URL é inválido (status fora do enum, data mal formatada, página não numérica), sem quebrar (EC-08)', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        snapshot: {
+          queryParamMap: convertToParamMap({ status: 'Banido', createdFrom: '01-01-2026', page: 'abc', pageSize: '7' })
+        }
+      }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(usersStoreFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
+      status: 'All', createdFrom: undefined, createdTo: undefined, page: 1, pageSize: 20
+    });
+  });
+
+  it('não inclui o termo de busca livre na URL', async () => {
+    const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
+    usersStoreFake.filters.set({ status: 'Inactive', search: 'maria@empresa.com', page: 1, pageSize: 20 });
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalled();
+    const queryParams = navigateSpy.calls.mostRecent().args[1]!.queryParams as Record<string, unknown>;
+    expect(Object.keys(queryParams)).not.toContain('search');
+    expect(queryParams['status']).toBe('Inactive');
+  });
+
+  it('reflete filtro/página não-padrão na URL, sem empilhar histórico', async () => {
+    const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
+    usersStoreFake.filters.set({ status: 'Inactive', page: 2, pageSize: 20 });
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith([], jasmine.objectContaining({
+      queryParams: jasmine.objectContaining({ status: 'Inactive', page: 2 }),
+      replaceUrl: true
+    }));
+  });
+
+  it('não navega de novo quando os filtros já batem com a URL atual (evita loop)', async () => {
+    const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('restaura o usuário selecionado a partir do "userId" da query string ao inicializar', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ userId: 'u1' }) } }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.infoPanelUserId()).toBe('u1');
+  });
+
+  it('seleciona um usuário ao clicar na linha, mostra o painel, e desseleciona ao clicar de novo', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
+
+    row.click();
+    await fixture.whenStable();
+    expect(row.getAttribute('aria-pressed')).toBe('true');
+    expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeTruthy();
+
+    row.click();
+    await fixture.whenStable();
+    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
+  });
+
+  it('marca a linha com o painel aberto com uma classe distinta da seleção em lote, e reflete o estado no aria-label', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    expect(row.classList).not.toContain('user-row-info-open');
+    expect(row.getAttribute('aria-label')).toBe('Ver informações de Maria Silva');
+
+    row.click();
+    await fixture.whenStable();
+
+    expect(row.classList).toContain('user-row-info-open');
+    expect(row.getAttribute('aria-label')).toBe('Fechar informações de Maria Silva');
+  });
+
+  it('mostra uma nota de que a seleção em lote vale só pra página atual, quando há mais de uma página', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('só desta página');
+
+    usersStoreFake.totalPages.set(3);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('só desta página');
+  });
+
+  it('mostra uma dica de que a busca não fica salva na URL', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Não fica salva no link, por privacidade');
+  });
+
+  it('não alterna a seleção da linha ao clicar na checkbox de seleção em lote ou no menu de ações', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    const checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    checkbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await fixture.whenStable();
+
+    expect(row.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('fecha o painel com a tecla Esc, de qualquer lugar da tela, e devolve o foco a quem o abriu', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    row.focus();
+    row.click();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeTruthy();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
+    expect(document.activeElement).toBe(row);
+  });
+
+  it('não faz nada ao apertar Esc sem nenhum painel aberto', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))).not.toThrow();
+  });
+
+  it('fecha o painel ao clicar no backdrop (overlay de telas pequenas), e devolve o foco a quem o abriu', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    row.focus();
+    row.click();
+    await fixture.whenStable();
+
+    const backdrop = fixture.nativeElement.querySelector('.info-panel-backdrop') as HTMLElement;
+    expect(backdrop).toBeTruthy();
+    backdrop.click();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
+    expect(document.activeElement).toBe(row);
+  });
+
+  it('não alterna a seleção da linha ao clicar no botão de menu de ações', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    const menuButton = row.querySelector('.btn-row-actions') as HTMLButtonElement;
+    menuButton.click();
+    await fixture.whenStable();
+
+    expect(row.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('reflete o usuário selecionado na URL, sem navegar pra outra rota', async () => {
+    const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    navigateSpy.calls.reset();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    row.click();
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith([], jasmine.objectContaining({
+      queryParams: jasmine.objectContaining({ userId: 'u1' }),
+      replaceUrl: true
+    }));
+  });
+
+  it('o atalho "Editar cadastro" do painel abre o modal de edição pro usuário selecionado', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.infoPanelUserId.set('u1');
+    await fixture.whenStable();
+
+    fixture.componentInstance.onPanelEdit();
+
+    expect(fixture.componentInstance.editForm.getRawValue()).toEqual({ firstName: 'Maria', lastName: 'Silva' });
+  });
+
+  it('o atalho "Atribuir funções" do painel abre o modal de roles pro usuário selecionado', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.infoPanelUserId.set('u1');
+    await fixture.whenStable();
+
+    fixture.componentInstance.onPanelAssignRoles();
+
+    expect(fixture.componentInstance.isChecked('Agent')).toBeTrue();
+  });
+
+  it('o atalho de ativar/desativar do painel chama desativar pra um usuário ativo, e ativar pra um inativo', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    usersStoreFake.users.set([activeUser, inactiveUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.infoPanelUserId.set('u1');
+    await fixture.whenStable();
+    fixture.componentInstance.onPanelToggleActive();
+    expect(usersStoreFake.deactivate).toHaveBeenCalledWith('u1', jasmine.any(Function));
+
+    fixture.componentInstance.infoPanelUserId.set('u2');
+    await fixture.whenStable();
+    fixture.componentInstance.onPanelToggleActive();
+    expect(usersStoreFake.activate).toHaveBeenCalledWith('u2', jasmine.any(Function));
   });
 
   it('renderiza os usuários carregados, com status, datas e funções', async () => {

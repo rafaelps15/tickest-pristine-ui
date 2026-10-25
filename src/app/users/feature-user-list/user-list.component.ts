@@ -1,17 +1,52 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, effect } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { UsersStore } from '../application/users.store';
 import { UserSummary, UserRoleSummary } from '../entities/user-summary';
-import { UserStatus } from '../entities/user-filters';
+import { UserFilters, UserStatus } from '../entities/user-filters';
 import { RolesStore } from '../../roles';
 import {
     SessionService, ConfirmDialogService, ToastService,
     visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames
 } from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
+import { UserListInfoPanelComponent } from './user-list-info-panel.component';
+import { UserListInsightsComponent } from './user-list-insights.component';
+import { UserListGuideComponent } from './user-list-guide.component';
+
+const DEFAULT_STATUS: UserStatus = 'All';
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const STATUS_OPTIONS: UserStatus[] = ['All', 'Active', 'Inactive'];
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Lê o status da query string só se bater com um dos valores aceitos; senão, o padrão ("Todos"). */
+function parseStatusParam(value: string | null): UserStatus {
+    return value !== null && (STATUS_OPTIONS as string[]).includes(value) ? (value as UserStatus) : DEFAULT_STATUS;
+}
+
+/** Lê uma data (aaaa-mm-dd) da query string só se o formato bater; senão, `undefined`. */
+function parseDateParam(value: string | null): string | undefined {
+    return value !== null && DATE_PATTERN.test(value) ? value : undefined;
+}
+
+/** Lê um inteiro positivo (página) da query string; se ausente ou inválido, devolve 1. */
+function parsePageParam(value: string | null): number {
+    if (value === null) return DEFAULT_PAGE;
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_PAGE;
+}
+
+/** Lê o tamanho de página da query string só se bater com uma das opções aceitas; senão, o padrão. */
+function parsePageSizeParam(value: string | null): number {
+    if (value === null) return DEFAULT_PAGE_SIZE;
+    const parsed = Number(value);
+    return PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
+}
 
 /** Validador customizado para confirmar se as senhas coincidem. */
 const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -25,7 +60,7 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
     selector: 'app-user-list',
-    imports: [ReactiveFormsModule, DatePipe, DropdownFixedPositionDirective],
+    imports: [ReactiveFormsModule, DatePipe, DropdownFixedPositionDirective, UserListInfoPanelComponent, UserListInsightsComponent, UserListGuideComponent],
     templateUrl: './user-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-list.component.css'
@@ -37,6 +72,8 @@ export class UserListComponent implements OnInit {
     private readonly sessionService = inject(SessionService);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
+    private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
 
     createForm = this.fb.group({
         firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
@@ -70,6 +107,18 @@ export class UserListComponent implements OnInit {
     /** Ids dos usuários marcados para ação em lote, na página atual. */
     selectedUserIds = signal<Set<string>>(new Set());
 
+    /**
+     * Usuário selecionado por clique na linha, pro painel "Informações do Usuário" — estado de UI
+     * puro (não é parâmetro de busca da API, não entra em `UserFilters`), independente da seleção
+     * em lote acima (semânticas diferentes: uma linha pode estar selecionada pro painel sem estar
+     * marcada pra ação em lote, e vice-versa). Só sincronizado com a URL (query param `userId`)
+     * pra sobreviver a recarregar/compartilhar o link.
+     */
+    infoPanelUserId = signal<string | undefined>(undefined);
+
+    /** Usuário selecionado, com os dados já carregados na tabela — `undefined` se o id não estiver (mais) na página/filtro atual. */
+    infoPanelUser = computed(() => this.store.users().find(user => user.id === this.infoPanelUserId()));
+
     readonly pageSizeOptions = [10, 20, 50, 100];
 
     constructor() {
@@ -94,12 +143,125 @@ export class UserListComponent implements OnInit {
             this.store.filters();
             this.selectedUserIds.set(new Set());
         });
+
+        // Toda mudança de filtro/página se reflete na URL, sem empilhar histórico a cada
+        // alternância — "Voltar" deve levar pra fora da tela, não filtro por filtro. Só navega
+        // quando o alvo realmente difere da URL atual — evita regravar (e reagir de novo) o mesmo
+        // estado que acabou de ser lido dela, ao inicializar. O termo de busca livre fica de fora
+        // de propósito: texto livre/dado pessoal não vai na query string (mesma regra já aplicada
+        // em Monitorar Tickets).
+        effect(() => {
+            const queryParams = { ...this.filtersToQueryParams(this.store.filters()), userId: this.infoPanelUserId() ?? null };
+            if (this.matchesCurrentUrl(queryParams)) return;
+
+            this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
+        });
+
+        // Página alvo além do total (ex.: vinda de uma URL salva de quando havia mais resultados)
+        // volta pra última página válida, em vez de mostrar uma tabela vazia.
+        effect(() => {
+            const totalPages = this.store.totalPages();
+            const currentPage = this.store.filters().page;
+            if (totalPages > 0 && currentPage > totalPages) {
+                this.store.goToPage(totalPages);
+            }
+        });
     }
 
+    /**
+     * Restaura status, período, página e tamanho de página a partir da query string ao
+     * inicializar — recarregar, voltar ou compartilhar o link reproduz o mesmo estado. Parâmetro
+     * ausente ou inválido (fora do enum, formato de data errado etc.) volta ao padrão, nunca
+     * quebra a tela.
+     */
     ngOnInit(): void {
+        const params = this.route.snapshot.queryParamMap;
+
+        const filters: UserFilters = {
+            status: parseStatusParam(params.get('status')),
+            createdFrom: parseDateParam(params.get('createdFrom')),
+            createdTo: parseDateParam(params.get('createdTo')),
+            page: parsePageParam(params.get('page')),
+            pageSize: parsePageSizeParam(params.get('pageSize'))
+        };
+
+        this.store.hydrateFiltersFromUrl(filters);
+        this.infoPanelUserId.set(params.get('userId') || undefined);
         this.store.resetState();
         this.store.loadAll();
         this.rolesStore.load();
+    }
+
+    /**
+     * Elemento com foco no momento em que o painel "Informações do Usuário" foi aberto — pra
+     * devolver o foco a ele ao fechar, em vez de deixá-lo "perdido" no topo da página. Importa
+     * principalmente no overlay de tela cheia (abaixo de "lg"), onde o elemento que abriu o painel
+     * fica fora da área visível enquanto ele está aberto. Mesmo padrão de Monitorar Tickets.
+     */
+    private lastFocusedElement: HTMLElement | null = null;
+
+    /** Seleciona o usuário clicado/ativado pro painel; clicar de novo no já selecionado desseleciona. */
+    selectRow(userId: string): void {
+        if (this.infoPanelUserId() === userId) {
+            this.closeInfoPanel();
+            return;
+        }
+
+        this.lastFocusedElement = document.activeElement as HTMLElement;
+        this.infoPanelUserId.set(userId);
+    }
+
+    /** Fecha o painel "Informações do Usuário" (clique no X, no backdrop, ou tecla Esc) e devolve o foco a quem o abriu. */
+    closeInfoPanel(): void {
+        this.infoPanelUserId.set(undefined);
+        this.lastFocusedElement?.focus();
+        this.lastFocusedElement = null;
+    }
+
+    /** Esc fecha o painel "Informações do Usuário", de qualquer lugar da tela — essencial no overlay de tela cheia, sem botão "fora" pra clicar. */
+    @HostListener('document:keydown.escape')
+    onEscapeKey(): void {
+        if (this.infoPanelUserId()) {
+            this.closeInfoPanel();
+        }
+    }
+
+    /** Atalho do painel: abre o modal de edição de cadastro pro usuário selecionado no painel. */
+    onPanelEdit(): void {
+        const user = this.infoPanelUser();
+        if (user) this.openEditModal(user);
+    }
+
+    /** Atalho do painel: abre o modal de atribuição de funções pro usuário selecionado no painel. */
+    onPanelAssignRoles(): void {
+        const user = this.infoPanelUser();
+        if (user) this.openAssignRolesModal(user);
+    }
+
+    /** Atalho do painel: ativa ou desativa (conforme o estado atual) o usuário selecionado no painel, com a mesma confirmação já usada na linha. */
+    onPanelToggleActive(): void {
+        const user = this.infoPanelUser();
+        if (!user) return;
+
+        if (user.isActive) this.onDeactivate(user); else this.onActivate(user);
+    }
+
+    /** Converte os filtros atuais no formato aceito por `Router.navigate`, omitindo valores padrão pra manter a URL curta. */
+    private filtersToQueryParams(filters: UserFilters): Record<string, string | number | null> {
+        return {
+            status: filters.status === DEFAULT_STATUS ? null : filters.status,
+            createdFrom: filters.createdFrom ?? null,
+            createdTo: filters.createdTo ?? null,
+            page: filters.page === DEFAULT_PAGE ? null : filters.page,
+            pageSize: filters.pageSize === DEFAULT_PAGE_SIZE ? null : filters.pageSize
+        };
+    }
+
+    /** Compara o alvo com a query string atual, pra só navegar quando algo de fato mudou. */
+    private matchesCurrentUrl(target: Record<string, string | number | null>): boolean {
+        const current = this.route.snapshot.queryParamMap;
+        return Object.entries(target).every(([key, value]) =>
+            current.get(key) === (value === null ? null : String(value)));
     }
 
     onCreateSubmit(): void {

@@ -255,16 +255,16 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    expect(row.getAttribute('aria-selected')).toBe('false');
+    expect(row.getAttribute('aria-pressed')).toBe('false');
 
     row.click();
     await fixture.whenStable();
-    expect(row.getAttribute('aria-selected')).toBe('true');
+    expect(row.getAttribute('aria-pressed')).toBe('true');
     expect(row.classList).toContain('table-active');
 
     row.click();
     await fixture.whenStable();
-    expect(row.getAttribute('aria-selected')).toBe('false');
+    expect(row.getAttribute('aria-pressed')).toBe('false');
     expect(row.classList).not.toContain('table-active');
   });
 
@@ -276,7 +276,7 @@ describe('TicketMonitorComponent', () => {
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await fixture.whenStable();
 
-    expect(row.getAttribute('aria-selected')).toBe('true');
+    expect(row.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('não alterna a seleção da linha ao clicar no botão de ação "Atribuir a mim"', async () => {
@@ -288,7 +288,7 @@ describe('TicketMonitorComponent', () => {
     assignButton.click();
     await fixture.whenStable();
 
-    expect(row.getAttribute('aria-selected')).toBe('false');
+    expect(row.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('mostra o painel "Informações do Ticket" ao selecionar um ticket, e repassa a seleção pro TicketQuickInfoStore', async () => {

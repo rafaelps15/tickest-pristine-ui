@@ -27,6 +27,7 @@
           <input id="userSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
                  [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
         </div>
+        <div class="form-text">Não fica salva no link, por privacidade — recarregar a página limpa a busca.</div>
       </div>
       <div class="col-6 col-md-2">
         <label class="form-label small" for="userStatus">Status</label>
@@ -60,6 +61,9 @@
     <div class="d-flex align-items-center gap-2">
       <i class="bx bx-check-square fs-5"></i>
       <span class="fw-semibold" aria-live="polite">{{ selectedCount() === 1 ? '1 selecionado' : selectedCount() + ' selecionados' }}</span>
+      @if (store.totalPages() > 1) {
+        <span class="text-muted small">(só desta página)</span>
+      }
       <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="clearSelection()">
         Limpar seleção
       </button>
@@ -73,7 +77,10 @@
   </div>
 }
 
-<div class="card shadow-sm border-0">
+<div class="row g-3">
+  <div class="col-12" [class.col-lg-8]="infoPanelUser()">
+  <app-user-list-guide class="guide-rail" />
+  <div class="card shadow-sm border-0">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0"
            [class.is-refreshing]="store.listState().loading && store.users().length > 0">
@@ -108,10 +115,16 @@
           </tr>
         } @else {
           @for (user of store.users(); track user.id) {
-            <tr [class.opacity-75]="isInactive(user)">
-              <td>
+            <tr tabindex="0" role="button" class="user-row" [class.opacity-75]="isInactive(user)"
+                [class.user-row-info-open]="infoPanelUserId() === user.id"
+                [attr.aria-pressed]="infoPanelUserId() === user.id"
+                [attr.aria-label]="(infoPanelUserId() === user.id ? 'Fechar informações de ' : 'Ver informações de ') + user.firstName + ' ' + user.lastName"
+                (click)="selectRow(user.id)"
+                (keydown.enter)="selectRow(user.id)"
+                (keydown.space)="selectRow(user.id); $event.preventDefault()">
+              <td (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                 @if (canSelectForBulk(user)) {
-                  <input type="checkbox" class="form-check-input" [attr.aria-label]="'Selecionar ' + user.firstName + ' ' + user.lastName"
+                  <input type="checkbox" class="form-check-input" [attr.aria-label]="'Marcar ' + user.firstName + ' ' + user.lastName + ' para ação em lote'"
                          [checked]="isSelected(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
                 }
               </td>
@@ -146,7 +159,7 @@
                   <div class="text-danger deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
                 }
               </td>
-              <td class="text-end">
+              <td class="text-end" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                 <div class="dropdown">
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
@@ -226,7 +239,26 @@
       </div>
     </div>
   }
+  </div>
+  </div>
+
+  @if (infoPanelUser(); as user) {
+    <!-- Abaixo de "lg", o painel vira um overlay de tela cheia: a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
+    <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
+    <div class="col-12 col-lg-4 info-panel-col">
+      <app-user-list-info-panel [user]="user" [canToggleActive]="!isCurrentUser(user)"
+                                 [deactivating]="store.deactivatingIds().includes(user.id)"
+                                 [activating]="store.activatingIds().includes(user.id)"
+                                 (close)="closeInfoPanel()"
+                                 (editClick)="onPanelEdit()"
+                                 (assignRolesClick)="onPanelAssignRoles()"
+                                 (toggleActiveClick)="onPanelToggleActive()" />
+    </div>
+  }
 </div>
+
+<!-- Só aparece em telas muito largas, no espaço livre à direita do container central (ver CSS). -->
+<app-user-list-insights class="insights-rail" />
 
 <!-- Modal de criação -->
 <div class="modal fade" id="userCreateModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userCreateModalTitle">

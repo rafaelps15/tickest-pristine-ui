@@ -1,0 +1,35 @@
+/* Painel acompanha a rolagem da tabela, sem exigir scroll próprio em telas grandes. */
+.info-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+/* Lista de campos rótulo/valor (E-mail, Funções, Cadastrado em...), mesmo padrão do painel de Monitorar Tickets. */
+.info-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+}
+
+.info-list dt {
+  color: var(--tk-text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.info-list dd {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Ponto colorido antes do texto do badge de status — mesma regra de user-list.component.css, duplicada
+   porque o encapsulamento de view do Angular não deixa o CSS do componente pai alcançar este componente filho. */
+.status-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  background-color: currentColor;
+}

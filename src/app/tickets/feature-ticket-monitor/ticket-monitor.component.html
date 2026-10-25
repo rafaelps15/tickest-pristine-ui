@@ -222,8 +222,8 @@
         } @else {
           @for (ticket of store.tickets(); track ticket.id) {
             <tr tabindex="0" role="button" class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id"
-                [attr.aria-selected]="selectedTicketId() === ticket.id"
-                [attr.aria-label]="'Selecionar o ticket ' + ticket.title"
+                [attr.aria-pressed]="selectedTicketId() === ticket.id"
+                [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do ticket ' : 'Ver informações do ticket ') + ticket.title"
                 (click)="selectTicket(ticket.id)"
                 (keydown.enter)="selectTicket(ticket.id)"
                 (keydown.space)="selectTicket(ticket.id); $event.preventDefault()">

@@ -139,6 +139,15 @@ export const UsersStore = signalStore(
       patchState(store, { filters: DEFAULT_FILTERS });
     },
 
+    /**
+     * Substitui todos os filtros de uma vez, sem o efeito colateral de voltar pra página 1 que os
+     * `set*` individuais têm — usado só pra restaurar o estado a partir da query string ao
+     * inicializar a tela (recarregar/voltar/compartilhar o link precisa preservar a página exata).
+     */
+    hydrateFiltersFromUrl(filters: UserFilters): void {
+      patchState(store, { filters });
+    },
+
     /** Atualiza nome/sobrenome de um usuário (PUT /users/{userId}/profile) e recarrega a listagem em caso de sucesso. */
     updateProfile(userId: string, data: UpdateProfileRequest, onSuccess?: () => void): void {
       patchState(store, { listMutationError: null, updatingProfile: true });

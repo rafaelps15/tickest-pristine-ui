@@ -130,6 +130,15 @@ describe('UsersStore', () => {
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', page: 1, pageSize: 100 });
   });
 
+  it('restaura os filtros de uma vez a partir da URL, sem voltar pra página 1', async () => {
+    store.hydrateFiltersFromUrl({ status: 'Inactive', createdFrom: '2026-01-01', createdTo: '2026-01-31', page: 3, pageSize: 50 });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.getAll).toHaveBeenCalledWith({
+      status: 'Inactive', createdFrom: '2026-01-01', createdTo: '2026-01-31', page: 3, pageSize: 50
+    });
+  });
+
   it('limpa os filtros, voltando ao estado padrão', async () => {
     store.setSearch('maria');
     store.setStatus('Inactive');
