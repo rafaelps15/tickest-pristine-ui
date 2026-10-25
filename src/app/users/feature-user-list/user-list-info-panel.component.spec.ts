@@ -2,6 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
 import { UserSummary } from '../entities/user-summary';
+import { setRoleColor } from '../../shared';
+
+const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('UserListInfoPanelComponent', () => {
   const activeUser: UserSummary = {
@@ -11,6 +14,7 @@ describe('UserListInfoPanelComponent', () => {
   };
 
   beforeEach(async () => {
+    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     await TestBed.configureTestingModule({
       imports: [UserListInfoPanelComponent],
       providers: [provideZonelessChangeDetection()]
@@ -45,6 +49,16 @@ describe('UserListInfoPanelComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('+1');
+  });
+
+  it('usa a cor customizada da função quando escolhida (prévia local)', async () => {
+    setRoleColor('Agent', '#ff3e1d');
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const badge = fixture.nativeElement.querySelector('.info-list .badge') as HTMLElement;
+    expect(badge.classList).toContain('badge-role-custom');
+    expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
   });
 
   it('mostra a data de desativação só quando o usuário está desativado', async () => {

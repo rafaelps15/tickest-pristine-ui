@@ -10,9 +10,9 @@
 
     <div class="mb-3">
       @if (user().isActive) {
-        <span class="badge bg-label-success"><span class="status-dot"></span>Ativo</span>
+        <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
       } @else {
-        <span class="badge bg-label-secondary"><span class="status-dot"></span>Inativo</span>
+        <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
       }
     </div>
 
@@ -23,7 +23,8 @@
       <dt>Funções</dt>
       <dd>
         @for (role of visibleRoles(user()); track role.name) {
-          <span class="badge bg-label-primary me-1">{{ role.name }}</span>
+          @let color = roleColor(role.name);
+          <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
         } @empty {
           <span class="text-muted small">—</span>
         }

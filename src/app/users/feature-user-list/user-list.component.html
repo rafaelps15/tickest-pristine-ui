@@ -27,7 +27,6 @@
           <input id="userSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
                  [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
         </div>
-        <div class="form-text">Não fica salva no link, por privacidade — recarregar a página limpa a busca.</div>
       </div>
       <div class="col-6 col-md-2">
         <label class="form-label small" for="userStatus">Status</label>
@@ -135,7 +134,8 @@
               <td class="text-muted small d-none d-md-table-cell">{{ user.email }}</td>
               <td>
                 @for (role of visibleRoles(user); track role.name) {
-                  <span class="badge bg-label-primary me-1">{{ role.name }}</span>
+                  @let color = roleColor(role.name);
+                  <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
                 } @empty {
                   <span class="text-muted small">—</span>
                 }
@@ -148,9 +148,9 @@
               </td>
               <td>
                 @if (user.isActive) {
-                  <span class="badge bg-label-success"><span class="status-dot"></span>Ativo</span>
+                  <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
                 } @else {
-                  <span class="badge bg-label-secondary"><span class="status-dot"></span>Inativo</span>
+                  <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
                 }
               </td>
               <td class="text-muted small d-none d-md-table-cell">
@@ -365,7 +365,7 @@
 
 <!-- Modal de atribuição de roles -->
 <div class="modal fade" id="userRolesModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userRolesModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="userRolesModalTitle">Atribuir Funções — {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }}</h5>

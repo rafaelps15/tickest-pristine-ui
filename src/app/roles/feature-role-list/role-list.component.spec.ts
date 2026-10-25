@@ -7,6 +7,8 @@ import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
 import { ConfirmDialogService } from '../../shared';
 
+const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
+
 describe('RoleListComponent', () => {
   const adminRole: Role = { name: 'Admin', permissionCodes: ['users:read'], isDefault: false, isAdministrator: true };
   const agentRole: Role = { name: 'Agent', permissionCodes: ['tickets:manage'], isDefault: false, isAdministrator: false };
@@ -40,6 +42,7 @@ describe('RoleListComponent', () => {
   let confirmDialogServiceFake: jasmine.SpyObj<ConfirmDialogService>;
 
   beforeEach(async () => {
+    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     storeFake = createStoreFake();
     confirmDialogServiceFake = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
@@ -189,5 +192,46 @@ describe('RoleListComponent', () => {
     fixture.componentInstance.onCreateSubmit();
 
     expect(storeFake.create).toHaveBeenCalledWith('Supervisor', jasmine.any(Function));
+  });
+
+  it('salva a cor escolhida no modal ao criar a role com sucesso', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.createForm.setValue({ name: 'Supervisor' });
+    fixture.componentInstance.createColor.set('#71dd37');
+    fixture.componentInstance.onCreateSubmit();
+
+    const onSuccess = storeFake.create.calls.mostRecent().args[1] as () => void;
+    onSuccess();
+
+    expect(fixture.componentInstance.roleColor('Supervisor')).toBe('#71dd37');
+  });
+
+  it('escolhe e remove a cor de uma função já existente', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
+
+    fixture.componentInstance.onPickColor('Agent', '#ff3e1d');
+    expect(fixture.componentInstance.roleColor('Agent')).toBe('#ff3e1d');
+
+    fixture.componentInstance.onClearColor('Agent');
+    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
+  });
+
+  it('mostra o seletor de cor com a cor escolhida, e o botão "Remover cor" só quando há uma cor customizada', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    let colorInput = fixture.nativeElement.querySelector('input[type="color"].role-color-input') as HTMLInputElement;
+    expect(colorInput).toBeTruthy();
+    expect(fixture.nativeElement.textContent).not.toContain('Remover cor');
+
+    fixture.componentInstance.onPickColor('Admin', '#ff3e1d');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Remover cor');
   });
 });

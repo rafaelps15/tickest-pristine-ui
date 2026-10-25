@@ -194,7 +194,7 @@
   <app-ticket-monitor-guide class="guide-rail" />
   <div class="card">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
+    <table class="table table-hover align-middle mb-0" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
       <caption class="visually-hidden">Tickets do sistema, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
@@ -210,7 +210,7 @@
         </tr>
       </thead>
       <tbody>
-        @if (store.listState().loading) {
+        @if (store.listState().loading && store.tickets().length === 0) {
           <tr><td colspan="9" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
         } @else if (store.tickets().length === 0) {
           <tr>

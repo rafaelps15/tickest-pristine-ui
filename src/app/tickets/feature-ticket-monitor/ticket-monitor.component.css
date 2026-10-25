@@ -124,6 +124,21 @@
   background-color: rgba(0, 0, 0, 0.5);
 }
 
+/*
+ * Ao trocar filtro/página com a lista já carregada, a tabela some e vira um spinner solitário.
+ * Em vez disso, mantém as linhas atuais visíveis e só esmaece — a troca de página some suave
+ * quando os dados novos chegam, sem o "pisca-tudo" de recarregar do zero. Mesmo padrão já usado
+ * em Usuários; achado do polish de 2026-10-25 (a tabela do Monitor nunca tinha ganho isso).
+ */
+.table {
+  transition: opacity 150ms ease;
+}
+
+.table.is-refreshing {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* Botão "Limpar filtros": ação secundária de baixa frequência. */
 .btn-clear-filters {
   color: var(--tk-text-secondary);

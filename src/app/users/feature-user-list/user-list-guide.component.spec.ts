@@ -35,6 +35,13 @@ describe('UserListGuideComponent', () => {
     expect(text).toContain('Marcar o checkbox');
   });
 
+  it('explica que o termo de busca não fica salvo no link, por privacidade', async () => {
+    const fixture = TestBed.createComponent(UserListGuideComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('não fica salvo no link');
+  });
+
   it('começa aberto quando não há preferência salva', async () => {
     const fixture = TestBed.createComponent(UserListGuideComponent);
     await fixture.whenStable();

@@ -335,6 +335,25 @@ body {
   cursor: default;
 }
 
+/*
+ * Prévia de cor por função (pedido explícito do usuário em 2026-10-25, "pra ver como fica"): o
+ * back-end não tem campo de cor na função hoje, então a escolha fica só neste navegador
+ * (localStorage, ver `shared/utils/role-colors.util.ts`) — não é dado real ainda. A cor escolhida
+ * entra via a variável `--role-color` no próprio elemento; aqui só a mistura que gera o par
+ * claro/escuro "soft" (mesmo princípio do Badge Pair Rule do DESIGN.md, com a cor vindo de uma
+ * variável em vez de um dos 4 tons semânticos fixos). Usada em mais de uma tela (Gestão de
+ * Usuários, atribuição de responsável no chamado), por isso global.
+ */
+.badge-role-custom {
+  background-color: color-mix(in srgb, var(--role-color) 15%, white) !important;
+  color: color-mix(in srgb, var(--role-color) 65%, black) !important;
+}
+
+[data-bs-theme="dark"] .badge-role-custom {
+  background-color: color-mix(in srgb, var(--role-color) 25%, #212529) !important;
+  color: color-mix(in srgb, var(--role-color) 70%, white) !important;
+}
+
 /* Alertas */
 .alert {
   border: none;

@@ -8,7 +8,9 @@ import { RolesStore } from '../../roles';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { Role } from '../../roles';
-import { SessionService, ConfirmDialogService, ToastService } from '../../shared';
+import { SessionService, ConfirmDialogService, ToastService, setRoleColor } from '../../shared';
+
+const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('UserListComponent', () => {
   const activeUser: UserSummary = {
@@ -69,6 +71,7 @@ describe('UserListComponent', () => {
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
+    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     usersStoreFake = createUsersStoreFake();
     rolesStoreFake = { roles: signal<Role[]>([role]), load: jasmine.createSpy('load') };
     sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id') };
@@ -230,12 +233,6 @@ describe('UserListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('só desta página');
   });
 
-  it('mostra uma dica de que a busca não fica salva na URL', async () => {
-    const fixture = TestBed.createComponent(UserListComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('Não fica salva no link, por privacidade');
-  });
 
   it('não alterna a seleção da linha ao clicar na checkbox de seleção em lote ou no menu de ações', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
@@ -413,6 +410,17 @@ describe('UserListComponent', () => {
     expect(fixture.componentInstance.hiddenRolesCount(userWithManyRoles)).toBe(1);
     expect(fixture.componentInstance.hiddenRolesNames(userWithManyRoles)).toBe('Financeiro');
     expect(fixture.nativeElement.textContent).toContain('+1');
+  });
+
+  it('usa a cor customizada da função quando escolhida (prévia local), e o acento padrão quando não há', async () => {
+    setRoleColor('Agent', '#ff3e1d');
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const badge = fixture.nativeElement.querySelector('td .badge') as HTMLElement;
+    expect(badge.classList).toContain('badge-role-custom');
+    expect(badge.classList).not.toContain('bg-label-primary');
+    expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
   });
 
   it('busca com debounce de 300ms após parar de digitar', async () => {

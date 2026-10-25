@@ -4,3 +4,29 @@
   color: var(--tk-text-muted);
   font-weight: 600;
 }
+
+/* Seletor de cor por função (prévia local, ver shared/utils/role-colors.util.ts): círculo pequeno, sem a borda quadrada padrão do <input type="color">. */
+.role-color-input {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--tk-border);
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.role-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: 50%;
+}
+
+.role-color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.role-color-input::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}

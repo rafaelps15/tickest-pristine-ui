@@ -32,7 +32,17 @@
           @for (role of store.roles(); track role.name) {
             <tr>
               <td class="fw-semibold">
-                {{ role.name }}
+                <div class="d-flex align-items-center gap-2">
+                  <input type="color" class="role-color-input" [value]="roleColor(role.name) ?? '#696cff'"
+                         (change)="onPickColor(role.name, $any($event.target).value)"
+                         [attr.aria-label]="'Cor da função ' + role.name + ' (prévia só neste navegador)'" />
+                  <span>{{ role.name }}</span>
+                  @if (roleColor(role.name)) {
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 small" (click)="onClearColor(role.name)">
+                      Remover cor
+                    </button>
+                  }
+                </div>
                 @if (role.isDefault) {
                   <span class="badge bg-label-secondary ms-1">Padrão para novos colaboradores</span>
                 }
@@ -82,6 +92,12 @@
           }
           <label class="form-label" for="roleName">Nome</label>
           <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
+
+          <label class="form-label mt-3" for="roleCreateColor">Cor</label>
+          <div class="d-flex align-items-center gap-2">
+            <input id="roleCreateColor" type="color" class="role-color-input" [value]="createColor()" (change)="createColor.set($any($event.target).value)" />
+            <span class="text-muted small">Prévia só neste navegador — o back-end ainda não guarda cor de função.</span>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>

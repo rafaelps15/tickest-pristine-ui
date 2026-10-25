@@ -12,8 +12,10 @@ import { TicketHistoryAction, TicketHistoryEntry } from '../entities/ticket-hist
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
-import { ConfirmDialogService, SessionService } from '../../shared';
+import { ConfirmDialogService, SessionService, setRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
+
+const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('TicketDetailComponent', () => {
   const ticket: TicketDetail = {
@@ -98,6 +100,7 @@ describe('TicketDetailComponent', () => {
   let sessionServiceFake: { hasPermission: jasmine.Spy };
 
   beforeEach(async () => {
+    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     detailStoreFake = createDetailStoreFake();
     attachmentsStoreFake = createAttachmentsStoreFake();
     historyStoreFake = createHistoryStoreFake();
@@ -539,6 +542,20 @@ describe('TicketDetailComponent', () => {
       expect(fixture.componentInstance.selectedAssigneeId()).toBe('u2');
       expect(candidateRow!.classList).toContain('is-selected');
       expect(candidateRow!.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('usa a cor customizada da função quando escolhida (prévia local)', async () => {
+      setRoleColor('Atendente', '#ff3e1d');
+      detailStoreFake.assigneeCandidates.set([candidate]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.assigneeSearchInput.set('joão');
+      await fixture.whenStable();
+
+      const candidateRow = Array.from(fixture.nativeElement.querySelectorAll('li') as NodeListOf<HTMLElement>)
+        .find(li => li.textContent?.includes('joao.pedro@empresa.com'));
+      const badge = candidateRow!.querySelector('.badge') as HTMLElement;
+      expect(badge.classList).toContain('badge-role-custom');
+      expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
     });
 
     it('mostra no máximo 2 badges de função por candidato, agrupando o resto num badge "+N"', async () => {

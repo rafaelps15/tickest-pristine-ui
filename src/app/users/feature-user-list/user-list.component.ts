@@ -10,7 +10,8 @@ import { UserFilters, UserStatus } from '../entities/user-filters';
 import { RolesStore } from '../../roles';
 import {
     SessionService, ConfirmDialogService, ToastService,
-    visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames
+    visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
+    getRoleColor
 } from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
@@ -357,6 +358,11 @@ export class UserListComponent implements OnInit {
     /** Nomes das funções ocultas no badge "+N", para exibir no `title` (tooltip nativo). */
     hiddenRolesNames(user: UserSummary): string {
         return sharedHiddenRolesNames(user.roles);
+    }
+
+    /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
+    roleColor(roleName: string): string | null {
+        return getRoleColor(roleName);
     }
 
     /** Impede desativar/reativar a própria conta logada, que travaria a sessão atual sem recuperação pela UI. */

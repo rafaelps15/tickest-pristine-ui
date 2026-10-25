@@ -11,7 +11,7 @@ import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketDetail } from '../entities/ticket';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
-import { ConfirmDialogService, SessionService, visibleRoles, hiddenRolesCount, hiddenRolesNames } from '../../shared';
+import { ConfirmDialogService, SessionService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
 
 
@@ -201,6 +201,11 @@ export class TicketDetailComponent implements OnInit {
 
     hiddenCandidateRolesNames(candidate: UserSummary): string {
         return hiddenRolesNames(candidate.roles);
+    }
+
+    /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
+    roleColor(roleName: string): string | null {
+        return getRoleColor(roleName);
     }
 
     /** Marca (ou desmarca, ao clicar de novo) um candidato como o escolhido para responsável; limpa o erro de uma tentativa anterior. */

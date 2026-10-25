@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { UserSummary, UserRoleSummary } from '../entities/user-summary';
-import { visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames } from '../../shared';
+import { visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames, getRoleColor } from '../../shared';
 
 /**
  * Painel "Informações do Usuário" de Usuários: mostra os mesmos dados já carregados na linha
@@ -40,5 +40,10 @@ export class UserListInfoPanelComponent {
 
   hiddenRolesNames(user: UserSummary): string {
     return sharedHiddenRolesNames(user.roles);
+  }
+
+  /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
+  roleColor(roleName: string): string | null {
+    return getRoleColor(roleName);
   }
 }

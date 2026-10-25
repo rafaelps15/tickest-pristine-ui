@@ -8,6 +8,7 @@ p1_count: 2
 target_identity: "file:C:\\dev\\tickest-pristine-front\\src\\app\\users\\feature-user-list"
 timestamp: 2026-10-25T18-02-11Z
 slug: src-app-users-feature-user-list
+closed: true
 ---
 Method: dual-agent (A: design review · B: detector + browser evidence)
 

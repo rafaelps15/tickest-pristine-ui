@@ -164,14 +164,15 @@
 }
 
 /*
- * Linha com o painel "Informações do Usuário" aberto: barra de acento à esquerda, não um
- * tingimento de fundo na linha inteira — de propósito, pra não parecer a mesma linguagem visual
- * do checkbox de seleção em lote (duas semânticas de "selecionado" diferentes na mesma linha:
- * uma é só consulta, a outra prepara uma ação destrutiva em massa; achado do critique de
- * 2026-10-25, P1).
+ * Linha com o painel "Informações do Usuário" aberto: tingimento de fundo bem discreto — já
+ * suficiente pra diferenciar da seleção em lote, que não tinge a linha (só o próprio checkbox
+ * muda), sem precisar de um motivo novo. Achado do critique de 2026-10-25 (P1, duas semânticas de
+ * "selecionado" na mesma linha); revisado no polish seguinte pra não usar uma barra de acento
+ * colorida — item banido pelo craft-floor do sistema de design ("borda colorida à esquerda/
+ * direita acima de 1px"), que uma `box-shadow` inset do mesmo jeito também conta como.
  */
 .user-row-info-open {
-  box-shadow: inset 3px 0 0 var(--tk-primary);
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
 }
 
 /*

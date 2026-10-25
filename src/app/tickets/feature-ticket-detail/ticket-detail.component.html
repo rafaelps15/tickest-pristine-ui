@@ -246,7 +246,8 @@
                     @if (candidate.roles.length > 0) {
                       <div class="mt-1">
                         @for (role of visibleCandidateRoles(candidate); track role.name) {
-                          <span class="badge bg-label-primary me-1">{{ role.name }}</span>
+                          @let color = roleColor(role.name);
+                          <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
                         }
                         @if (hiddenCandidateRolesCount(candidate) > 0) {
                           <span class="badge bg-label-secondary badge-roles-overflow" tabindex="0"

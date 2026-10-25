@@ -567,12 +567,24 @@ describe('TicketMonitorComponent', () => {
   });
 
   it('anuncia o carregamento da tabela por leitor de tela e tem uma legenda acessível', async () => {
+    storeFake.tickets.set([]);
     storeFake.listState.set({ loading: true, error: null });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('table caption')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.spinner-border')?.getAttribute('role')).toBe('status');
+  });
+
+  it('mantém a lista atual visível (só esmaecida) ao recarregar com filtro/página, em vez de sumir com tudo', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    storeFake.listState.set({ loading: true, error: null });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
+    expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
   });
 
   it('limpa os filtros', async () => {

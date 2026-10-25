@@ -2,7 +2,10 @@ import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@ang
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
-import { ConfirmDialogService } from '../../shared';
+import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor } from '../../shared';
+
+/** Cor padrão pré-marcada no seletor de cor ao criar uma função — o próprio índigo do sistema. */
+const DEFAULT_ROLE_COLOR = '#696cff';
 
 /** Quantidade de badges de permissão exibidos antes de agrupar o restante em "+N". */
 const MAX_VISIBLE_PERMISSION_BADGES = 2;
@@ -30,6 +33,16 @@ export class RoleListComponent implements OnInit {
     /** Conjunto (mutável) de códigos de permissão marcados no modal de atribuição. */
     selectedPermissionCodes = signal<Set<string>>(new Set());
 
+    /** Cor marcada no seletor do modal de criação. */
+    createColor = signal(DEFAULT_ROLE_COLOR);
+
+    /**
+     * Incrementado a cada escolha/remoção de cor, só pra forçar `roleColor()` a reavaliar —
+     * a cor em si fica no localStorage (prévia local, sem persistência no back-end ainda, ver
+     * `shared/utils/role-colors.util.ts`), que não é reativo sozinho.
+     */
+    private readonly roleColorVersion = signal(0);
+
     /** Carrega as roles e os códigos de permissão disponíveis ao abrir a tela. */
     ngOnInit(): void {
         this.store.load();
@@ -40,9 +53,10 @@ export class RoleListComponent implements OnInit {
     openCreateModal(): void {
         this.store.clearCreateError();
         this.createForm.reset({ name: '' });
+        this.createColor.set(DEFAULT_ROLE_COLOR);
     }
 
-    /** Valida e envia o formulário de criação de uma nova role. */
+    /** Valida e envia o formulário de criação de uma nova role; salva a cor escolhida em caso de sucesso. */
     onCreateSubmit(): void {
         if (this.createForm.invalid) {
             this.createForm.markAllAsTouched();
@@ -51,9 +65,32 @@ export class RoleListComponent implements OnInit {
 
         const name = this.createForm.getRawValue().name!;
         this.store.create(name, () => {
+            setRoleColor(name, this.createColor());
+            this.roleColorVersion.update(v => v + 1);
             this.createForm.reset({ name: '' });
             document.getElementById('roleCreateModalCloseButton')?.click();
         });
+    }
+
+    /**
+     * Cor escolhida pra uma função — prévia só neste navegador (localStorage), o back-end não tem
+     * campo de cor ainda. `null` cai no acento padrão do sistema (índigo), sem badge customizada.
+     */
+    roleColor(roleName: string): string | null {
+        this.roleColorVersion();
+        return getRoleColor(roleName);
+    }
+
+    /** Escolhe (ou troca) a cor de uma função já existente. */
+    onPickColor(roleName: string, hex: string): void {
+        setRoleColor(roleName, hex);
+        this.roleColorVersion.update(v => v + 1);
+    }
+
+    /** Remove a cor customizada de uma função, voltando ao acento padrão. */
+    onClearColor(roleName: string): void {
+        clearRoleColor(roleName);
+        this.roleColorVersion.update(v => v + 1);
     }
 
     /** Abre o modal de atribuição de permissões pré-marcando as permissões já atribuídas à role. */
