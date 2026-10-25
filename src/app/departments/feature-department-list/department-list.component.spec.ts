@@ -86,7 +86,7 @@ describe('DepartmentListComponent', () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
-    const cards = fixture.nativeElement.querySelectorAll('.card');
+    const cards = fixture.nativeElement.querySelectorAll('.row.g-4 .card');
     expect(cards[0].textContent).toContain('TI');
     expect(cards[0].textContent).toContain('Helpdesk');
     expect(cards[0].textContent).toContain('Infraestrutura');

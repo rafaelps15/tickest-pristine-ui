@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { DashboardComponent } from './dashboard.component';
-import { TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint } from '../tickets';
+import { TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
 import { SessionService } from '../shared';
 
 describe('DashboardComponent', () => {
@@ -22,7 +22,10 @@ describe('DashboardComponent', () => {
         { periodStart: '2026-01-06', count: 5 }
       ]),
       load: jasmine.createSpy('load'),
-      setGroupBy: jasmine.createSpy('setGroupBy')
+      setGroupBy: jasmine.createSpy('setGroupBy'),
+      criticalTickets: signal<TicketMonitorItem[]>([]),
+      criticalTicketsLoading: signal(false),
+      criticalTicketsError: signal<string | null>(null)
     };
   }
 
@@ -233,5 +236,24 @@ describe('DashboardComponent', () => {
       .find(a => a.textContent?.includes('Novo Ticket'));
 
     expect(novoTicketLink).withContext('o atalho "Novo Ticket" deve ser <a>, não <button>').toBeTruthy();
+  });
+
+  it('não mostra o card de Alertas de SLA pra quem não tem a permissão tickets:manage', async () => {
+    hasPermission.and.returnValue(false);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-dashboard-insights')).toBeNull();
+  });
+
+  it('mostra o card de Alertas de SLA, com os chamados em risco do store, pra quem tem tickets:manage', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    ticketsStoreFake.criticalTickets.set([{ id: 't1', title: 'Chamado urgente' } as TicketMonitorItem]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const insights = fixture.nativeElement.querySelector('app-dashboard-insights');
+    expect(insights).toBeTruthy();
+    expect(insights.textContent).toContain('Chamado urgente');
   });
 });

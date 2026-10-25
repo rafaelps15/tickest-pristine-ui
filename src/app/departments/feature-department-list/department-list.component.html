@@ -14,6 +14,9 @@
   </div>
 </div>
 
+<app-department-guide class="guide-rail" />
+<app-department-insights class="insights-rail" [departments]="store.departments()" />
+
 @if (store.listState().error) {
   <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }

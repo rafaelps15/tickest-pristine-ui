@@ -6,6 +6,8 @@ import { DepartmentsStore } from '../application/departments.store';
 import { Department, DepartmentSector } from '../entities/department';
 import { ConfirmDialogService, SessionService } from '../../shared';
 import { UserSummary } from '../../users';
+import { DepartmentGuideComponent } from './department-guide.component';
+import { DepartmentInsightsComponent } from './department-insights.component';
 
 /**
  * Tela administrativa de departamentos e setores: cada departamento mostra os seus setores, e o setor é
@@ -13,7 +15,7 @@ import { UserSummary } from '../../users';
  */
 @Component({
     selector: 'app-department-list',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, DepartmentGuideComponent, DepartmentInsightsComponent],
     templateUrl: './department-list.component.html',
     styleUrl: './department-list.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush

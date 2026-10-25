@@ -1,0 +1,33 @@
+<div class="card insights-card h-100">
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <i class="bx bx-bar-chart-alt-2 fs-5 text-muted" aria-hidden="true"></i>
+      <h6 class="fw-bold mb-0">Resumo</h6>
+    </div>
+
+    <div class="insights-section">
+      <div class="d-flex gap-4">
+        <div>
+          <div class="insights-stat">{{ departments().length }}</div>
+          <p class="text-muted small mb-0">{{ departments().length === 1 ? 'departamento' : 'departamentos' }}</p>
+        </div>
+        <div>
+          <div class="insights-stat">{{ totalSectors() }}</div>
+          <p class="text-muted small mb-0">{{ totalSectors() === 1 ? 'setor' : 'setores' }}</p>
+        </div>
+      </div>
+    </div>
+
+    @if (departmentsWithoutSectors() > 0) {
+      <div class="insights-section">
+        <p class="text-muted small mb-0"><i class="bx bx-error-circle text-warning me-1"></i>{{ departmentsWithoutSectors() }} {{ departmentsWithoutSectors() === 1 ? 'departamento sem nenhum setor' : 'departamentos sem nenhum setor' }} — não {{ departmentsWithoutSectors() === 1 ? 'aparece' : 'aparecem' }} na abertura de chamados.</p>
+      </div>
+    }
+
+    @if (departmentsWithoutResponsible() > 0) {
+      <div class="insights-section mb-0">
+        <p class="text-muted small mb-0"><i class="bx bx-user-x text-muted me-1"></i>{{ departmentsWithoutResponsible() }} {{ departmentsWithoutResponsible() === 1 ? 'departamento sem responsável definido' : 'departamentos sem responsável definido' }}.</p>
+      </div>
+    }
+  </div>
+</div>

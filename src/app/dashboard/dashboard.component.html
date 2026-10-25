@@ -10,6 +10,8 @@
   </div>
 </div>
 
+<app-dashboard-guide class="guide-rail" />
+
 @if (store.state().error) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
     <span>{{ store.state().error }}</span>
@@ -218,7 +220,7 @@
 
   <!-- Ações Rápidas -->
   <div class="col-12 col-lg-4 mb-4">
-    <div class="card h-100">
+    <div class="card mb-3">
       <div class="card-header py-3">
         <h5 class="card-title m-0 fw-bold">Ações Rápidas</h5>
       </div>
@@ -276,5 +278,9 @@
         }
       </div>
     </div>
+
+    @if (sessionService.hasPermission('tickets:manage')) {
+      <app-dashboard-insights class="insights-rail" [criticalTickets]="store.criticalTickets()" [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()" />
+    }
   </div>
 </div>

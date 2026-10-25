@@ -1,0 +1,17 @@
+.critical-ticket-item + .critical-ticket-item {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--tk-border);
+}
+
+.critical-ticket-link {
+  color: var(--tk-text-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.critical-ticket-link:hover,
+.critical-ticket-link:focus-visible {
+  color: var(--tk-primary);
+  text-decoration: underline;
+}

@@ -3,6 +3,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
 import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor } from '../../shared';
+import { RoleGuideComponent } from './role-guide.component';
+import { RoleInsightsComponent } from './role-insights.component';
 
 /** Cor padrão pré-marcada no seletor de cor ao criar uma função — o próprio índigo do sistema. */
 const DEFAULT_ROLE_COLOR = '#696cff';
@@ -13,7 +15,7 @@ const MAX_VISIBLE_PERMISSION_BADGES = 2;
 /** Tela administrativa de gestão de roles e atribuição de permissões (RBAC). */
 @Component({
     selector: 'app-role-list',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, RoleGuideComponent, RoleInsightsComponent],
     templateUrl: './role-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './role-list.component.css'

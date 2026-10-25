@@ -79,3 +79,33 @@ h3 {
     text-transform: uppercase;
     font-weight: 500;
 }
+
+/*
+ * Trilhas laterais, mesma mecânica e mesmas contas do Monitorar Tickets (ver
+ * ticket-monitor.component.css) — só escapam do fluxo normal (pra fora do limite de 1320px do
+ * `container-xxl`) numa janela realmente larga (≥1900px). Diferente do Monitor/Usuários, o
+ * conteúdo da direita aqui tem dado real (Alertas de SLA) — não é só uma prévia "Em breve" — então
+ * não pode ficar escondido abaixo de 1900px como lá; por isso fica no fluxo normal por padrão
+ * (dentro da coluna de Ações Rápidas), igual o Guia já fica, em vez de some/aparece.
+ */
+@media (min-width: 1900px) {
+  .guide-rail {
+    position: fixed;
+    top: 100px;
+    left: 268px;
+    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    z-index: 5;
+  }
+
+  .insights-rail {
+    position: fixed;
+    top: 100px;
+    right: 8px;
+    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    z-index: 5;
+  }
+}

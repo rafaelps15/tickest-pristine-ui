@@ -9,6 +9,9 @@
   </div>
 </div>
 
+<app-role-guide class="guide-rail" />
+<app-role-insights class="insights-rail" [roles]="store.roles()" />
+
 @if (store.listState().error) {
   <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }

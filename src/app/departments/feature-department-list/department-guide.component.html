@@ -1,0 +1,28 @@
+<div class="card filters-card mb-3">
+  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
+          [attr.aria-expanded]="open()" aria-controls="departmentGuideBody" (click)="toggle()">
+    <span class="fw-bold">
+      <i class="bx bx-info-circle me-2"></i>Guia da Tela
+    </span>
+    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
+  </button>
+
+  @if (open()) {
+    <div id="departmentGuideBody" class="card-body pt-0">
+      <div class="guide-section">
+        <h6 class="guide-section-title">Departamento e setor</h6>
+        <p class="small text-muted mb-0">Cada setor pertence a um departamento, e é cadastrado a partir do card dele. Um departamento sem nenhum setor não aparece na abertura de chamados.</p>
+      </div>
+
+      <div class="guide-section">
+        <h6 class="guide-section-title">Busca</h6>
+        <p class="small text-muted mb-0">Busca por nome do departamento ou de algum dos seus setores — não precisa saber em qual departamento um setor está.</p>
+      </div>
+
+      <div class="guide-section mb-0">
+        <h6 class="guide-section-title">Responsável</h6>
+        <p class="small text-muted mb-0">Opcional — um usuário indicado como ponto de contato do departamento.</p>
+      </div>
+    </div>
+  }
+</div>

@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
 import { TicketSummaryStore, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
 import { SessionService, loadChart } from '../shared';
+import { DashboardGuideComponent } from './dashboard-guide.component';
+import { DashboardInsightsComponent } from './dashboard-insights.component';
 
 // Mesmos valores de --tk-surface/--tk-text-secondary (claro/escuro) do styles.css — repetidos
 // aqui como literais porque o Chart.js não lê CSS custom properties, só string/hex direto.
@@ -35,7 +37,7 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink],
+    imports: [RouterLink, DashboardGuideComponent, DashboardInsightsComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./dashboard.component.css']

@@ -3,8 +3,10 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
+import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage } from '../../shared';
+import { extractErrorMessage, SessionService } from '../../shared';
 
 /**
  * Store do resumo de tickets de toda a empresa, para o dashboard — totais por status e volume de
@@ -18,7 +20,8 @@ export const TicketSummaryStore = signalStore(
     groupBy: 'Day' as TicketVolumeGrouping
   }),
   withProps(() => ({
-    _ticketDataService: inject(TicketDataService)
+    _ticketDataService: inject(TicketDataService),
+    _sessionService: inject(SessionService)
   })),
   withProps((store) => ({
     _statusCountsResource: rxResource({
@@ -27,6 +30,21 @@ export const TicketSummaryStore = signalStore(
     _volumeResource: rxResource({
       params: () => store.groupBy(),
       stream: ({ params }) => store._ticketDataService.getVolume(params)
+    }),
+    /**
+     * Os 5 chamados com SLA em risco mais próximos de vencer, pro card "Alertas de SLA" do
+     * Dashboard — mesmo endpoint que Monitorar Tickets usa (GET /tickets), que exige a permissão
+     * `tickets:manage`. `params` retorna `undefined` pra quem não tem a permissão, o que faz o
+     * `rxResource` nem chamar a API (evita um 403 certo pra Solicitante).
+     */
+    _criticalTicketsResource: rxResource({
+      params: () => (store._sessionService.hasPermission('tickets:manage') ? true : undefined),
+      stream: () => store._ticketDataService.getAll({
+        slaStatus: TicketSlaStatus.AtRisk,
+        sort: TicketSortOrder.DueDate,
+        page: 1,
+        pageSize: 5
+      })
     })
   })),
   withComputed((store) => ({
@@ -60,13 +78,23 @@ export const TicketSummaryStore = signalStore(
     /** Quantidade de tickets com status Fechado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
     closedCount: computed(() => store._statusCountsResource.value()?.closedCount ?? 0),
     /** Quantidade de tickets com status Cancelado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
-    canceledCount: computed(() => store._statusCountsResource.value()?.canceledCount ?? 0)
+    canceledCount: computed(() => store._statusCountsResource.value()?.canceledCount ?? 0),
+    /** Chamados com SLA em risco mais próximos de vencer (até 5), do mais urgente pro menos — vazio para quem não tem `tickets:manage`. */
+    criticalTickets: computed(() => store._criticalTicketsResource.value()?.items ?? []),
+    /** Carregando os chamados em risco de SLA. */
+    criticalTicketsLoading: computed(() => store._criticalTicketsResource.isLoading()),
+    /** Mensagem de erro ao buscar os chamados em risco de SLA — não derruba o resto do dashboard, só esse card. */
+    criticalTicketsError: computed(() => {
+      const error = store._criticalTicketsResource.error() as HttpErrorResponse | undefined;
+      return error ? extractErrorMessage(error, {}, 'Erro ao carregar os alertas de SLA') : null;
+    })
   })),
   withMethods((store) => ({
     /** Carrega (ou recarrega) os totais por status e o volume de tickets da empresa. */
     load(): void {
       store._statusCountsResource.reload();
       store._volumeResource.reload();
+      store._criticalTicketsResource.reload();
     },
 
     /** Muda o agrupamento do gráfico de volume (dia/semana/mês). */

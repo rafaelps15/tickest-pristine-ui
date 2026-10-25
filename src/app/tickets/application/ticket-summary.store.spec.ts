@@ -5,13 +5,28 @@ import { of, throwError } from 'rxjs';
 import { TicketSummaryStore } from './ticket-summary.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatusCounts } from '../entities/ticket-status-counts';
+import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketSortOrder } from '../entities/ticket-sort-order';
+import { TicketMonitorItem } from '../entities/ticket-monitor-item';
+import { TicketPriority } from '../entities/ticket-priority';
+import { TicketStatus } from '../entities/ticket-status';
+import { SessionService } from '../../shared';
 
 describe('TicketSummaryStore', () => {
   let store: InstanceType<typeof TicketSummaryStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
+  let sessionService: jasmine.SpyObj<SessionService>;
 
   const statusCounts: TicketStatusCounts = {
     totalCount: 10, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 0
+  };
+
+  const criticalTicket: TicketMonitorItem = {
+    id: 't1', title: 'Chamado urgente', priority: TicketPriority.High, status: TicketStatus.InProgress,
+    requesterId: 'r1', requesterName: 'Fulano', requesterEmail: 'fulano@empresa.com',
+    assignedToUserId: 'u1', assignedToName: 'Atendente', sectorId: 's1', sectorName: 'TI',
+    createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
+    resolvedAtUtc: null, slaStatus: TicketSlaStatus.AtRisk
   };
 
   /** Injeta o store (disparando a busca inicial com o retorno já configurado no spy) e espera estabilizar. */
@@ -22,18 +37,25 @@ describe('TicketSummaryStore', () => {
   }
 
   beforeEach(async () => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll']);
     dataService.getStatusCounts.and.returnValue(of(statusCounts));
     dataService.getVolume.and.returnValue(of([
       { periodStart: '2026-01-05', count: 2 },
       { periodStart: '2026-01-06', count: 5 }
     ]));
+    dataService.getAll.and.returnValue(of({
+      items: [criticalTicket], page: 1, pageSize: 5, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
+    }));
+
+    sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
+    sessionService.hasPermission.and.returnValue(true);
 
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         TicketSummaryStore,
-        { provide: TicketDataService, useValue: dataService }
+        { provide: TicketDataService, useValue: dataService },
+        { provide: SessionService, useValue: sessionService }
       ]
     });
     store = await createStore();
@@ -85,5 +107,52 @@ describe('TicketSummaryStore', () => {
 
     expect(store.state().error).toBe('Erro ao carregar o volume de tickets');
     expect(store.state().loading).toBeFalse();
+  });
+
+  it('busca os chamados com SLA em risco, ordenados por prazo, para quem tem tickets:manage', () => {
+    expect(dataService.getAll).toHaveBeenCalledWith({
+      slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5
+    });
+    expect(store.criticalTickets()).toEqual([criticalTicket]);
+  });
+
+  it('refaz a busca dos chamados em risco de SLA ao chamar load()', async () => {
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledTimes(2);
+  });
+
+  it('expõe mensagem de erro quando a busca dos chamados em risco de SLA falhar', async () => {
+    dataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.criticalTicketsError()).toBe('Erro ao carregar os alertas de SLA');
+    expect(store.criticalTicketsLoading()).toBeFalse();
+  });
+
+  describe('sem a permissão tickets:manage', () => {
+    beforeEach(async () => {
+      sessionService.hasPermission.and.returnValue(false);
+      dataService.getAll.calls.reset();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          TicketSummaryStore,
+          { provide: TicketDataService, useValue: dataService },
+          { provide: SessionService, useValue: sessionService }
+        ]
+      });
+      store = await createStore();
+    });
+
+    it('não busca os chamados em risco de SLA, e a lista fica vazia', () => {
+      expect(dataService.getAll).not.toHaveBeenCalled();
+      expect(store.criticalTickets()).toEqual([]);
+    });
   });
 });
