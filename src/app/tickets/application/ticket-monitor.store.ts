@@ -10,6 +10,7 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage } from '../../shared';
+import { UserDataService, UserSummary } from '../../users';
 
 /** Filtros e paginação padrão: todos os status/prioridade/SLA, mais recentes primeiro, 20 por página. */
 const DEFAULT_FILTERS: TicketMonitorFilters = { sort: TicketSortOrder.Newest, page: 1, pageSize: 20 };
@@ -17,8 +18,9 @@ const DEFAULT_FILTERS: TicketMonitorFilters = { sort: TicketSortOrder.Newest, pa
 /**
  * Store de "Monitorar Tickets": listagem paginada e filtrável de todos os chamados do sistema,
  * mais o resumo de SLA dos chamados ativos — os dois somente leitura, para quem administra a
- * fila (`tickets:manage`), mais a atribuição rápida "pra mim" de um chamado sem responsável direto
- * na linha da tabela. O resumo de SLA acompanha o filtro de setor da listagem.
+ * fila (`tickets:manage`). Duas ações rápidas de atribuição, direto na linha da tabela, sem ida à
+ * tela de detalhe: "pra mim" (um clique) e "escolher responsável" (busca por nome/e-mail no modal
+ * "Atribuir responsável"). O resumo de SLA acompanha o filtro de setor da listagem.
  */
 export const TicketMonitorStore = signalStore(
   { providedIn: 'root' },
@@ -26,11 +28,18 @@ export const TicketMonitorStore = signalStore(
     filters: DEFAULT_FILTERS,
     /** Ids de chamados com uma atribuição "pra mim" em andamento — desabilita só a linha, não a tabela inteira. */
     assigningToMeIds: [] as string[],
-    /** Erro da última tentativa de "Atribuir a mim", separado dos erros de leitura da listagem/resumo de SLA. */
-    mutationError: null as string | null
+    /** Erro da última tentativa de atribuição (pra mim ou de um responsável escolhido), separado dos erros de leitura da listagem/resumo de SLA. */
+    mutationError: null as string | null,
+    /** Se a atribuição de um responsável escolhido no modal "Atribuir responsável" está em andamento. */
+    assigningResponsible: false,
+    /** Candidatos a responsável encontrados na busca do modal "Atribuir responsável". */
+    responsibleCandidates: [] as UserSummary[],
+    searchingResponsibleCandidates: false,
+    responsibleSearchError: null as string | null
   }),
   withProps(() => ({
-    _ticketDataService: inject(TicketDataService)
+    _ticketDataService: inject(TicketDataService),
+    _userDataService: inject(UserDataService)
   })),
   withProps((store) => ({
     _listResource: rxResource({
@@ -132,12 +141,21 @@ export const TicketMonitorStore = signalStore(
     },
 
     /**
+     * Substitui todos os filtros de uma vez, sem o efeito colateral de voltar pra página 1 que os
+     * `set*` individuais têm — usado só pra restaurar o estado a partir da query string ao
+     * inicializar a tela (recarregar/voltar/compartilhar o link precisa preservar a página exata).
+     */
+    hydrateFiltersFromUrl(filters: TicketMonitorFilters): void {
+      patchState(store, { filters });
+    },
+
+    /**
      * Atribui o usuário logado como responsável do chamado, direto na linha da tabela — sem abrir
      * o modal de busca do detalhe do chamado. Resolve o backlog que o filtro "Só sem responsável"
      * identifica (achado do critique de 2026-10-24, P2): até aqui, atribuir um chamado sem
      * responsável exigia ida completa à tela de detalhe pra cada um.
      */
-    assignToMe(ticketId: string, currentUserId: string): void {
+    assignToMe(ticketId: string, currentUserId: string, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, assigningToMeIds: [...store.assigningToMeIds(), ticketId] });
 
       store._ticketDataService.assignTicket(ticketId, currentUserId).pipe(
@@ -145,7 +163,10 @@ export const TicketMonitorStore = signalStore(
           assigningToMeIds: store.assigningToMeIds().filter(id => id !== ticketId)
         }))
       ).subscribe({
-        next: () => store._listResource.reload(),
+        next: () => {
+          store._listResource.reload();
+          onSuccess?.();
+        },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             mutationError: extractErrorMessage(err, {
@@ -153,6 +174,63 @@ export const TicketMonitorStore = signalStore(
               404: 'Ticket não encontrado.',
               409: 'Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.'
             }, 'Erro ao atribuir o ticket a você.')
+          });
+        }
+      });
+    },
+
+    /**
+     * Busca usuários ativos candidatos a responsável, pelo nome/sobrenome/e-mail (GET /users), pro
+     * modal "Atribuir responsável" — mesmo padrão de busca já usado no detalhe do chamado
+     * (`TicketDetailStore.searchAssignees`) e no seletor de responsável de Departamentos, cada tela
+     * com sua própria cópia por ora (achado não-bloqueante de duplicação, registrado nos dois
+     * critiques anteriores). Exige a permissão `users:read`, diferente de `tickets:manage`.
+     */
+    searchResponsibleCandidates(search: string): void {
+      const trimmed = search.trim();
+      if (!trimmed) {
+        patchState(store, { responsibleCandidates: [], searchingResponsibleCandidates: false, responsibleSearchError: null });
+        return;
+      }
+
+      patchState(store, { searchingResponsibleCandidates: true, responsibleSearchError: null });
+
+      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
+        finalize(() => patchState(store, { searchingResponsibleCandidates: false }))
+      ).subscribe({
+        next: (page) => patchState(store, { responsibleCandidates: page.items }),
+        error: (err: HttpErrorResponse) => patchState(store, {
+          responsibleCandidates: [],
+          responsibleSearchError: extractErrorMessage(err, {
+            403: 'Você não tem permissão para buscar usuários.'
+          }, 'Erro ao buscar usuários.')
+        })
+      });
+    },
+
+    /** Limpa os resultados da busca de candidatos a responsável — ex.: ao abrir ou fechar o modal "Atribuir responsável". */
+    clearResponsibleSearch(): void {
+      patchState(store, { responsibleCandidates: [], responsibleSearchError: null });
+    },
+
+    /** Atribui o candidato escolhido no modal "Atribuir responsável" e recarrega a listagem em caso de sucesso. */
+    assignResponsible(ticketId: string, userId: string, onSuccess?: () => void): void {
+      patchState(store, { mutationError: null, assigningResponsible: true });
+
+      store._ticketDataService.assignTicket(ticketId, userId).pipe(
+        finalize(() => patchState(store, { assigningResponsible: false }))
+      ).subscribe({
+        next: () => {
+          store._listResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            mutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para atribuir o responsável deste ticket.',
+              404: 'Ticket ou usuário não encontrado.',
+              409: 'Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.'
+            }, 'Erro ao atribuir o responsável.')
           });
         }
       });

@@ -1,0 +1,57 @@
+<div class="card info-panel h-100">
+  <div class="card-body">
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+      <h5 class="fw-bold mb-0">{{ ticket().title }}</h5>
+      <button type="button" class="btn btn-sm btn-icon rounded-circle btn-outline-secondary flex-shrink-0"
+              aria-label="Fechar painel de informações do ticket" (click)="close.emit()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <span class="badge" [ngClass]="statusBadgeClass[ticket().status]">{{ statusLabels[ticket().status] }}</span>
+      <span class="badge" [ngClass]="priorityBadgeClass[ticket().priority]">{{ priorityLabels[ticket().priority] }}</span>
+      <span class="badge" [ngClass]="slaStatusBadgeClass[ticket().slaStatus]">{{ slaStatusLabels[ticket().slaStatus] }}</span>
+    </div>
+
+    <dl class="info-list mb-3">
+      <dt>Solicitante</dt>
+      <dd>{{ ticket().requesterName }} <span class="text-muted small">({{ ticket().requesterEmail }})</span></dd>
+
+      <dt>Atendente</dt>
+      <dd>
+        @if (ticket().assignedToName) {
+          {{ ticket().assignedToName }}
+        } @else {
+          <span class="text-muted fst-italic">Não atribuído</span>
+        }
+      </dd>
+
+      <dt>Setor</dt>
+      <dd>{{ ticket().sectorName }}</dd>
+
+      <dt>Prazo</dt>
+      <dd>{{ ticket().dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+
+      @if (ticket().resolvedAtUtc) {
+        <dt>Resolvido em</dt>
+        <dd>{{ ticket().resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+      }
+    </dl>
+
+    <div class="mb-3">
+      <div class="info-list-title mb-1">Descrição</div>
+      @if (quickInfoStore.state().loading) {
+        <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando descrição…</span></span>
+      } @else if (quickInfoStore.state().error) {
+        <p class="text-danger small mb-0">{{ quickInfoStore.state().error }}</p>
+      } @else {
+        <p class="small mb-0">{{ quickInfoStore.ticket()?.description }}</p>
+      }
+    </div>
+
+    <a [routerLink]="['/tickets', ticket().id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-primary w-100">
+      Ver detalhes completos
+    </a>
+  </div>
+</div>

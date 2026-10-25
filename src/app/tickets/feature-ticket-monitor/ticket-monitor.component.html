@@ -189,7 +189,10 @@
   <div class="alert alert-danger" role="alert">{{ store.mutationError() }}</div>
 }
 
-<div class="card">
+<div class="row g-3">
+  <div class="col-12" [class.col-lg-8]="selectedTicket()">
+  <app-ticket-monitor-guide class="guide-rail" />
+  <div class="card">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
       <caption class="visually-hidden">Tickets do sistema, filtrados conforme os filtros acima</caption>
@@ -218,7 +221,12 @@
           </tr>
         } @else {
           @for (ticket of store.tickets(); track ticket.id) {
-            <tr>
+            <tr tabindex="0" role="button" class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id"
+                [attr.aria-selected]="selectedTicketId() === ticket.id"
+                [attr.aria-label]="'Selecionar o ticket ' + ticket.title"
+                (click)="selectTicket(ticket.id)"
+                (keydown.enter)="selectTicket(ticket.id)"
+                (keydown.space)="selectTicket(ticket.id); $event.preventDefault()">
               <td class="fw-semibold">{{ ticket.title }}</td>
               <td>
                 <div>{{ ticket.requesterName }}</div>
@@ -249,7 +257,7 @@
                 }
                 {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
               </td>
-              <td class="text-end">
+              <td class="text-end" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                 <div class="d-flex gap-1 justify-content-end">
                   @if (canAssignToMe(ticket)) {
                     <button type="button" class="btn btn-sm btn-outline-primary btn-icon rounded-circle"
@@ -261,6 +269,14 @@
                       } @else {
                         <i class="bx bx-user-plus"></i>
                       }
+                    </button>
+                  }
+                  @if (canAssignResponsible(ticket)) {
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
+                            data-bs-toggle="modal" data-bs-target="#monitorAssignResponsibleModal"
+                            [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo ticket ' : 'Atribuir responsável pelo ticket ') + ticket.title"
+                            (click)="onOpenAssignResponsibleModal(ticket.id)">
+                      <i class="bx bx-user-check"></i>
                     </button>
                   }
                   <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
@@ -313,4 +329,62 @@
       </div>
     </div>
   }
+  </div>
+  </div>
+
+  @if (selectedTicket(); as ticket) {
+    <!-- Abaixo de "lg", o painel vira um overlay de tela cheia (RF-04): a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
+    <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
+    <div class="col-12 col-lg-4 info-panel-col">
+      <app-ticket-monitor-info-panel [ticket]="ticket" (close)="closeInfoPanel()" />
+    </div>
+  }
+</div>
+
+<!-- Só aparece em telas muito largas, no espaço livre à direita do container central (ver CSS). -->
+<app-ticket-monitor-insights class="insights-rail" />
+
+<!-- Modal de atribuição de responsável -->
+<div class="modal fade" id="monitorAssignResponsibleModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="monitorAssignResponsibleModalTitle">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="monitorAssignResponsibleModalTitle">Atribuir responsável</h5>
+        <button id="monitorAssignResponsibleModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label small" for="monitorResponsibleSearch">Buscar usuário</label>
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="bx bx-search"></i></span>
+          <input id="monitorResponsibleSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
+                 [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
+        </div>
+
+        @if (store.responsibleSearchError()) {
+          <div class="alert alert-danger py-2 small mb-0" role="alert">{{ store.responsibleSearchError() }}</div>
+        } @else if (store.searchingResponsibleCandidates()) {
+          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
+        } @else if (responsibleSearchInput().trim().length === 0) {
+          <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
+        } @else if (store.responsibleCandidates().length === 0) {
+          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+        } @else {
+          <ul class="list-group">
+            @for (candidate of store.responsibleCandidates(); track candidate.id) {
+              <li class="list-group-item p-0">
+                <button type="button" class="btn w-100 text-start p-2 rounded-0" [disabled]="store.assigningResponsible()" (click)="onSelectResponsibleCandidate(candidate)">
+                  <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
+                  <div class="small text-muted">{{ candidate.email }}</div>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (store.mutationError()) {
+          <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">{{ store.mutationError() }}</div>
+        }
+      </div>
+    </div>
+  </div>
 </div>

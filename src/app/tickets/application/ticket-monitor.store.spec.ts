@@ -11,6 +11,7 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { PagedResponse } from '../../shared';
+import { UserDataService, UserSummary } from '../../users';
 
 describe('TicketMonitorStore', () => {
   const ticket: TicketMonitorItem = {
@@ -27,19 +28,30 @@ describe('TicketMonitorStore', () => {
     return { items, page, pageSize, totalCount, totalPages, hasPreviousPage: page > 1, hasNextPage: page < totalPages };
   }
 
+  const candidate: UserSummary = {
+    id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
+    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null
+  };
+
   let store: InstanceType<typeof TicketMonitorStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
+  let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
     dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getSlaSummary', 'assignTicket']);
     dataService.getAll.and.returnValue(of(pageOf([ticket])));
     dataService.getSlaSummary.and.returnValue(of(slaSummary));
+    userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
+    userDataService.getAll.and.returnValue(of({
+      items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
+    }));
 
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         TicketMonitorStore,
-        { provide: TicketDataService, useValue: dataService }
+        { provide: TicketDataService, useValue: dataService },
+        { provide: UserDataService, useValue: userDataService }
       ]
     });
     store = TestBed.inject(TicketMonitorStore);
@@ -190,6 +202,79 @@ describe('TicketMonitorStore', () => {
 
     expect(store.mutationError()).toContain('já ter outro responsável');
     expect(store.assigningToMeIds()).toEqual([]);
+    expect(dataService.getAll).not.toHaveBeenCalled();
+  });
+
+  it('chama onSuccess depois de recarregar a listagem, ao atribuir com sucesso', async () => {
+    dataService.assignTicket.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.assignToMe('t1', 'u-current', onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('não busca candidatos a responsável com o termo vazio', () => {
+    store.searchResponsibleCandidates('');
+
+    expect(userDataService.getAll).not.toHaveBeenCalled();
+    expect(store.responsibleCandidates()).toEqual([]);
+  });
+
+  it('busca candidatos a responsável pelo termo informado', async () => {
+    store.searchResponsibleCandidates('joão');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'joão', page: 1, pageSize: 8 });
+    expect(store.responsibleCandidates()).toEqual([candidate]);
+  });
+
+  it('mostra mensagem própria quando falta permissão pra buscar usuários (403)', async () => {
+    userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+    store.searchResponsibleCandidates('joão');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.responsibleSearchError()).toBe('Você não tem permissão para buscar usuários.');
+    expect(store.responsibleCandidates()).toEqual([]);
+  });
+
+  it('limpa a busca de candidatos a responsável', () => {
+    store.searchResponsibleCandidates('joão');
+    store.clearResponsibleSearch();
+
+    expect(store.responsibleCandidates()).toEqual([]);
+    expect(store.responsibleSearchError()).toBeNull();
+  });
+
+  it('atribui o responsável escolhido, recarrega a listagem e chama onSuccess', async () => {
+    dataService.assignTicket.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+    dataService.getAll.calls.reset();
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.assignResponsible('t1', 'u2', onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.assignTicket).toHaveBeenCalledWith('t1', 'u2');
+    expect(dataService.getAll).toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalled();
+    expect(store.assigningResponsible()).toBeFalse();
+    expect(store.mutationError()).toBeNull();
+  });
+
+  it('mostra uma mensagem específica por código de erro ao falhar a atribuição de responsável, sem recarregar a listagem', async () => {
+    dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+    dataService.getAll.calls.reset();
+
+    store.assignResponsible('t1', 'u2');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutationError()).toBe('Ticket ou usuário não encontrado.');
+    expect(store.assigningResponsible()).toBeFalse();
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
