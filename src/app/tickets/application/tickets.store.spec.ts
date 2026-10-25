@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef, provideZonelessChangeDetection, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { TicketsStore } from './tickets.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { Ticket } from '../entities/ticket';
@@ -110,6 +110,35 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBeNull();
   });
 
+  it('marca creating durante a criação, e libera ao terminar', async () => {
+    const subject = new Subject<string>();
+    dataService.create.and.returnValue(subject);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
+    expect(store.creating()).toBeTrue();
+
+    subject.next('t2');
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.creating()).toBeFalse();
+  });
+
+  it('libera creating mesmo quando a criação falha', async () => {
+    const subject = new Subject<string>();
+    dataService.create.and.returnValue(subject);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
+    expect(store.creating()).toBeTrue();
+
+    subject.error(new HttpErrorResponse({ status: 500 }));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.creating()).toBeFalse();
+  });
+
   it('expõe mensagem de erro quando a criação falhar', async () => {
     dataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
@@ -172,5 +201,34 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.state().error).toBe('Erro ao excluir o ticket');
+  });
+
+  it('marca o ticket como pendente durante a reabertura, e libera ao terminar', async () => {
+    const subject = new Subject<void>();
+    dataService.reopen.and.returnValue(subject);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.reopen('t1');
+    expect(store.pendingTicketIds()).toEqual(['t1']);
+
+    subject.next();
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.pendingTicketIds()).toEqual([]);
+  });
+
+  it('libera o ticket pendente mesmo quando a exclusão falha', async () => {
+    const subject = new Subject<void>();
+    dataService.delete.and.returnValue(subject);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.remove('t1');
+    expect(store.pendingTicketIds()).toEqual(['t1']);
+
+    subject.error(new HttpErrorResponse({ status: 500 }));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.pendingTicketIds()).toEqual([]);
   });
 });

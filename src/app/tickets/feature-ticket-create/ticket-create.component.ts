@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
+import { ToastService } from '../../shared';
 
 /** Tela de abertura de um novo ticket. */
 @Component({
@@ -17,6 +18,7 @@ import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-prior
 export class TicketCreateComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly router = inject(Router);
+    private readonly toastService = inject(ToastService);
     protected readonly store = inject(TicketsStore);
     protected readonly departmentsStore = inject(DepartmentsStore);
 
@@ -75,6 +77,9 @@ export class TicketCreateComponent implements OnInit {
             description: raw.description!,
             priority: raw.priority!,
             sectorId: raw.sectorId!
-        }, () => this.router.navigate(['/tickets']));
+        }, () => {
+            this.toastService.show('Ticket aberto com sucesso.');
+            this.router.navigate(['/tickets']);
+        });
     }
 }

@@ -1,7 +1,10 @@
 <div class="row mb-4">
   <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Início / Meus Tickets /</span> Novo Ticket</h4>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+      <div>
+        <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Início / Meus Tickets /</span> Novo Ticket</h4>
+        <p class="page-subtitle small mb-0">Descreva o problema e escolha o departamento e o setor responsável.</p>
+      </div>
       <a routerLink="/tickets" class="btn btn-outline-secondary btn-sm">
         <i class="bx bx-arrow-back me-1"></i> Voltar
       </a>
@@ -21,9 +24,9 @@
           <div class="col-12">
             <label class="form-label" for="ticketTitle">Título</label>
             <input id="ticketTitle" type="text" class="form-control" formControlName="title" placeholder="Ex: Impressora não funciona"
-                   [class.is-invalid]="isFieldInvalid('title')" />
+                   [class.is-invalid]="isFieldInvalid('title')" [attr.aria-describedby]="isFieldInvalid('title') ? 'ticketTitleError' : null" />
             @if (isFieldInvalid('title')) {
-              <div class="invalid-feedback">
+              <div id="ticketTitleError" class="invalid-feedback">
                 @if (form.controls.title.errors?.['required']) {
                   O título é obrigatório.
                 } @else if (form.controls.title.errors?.['maxlength']) {
@@ -36,9 +39,9 @@
           <div class="col-12">
             <label class="form-label" for="ticketDescription">Descrição</label>
             <textarea id="ticketDescription" class="form-control" rows="4" formControlName="description" placeholder="Descreva o problema em detalhes"
-                      [class.is-invalid]="isFieldInvalid('description')"></textarea>
+                      [class.is-invalid]="isFieldInvalid('description')" [attr.aria-describedby]="isFieldInvalid('description') ? 'ticketDescriptionError' : null"></textarea>
             @if (isFieldInvalid('description')) {
-              <div class="invalid-feedback">
+              <div id="ticketDescriptionError" class="invalid-feedback">
                 @if (form.controls.description.errors?.['required']) {
                   A descrição é obrigatória.
                 } @else if (form.controls.description.errors?.['minlength']) {
@@ -62,35 +65,50 @@
           <div class="col-12 col-md-4">
             <label class="form-label" for="ticketDepartmentId">Departamento</label>
             <select id="ticketDepartmentId" class="form-select" formControlName="departmentId"
-                    [class.is-invalid]="isFieldInvalid('departmentId')">
+                    [class.is-invalid]="isFieldInvalid('departmentId')"
+                    [attr.aria-describedby]="isFieldInvalid('departmentId') ? 'ticketDepartmentIdError' : null">
               <option value="" disabled>Selecione...</option>
               @for (department of departmentsWithSectors(); track department.id) {
                 <option [value]="department.id">{{ department.name }}</option>
               }
             </select>
+            @if (departmentsStore.listState().loading) {
+              <div class="form-text"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Carregando departamentos…</div>
+            } @else if (departmentsStore.listState().error) {
+              <div class="form-text text-danger">{{ departmentsStore.listState().error }}</div>
+            }
             @if (isFieldInvalid('departmentId')) {
-              <div class="invalid-feedback">Selecione o departamento.</div>
+              <div id="ticketDepartmentIdError" class="invalid-feedback">Selecione o departamento.</div>
             }
           </div>
 
           <div class="col-12 col-md-4">
             <label class="form-label" for="ticketSectorId">Setor</label>
             <select id="ticketSectorId" class="form-select" formControlName="sectorId"
-                    [class.is-invalid]="isFieldInvalid('sectorId')">
+                    [class.is-invalid]="isFieldInvalid('sectorId')"
+                    [attr.aria-describedby]="isFieldInvalid('sectorId') ? 'ticketSectorIdError' : null">
               <option value="" disabled>Selecione...</option>
               @for (sector of availableSectors(); track sector.id) {
                 <option [value]="sector.id">{{ sector.name }}</option>
               }
             </select>
+            @if (form.controls.sectorId.disabled) {
+              <div class="form-text">Escolha um departamento primeiro.</div>
+            }
             @if (isFieldInvalid('sectorId')) {
-              <div class="invalid-feedback">Selecione o setor.</div>
+              <div id="ticketSectorIdError" class="invalid-feedback">Selecione o setor.</div>
             }
           </div>
         </div>
 
         <div class="mt-5">
-          <button type="submit" class="btn btn-primary w-100" [disabled]="form.invalid">
-            <i class="bx bx-send me-1"></i> Abrir Ticket
+          <button type="submit" class="btn btn-primary w-100" [disabled]="form.invalid || store.creating()">
+            @if (store.creating()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            } @else {
+              <i class="bx bx-send me-1"></i>
+            }
+            Abrir Ticket
           </button>
         </div>
       </form>

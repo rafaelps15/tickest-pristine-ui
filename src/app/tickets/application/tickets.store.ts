@@ -2,6 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { CreateTicketData, Ticket, UpdateTicketData } from '../entities/ticket';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { SessionService, extractErrorMessage } from '../../shared';
@@ -15,7 +16,11 @@ export const TicketsStore = signalStore(
   withState({
     mutationError: null as string | null,
     page: 1,
-    pageSize: TICKETS_PAGE_SIZE
+    pageSize: TICKETS_PAGE_SIZE,
+    /** Ids de tickets com reabertura ou exclusão em andamento — trava o botão da linha e evita duplo-envio. */
+    pendingTicketIds: [] as string[],
+    /** Criação de ticket em andamento — trava o botão de envio e evita duplo-envio. */
+    creating: false
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
@@ -82,11 +87,18 @@ export const TicketsStore = signalStore(
       store._listResource.reload();
     },
 
-    /** Cria um novo ticket e recarrega a listagem na primeira página (onde o ticket novo aparece) em caso de sucesso. */
+    /**
+     * Cria um novo ticket e recarrega a listagem na primeira página (onde o ticket novo aparece) em caso de
+     * sucesso. Marca `creating` durante a chamada, pra travar o botão de envio e evitar duplo-envio.
+     */
     create(data: CreateTicketData, onSuccess?: () => void): void {
-      store._ticketDataService.create(data).subscribe({
+      patchState(store, { mutationError: null, creating: true });
+
+      store._ticketDataService.create(data).pipe(
+        finalize(() => patchState(store, { creating: false }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null, page: 1 });
+          patchState(store, { page: 1 });
           store._listResource.reload();
           onSuccess?.();
         },
@@ -109,13 +121,19 @@ export const TicketsStore = signalStore(
       });
     },
 
-    /** Reabre um ticket inativo e recarrega a listagem em caso de sucesso. */
+    /**
+     * Reabre um ticket inativo e recarrega a listagem em caso de sucesso. Marca o id como pendente
+     * durante a chamada, pra travar o botão da linha e evitar duplo-envio num duplo-clique.
+     */
     reopen(ticketId: string): void {
-      store._ticketDataService.reopen(ticketId).subscribe({
-        next: () => {
-          patchState(store, { mutationError: null });
-          store._listResource.reload();
-        },
+      patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
+
+      store._ticketDataService.reopen(ticketId).pipe(
+        finalize(() => patchState(store, {
+          pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
+        }))
+      ).subscribe({
+        next: () => store._listResource.reload(),
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao reabrir o ticket') });
         }
@@ -124,12 +142,18 @@ export const TicketsStore = signalStore(
 
     /**
      * Exclui (soft-delete) um ticket e recarrega a listagem em caso de sucesso. Se era o último item de uma
-     * página que não é a primeira, volta uma página para a tela não ficar vazia.
+     * página que não é a primeira, volta uma página para a tela não ficar vazia. Marca o id como pendente
+     * durante a chamada, pra travar o botão da linha e evitar duplo-envio num duplo-clique.
      */
     remove(ticketId: string): void {
-      store._ticketDataService.delete(ticketId).subscribe({
+      patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
+
+      store._ticketDataService.delete(ticketId).pipe(
+        finalize(() => patchState(store, {
+          pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
+        }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
           if (store.tickets().length === 1 && store.page() > 1) {
             patchState(store, { page: store.page() - 1 });
           } else {

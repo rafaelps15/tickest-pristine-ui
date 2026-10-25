@@ -32,6 +32,7 @@ describe('TicketListComponent', () => {
       totalPages: signal(1),
       hasPreviousPage: signal(false),
       hasNextPage: signal(false),
+      pendingTicketIds: signal<string[]>([]),
       loadForCurrentUser: jasmine.createSpy('loadForCurrentUser'),
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
@@ -98,6 +99,18 @@ describe('TicketListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar tickets');
+  });
+
+  it('recarrega os tickets ao clicar em "Tentar novamente" no alerta de erro', async () => {
+    storeFake.state.set({ data: [], loading: false, error: 'Erro ao carregar tickets' });
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const retryButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Tentar novamente'));
+    retryButton?.click();
+
+    expect(storeFake.loadForCurrentUser).toHaveBeenCalledTimes(2);
   });
 
   it('só mostra "Reabrir" para tickets inativos (Resolvido/Fechado/Cancelado)', async () => {
@@ -198,6 +211,19 @@ describe('TicketListComponent', () => {
 
     expect(pageOneButton?.getAttribute('aria-current')).toBe('page');
     expect(pageTwoButton?.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('desabilita e mostra um spinner nos botões "Reabrir"/"Excluir" do ticket pendente', async () => {
+    storeFake.tickets.set([openTicket, resolvedTicket]);
+    storeFake.pendingTicketIds.set(['t2']);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.isPending(resolvedTicket)).toBeTrue();
+    expect(fixture.componentInstance.isPending(openTicket)).toBeFalse();
+
+    const reopenButton = fixture.nativeElement.querySelector('.dropdown-item.text-success') as HTMLButtonElement;
+    expect(reopenButton.disabled).toBeTrue();
   });
 
   it('muda o tamanho da página', async () => {

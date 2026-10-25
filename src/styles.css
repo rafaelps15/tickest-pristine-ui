@@ -105,6 +105,16 @@ body {
   background: rgba(var(--tk-primary-rgb), 0.4);
 }
 
+/*
+ * Subtítulo de uma linha abaixo do título da tela, explicando o que ela entrega — usado em mais
+ * de uma tela (Dashboard, Monitorar Tickets e, a partir daqui, as demais telas de tickets), por
+ * isso promovido a classe global em vez de duplicado no CSS isolado de cada componente.
+ */
+.page-subtitle {
+  color: var(--tk-text-secondary);
+  max-width: 48rem;
+}
+
 /* Cards: elevação suave e consistente em todas as telas */
 .card {
   border: none;

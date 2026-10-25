@@ -1,8 +1,4 @@
-/* Cabeçalho: respiro entre o rótulo "Administração" e o título, sem pesar no layout. */
-.page-subtitle {
-  color: var(--tk-text-secondary);
-  max-width: 48rem;
-}
+/* .page-subtitle agora é classe global (src/styles.css) — usada em mais de uma tela de tickets. */
 
 /* Cards de resumo de SLA: mesmo visual dos cards de estatística do Dashboard. */
 .card-stats {

@@ -5,6 +5,7 @@ import { TicketCreateComponent } from './ticket-create.component';
 import { TicketsStore } from '../application/tickets.store';
 import { TicketPriority } from '../entities/ticket-priority';
 import { Department, DepartmentsStore } from '../../departments';
+import { ToastService } from '../../shared';
 
 describe('TicketCreateComponent', () => {
   const informationTechnology: Department = {
@@ -22,15 +23,26 @@ describe('TicketCreateComponent', () => {
     sectors: []
   };
 
-  let ticketsStoreFake: { state: ReturnType<typeof signal<{ error: string | null }>>; create: jasmine.Spy };
-  let departmentsStoreFake: { departments: ReturnType<typeof signal<Department[]>>; load: jasmine.Spy };
+  let ticketsStoreFake: {
+    state: ReturnType<typeof signal<{ error: string | null }>>;
+    creating: ReturnType<typeof signal<boolean>>;
+    create: jasmine.Spy;
+  };
+  let departmentsStoreFake: {
+    departments: ReturnType<typeof signal<Department[]>>;
+    listState: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>;
+    load: jasmine.Spy;
+  };
+  let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
-    ticketsStoreFake = { state: signal({ error: null }), create: jasmine.createSpy('create') };
+    ticketsStoreFake = { state: signal({ error: null }), creating: signal(false), create: jasmine.createSpy('create') };
     departmentsStoreFake = {
       departments: signal<Department[]>([informationTechnology, departmentWithoutSectors]),
+      listState: signal({ loading: false, error: null }),
       load: jasmine.createSpy('load')
     };
+    toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
       imports: [TicketCreateComponent],
@@ -38,7 +50,8 @@ describe('TicketCreateComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketsStore, useValue: ticketsStoreFake },
-        { provide: DepartmentsStore, useValue: departmentsStoreFake }
+        { provide: DepartmentsStore, useValue: departmentsStoreFake },
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -72,6 +85,35 @@ describe('TicketCreateComponent', () => {
 
     expect(component.form.controls.sectorId.enabled).toBeTrue();
     expect(component.availableSectors()).toEqual(informationTechnology.sectors);
+  });
+
+  it('mostra um spinner no campo Departamento enquanto a lista carrega', async () => {
+    departmentsStoreFake.listState.set({ loading: true, error: null });
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Carregando departamentos…');
+  });
+
+  it('mostra o erro do store de departamentos quando a busca falhar', async () => {
+    departmentsStoreFake.listState.set({ loading: false, error: 'Erro ao carregar departamentos' });
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar departamentos');
+  });
+
+  it('liga o campo Título ao seu texto de erro via aria-describedby', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.form.controls.title.markAsTouched();
+    fixture.detectChanges();
+
+    const titleInput = fixture.nativeElement.querySelector('#ticketTitle') as HTMLInputElement;
+    expect(titleInput.getAttribute('aria-describedby')).toBe('ticketTitleError');
+    expect(fixture.nativeElement.querySelector('#ticketTitleError')).toBeTruthy();
   });
 
   it('mostra erro de validação por campo depois de tocado e inválido', async () => {
@@ -132,5 +174,44 @@ describe('TicketCreateComponent', () => {
       priority: TicketPriority.Medium,
       sectorId: 'sec-1'
     }, jasmine.any(Function));
+  });
+
+  it('mostra um toast de sucesso ao abrir o chamado', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.form.controls.title.setValue('Impressora não funciona');
+    component.form.controls.description.setValue('A impressora do 2º andar não imprime nada.');
+    component.form.controls.departmentId.setValue('dep-1');
+    component.form.controls.sectorId.setValue('sec-1');
+    component.onSubmit();
+
+    const onSuccess = ticketsStoreFake.create.calls.mostRecent().args[1];
+    onSuccess();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket aberto com sucesso.');
+  });
+
+  it('desabilita e mostra um spinner no botão de envio enquanto o ticket está sendo criado', async () => {
+    ticketsStoreFake.creating.set(true);
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    const submitButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(submitButton.disabled).toBeTrue();
+    expect(submitButton.querySelector('.spinner-border')).toBeTruthy();
+  });
+
+  it('avisa que é preciso escolher um departamento primeiro, enquanto o setor está desabilitado', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Escolha um departamento primeiro.');
+
+    fixture.componentInstance.form.controls.departmentId.setValue('dep-1');
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Escolha um departamento primeiro.');
   });
 });

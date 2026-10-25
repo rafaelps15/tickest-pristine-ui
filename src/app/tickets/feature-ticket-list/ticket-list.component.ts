@@ -82,6 +82,11 @@ export class TicketListComponent implements OnInit {
             || ticket.status === TicketStatus.Canceled;
     }
 
+    /** Indica se o ticket tem uma reabertura ou exclusão em andamento — trava o botão da linha. */
+    isPending(ticket: Ticket): boolean {
+        return this.store.pendingTicketIds().includes(ticket.id);
+    }
+
     /** Reabre o ticket selecionado. */
     onReopen(ticket: Ticket): void {
         this.store.reopen(ticket.id);
