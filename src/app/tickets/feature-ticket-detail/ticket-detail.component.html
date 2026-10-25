@@ -28,12 +28,36 @@
       </div>
       <p class="text-muted mb-4">{{ t.description }}</p>
 
-      <dl class="row small mb-0 max-w-700">
-        <dt class="col-sm-3 text-muted fw-normal">Aberto por</dt>
-        <dd class="col-sm-9">{{ t.openedByName }}</dd>
+      @if (nextStatusOptions(t.status).length > 0 || canReopenTicket(t.status)) {
+        <div class="d-flex gap-2 flex-wrap mb-4">
+          @for (nextStatus of nextStatusOptions(t.status); track nextStatus) {
+            <button type="button" class="btn btn-sm"
+                    [class.btn-outline-danger]="nextStatus === TicketStatus.Canceled"
+                    [class.btn-outline-primary]="nextStatus !== TicketStatus.Canceled"
+                    [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(nextStatus, t.description)">
+              @if (detailStore.updatingStatus()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              {{ statusActionLabels[nextStatus] }}
+            </button>
+          }
+          @if (canReopenTicket(t.status)) {
+            <button type="button" class="btn btn-sm btn-outline-success" [disabled]="detailStore.reopening()" (click)="onReopen()">
+              @if (detailStore.reopening()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Reabrir chamado
+            </button>
+          }
+        </div>
+      }
 
-        <dt class="col-sm-3 text-muted fw-normal">Responsável</dt>
-        <dd class="col-sm-9 d-flex align-items-center gap-2 flex-wrap">
+      <dl class="row small mb-0 max-w-700">
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Aberto por</dt>
+        <dd class="col-12 col-sm-9">{{ t.openedByName }}</dd>
+
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Responsável</dt>
+        <dd class="col-12 col-sm-9 d-flex align-items-center gap-2 flex-wrap">
           {{ t.assignedToName ?? 'Ainda não atribuído' }}
           @if (canAssignTicket(t.status)) {
             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ticketAssignModal" (click)="onOpenAssignModal()">
@@ -50,14 +74,19 @@
           }
         </dd>
 
-        <dt class="col-sm-3 text-muted fw-normal">Setor</dt>
-        <dd class="col-sm-9">{{ t.sectorName }}</dd>
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Setor</dt>
+        <dd class="col-12 col-sm-9">{{ t.sectorName }}</dd>
 
-        <dt class="col-sm-3 text-muted fw-normal">Aberto em</dt>
-        <dd class="col-sm-9">{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Aberto em</dt>
+        <dd class="col-12 col-sm-9">{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
 
-        <dt class="col-sm-3 text-muted fw-normal">Prazo</dt>
-        <dd class="col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
+        @if (t.resolvedAtUtc) {
+          <dt class="col-12 col-sm-3 text-muted fw-normal">Resolvido em</dt>
+          <dd class="col-12 col-sm-9">{{ t.resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        }
+
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Prazo</dt>
+        <dd class="col-12 col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
           {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
           @if (dueRelativeLabel(t); as relative) {
             <span class="fw-semibold">— {{ relative }}</span>

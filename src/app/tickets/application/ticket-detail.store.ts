@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
+import { TicketStatus } from '../entities/ticket-status';
 import { UserDataService, UserSummary } from '../../users';
 import { extractErrorMessage } from '../../shared';
 
@@ -20,6 +21,8 @@ export const TicketDetailStore = signalStore(
     mutationError: null as string | null,
     removingAssignee: false,
     assigningTicket: false,
+    updatingStatus: false,
+    reopening: false,
     assigneeCandidates: [] as UserSummary[],
     searchingAssignees: false,
     assigneeSearchError: null as string | null
@@ -122,6 +125,56 @@ export const TicketDetailStore = signalStore(
     /** Limpa os resultados da busca de candidatos a responsável — ex.: ao abrir o modal de atribuição. */
     clearAssigneeSearch(): void {
       patchState(store, { assigneeCandidates: [], assigneeSearchError: null });
+    },
+
+    /**
+     * Muda o status do ticket (PUT /tickets/{id}, que exige descrição + status juntos — por isso
+     * recebe a descrição atual, sem oferecer edição aqui) e recarrega o detalhe em caso de
+     * sucesso. Exige a permissão `tickets:manage`.
+     */
+    updateStatus(ticketId: string, status: TicketStatus, currentDescription: string, onSuccess?: () => void): void {
+      patchState(store, { mutationError: null, updatingStatus: true });
+
+      store._ticketDataService.update(ticketId, { description: currentDescription, status }).pipe(
+        finalize(() => patchState(store, { updatingStatus: false }))
+      ).subscribe({
+        next: () => {
+          store._detailResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            mutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para mudar o status deste chamado.',
+              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              409: 'Não foi possível mudar o status — tente novamente.'
+            }, 'Erro ao mudar o status do chamado.')
+          });
+        }
+      });
+    },
+
+    /** Reabre um ticket inativo (Resolvido/Fechado/Cancelado) e recarrega o detalhe em caso de sucesso. */
+    reopen(ticketId: string, onSuccess?: () => void): void {
+      patchState(store, { mutationError: null, reopening: true });
+
+      store._ticketDataService.reopen(ticketId).pipe(
+        finalize(() => patchState(store, { reopening: false }))
+      ).subscribe({
+        next: () => {
+          store._detailResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            mutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para reabrir este chamado.',
+              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              409: 'Não foi possível reabrir o chamado — tente novamente.'
+            }, 'Erro ao reabrir o chamado.')
+          });
+        }
+      });
     },
 
     /**

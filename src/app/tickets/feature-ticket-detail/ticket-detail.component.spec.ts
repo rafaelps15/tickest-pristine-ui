@@ -12,7 +12,7 @@ import { TicketHistoryAction, TicketHistoryEntry } from '../entities/ticket-hist
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
-import { ConfirmDialogService, SessionService, setRoleColor } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService, setRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
 
 const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
@@ -49,12 +49,16 @@ describe('TicketDetailComponent', () => {
       mutationError: signal<string | null>(null),
       removingAssignee: signal(false),
       assigningTicket: signal(false),
+      updatingStatus: signal(false),
+      reopening: signal(false),
       assigneeCandidates: signal<UserSummary[]>([]),
       searchingAssignees: signal(false),
       assigneeSearchError: signal<string | null>(null),
       loadTicket: jasmine.createSpy('loadTicket'),
       removeAssignee: jasmine.createSpy('removeAssignee'),
       assignTicket: jasmine.createSpy('assignTicket'),
+      updateStatus: jasmine.createSpy('updateStatus'),
+      reopen: jasmine.createSpy('reopen'),
       searchAssignees: jasmine.createSpy('searchAssignees'),
       clearAssigneeSearch: jasmine.createSpy('clearAssigneeSearch'),
       clearMutationError: jasmine.createSpy('clearMutationError')
@@ -98,6 +102,7 @@ describe('TicketDetailComponent', () => {
   let historyStoreFake: ReturnType<typeof createHistoryStoreFake>;
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
   let sessionServiceFake: { hasPermission: jasmine.Spy };
+  let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
     localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
@@ -106,6 +111,7 @@ describe('TicketDetailComponent', () => {
     historyStoreFake = createHistoryStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
     sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
+    toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
       imports: [TicketDetailComponent],
@@ -120,7 +126,8 @@ describe('TicketDetailComponent', () => {
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }), queryParamMap: convertToParamMap({}) } }
         },
         { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
-        { provide: SessionService, useValue: sessionServiceFake }
+        { provide: SessionService, useValue: sessionServiceFake },
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -144,7 +151,7 @@ describe('TicketDetailComponent', () => {
     expect(backLink.getAttribute('href')).toBe('/tickets');
   });
 
-  it('mostra "Monitorar Tickets" no trilho e volta pra /tickets/monitorar quando chega com ?from=monitor', async () => {
+  it('mostra "Administração / Monitorar Tickets" no trilho e volta pra /tickets/monitorar quando chega com ?from=monitor', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: {
         snapshot: { paramMap: convertToParamMap({ id: 't1' }), queryParamMap: convertToParamMap({ from: 'monitor' }) }
@@ -153,7 +160,7 @@ describe('TicketDetailComponent', () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Monitorar Tickets /');
+    expect(fixture.nativeElement.textContent).toContain('Administração / Monitorar Tickets /');
     const backLink = fixture.nativeElement.querySelector('a.btn-outline-secondary') as HTMLAnchorElement;
     expect(backLink.getAttribute('href')).toBe('/tickets/monitorar');
   });
@@ -198,6 +205,21 @@ describe('TicketDetailComponent', () => {
 
     expect(fixture.nativeElement.textContent).not.toContain('Vence em');
     expect(fixture.nativeElement.textContent).not.toContain('Atrasado há');
+  });
+
+  it('mostra "Resolvido em" quando o chamado tem data de resolução', async () => {
+    detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved, resolvedAtUtc: '2026-01-02T10:00:00Z' });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Resolvido em');
+  });
+
+  it('não mostra "Resolvido em" quando o chamado ainda não foi resolvido', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Resolvido em');
   });
 
   it('mostra quem abriu, o setor e o responsável (ou que ainda não foi atribuído)', async () => {
@@ -296,8 +318,21 @@ describe('TicketDetailComponent', () => {
 
     fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
 
-    expect(attachmentsStoreFake.upload).toHaveBeenCalledWith(file);
+    expect(attachmentsStoreFake.upload).toHaveBeenCalledWith(file, jasmine.any(Function));
     expect(fixture.componentInstance.fileValidationError()).toBeNull();
+  });
+
+  it('mostra um toast de sucesso ao enviar o anexo', async () => {
+    attachmentsStoreFake.upload.and.callFake((_file: File, onSuccess?: () => void) => onSuccess?.());
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const file = new File(['x'], 'foto.png', { type: 'image/png' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [file] });
+    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Anexo enviado.');
   });
 
   it('exclui o anexo quando confirmado', async () => {
@@ -307,7 +342,18 @@ describe('TicketDetailComponent', () => {
 
     fixture.componentInstance.onDeleteAttachment('a1', 'foto.png');
 
-    expect(attachmentsStoreFake.delete).toHaveBeenCalledWith('a1');
+    expect(attachmentsStoreFake.delete).toHaveBeenCalledWith('a1', jasmine.any(Function));
+  });
+
+  it('mostra um toast de sucesso ao excluir o anexo', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    attachmentsStoreFake.delete.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeleteAttachment('a1', 'foto.png');
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Anexo excluído.');
   });
 
   it('não exclui o anexo quando a confirmação for cancelada', async () => {
@@ -430,6 +476,7 @@ describe('TicketDetailComponent', () => {
       expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
       expect(detailStoreFake.removeAssignee).toHaveBeenCalledWith('t1', jasmine.any(Function));
       expect(historyStoreFake.reload).toHaveBeenCalled();
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Responsável removido.');
     });
 
     it('não remove o responsável quando a confirmação for cancelada', async () => {
@@ -637,6 +684,7 @@ describe('TicketDetailComponent', () => {
 
     it('atribui o candidato selecionado e recarrega o histórico em caso de sucesso', async () => {
       detailStoreFake.assignTicket.and.callFake((_id: string, _userId: string, onSuccess?: () => void) => onSuccess?.());
+      detailStoreFake.assigneeCandidates.set([candidate]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       fixture.componentInstance.selectedAssigneeId.set('u2');
@@ -645,6 +693,7 @@ describe('TicketDetailComponent', () => {
 
       expect(detailStoreFake.assignTicket).toHaveBeenCalledWith('t1', 'u2', jasmine.any(Function));
       expect(historyStoreFake.reload).toHaveBeenCalled();
+      expect(toastServiceFake.show).toHaveBeenCalledWith('João Pedro agora é o responsável.');
     });
 
     it('mostra a mensagem de erro da mutação quando a atribuição falhar', async () => {
@@ -682,6 +731,134 @@ describe('TicketDetailComponent', () => {
       expect(text).toContain('Isso substitui');
       expect(text).toContain('Maria Souza');
       expect(text).toContain('João Pedro');
+    });
+  });
+
+  describe('mudar status', () => {
+    function findButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>, text: string): HTMLButtonElement | undefined {
+      return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes(text));
+    }
+
+    it('mostra os próximos status válidos pra um chamado Aberto', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findButton(fixture, 'Iniciar atendimento')).toBeTruthy();
+      expect(findButton(fixture, 'Cancelar chamado')).toBeTruthy();
+      expect(findButton(fixture, 'Marcar como resolvido')).toBeFalsy();
+    });
+
+    it('mostra só "Fechar chamado" pra um chamado Resolvido', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findButton(fixture, 'Fechar chamado')).toBeTruthy();
+      expect(findButton(fixture, 'Cancelar chamado')).toBeFalsy();
+    });
+
+    it('não mostra nenhum botão de transição sem a permissão tickets:manage', async () => {
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findButton(fixture, 'Iniciar atendimento')).toBeFalsy();
+      expect(findButton(fixture, 'Cancelar chamado')).toBeFalsy();
+    });
+
+    it('não mostra nenhum botão de transição pra um chamado Fechado (terminal)', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Closed });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findButton(fixture, 'Iniciar atendimento')).toBeFalsy();
+      expect(findButton(fixture, 'Marcar como resolvido')).toBeFalsy();
+      expect(findButton(fixture, 'Fechar chamado')).toBeFalsy();
+    });
+
+    it('muda o status sem confirmação para uma transição de rotina (Iniciar atendimento)', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Iniciar atendimento')!.click();
+
+      expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.InProgress, ticket.description, jasmine.any(Function));
+    });
+
+    it('pede confirmação antes de cancelar, e cancela quando confirmado', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      confirmDialogServiceFake.confirm.and.returnValue(of(true));
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Cancelar chamado')!.click();
+
+      expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, ticket.description, jasmine.any(Function));
+    });
+
+    it('não cancela quando a confirmação é negada', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      confirmDialogServiceFake.confirm.and.returnValue(of(false));
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Cancelar chamado')!.click();
+
+      expect(detailStoreFake.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('mostra um toast e recarrega o histórico ao mudar o status com sucesso', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress });
+      detailStoreFake.updateStatus.and.callFake((_id: string, _status: TicketStatus, _desc: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Marcar como resolvido')!.click();
+
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado marcado como resolvido.');
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+  });
+
+  describe('reabrir', () => {
+    function findReopenButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
+      return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Reabrir chamado'));
+    }
+
+    it('mostra o botão "Reabrir chamado" pra um chamado Resolvido/Fechado/Cancelado', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Canceled });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findReopenButton(fixture)).toBeTruthy();
+    });
+
+    it('não mostra o botão "Reabrir chamado" pra um chamado ativo', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findReopenButton(fixture)).toBeFalsy();
+    });
+
+    it('reabre o chamado, mostra um toast e recarrega o histórico em caso de sucesso', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      detailStoreFake.reopen.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findReopenButton(fixture)!.click();
+
+      expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', jasmine.any(Function));
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto.');
+      expect(historyStoreFake.reload).toHaveBeenCalled();
     });
   });
 

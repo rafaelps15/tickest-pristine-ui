@@ -6,12 +6,15 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TicketHistoryStore } from '../application/ticket-history.store';
-import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_ACTIVE_STATUSES } from '../entities/ticket-status';
+import {
+    TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_ACTIVE_STATUSES,
+    TICKET_STATUS_TRANSITIONS, TICKET_STATUS_ACTION_LABELS
+} from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketDetail } from '../entities/ticket';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
-import { ConfirmDialogService, SessionService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
 
 
@@ -30,9 +33,12 @@ export class TicketDetailComponent implements OnInit {
     protected readonly historyStore = inject(TicketHistoryStore);
     protected readonly sessionService = inject(SessionService);
     private readonly confirmDialogService = inject(ConfirmDialogService);
+    private readonly toastService = inject(ToastService);
 
+    protected readonly TicketStatus = TicketStatus;
     protected readonly statusLabels = TICKET_STATUS_LABELS;
     protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
+    protected readonly statusActionLabels = TICKET_STATUS_ACTION_LABELS;
     protected readonly priorityLabels = TICKET_PRIORITY_LABELS;
     protected readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
     protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
@@ -50,8 +56,13 @@ export class TicketDetailComponent implements OnInit {
      */
     protected readonly cameFromMonitor = this.route.snapshot.queryParamMap.get('from') === 'monitor';
 
-    /** Texto do trilho de navegação, coerente com a tela de onde o usuário realmente veio. */
-    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Monitorar Tickets /' : 'Meus Tickets /';
+    /**
+     * Texto do trilho de navegação, coerente com a tela de onde o usuário realmente veio — inclui
+     * "Administração /" quando vem do Monitor, igual o próprio Monitor mostra no cabeçalho dele
+     * (achado do critique de 2026-10-25: aqui descartava esse nível, perdendo o pai que o usuário
+     * acabou de ver um clique antes).
+     */
+    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Administração / Monitorar Tickets /' : 'Meus Tickets /';
 
     /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
     protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';
@@ -170,8 +181,74 @@ export class TicketDetailComponent implements OnInit {
             variant: 'danger'
         }).subscribe(confirmed => {
             if (confirmed) {
-                this.detailStore.removeAssignee(this.ticketId, () => this.historyStore.reload());
+                this.detailStore.removeAssignee(this.ticketId, () => {
+                    this.toastService.show('Responsável removido.');
+                    this.historyStore.reload();
+                });
             }
+        });
+    }
+
+    /** Indica se os botões de transição de status devem aparecer: só pra quem administra chamados. */
+    protected canChangeStatus(): boolean {
+        return this.sessionService.hasPermission('tickets:manage');
+    }
+
+    /** Próximos status válidos a partir do status atual, pra quem administra chamados. */
+    protected nextStatusOptions(status: TicketStatus): TicketStatus[] {
+        return this.canChangeStatus() ? TICKET_STATUS_TRANSITIONS[status] : [];
+    }
+
+    /** Indica se o botão "Reabrir chamado" deve aparecer: o chamado precisa estar inativo (Resolvido/Fechado/Cancelado). */
+    protected canReopenTicket(status: TicketStatus): boolean {
+        return !TICKET_ACTIVE_STATUSES.has(status);
+    }
+
+    /**
+     * Muda o status do ticket pra um dos próximos válidos. Cancelar passa pelo modal de
+     * confirmação do sistema (ação sensível pro Solicitante, que perde o chamado); as demais
+     * transições são progressões de rotina do fluxo de atendimento e não pedem confirmação —
+     * mesmo critério já usado em Atribuir (sem confirmação) vs. Excluir (com confirmação).
+     */
+    protected onChangeStatus(newStatus: TicketStatus, currentDescription: string): void {
+        if (newStatus === TicketStatus.Canceled) {
+            this.confirmDialogService.confirm({
+                title: 'Cancelar este chamado?',
+                message: 'O Solicitante é avisado de que o chamado não vai ser atendido. Pode ser reaberto depois, se necessário.',
+                confirmLabel: 'Cancelar chamado',
+                variant: 'danger'
+            }).subscribe(confirmed => {
+                if (confirmed) this.submitStatusChange(newStatus, currentDescription);
+            });
+            return;
+        }
+
+        this.submitStatusChange(newStatus, currentDescription);
+    }
+
+    private submitStatusChange(newStatus: TicketStatus, currentDescription: string): void {
+        this.detailStore.updateStatus(this.ticketId, newStatus, currentDescription, () => {
+            this.toastService.show(this.statusChangeToastMessage(newStatus));
+            this.historyStore.reload();
+        });
+    }
+
+    /** Mensagem de sucesso do toast, em tom de confirmação ("X feito"), separada do rótulo do botão (que nomeia a ação, "Fazer X"). */
+    private statusChangeToastMessage(newStatus: TicketStatus): string {
+        switch (newStatus) {
+            case TicketStatus.InProgress: return 'Atendimento iniciado.';
+            case TicketStatus.Resolved: return 'Chamado marcado como resolvido.';
+            case TicketStatus.Closed: return 'Chamado fechado.';
+            case TicketStatus.Canceled: return 'Chamado cancelado.';
+            default: return 'Status atualizado.';
+        }
+    }
+
+    /** Reabre o chamado inativo. */
+    protected onReopen(): void {
+        this.detailStore.reopen(this.ticketId, () => {
+            this.toastService.show('Chamado reaberto.');
+            this.historyStore.reload();
         });
     }
 
@@ -243,7 +320,9 @@ export class TicketDetailComponent implements OnInit {
         const userId = this.selectedAssigneeId();
         if (!userId) return;
 
+        const name = this.selectedAssigneeName();
         this.detailStore.assignTicket(this.ticketId, userId, () => {
+            this.toastService.show(name ? `${name} agora é o responsável.` : 'Responsável atribuído.');
             this.historyStore.reload();
             document.getElementById('ticketAssignModalCloseButton')?.click();
         });
@@ -276,7 +355,7 @@ export class TicketDetailComponent implements OnInit {
         }
 
         this.fileValidationError.set(null);
-        this.store.upload(file);
+        this.store.upload(file, () => this.toastService.show('Anexo enviado.'));
     }
 
     /** Confirma e exclui o anexo selecionado. */
@@ -287,7 +366,7 @@ export class TicketDetailComponent implements OnInit {
             confirmLabel: 'Excluir',
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (confirmed) this.store.delete(attachmentId);
+            if (confirmed) this.store.delete(attachmentId, () => this.toastService.show('Anexo excluído.'));
         });
     }
 }

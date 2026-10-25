@@ -29,10 +29,12 @@ describe('TicketDetailStore', () => {
   let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'reopen']);
     dataService.getById.and.returnValue(of(ticket));
     dataService.removeAssignee.and.returnValue(of(undefined));
     dataService.assignTicket.and.returnValue(of(undefined));
+    dataService.update.and.returnValue(of(undefined));
+    dataService.reopen.and.returnValue(of(undefined));
     userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
     userDataService.getAll.and.returnValue(of({
       items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
@@ -210,6 +212,80 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.assigningTicket()).toBeFalse();
+    });
+  });
+
+  describe('updateStatus', () => {
+    beforeEach(async () => {
+      store.loadTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('muda o status, recarrega o detalhe e chama onSuccess', async () => {
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      store.updateStatus('t1', TicketStatus.InProgress, 'Não imprime.', onSuccess);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Não imprime.', status: TicketStatus.InProgress });
+      expect(dataService.getById).toHaveBeenCalledTimes(2);
+      expect(onSuccess).toHaveBeenCalled();
+      expect(store.mutationError()).toBeNull();
+    });
+
+    it('expõe mensagem própria quando falta permissão (403)', async () => {
+      dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.updateStatus('t1', TicketStatus.Resolved, 'Não imprime.');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.mutationError()).toBe('Você não tem permissão para mudar o status deste chamado.');
+    });
+
+    it('volta updatingStatus pra false depois do erro', async () => {
+      dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      store.updateStatus('t1', TicketStatus.Resolved, 'Não imprime.');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.updatingStatus()).toBeFalse();
+    });
+  });
+
+  describe('reopen', () => {
+    beforeEach(async () => {
+      store.loadTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('reabre o ticket, recarrega o detalhe e chama onSuccess', async () => {
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      store.reopen('t1', onSuccess);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.reopen).toHaveBeenCalledWith('t1');
+      expect(dataService.getById).toHaveBeenCalledTimes(2);
+      expect(onSuccess).toHaveBeenCalled();
+      expect(store.mutationError()).toBeNull();
+    });
+
+    it('expõe mensagem própria quando falta permissão (403)', async () => {
+      dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.reopen('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.mutationError()).toBe('Você não tem permissão para reabrir este chamado.');
+    });
+
+    it('volta reopening pra false depois do erro', async () => {
+      dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      store.reopen('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.reopening()).toBeFalse();
     });
   });
 
