@@ -1,6 +1,7 @@
 import { TicketPriority } from './ticket-priority';
 import { TicketStatus } from './ticket-status';
 import { TicketSlaStatus } from './ticket-sla-status';
+import { TicketSla } from './ticket-sla';
 
 /** Ticket do usuário logado, conforme retornado (paginado) por GET /tickets/mine. */
 export interface Ticket {
@@ -32,6 +33,12 @@ export interface TicketDetail {
   slaWarningAtUtc: string;
   resolvedAtUtc: string | null;
   slaStatus: TicketSlaStatus;
+  /**
+   * Plano, objetivos (Primeira resposta/Resolução) e ciclos de SLA em minutos úteis. `slaStatus`/
+   * `dueAtUtc` acima continuam sendo os do primeiro ciclo mesmo após uma reabertura — o prazo
+   * vigente de verdade é sempre o objetivo com `isCurrentCycle: true` aqui dentro.
+   */
+  sla: TicketSla;
 }
 
 /** Dados para abertura de um novo ticket (POST /tickets). */

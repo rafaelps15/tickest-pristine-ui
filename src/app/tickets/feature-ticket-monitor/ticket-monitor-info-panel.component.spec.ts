@@ -8,8 +8,10 @@ import { TicketDetail } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketSla } from '../entities/ticket-sla';
 
 describe('TicketMonitorInfoPanelComponent', () => {
+  const sla: TicketSla = { serverNowUtc: '2026-01-01T12:00:00Z', plan: { policyId: null, policyName: '', policyVersion: 1, calendarId: '', calendarName: '', isLegacy: false }, objectives: [] };
   const ticket: TicketMonitorItem = {
     id: 't1', title: 'Impressora não funciona', priority: TicketPriority.High, status: TicketStatus.Open,
     requesterId: 'u1', requesterName: 'Maria Silva', requesterEmail: 'maria@empresa.com',
@@ -90,7 +92,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
       openedByUserId: 'u1', openedByName: 'Maria Silva', assignedToUserId: null, assignedToName: null,
       sectorId: 's1', sectorName: 'Suporte',
       createdAtUtc: ticket.createdAtUtc, dueAtUtc: ticket.dueAtUtc, slaWarningAtUtc: ticket.slaWarningAtUtc,
-      resolvedAtUtc: null, slaStatus: ticket.slaStatus
+      resolvedAtUtc: null, slaStatus: ticket.slaStatus, sla
     });
     const fixture = createFixture();
     await fixture.whenStable();

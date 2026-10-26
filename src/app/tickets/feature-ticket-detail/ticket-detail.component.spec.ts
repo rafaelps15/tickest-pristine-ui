@@ -6,25 +6,47 @@ import { TicketDetailComponent } from './ticket-detail.component';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TicketHistoryStore } from '../application/ticket-history.store';
+import { TicketMessagesStore } from '../application/ticket-messages.store';
 import { TicketDetail } from '../entities/ticket';
 import { TicketAttachment } from '../entities/ticket-attachment';
+import { TicketMessage } from '../entities/ticket-message';
 import { TicketHistoryAction, TicketHistoryEntry } from '../entities/ticket-history';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketSla, TicketSlaMetric, TicketSlaObjective, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { ConfirmDialogService, SessionService, ToastService, setRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
 
 const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('TicketDetailComponent', () => {
+  /** Objetivo de SLA "em branco", pra só sobrescrever os campos que cada cenário de teste precisa. */
+  function makeObjective(overrides: Partial<TicketSlaObjective>): TicketSlaObjective {
+    return {
+      metric: TicketSlaMetric.Resolution, cycle: 1, state: TicketSlaObjectiveState.Running, targetMinutes: 480,
+      startedAtUtc: '2026-01-01T12:00:00Z', warningAtUtc: '2026-01-02T10:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z',
+      completedAtUtc: null, stoppedAtUtc: null, consumedMinutes: 30, remainingMinutes: 450, isCurrentCycle: true,
+      ...overrides
+    };
+  }
+
+  const sla: TicketSla = {
+    serverNowUtc: '2026-01-01T13:00:00Z',
+    plan: { policyId: 'p1', policyName: 'Padrão', policyVersion: 1, calendarId: 'c1', calendarName: 'Expediente', isLegacy: false },
+    objectives: [
+      makeObjective({ metric: TicketSlaMetric.FirstResponse, targetMinutes: 60, dueAtUtc: '2026-01-01T13:00:00Z', consumedMinutes: 30, remainingMinutes: 30 }),
+      makeObjective({ metric: TicketSlaMetric.Resolution })
+    ]
+  };
+
   const ticket: TicketDetail = {
     id: 't1', title: 'Impressora não funciona', description: 'A impressora do 3º andar não imprime.',
     priority: TicketPriority.Medium, status: TicketStatus.Open,
     openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null,
     sectorId: 's1', sectorName: 'Suporte',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
-    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
+    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime, sla
   };
   const attachment: TicketAttachment = {
     id: 'a1', ticketId: 't1', uploadedByUserId: 'u1',
@@ -35,6 +57,10 @@ describe('TicketDetailComponent', () => {
     id: 'h1', ticketId: 't1', changedByUserId: 'u1',
     action: TicketHistoryAction.Created, description: 'Chamado criado',
     oldValue: null, newValue: null, occurredAtUtc: '2026-01-01T12:00:00Z'
+  };
+  const message: TicketMessage = {
+    id: 'm1', ticketId: 't1', authorUserId: 'u1', content: 'Já verifiquei, aguardando peça.',
+    createdAtUtc: '2026-01-01T12:00:00Z', editedAtUtc: null
   };
   const candidate: UserSummary = {
     id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
@@ -51,6 +77,10 @@ describe('TicketDetailComponent', () => {
       assigningTicket: signal(false),
       updatingStatus: signal(false),
       reopening: signal(false),
+      sla: signal<TicketSla | null>(sla),
+      slaRefreshing: signal(false),
+      slaError: signal<string | null>(null),
+      refreshSla: jasmine.createSpy('refreshSla'),
       assigneeCandidates: signal<UserSummary[]>([]),
       searchingAssignees: signal(false),
       assigneeSearchError: signal<string | null>(null),
@@ -97,11 +127,34 @@ describe('TicketDetailComponent', () => {
     };
   }
 
+  function createMessagesStoreFake() {
+    return {
+      messages: signal<TicketMessage[]>([message]),
+      listState: signal({ loading: false, error: null as string | null }),
+      hasMore: signal(false),
+      loadingMore: signal(false),
+      loadMoreError: signal<string | null>(null),
+      posting: signal(false),
+      postError: signal<string | null>(null),
+      savingEdit: signal(false),
+      mutationError: signal<string | null>(null),
+      deletingMessageId: signal<string | null>(null),
+      loadForTicket: jasmine.createSpy('loadForTicket'),
+      loadMore: jasmine.createSpy('loadMore'),
+      post: jasmine.createSpy('post'),
+      editMessage: jasmine.createSpy('editMessage'),
+      deleteMessage: jasmine.createSpy('deleteMessage'),
+      clearPostError: jasmine.createSpy('clearPostError'),
+      clearMutationError: jasmine.createSpy('clearMutationError')
+    };
+  }
+
   let detailStoreFake: ReturnType<typeof createDetailStoreFake>;
   let attachmentsStoreFake: ReturnType<typeof createAttachmentsStoreFake>;
   let historyStoreFake: ReturnType<typeof createHistoryStoreFake>;
+  let messagesStoreFake: ReturnType<typeof createMessagesStoreFake>;
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
-  let sessionServiceFake: { hasPermission: jasmine.Spy };
+  let sessionServiceFake: { hasPermission: jasmine.Spy; userId: ReturnType<typeof signal<string | null>> };
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
@@ -109,8 +162,9 @@ describe('TicketDetailComponent', () => {
     detailStoreFake = createDetailStoreFake();
     attachmentsStoreFake = createAttachmentsStoreFake();
     historyStoreFake = createHistoryStoreFake();
+    messagesStoreFake = createMessagesStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
-    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
+    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true), userId: signal<string | null>('viewer-1') };
     toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
@@ -121,6 +175,7 @@ describe('TicketDetailComponent', () => {
         { provide: TicketDetailStore, useValue: detailStoreFake },
         { provide: TicketAttachmentsStore, useValue: attachmentsStoreFake },
         { provide: TicketHistoryStore, useValue: historyStoreFake },
+        { provide: TicketMessagesStore, useValue: messagesStoreFake },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 't1' }), queryParamMap: convertToParamMap({}) } }
@@ -203,8 +258,11 @@ describe('TicketDetailComponent', () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Vence em');
-    expect(fixture.nativeElement.textContent).not.toContain('Atrasado há');
+    // Escopado na linha "Prazo" do resumo do chamado — o painel de SLA abaixo tem sua própria
+    // urgência relativa por objetivo, independente deste campo (ver describe('painel de SLA')).
+    const prazoText = fixture.nativeElement.querySelector('dl.max-w-700')?.textContent;
+    expect(prazoText).not.toContain('Vence em');
+    expect(prazoText).not.toContain('Atrasado há');
   });
 
   it('mostra "Resolvido em" quando o chamado tem data de resolução', async () => {
@@ -275,9 +333,9 @@ describe('TicketDetailComponent', () => {
     await fixture.whenStable();
 
     const downloadButton = fixture.nativeElement.querySelector('button[aria-label^="Baixar"]');
-    const deleteButton = fixture.nativeElement.querySelector('button[aria-label^="Excluir"]');
+    const deleteButton = fixture.nativeElement.querySelector('button[aria-label="Excluir foto.png"]');
     expect(downloadButton?.getAttribute('aria-label')).toBe('Baixar foto.png');
-    expect(deleteButton?.getAttribute('aria-label')).toBe('Excluir foto.png');
+    expect(deleteButton).toBeTruthy();
   });
 
   it('rejeita um arquivo maior que o limite, sem chamar o store', async () => {
@@ -859,6 +917,319 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', jasmine.any(Function));
       expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto.');
       expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+  });
+
+  describe('painel de SLA', () => {
+    it('mostra os dois cartões (Primeira resposta e Resolução) de um chamado novo', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Primeira resposta');
+      expect(text).toContain('Resolução');
+      expect(text).toContain('Padrão · Expediente');
+      expect(text).toContain('30 min consumidos / 30 min restantes (úteis)');
+      expect(text).toContain('30 min consumidos / 450 min restantes (úteis)');
+    });
+
+    it('mostra o selo "Legado (horas corridas)" e "Sem meta de primeira resposta" num chamado legado', async () => {
+      detailStoreFake.sla.set({
+        serverNowUtc: '2026-01-01T13:00:00Z',
+        plan: { policyId: null, policyName: 'Legado', policyVersion: 0, calendarId: 'c0', calendarName: 'Corrido', isLegacy: true },
+        objectives: [
+          makeObjective({
+            metric: TicketSlaMetric.FirstResponse, state: TicketSlaObjectiveState.NotApplicable, targetMinutes: null,
+            startedAtUtc: null, warningAtUtc: null, dueAtUtc: null, consumedMinutes: null, remainingMinutes: null
+          }),
+          makeObjective({ metric: TicketSlaMetric.Resolution })
+        ]
+      });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Legado (horas corridas)');
+      expect(text).toContain('Sem meta de primeira resposta.');
+    });
+
+    it('mostra o ciclo vigente e a área "Ciclos anteriores" num chamado reaberto', async () => {
+      detailStoreFake.sla.set({
+        ...sla,
+        objectives: [
+          makeObjective({ metric: TicketSlaMetric.FirstResponse, dueAtUtc: '2026-01-01T13:00:00Z' }),
+          makeObjective({
+            metric: TicketSlaMetric.Resolution, cycle: 1, isCurrentCycle: false, state: TicketSlaObjectiveState.Missed,
+            stoppedAtUtc: '2026-01-02T12:30:00Z', consumedMinutes: 480, remainingMinutes: 0
+          }),
+          makeObjective({ metric: TicketSlaMetric.Resolution, cycle: 2, isCurrentCycle: true })
+        ]
+      });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent).not.toContain('Ciclo 1');
+
+      const toggleButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Ciclos anteriores'));
+      toggleButton!.click();
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Resolução — Ciclo 1');
+      expect(text).toContain('Parado em');
+    });
+
+    it('mostra os 7 estados de objetivo com o rótulo e o badge certos', async () => {
+      const statesAndBadges: [TicketSlaObjectiveState, string, string][] = [
+        [TicketSlaObjectiveState.Running, 'Em andamento', 'bg-label-success'],
+        [TicketSlaObjectiveState.AtRisk, 'Em risco', 'bg-label-warning'],
+        [TicketSlaObjectiveState.Breached, 'Violado', 'bg-label-danger'],
+        [TicketSlaObjectiveState.Met, 'Cumprido', 'bg-label-success'],
+        [TicketSlaObjectiveState.Missed, 'Perdido', 'bg-label-danger'],
+        [TicketSlaObjectiveState.Stopped, 'Parado', 'bg-label-secondary'],
+        [TicketSlaObjectiveState.NotApplicable, 'Sem meta', 'bg-label-secondary']
+      ];
+
+      for (const [state, label, badgeClass] of statesAndBadges) {
+        detailStoreFake.sla.set({
+          ...sla,
+          objectives: [makeObjective({ metric: TicketSlaMetric.FirstResponse, state })]
+        });
+        const fixture = TestBed.createComponent(TicketDetailComponent);
+        await fixture.whenStable();
+
+        const badge = Array.from(fixture.nativeElement.querySelectorAll('.badge') as NodeListOf<HTMLElement>)
+          .find(b => b.textContent?.trim() === label);
+        expect(badge).withContext(`estado ${state}`).toBeTruthy();
+        expect(badge?.classList).toContain(badgeClass);
+      }
+    });
+
+    it('usa serverNowUtc (hora do servidor), não o relógio local, pro prazo relativo do objetivo', async () => {
+      // serverNowUtc fica bem no passado — se o cálculo usasse Date.now(), o resultado seria outro.
+      detailStoreFake.sla.set({
+        ...sla,
+        serverNowUtc: '2020-01-01T11:20:00Z',
+        objectives: [makeObjective({ metric: TicketSlaMetric.FirstResponse, dueAtUtc: '2020-01-01T12:00:00Z' })]
+      });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Vence em 40 minutos');
+    });
+
+    it('não mostra o painel quando não há sla (ainda carregando, por exemplo)', async () => {
+      detailStoreFake.sla.set(null);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Padrão · Expediente');
+    });
+  });
+
+  describe('mensagens', () => {
+    it('carrega as mensagens do ticket ao inicializar', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(messagesStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
+    });
+
+    it('mostra as mensagens carregadas, com autor e data', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Já verifiquei, aguardando peça.');
+      expect(text).toContain('Maria Souza'); // authorUserId 'u1' == ticket.openedByUserId
+    });
+
+    it('resolve o nome do autor: "Você" quando é o usuário logado', async () => {
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'viewer-1' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Você');
+    });
+
+    it('resolve o nome do autor pelo responsável atual do chamado', async () => {
+      detailStoreFake.ticket.set({ ...ticket, assignedToUserId: 'u2', assignedToName: 'João Pedro' });
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'u2' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('João Pedro');
+    });
+
+    it('usa "Equipe" como rótulo genérico quando o autor não é o solicitante, o responsável, nem o usuário logado', async () => {
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Equipe');
+    });
+
+    it('mostra "(editada)" quando a mensagem tem editedAtUtc', async () => {
+      messagesStoreFake.messages.set([{ ...message, editedAtUtc: '2026-01-01T13:00:00Z' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('(editada)');
+    });
+
+    it('mostra uma mensagem quando não há nenhuma ainda', async () => {
+      messagesStoreFake.messages.set([]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Nenhuma mensagem ainda.');
+    });
+
+    it('envia a nova mensagem, limpa a caixa e recarrega o histórico em caso de sucesso', async () => {
+      messagesStoreFake.post.and.callFake((_id: string, _content: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.newMessageContent.set('Resolvido, pode confirmar.');
+
+      fixture.componentInstance.onSendMessage();
+
+      expect(messagesStoreFake.post).toHaveBeenCalledWith('t1', 'Resolvido, pode confirmar.', jasmine.any(Function));
+      expect(fixture.componentInstance.newMessageContent()).toBe('');
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Mensagem enviada.');
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+      expect(detailStoreFake.refreshSla).toHaveBeenCalled();
+    });
+
+    it('não atualiza o SLA quando a publicação falhar (post sem chamar onSuccess)', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.newMessageContent.set('Resolvido, pode confirmar.');
+
+      fixture.componentInstance.onSendMessage();
+
+      expect(messagesStoreFake.post).toHaveBeenCalled();
+      expect(detailStoreFake.refreshSla).not.toHaveBeenCalled();
+    });
+
+    it('não envia uma mensagem vazia (só espaços)', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.newMessageContent.set('   ');
+
+      fixture.componentInstance.onSendMessage();
+
+      expect(messagesStoreFake.post).not.toHaveBeenCalled();
+    });
+
+    it('mostra o botão "Editar" só pra quem escreveu a mensagem', async () => {
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'viewer-1' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('button[aria-label="Editar mensagem"]')).toBeTruthy();
+    });
+
+    it('não mostra o botão "Editar" pra quem não escreveu a mensagem', async () => {
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('button[aria-label="Editar mensagem"]')).toBeFalsy();
+    });
+
+    it('mostra o botão "Excluir" pra quem tem tickets:manage, mesmo não sendo o autor', async () => {
+      sessionServiceFake.hasPermission.and.returnValue(true);
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('button[aria-label="Excluir mensagem"]')).toBeTruthy();
+    });
+
+    it('não mostra o botão "Excluir" sem ser o autor nem ter tickets:manage', async () => {
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('button[aria-label="Excluir mensagem"]')).toBeFalsy();
+    });
+
+    it('edita a mensagem inline e salva, recarregando o histórico em caso de sucesso', async () => {
+      messagesStoreFake.messages.set([{ ...message, authorUserId: 'viewer-1' }]);
+      messagesStoreFake.editMessage.and.callFake((_id: string, _content: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onStartEdit({ ...message, authorUserId: 'viewer-1' });
+      await fixture.whenStable();
+      expect(fixture.componentInstance.editMessageContent()).toBe(message.content);
+
+      fixture.componentInstance.editMessageContent.set('Texto corrigido.');
+      fixture.componentInstance.onSaveEdit('m1');
+
+      expect(messagesStoreFake.editMessage).toHaveBeenCalledWith('m1', 'Texto corrigido.', jasmine.any(Function));
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Mensagem editada.');
+      expect(fixture.componentInstance.editingMessageId()).toBeNull();
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+
+    it('cancela a edição inline sem salvar', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.onStartEdit(message);
+
+      fixture.componentInstance.onCancelEdit();
+
+      expect(fixture.componentInstance.editingMessageId()).toBeNull();
+      expect(messagesStoreFake.editMessage).not.toHaveBeenCalled();
+    });
+
+    it('pede confirmação e exclui a mensagem, recarregando o histórico em caso de sucesso', async () => {
+      confirmDialogServiceFake.confirm.and.returnValue(of(true));
+      messagesStoreFake.deleteMessage.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onDeleteMessage('m1');
+
+      expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+      expect(messagesStoreFake.deleteMessage).toHaveBeenCalledWith('m1', jasmine.any(Function));
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Mensagem excluída.');
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+
+    it('não exclui a mensagem quando a confirmação for cancelada', async () => {
+      confirmDialogServiceFake.confirm.and.returnValue(of(false));
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onDeleteMessage('m1');
+
+      expect(messagesStoreFake.deleteMessage).not.toHaveBeenCalled();
+    });
+
+    it('mostra o botão de carregar mais mensagens só quando há mais páginas, e carrega ao clicar', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent).not.toContain('Carregar mais mensagens');
+
+      messagesStoreFake.hasMore.set(true);
+      await fixture.whenStable();
+
+      const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Carregar mais mensagens'));
+      button!.click();
+
+      expect(messagesStoreFake.loadMore).toHaveBeenCalled();
+    });
+
+    it('mostra a mensagem de erro de publicação do store', async () => {
+      messagesStoreFake.postError.set('Você não tem permissão para enviar mensagens neste chamado.');
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para enviar mensagens neste chamado.');
     });
   });
 

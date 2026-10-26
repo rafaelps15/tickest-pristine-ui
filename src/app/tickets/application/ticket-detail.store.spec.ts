@@ -8,16 +8,33 @@ import { TicketDetail } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketSla, TicketSlaMetric, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { UserDataService, UserSummary } from '../../users';
 
 describe('TicketDetailStore', () => {
+  const sla: TicketSla = {
+    serverNowUtc: '2026-01-01T13:00:00Z',
+    plan: { policyId: 'p1', policyName: 'Padrão', policyVersion: 1, calendarId: 'c1', calendarName: 'Expediente', isLegacy: false },
+    objectives: [
+      {
+        metric: TicketSlaMetric.FirstResponse, cycle: 1, state: TicketSlaObjectiveState.Running, targetMinutes: 60,
+        startedAtUtc: '2026-01-01T12:00:00Z', warningAtUtc: '2026-01-01T12:50:00Z', dueAtUtc: '2026-01-01T13:00:00Z',
+        completedAtUtc: null, stoppedAtUtc: null, consumedMinutes: 30, remainingMinutes: 30, isCurrentCycle: true
+      },
+      {
+        metric: TicketSlaMetric.Resolution, cycle: 1, state: TicketSlaObjectiveState.Running, targetMinutes: 480,
+        startedAtUtc: '2026-01-01T12:00:00Z', warningAtUtc: '2026-01-02T10:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z',
+        completedAtUtc: null, stoppedAtUtc: null, consumedMinutes: 30, remainingMinutes: 450, isCurrentCycle: true
+      }
+    ]
+  };
   const ticket: TicketDetail = {
     id: 't1', title: 'Impressora não funciona', description: 'Não imprime.',
     priority: TicketPriority.Medium, status: TicketStatus.Open,
     openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null,
     sectorId: 's1', sectorName: 'Suporte',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
-    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
+    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime, sla
   };
   const candidate: UserSummary = {
     id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
@@ -29,12 +46,13 @@ describe('TicketDetailStore', () => {
   let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'reopen']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'reopen', 'getSla']);
     dataService.getById.and.returnValue(of(ticket));
     dataService.removeAssignee.and.returnValue(of(undefined));
     dataService.assignTicket.and.returnValue(of(undefined));
     dataService.update.and.returnValue(of(undefined));
     dataService.reopen.and.returnValue(of(undefined));
+    dataService.getSla.and.returnValue(of(sla));
     userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
     userDataService.getAll.and.returnValue(of({
       items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
@@ -286,6 +304,64 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.reopening()).toBeFalse();
+    });
+  });
+
+  describe('SLA', () => {
+    const refreshedSla: TicketSla = { ...sla, serverNowUtc: '2026-01-01T14:00:00Z' };
+
+    beforeEach(async () => {
+      store.loadTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('expõe o sla que já vem no detalhe do ticket', () => {
+      expect(store.sla()).toEqual(sla);
+    });
+
+    it('atualiza o sla ao chamar refreshSla() — ex.: avisada por outra store depois de publicar uma mensagem', async () => {
+      dataService.getSla.and.returnValue(of(refreshedSla));
+
+      store.refreshSla();
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.getSla).toHaveBeenCalledWith('t1');
+      expect(store.sla()).toEqual(refreshedSla);
+    });
+
+    it('expõe mensagem de erro quando a atualização do sla falhar, sem derrubar o sla já exibido', async () => {
+      dataService.getSla.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      store.refreshSla();
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.slaError()).toBe('Erro ao atualizar o SLA.');
+      expect(store.slaRefreshing()).toBeFalse();
+      expect(store.sla()).toEqual(sla);
+    });
+
+    it('atualiza o sla depois de mudar o status, descartando um override de refreshSla() anterior', async () => {
+      dataService.getSla.and.returnValue(of(refreshedSla));
+      store.refreshSla();
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(store.sla()).toEqual(refreshedSla);
+
+      store.updateStatus('t1', TicketStatus.InProgress, 'Não imprime.');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.sla()).toEqual(sla);
+    });
+
+    it('atualiza o sla depois de reabrir, descartando um override de refreshSla() anterior', async () => {
+      dataService.getSla.and.returnValue(of(refreshedSla));
+      store.refreshSla();
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(store.sla()).toEqual(refreshedSla);
+
+      store.reopen('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.sla()).toEqual(sla);
     });
   });
 

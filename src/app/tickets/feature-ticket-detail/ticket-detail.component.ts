@@ -6,6 +6,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TicketHistoryStore } from '../application/ticket-history.store';
+import { TicketMessagesStore } from '../application/ticket-messages.store';
 import {
     TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_ACTIVE_STATUSES,
     TICKET_STATUS_TRANSITIONS, TICKET_STATUS_ACTION_LABELS
@@ -13,7 +14,12 @@ import {
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketDetail } from '../entities/ticket';
+import {
+    TicketSla, TicketSlaObjective, TICKET_SLA_METRIC_LABELS,
+    TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS
+} from '../entities/ticket-sla';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
+import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
 import { ConfirmDialogService, SessionService, ToastService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
 
@@ -31,6 +37,7 @@ export class TicketDetailComponent implements OnInit {
     protected readonly detailStore = inject(TicketDetailStore);
     protected readonly store = inject(TicketAttachmentsStore);
     protected readonly historyStore = inject(TicketHistoryStore);
+    protected readonly messagesStore = inject(TicketMessagesStore);
     protected readonly sessionService = inject(SessionService);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
@@ -39,10 +46,49 @@ export class TicketDetailComponent implements OnInit {
     protected readonly statusLabels = TICKET_STATUS_LABELS;
     protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
     protected readonly statusActionLabels = TICKET_STATUS_ACTION_LABELS;
+    protected readonly TICKET_MESSAGE_MAX_LENGTH = TICKET_MESSAGE_MAX_LENGTH;
     protected readonly priorityLabels = TICKET_PRIORITY_LABELS;
     protected readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
     protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
     protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+    protected readonly TicketSlaObjectiveState = TicketSlaObjectiveState;
+    protected readonly slaMetricLabels = TICKET_SLA_METRIC_LABELS;
+    protected readonly slaObjectiveStateLabels = TICKET_SLA_OBJECTIVE_STATE_LABELS;
+    protected readonly slaObjectiveStateBadgeClass = TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS;
+
+    /** Painel "Ciclos anteriores" do SLA: fechado por padrão, só relevante em chamados já reabertos. */
+    protected readonly olderCyclesOpen = signal(false);
+
+    /** Alterna o painel "Ciclos anteriores" do SLA. */
+    protected toggleOlderCycles(): void {
+        this.olderCyclesOpen.update(open => !open);
+    }
+
+    /** Objetivos do ciclo vigente de cada métrica — os cartões principais do painel de SLA. */
+    protected currentCycleObjectives(sla: TicketSla): TicketSlaObjective[] {
+        return sla.objectives.filter(o => o.isCurrentCycle);
+    }
+
+    /** Objetivos de ciclos anteriores (ex.: resoluções de antes de uma reabertura) — a área recolhível. */
+    protected previousCycleObjectives(sla: TicketSla): TicketSlaObjective[] {
+        return sla.objectives.filter(o => !o.isCurrentCycle);
+    }
+
+    /**
+     * Urgência relativa pt-BR do prazo de um objetivo de SLA ("Vence em 40 minutos"/"Atrasado há 3
+     * horas"), a partir da hora do servidor (nunca do relógio do navegador — os minutos são úteis e
+     * só o back-end sabe quando o expediente/calendário conta ou não). Null sem prazo (ex.: sem
+     * meta) ou quando o objetivo já terminou (concluído ou parado) — a data absoluta já basta.
+     */
+    protected objectiveRelativeLabel(objective: TicketSlaObjective, serverNowUtc: string): string | null {
+        if (!objective.dueAtUtc || objective.completedAtUtc || objective.stoppedAtUtc) {
+            return null;
+        }
+
+        const diffMs = new Date(objective.dueAtUtc).getTime() - new Date(serverNowUtc).getTime();
+        const duration = this.formatDuration(Math.abs(diffMs));
+        return diffMs < 0 ? `Atrasado há ${duration}` : `Vence em ${duration}`;
+    }
 
     readonly ticketId = this.route.snapshot.paramMap.get('id')!;
 
@@ -107,11 +153,103 @@ export class TicketDetailComponent implements OnInit {
         });
     }
 
-    /** Carrega o detalhe do ticket, o histórico e a primeira página de anexos ao inicializar a tela. */
+    /** Carrega o detalhe do ticket, o histórico, os anexos e as mensagens ao inicializar a tela. */
     ngOnInit(): void {
         this.detailStore.loadTicket(this.ticketId);
         this.historyStore.loadForTicket(this.ticketId);
         this.store.loadForTicket(this.ticketId);
+        this.messagesStore.loadForTicket(this.ticketId);
+    }
+
+    /** Texto digitado na caixa de nova mensagem. */
+    newMessageContent = signal('');
+
+    /** Id da mensagem em edição inline (null quando nenhuma está sendo editada). */
+    editingMessageId = signal<string | null>(null);
+
+    /** Texto digitado na edição inline da mensagem em {@link editingMessageId}. */
+    editMessageContent = signal('');
+
+    /**
+     * Nome de quem escreveu a mensagem, pra exibição — o back-end só manda o id do autor
+     * (`TicketMessageResponse` não tem nome). Resolve pelos papéis já conhecidos do próprio
+     * chamado (quem abriu, o responsável atual) ou por ser o próprio usuário logado; sem essas
+     * três correspondências, "Equipe" é um rótulo genérico de propósito — não inventa qual função
+     * específica a pessoa tem, já que tanto Administrador quanto Atendente podem postar.
+     */
+    protected messageAuthorName(message: TicketMessage, t: TicketDetail): string {
+        if (message.authorUserId === this.sessionService.userId()) return 'Você';
+        if (message.authorUserId === t.openedByUserId) return t.openedByName;
+        if (message.authorUserId === t.assignedToUserId) return t.assignedToName ?? 'Equipe';
+        return 'Equipe';
+    }
+
+    /** Só quem escreveu a mensagem pode editá-la. */
+    protected canEditMessage(message: TicketMessage): boolean {
+        return message.authorUserId === this.sessionService.userId();
+    }
+
+    /** Quem escreveu a mensagem, ou quem administra chamados, pode excluí-la. */
+    protected canDeleteMessage(message: TicketMessage): boolean {
+        return message.authorUserId === this.sessionService.userId() || this.sessionService.hasPermission('tickets:manage');
+    }
+
+    /**
+     * Publica a nova mensagem e limpa a caixa de composição em caso de sucesso. Também pede pro
+     * SLA ser atualizado — publicar pode concluir a primeira resposta — já que `TicketMessagesStore`
+     * não injeta `TicketDetailStore` (Stores desta arquitetura não injetam outras do mesmo domínio).
+     */
+    onSendMessage(): void {
+        const content = this.newMessageContent().trim();
+        if (!content) return;
+
+        this.messagesStore.post(this.ticketId, content, () => {
+            this.newMessageContent.set('');
+            this.toastService.show('Mensagem enviada.');
+            this.historyStore.reload();
+            this.detailStore.refreshSla();
+        });
+    }
+
+    /** Abre a edição inline da mensagem, pré-carregando o texto atual. */
+    onStartEdit(message: TicketMessage): void {
+        this.messagesStore.clearMutationError();
+        this.editingMessageId.set(message.id);
+        this.editMessageContent.set(message.content);
+    }
+
+    /** Cancela a edição inline sem salvar. */
+    onCancelEdit(): void {
+        this.editingMessageId.set(null);
+    }
+
+    /** Salva a edição inline e fecha o modo de edição em caso de sucesso. */
+    onSaveEdit(messageId: string): void {
+        const content = this.editMessageContent().trim();
+        if (!content) return;
+
+        this.messagesStore.editMessage(messageId, content, () => {
+            this.toastService.show('Mensagem editada.');
+            this.editingMessageId.set(null);
+            this.historyStore.reload();
+        });
+    }
+
+    /** Confirma e exclui a mensagem selecionada. */
+    onDeleteMessage(messageId: string): void {
+        this.confirmDialogService.confirm({
+            title: 'Excluir esta mensagem?',
+            message: 'Essa ação não pode ser desfeita.',
+            confirmLabel: 'Excluir',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (confirmed) {
+                this.messagesStore.deleteMessage(messageId, () => {
+                    this.toastService.show('Mensagem excluída.');
+                    this.historyStore.reload();
+                });
+            }
+        });
     }
 
     /**

@@ -57,8 +57,14 @@ Fluxo do chamado: Aberto → Em Andamento → Resolvido → Fechado, com Cancela
   multi-tenant é a direção de produto confirmada, mas a modelagem (isolamento por `TenantId`,
   schema por cliente, etc.) ainda está indefinida — decisão futura, não assumir nada até ser
   decidido.
-- SLA de atendimento é objetivo confirmado, mas métricas/prazos/dashboards de SLA ainda não
-  existem no sistema.
+- SLA de atendimento: métricas e objetivos (primeira resposta, resolução) já têm modelo e painel
+  implementados no front-end (ciclo atual, ciclos anteriores, estados Running/AtRisk/Breached/
+  Met/Missed/Stopped), acionados por troca de status, reabertura e publicação de mensagem.
+  Pendente: o endpoint `GET /tickets/{id}/sla` ainda precisa ser implantado no back-end em
+  produção para o painel aparecer de fato (confirmado via `swagger.json` do back-end rodando).
+- Mensagens do chamado: solicitante e atendente podem conversar dentro do próprio ticket
+  (criar, editar e excluir mensagem), com paginação por cursor. A primeira mensagem de resposta
+  (de quem não é o solicitante) pode concluir o SLA de primeira resposta no back-end.
 - Expansão futura mencionada pelo usuário: incorporar a ideia de "5S" — significado e escopo
   exatos ainda não confirmados; não assumir definição (ex.: metodologia 5S de organização) sem
   perguntar antes de desenhar algo em torno disso.

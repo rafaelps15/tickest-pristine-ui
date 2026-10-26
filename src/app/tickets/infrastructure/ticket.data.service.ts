@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
+import { TicketSla } from '../entities/ticket-sla';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
@@ -56,6 +57,15 @@ export class TicketDataService {
   /** Busca o detalhe de um ticket (GET /tickets/{id}). */
   getById(ticketId: string): Observable<TicketDetail> {
     return this.http.get<TicketDetail>(`${this.apiUrl}/${ticketId}`);
+  }
+
+  /**
+   * Busca só o bloco de SLA de um ticket (GET /tickets/{id}/sla) — pra atualizar o painel de SLA
+   * sem recarregar o chamado inteiro (ex.: depois que outra tela/Store publica algo que conclui a
+   * primeira resposta).
+   */
+  getSla(ticketId: string): Observable<TicketSla> {
+    return this.http.get<TicketSla>(`${this.apiUrl}/${ticketId}/sla`);
   }
 
   /**

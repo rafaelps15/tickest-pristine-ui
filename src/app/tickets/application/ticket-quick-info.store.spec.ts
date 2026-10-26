@@ -8,15 +8,17 @@ import { TicketDetail } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketSla } from '../entities/ticket-sla';
 
 describe('TicketQuickInfoStore', () => {
+  const sla: TicketSla = { serverNowUtc: '2026-01-01T12:00:00Z', plan: { policyId: null, policyName: '', policyVersion: 1, calendarId: '', calendarName: '', isLegacy: false }, objectives: [] };
   const ticket: TicketDetail = {
     id: 't1', title: 'Impressora não funciona', description: 'Não imprime.',
     priority: TicketPriority.Medium, status: TicketStatus.Open,
     openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null,
     sectorId: 's1', sectorName: 'Suporte',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
-    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
+    resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime, sla
   };
 
   let store: InstanceType<typeof TicketQuickInfoStore>;

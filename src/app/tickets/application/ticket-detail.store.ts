@@ -5,6 +5,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatus } from '../entities/ticket-status';
+import { TicketSla } from '../entities/ticket-sla';
 import { UserDataService, UserSummary } from '../../users';
 import { extractErrorMessage } from '../../shared';
 
@@ -23,6 +24,15 @@ export const TicketDetailStore = signalStore(
     assigningTicket: false,
     updatingStatus: false,
     reopening: false,
+    /**
+     * Bloco de SLA mais recente buscado via `refreshSla()` (GET /tickets/{id}/sla), sem recarregar
+     * o chamado inteiro — sobrepõe o `sla` que já vem no detalhe até o próximo carregamento
+     * completo (`loadTicket`/`updateStatus`/`reopen`), que já traz um `sla` fresco embutido e limpa
+     * este override pra não mostrar um SLA desatualizado por engano.
+     */
+    _slaOverride: null as TicketSla | null,
+    slaRefreshing: false,
+    slaError: null as string | null,
     assigneeCandidates: [] as UserSummary[],
     searchingAssignees: false,
     assigneeSearchError: null as string | null
@@ -40,6 +50,8 @@ export const TicketDetailStore = signalStore(
   withComputed((store) => ({
     /** Detalhe do ticket atual, ou indefinido enquanto carrega ou quando houve erro. */
     ticket: computed(() => store._detailResource.value()),
+    /** Bloco de SLA vigente: o mais recente buscado por `refreshSla()`, ou o que já vem no detalhe. */
+    sla: computed(() => store._slaOverride() ?? store._detailResource.value()?.sla ?? null),
     /** Estado do carregamento do detalhe: carregando e erro (com mensagens próprias para 404 e 403). */
     state: computed(() => {
       const resourceError = store._detailResource.error() as HttpErrorResponse | undefined;
@@ -55,13 +67,40 @@ export const TicketDetailStore = signalStore(
     })
   })),
   withMethods((store) => ({
-    /** Define o ticket a exibir, disparando o carregamento do detalhe. */
+    /** Define o ticket a exibir, disparando o carregamento do detalhe — o SLA vem embutido nele. */
     loadTicket(ticketId: string): void {
+      patchState(store, { _slaOverride: null });
+
       if (store.ticketId() === ticketId) {
         store._detailResource.reload();
         return;
       }
       patchState(store, { ticketId });
+    },
+
+    /**
+     * Busca só o bloco de SLA do ticket atual (GET /tickets/{id}/sla), sem recarregar o chamado
+     * inteiro — pra quando outra tela/Store (ex.: publicação de mensagem) conclui a primeira
+     * resposta e precisa só atualizar o painel de SLA.
+     */
+    refreshSla(): void {
+      const ticketId = store.ticketId();
+      if (!ticketId) return;
+
+      patchState(store, { slaRefreshing: true, slaError: null });
+
+      store._ticketDataService.getSla(ticketId).pipe(
+        finalize(() => patchState(store, { slaRefreshing: false }))
+      ).subscribe({
+        next: (sla) => patchState(store, { _slaOverride: sla }),
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            slaError: extractErrorMessage(err, {
+              404: 'Ticket não encontrado — ele pode ter sido removido.'
+            }, 'Erro ao atualizar o SLA.')
+          });
+        }
+      });
     },
 
     /** Limpa o erro da última mutação (remoção ou atribuição) — ex.: ao abrir o modal de atribuição. */
@@ -133,7 +172,7 @@ export const TicketDetailStore = signalStore(
      * sucesso. Exige a permissão `tickets:manage`.
      */
     updateStatus(ticketId: string, status: TicketStatus, currentDescription: string, onSuccess?: () => void): void {
-      patchState(store, { mutationError: null, updatingStatus: true });
+      patchState(store, { mutationError: null, updatingStatus: true, _slaOverride: null });
 
       store._ticketDataService.update(ticketId, { description: currentDescription, status }).pipe(
         finalize(() => patchState(store, { updatingStatus: false }))
@@ -156,7 +195,7 @@ export const TicketDetailStore = signalStore(
 
     /** Reabre um ticket inativo (Resolvido/Fechado/Cancelado) e recarrega o detalhe em caso de sucesso. */
     reopen(ticketId: string, onSuccess?: () => void): void {
-      patchState(store, { mutationError: null, reopening: true });
+      patchState(store, { mutationError: null, reopening: true, _slaOverride: null });
 
       store._ticketDataService.reopen(ticketId).pipe(
         finalize(() => patchState(store, { reopening: false }))

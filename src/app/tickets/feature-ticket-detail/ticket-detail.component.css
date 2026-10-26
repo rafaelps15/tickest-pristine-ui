@@ -51,3 +51,10 @@
 .attachment-info {
   min-width: 0;
 }
+
+/* Ciclos anteriores do painel de SLA: mesma linguagem do Guia da Tela — fio divisor, sem virar um card aninhado. */
+.sla-older-cycle + .sla-older-cycle {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--tk-border);
+}
