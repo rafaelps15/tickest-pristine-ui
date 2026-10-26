@@ -50,7 +50,11 @@ export const TicketSummaryStore = signalStore(
   withComputed((store) => ({
     /** Pontos de volume de tickets abertos no período atual (dia/semana/mês), do mais antigo pro mais novo. */
     volume: computed(() => store._volumeResource.value() ?? []),
-    /** Estado do carregamento do resumo: carregando (qualquer um dos dois recursos) e erro. */
+    /** Carregando os totais por status — só esse recurso, não o volume (os 2 são independentes; trocar o agrupamento do gráfico não deve acender o spinner dos 4 cards de status). */
+    statusCountsLoading: computed(() => store._statusCountsResource.isLoading()),
+    /** Carregando o volume de tickets do período (dia/semana/mês) — só esse recurso, não os totais por status. */
+    volumeLoading: computed(() => store._volumeResource.isLoading()),
+    /** Estado agregado do resumo: carregando (qualquer um dos dois recursos) e erro — usado só pro alerta de erro no topo, que cobre os dois. */
     state: computed(() => {
       const statusError = store._statusCountsResource.error() as HttpErrorResponse | undefined;
       const volumeError = store._volumeResource.error() as HttpErrorResponse | undefined;

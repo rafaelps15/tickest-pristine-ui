@@ -28,7 +28,7 @@
           <div class="content-left">
             <span class="text-muted">Total de Tickets</span>
             <div class="d-flex align-items-end mt-2">
-              @if (store.state().loading) {
+              @if (store.statusCountsLoading()) {
                 <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando total de tickets…</span></span>
               } @else {
                 <h3 class="mb-0 me-2">{{ store.total() }}</h3>
@@ -55,7 +55,7 @@
           <div class="content-left">
             <span class="text-muted">Em Aberto</span>
             <div class="d-flex align-items-end mt-2">
-              @if (store.state().loading) {
+              @if (store.statusCountsLoading()) {
                 <span class="spinner-border spinner-border-sm text-warning" role="status"><span class="visually-hidden">Carregando tickets em aberto…</span></span>
               } @else {
                 <h3 class="mb-0 me-2 text-warning">{{ store.openCount() }}</h3>
@@ -74,7 +74,7 @@
       </div>
       @if (sessionService.hasPermission('tickets:manage')) {
         <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.Open }"
-           aria-label="Ver tickets em aberto na fila de monitoramento"></a>
+           [attr.aria-label]="'Ver ' + store.openCount() + ' tickets em aberto na fila de monitoramento'"></a>
       }
     </div>
   </div>
@@ -86,7 +86,7 @@
           <div class="content-left">
             <span class="text-muted">Em Andamento</span>
             <div class="d-flex align-items-end mt-2">
-              @if (store.state().loading) {
+              @if (store.statusCountsLoading()) {
                 <span class="spinner-border spinner-border-sm text-info" role="status"><span class="visually-hidden">Carregando tickets em andamento…</span></span>
               } @else {
                 <h3 class="mb-0 me-2 text-info">{{ store.inProgressCount() }}</h3>
@@ -105,7 +105,7 @@
       </div>
       @if (sessionService.hasPermission('tickets:manage')) {
         <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.InProgress }"
-           aria-label="Ver tickets em andamento na fila de monitoramento"></a>
+           [attr.aria-label]="'Ver ' + store.inProgressCount() + ' tickets em andamento na fila de monitoramento'"></a>
       }
     </div>
   </div>
@@ -117,7 +117,7 @@
           <div class="content-left">
             <span class="text-muted">Resolvidos</span>
             <div class="d-flex align-items-end mt-2">
-              @if (store.state().loading) {
+              @if (store.statusCountsLoading()) {
                 <span class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Carregando tickets resolvidos…</span></span>
               } @else {
                 <h3 class="mb-0 me-2 text-success">{{ store.resolvedCount() }}</h3>
@@ -136,7 +136,7 @@
       </div>
       @if (sessionService.hasPermission('tickets:manage')) {
         <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.Resolved }"
-           aria-label="Ver tickets resolvidos na fila de monitoramento"></a>
+           [attr.aria-label]="'Ver ' + store.resolvedCount() + ' tickets resolvidos na fila de monitoramento'"></a>
       }
     </div>
   </div>
@@ -167,7 +167,7 @@
       </div>
       <div class="card-body">
         <div class="chart-container" style="position: relative; height: 380px;" [class.d-none]="showTable()">
-          @if (store.state().loading) {
+          @if (store.volumeLoading()) {
             <div class="d-flex align-items-center justify-content-center h-100">
               <span class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span>
             </div>
@@ -198,7 +198,7 @@
                 </tr>
               </thead>
               <tbody>
-                @if (store.state().loading) {
+                @if (store.volumeLoading()) {
                   <tr><td colspan="2" class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span></td></tr>
                 } @else if (store.volume().length === 0) {
                   <tr><td colspan="2" class="text-center py-4 text-muted">Nenhum ticket aberto neste período ainda.</td></tr>
@@ -274,6 +274,22 @@
               </div>
               <i class="bx bx-chevron-right"></i>
             </a>
+
+            @if (sessionService.hasPermission('tickets:manage')) {
+              <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
+                 routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
+                <div class="d-flex align-items-center">
+                  <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
+                    <i class="bx bx-user-x fs-4"></i>
+                  </span>
+                  <div>
+                    <div class="fw-bold">Tickets sem responsável</div>
+                    <div class="small opacity-75">Fila sem atendente definido</div>
+                  </div>
+                </div>
+                <i class="bx bx-chevron-right"></i>
+              </a>
+            }
           </div>
         }
       </div>

@@ -10,6 +10,8 @@ describe('DashboardComponent', () => {
   function createTicketsStoreFake() {
     return {
       state: signal({ loading: false, error: null as string | null }),
+      statusCountsLoading: signal(false),
+      volumeLoading: signal(false),
       total: signal(10),
       openCount: signal(3),
       inProgressCount: signal(2),
@@ -95,13 +97,21 @@ describe('DashboardComponent', () => {
   });
 
   it('mostra um spinner nos cards de estatística, em vez dos números, enquanto o resumo carrega', async () => {
-    ticketsStoreFake.state.set({ loading: true, error: null });
+    ticketsStoreFake.statusCountsLoading.set(true);
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
     expect(text).not.toContain('10');
     expect(fixture.nativeElement.querySelectorAll('.spinner-border').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('não mostra spinner nos cards de estatística quando só o volume está carregando (recursos independentes)', async () => {
+    ticketsStoreFake.volumeLoading.set(true);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('10');
   });
 
   it('mostra uma mensagem de vazio no gráfico quando não há tickets abertos no período', async () => {
@@ -121,6 +131,17 @@ describe('DashboardComponent', () => {
     expect(links).toHaveSize(3);
     expect(links.some(a => a.getAttribute('href')?.includes('status=1'))).toBeTrue();
     expect(fixture.nativeElement.textContent).toContain('toque para ver na fila');
+  });
+
+  it('inclui a contagem atual no aria-label dos cards de status, pra quem usa leitor de tela saber "quantos" antes de entrar', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
+    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 3 tickets em aberto na fila de monitoramento')).toBeTrue();
+    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 2 tickets em andamento na fila de monitoramento')).toBeTrue();
+    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 4 tickets resolvidos na fila de monitoramento')).toBeTrue();
   });
 
   it('não linka os cards de status sem a permissão tickets:manage', async () => {
@@ -194,7 +215,7 @@ describe('DashboardComponent', () => {
     expect(text).toContain('5');
   });
 
-  it('mostra os atalhos de Novo Ticket e Meus Tickets pra quem não tem papel administrativo (ex. Atendente, que também tem tickets:manage)', async () => {
+  it('mostra Novo Ticket, Meus Tickets E Tickets sem responsável pra quem não é administrativo mas tem tickets:manage (ex. Atendente)', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
@@ -202,7 +223,15 @@ describe('DashboardComponent', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Novo Ticket');
     expect(text).toContain('Meus Tickets');
-    expect(text).not.toContain('Tickets sem responsável');
+    expect(text).toContain('Tickets sem responsável');
+  });
+
+  it('não mostra o atalho "Tickets sem responsável" pra quem não tem a permissão tickets:manage (ex. Solicitante)', async () => {
+    hasPermission.and.returnValue(false);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Tickets sem responsável');
   });
 
   it('troca Novo Ticket/Meus Tickets por "Tickets sem responsável" pra quem tem papel administrativo (users:read, roles:manage, departments:manage ou sectors:manage)', async () => {
