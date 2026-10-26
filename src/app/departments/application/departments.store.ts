@@ -19,6 +19,8 @@ export const DepartmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
     mutationError: null as string | null,
+    /** Em voo uma criação/atualização/exclusão de departamento ou setor — evita duplo submit. */
+    mutating: false,
     /** Candidatos a responsável encontrados na busca do formulário de departamento. */
     responsibleCandidates: [] as UserSummary[],
     searchingResponsible: false,
@@ -54,7 +56,10 @@ export const DepartmentsStore = signalStore(
 
     /** Cria um novo departamento e recarrega a listagem em caso de sucesso (POST /departments). */
     create(data: DepartmentData, onSuccess?: () => void): void {
-      store._departmentDataService.create(data).subscribe({
+      patchState(store, { mutating: true });
+      store._departmentDataService.create(data).pipe(
+        finalize(() => patchState(store, { mutating: false }))
+      ).subscribe({
         next: () => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
@@ -68,7 +73,10 @@ export const DepartmentsStore = signalStore(
 
     /** Atualiza um departamento existente e recarrega a listagem em caso de sucesso (PUT /departments/{id}). */
     update(departmentId: string, data: DepartmentData, onSuccess?: () => void): void {
-      store._departmentDataService.update(departmentId, data).subscribe({
+      patchState(store, { mutating: true });
+      store._departmentDataService.update(departmentId, data).pipe(
+        finalize(() => patchState(store, { mutating: false }))
+      ).subscribe({
         next: () => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
@@ -135,7 +143,10 @@ export const DepartmentsStore = signalStore(
 
     /** Cria um setor dentro de um departamento e recarrega a listagem em caso de sucesso (POST /sectors). */
     createSector(data: CreateSectorData, onSuccess?: () => void): void {
-      store._sectorDataService.create(data).subscribe({
+      patchState(store, { mutating: true });
+      store._sectorDataService.create(data).pipe(
+        finalize(() => patchState(store, { mutating: false }))
+      ).subscribe({
         next: () => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
@@ -149,7 +160,10 @@ export const DepartmentsStore = signalStore(
 
     /** Atualiza um setor existente e recarrega a listagem em caso de sucesso (PUT /sectors/{sectorId}). */
     updateSector(sectorId: string, data: UpdateSectorData, onSuccess?: () => void): void {
-      store._sectorDataService.update(sectorId, data).subscribe({
+      patchState(store, { mutating: true });
+      store._sectorDataService.update(sectorId, data).pipe(
+        finalize(() => patchState(store, { mutating: false }))
+      ).subscribe({
         next: () => {
           patchState(store, { mutationError: null });
           store._listResource.reload();

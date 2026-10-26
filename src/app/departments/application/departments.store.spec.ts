@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { DepartmentsStore } from './departments.store';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
@@ -57,6 +57,43 @@ describe('DepartmentsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.departments()).toEqual(departments);
+  });
+
+  it('marca mutating durante a criação de departamento, e libera ao terminar', async () => {
+    const subject = new Subject<string>();
+    departmentDataService.create.and.returnValue(subject);
+
+    store.create({ name: 'Operações', description: 'Logística' });
+    expect(store.mutating()).toBeTrue();
+
+    subject.next('dep-2');
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutating()).toBeFalse();
+  });
+
+  it('marca mutating durante a atualização de departamento, mesmo quando a API falha', async () => {
+    departmentDataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.update('dep-1', { name: 'TI', description: 'Tecnologia' });
+
+    expect(store.mutating()).toBeFalse();
+    expect(store.mutationError()).toBe('Erro ao atualizar departamento');
+  });
+
+  it('marca mutating durante a criação de setor, e libera ao terminar', async () => {
+    const subject = new Subject<string>();
+    sectorDataService.create.and.returnValue(subject);
+
+    store.createSector({ name: 'Sistemas', departmentId: 'dep-1' });
+    expect(store.mutating()).toBeTrue();
+
+    subject.next('sec-2');
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutating()).toBeFalse();
   });
 
   it('cria o setor no departamento informado e recarrega os departamentos', async () => {

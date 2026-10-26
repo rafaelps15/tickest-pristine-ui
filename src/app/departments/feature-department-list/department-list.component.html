@@ -135,11 +135,33 @@
           }
           <div class="mb-3">
             <label class="form-label" for="departmentName">Nome</label>
-            <input id="departmentName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Tecnologia da Informação" />
+            <input id="departmentName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Tecnologia da Informação"
+                   [class.is-invalid]="isFieldInvalid('name')"
+                   [attr.aria-describedby]="isFieldInvalid('name') ? 'departmentName-error' : null" />
+            @if (isFieldInvalid('name')) {
+              <div class="invalid-feedback" id="departmentName-error">
+                @if (form.controls.name.errors?.['required']) {
+                  O nome é obrigatório.
+                } @else if (form.controls.name.errors?.['maxlength']) {
+                  O nome deve ter no máximo 100 caracteres.
+                }
+              </div>
+            }
           </div>
           <div class="mb-3">
             <label class="form-label" for="departmentDescription">Descrição</label>
-            <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"></textarea>
+            <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"
+                      [class.is-invalid]="isFieldInvalid('description')"
+                      [attr.aria-describedby]="isFieldInvalid('description') ? 'departmentDescription-error' : null"></textarea>
+            @if (isFieldInvalid('description')) {
+              <div class="invalid-feedback" id="departmentDescription-error">
+                @if (form.controls.description.errors?.['required']) {
+                  A descrição é obrigatória.
+                } @else if (form.controls.description.errors?.['maxlength']) {
+                  A descrição deve ter no máximo 500 caracteres.
+                }
+              </div>
+            }
           </div>
 
           <div class="mb-3">
@@ -191,7 +213,12 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="form.invalid">Salvar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || loadingCurrentResponsible()">
+            @if (store.mutating()) {
+              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            Salvar
+          </button>
         </div>
       </form>
     </div>
@@ -216,16 +243,37 @@
           }
           <div class="mb-3">
             <label class="form-label" for="sectorName">Nome</label>
-            <input id="sectorName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Suporte técnico" />
+            <input id="sectorName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Suporte técnico"
+                   [class.is-invalid]="isSectorFieldInvalid('name')"
+                   [attr.aria-describedby]="isSectorFieldInvalid('name') ? 'sectorName-error' : null" />
+            @if (isSectorFieldInvalid('name')) {
+              <div class="invalid-feedback" id="sectorName-error">
+                @if (sectorForm.controls.name.errors?.['required']) {
+                  O nome é obrigatório.
+                } @else if (sectorForm.controls.name.errors?.['maxlength']) {
+                  O nome deve ter no máximo 100 caracteres.
+                }
+              </div>
+            }
           </div>
           <div class="mb-3">
             <label class="form-label" for="sectorDescription">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
-            <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description" placeholder="Que tipo de chamado este setor atende"></textarea>
+            <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description" placeholder="Que tipo de chamado este setor atende"
+                      [class.is-invalid]="isSectorFieldInvalid('description')"
+                      [attr.aria-describedby]="isSectorFieldInvalid('description') ? 'sectorDescription-error' : null"></textarea>
+            @if (isSectorFieldInvalid('description')) {
+              <div class="invalid-feedback" id="sectorDescription-error">A descrição deve ter no máximo 500 caracteres.</div>
+            }
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="sectorForm.invalid">Salvar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
+            @if (store.mutating()) {
+              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            Salvar
+          </button>
         </div>
       </form>
     </div>

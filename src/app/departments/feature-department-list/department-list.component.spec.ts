@@ -37,6 +37,7 @@ describe('DepartmentListComponent', () => {
       departments: signal<Department[]>([informationTechnology, commercial]),
       listState: signal({ data: [informationTechnology, commercial], loading: false, error: null as string | null }),
       mutationError: signal<string | null>(null),
+      mutating: signal(false),
       responsibleCandidates: signal<UserSummary[]>([]),
       searchingResponsible: signal(false),
       responsibleSearchError: signal<string | null>(null),
@@ -137,6 +138,26 @@ describe('DepartmentListComponent', () => {
     expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
   });
 
+  it('ignora a resposta tardia de um departamento se o admin já trocou para outro antes dela chegar', async () => {
+    const departmentA: Department = { ...informationTechnology, id: 'dep-a', responsibleUserName: 'Carlos Souza' };
+    const departmentB: Department = { ...commercial, id: 'dep-b', responsibleUserName: 'Beatriz Lima' };
+    const detailA: DepartmentDetail = { id: 'dep-a', name: 'TI', description: '', responsibleUserId: 'u-carlos' };
+    let resolveA!: (detail: DepartmentDetail) => void;
+    storeFake.getDepartmentDetail.and.callFake((id: string, onLoaded: (d: DepartmentDetail) => void) => {
+      if (id === 'dep-a') resolveA = onLoaded;
+    });
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(departmentA);
+    fixture.componentInstance.openEditModal(departmentB);
+    resolveA(detailA);
+
+    expect(fixture.componentInstance.editingDepartment()?.id).toBe('dep-b');
+    expect(fixture.componentInstance.selectedResponsibleId()).toBeNull();
+    expect(fixture.componentInstance.selectedResponsibleName()).toBe('Beatriz Lima');
+  });
+
   it('seleciona um candidato da busca como responsável, e limpa a busca', async () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
@@ -159,6 +180,48 @@ describe('DepartmentListComponent', () => {
 
     expect(fixture.componentInstance.selectedResponsibleId()).toBeNull();
     expect(fixture.componentInstance.selectedResponsibleName()).toBeNull();
+  });
+
+  it('o botão "Salvar" do modal de departamento fica desabilitado enquanto o responsável atual carrega', async () => {
+    storeFake.getDepartmentDetail.and.callFake(() => {});
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeTrue();
+  });
+
+  it('o botão "Salvar" do modal de departamento fica desabilitado durante a mutação, não por formulário inválido', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeFalse();
+
+    storeFake.mutating.set(true);
+    fixture.detectChanges();
+    expect(button.disabled).toBeTrue();
+  });
+
+  it('mostra a mensagem de erro certa para o nome do departamento, por tipo de validação', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    const name = fixture.componentInstance.form.controls.name;
+
+    name.setValue('');
+    name.markAsTouched();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('O nome é obrigatório.');
   });
 
   it('inclui o responsável selecionado ao criar um departamento', async () => {

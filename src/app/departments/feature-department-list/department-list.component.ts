@@ -80,6 +80,18 @@ export class DepartmentListComponent implements OnInit {
         description: ['', [Validators.maxLength(500)]]
     });
 
+    /** Verifica se um campo do formulário de departamento está inválido e já foi tocado. */
+    isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
+        const control = this.form.controls[fieldName];
+        return control.invalid && (control.dirty || control.touched);
+    }
+
+    /** Verifica se um campo do formulário de setor está inválido e já foi tocado. */
+    isSectorFieldInvalid(fieldName: keyof typeof this.sectorForm.controls): boolean {
+        const control = this.sectorForm.controls[fieldName];
+        return control.invalid && (control.dirty || control.touched);
+    }
+
     constructor() {
         // Espera ~300ms após a última tecla antes de buscar, pra não buscar a cada letra digitada.
         toObservable(this.responsibleSearchInput).pipe(
@@ -122,6 +134,10 @@ export class DepartmentListComponent implements OnInit {
 
         this.loadingCurrentResponsible.set(true);
         this.store.getDepartmentDetail(department.id, detail => {
+            // Ignora a resposta se o admin já trocou de departamento no modal antes dela chegar
+            // (ex.: abriu "editar" em A e, antes de carregar, abriu "editar" em B).
+            if (this.editingDepartment()?.id !== department.id) return;
+
             this.selectedResponsibleId.set(detail.responsibleUserId);
             this.loadingCurrentResponsible.set(false);
         });
