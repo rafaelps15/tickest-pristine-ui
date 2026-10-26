@@ -92,6 +92,30 @@ describe('FirstAccessComponent', () => {
     expect(button.disabled).toBeTrue();
   });
 
+  it('o botão de salvar não fica desabilitado por formulário inválido, só durante o carregamento', async () => {
+    const fixture = TestBed.createComponent(FirstAccessComponent);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeFalse();
+  });
+
+  it('clicar no botão com o formulário vazio marca os campos como tocados e mostra os erros', async () => {
+    const fixture = TestBed.createComponent(FirstAccessComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    const button = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(storeFake.changeRequiredPassword).not.toHaveBeenCalled();
+    expect(component.form.controls.newPassword.touched).toBeTrue();
+    expect(component.form.controls.confirmPassword.touched).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('A nova senha é obrigatória.');
+  });
+
   it('mostra a mensagem de erro do store quando presente', async () => {
     storeFake.error.set('A nova senha precisa ser diferente da atual.');
     const fixture = TestBed.createComponent(FirstAccessComponent);

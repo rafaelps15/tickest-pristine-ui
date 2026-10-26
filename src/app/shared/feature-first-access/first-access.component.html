@@ -18,13 +18,16 @@
         autocomplete="new-password"
         autofocus
         [class.is-invalid]="isFieldInvalid('newPassword')"
-        [attr.aria-describedby]="isFieldInvalid('newPassword') ? 'newPassword-error' : null"
+        [attr.aria-describedby]="isFieldInvalid('newPassword') ? 'newPassword-error' : 'newPassword-requirements'"
       />
       <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
               [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
         <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
       </button>
     </div>
+    @if (!isFieldInvalid('newPassword')) {
+      <div class="form-text" id="newPassword-requirements">Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.</div>
+    }
     @if (isFieldInvalid('newPassword')) {
       <div class="form-text text-danger" id="newPassword-error">
         @if (form.controls.newPassword.errors?.['required']) {
@@ -81,7 +84,7 @@
   <button
     class="btn btn-primary btn-lg w-100 py-3 fw-bold"
     type="submit"
-    [disabled]="form.invalid || store.loading()"
+    [disabled]="store.loading()"
   >
     @if (store.loading()) {
       <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -92,7 +95,10 @@
   </button>
 </form>
 
-<p class="text-center mt-4 mb-0">
+<p class="text-center mt-4 mb-1 small text-muted">
+  Não lembra da senha provisória? Volte ao login e tente de novo, ou peça para um administrador reenviá-la.
+</p>
+<p class="text-center mb-0">
   <button type="button" class="btn btn-link fw-bold text-primary text-decoration-none p-0" (click)="store.cancelPasswordChange()">
     Voltar ao login
   </button>
