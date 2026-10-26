@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { RolesStore } from './roles.store';
 import { RoleDataService } from '../infrastructure/role.data.service';
 import { PermissionDataService } from '../infrastructure/permission.data.service';
@@ -109,6 +109,20 @@ describe('RolesStore', () => {
 
     expect(roleDataService.assignPermissions).toHaveBeenCalledWith('Agent', ['tickets:manage', 'tickets:create']);
     expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('marca assigningPermissions durante a atribuição, e libera ao terminar', async () => {
+    const subject = new Subject<void>();
+    roleDataService.assignPermissions.and.returnValue(subject);
+
+    store.assignPermissions('Agent', ['tickets:manage']);
+    expect(store.assigningPermissions()).toBeTrue();
+
+    subject.next();
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.assigningPermissions()).toBeFalse();
   });
 
   it('expõe a mensagem de erro quando a atribuição de permissões falhar, sem vazar pra fora do modal', async () => {

@@ -44,3 +44,51 @@ export function clearRoleColor(roleName: string): void {
   delete map[roleName];
   writeMap(map);
 }
+
+/** Converte uma cor hex (#rrggbb) em componentes RGB (0-255). */
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.replace('#', '');
+  return [
+    parseInt(normalized.substring(0, 2), 16),
+    parseInt(normalized.substring(2, 4), 16),
+    parseInt(normalized.substring(4, 6), 16)
+  ];
+}
+
+/** Mistura dois componentes de cor na mesma proporção usada pelo `color-mix(in srgb, ...)` do CSS. */
+function mixChannel(a: number, b: number, ratioOfA: number): number {
+  return a * ratioOfA + b * (1 - ratioOfA);
+}
+
+/** Luminância relativa (WCAG), a partir de componentes RGB (0-255) já linearizados. */
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const [rl, gl, bl] = [r, g, b].map(channel => {
+    const s = channel / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+}
+
+/** Taxa de contraste WCAG entre duas cores RGB (0-255). */
+function contrastRatio(a: [number, number, number], b: [number, number, number]): number {
+  const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * Verifica se a cor escolhida gera contraste suficiente (WCAG AA, 4.5:1) no badge de função
+ * (`.badge-role-custom`, `styles.css`) no modo claro — fundo `color-mix(cor 15%, branco)`, texto
+ * `color-mix(cor 65%, preto)`. É o pior dos dois temas: cores muito claras (perto do branco)
+ * deixam fundo e texto quase iguais; o par do modo escuro (fundo escuro, texto claro) não sofre
+ * desse problema pela mesma cor.
+ */
+export function hasAccessibleRoleColorContrast(hex: string): boolean {
+  const rgb = hexToRgb(hex);
+  const background: [number, number, number] = [
+    mixChannel(rgb[0], 255, 0.15), mixChannel(rgb[1], 255, 0.15), mixChannel(rgb[2], 255, 0.15)
+  ];
+  const text: [number, number, number] = [
+    mixChannel(rgb[0], 0, 0.65), mixChannel(rgb[1], 0, 0.65), mixChannel(rgb[2], 0, 0.65)
+  ];
+  return contrastRatio(background, text) >= 4.5;
+}

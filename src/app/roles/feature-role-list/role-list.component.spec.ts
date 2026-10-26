@@ -24,6 +24,7 @@ describe('RoleListComponent', () => {
       listState: signal({ data: [adminRole, agentRole], loading: false, error: null as string | null }),
       createError: signal<string | null>(null),
       assignPermissionsError: signal<string | null>(null),
+      assigningPermissions: signal(false),
       permissions: signal<Permission[]>(permissions),
       permissionGroups: signal([{ title: 'Chamados', permissions: [permissions[0]] }, { title: 'Usuários', permissions: [permissions[1]] }]),
       permissionName: jasmine.createSpy('permissionName').and.callFake(
@@ -156,6 +157,51 @@ describe('RoleListComponent', () => {
 
     expect(storeFake.assignPermissions).toHaveBeenCalledWith('Agent', ['tickets:manage', 'users:read'], jasmine.any(Function));
     expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+  });
+
+  it('pede confirmação extra ao zerar as permissões de uma role sem remover nenhuma administrativa', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openPermissionsModal(agentRole);
+    fixture.componentInstance.togglePermission('tickets:manage', false);
+    fixture.componentInstance.onAssignPermissionsSubmit();
+
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0];
+    expect(options.title).toContain('sem nenhuma permissão');
+    expect(storeFake.assignPermissions).toHaveBeenCalledWith('Agent', [], jasmine.any(Function));
+  });
+
+  it('não zera as permissões quando a confirmação de "sem permissões" é cancelada', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openPermissionsModal(agentRole);
+    fixture.componentInstance.togglePermission('tickets:manage', false);
+    fixture.componentInstance.onAssignPermissionsSubmit();
+
+    expect(storeFake.assignPermissions).not.toHaveBeenCalled();
+  });
+
+  it('o botão "Salvar" do modal de permissões fica desabilitado durante a atribuição', async () => {
+    storeFake.assigningPermissions.set(true);
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#rolePermissionsModal button.btn-primary') as HTMLButtonElement;
+    expect(button.disabled).toBeTrue();
+  });
+
+  it('rejeita uma cor clara demais para o badge, sem salvar nem alterar a cor atual', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onPickColor('Agent', '#ffffff');
+
+    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
+    expect(fixture.componentInstance.colorContrastWarning()).toContain('contraste');
   });
 
   it('pede confirmação extra ao remover uma permissão administrativa já atribuída', async () => {

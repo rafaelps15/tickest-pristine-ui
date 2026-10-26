@@ -2,6 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
 import { RoleDataService } from '../infrastructure/role.data.service';
@@ -17,7 +18,9 @@ export const RolesStore = signalStore(
     /** Erro de atribuição de permissões — exibido dentro do modal "Permissões", não na página. */
     assignPermissionsError: null as string | null,
     /** Erro ao carregar o catálogo de permissões (GET /permissions). */
-    permissionsLoadError: null as string | null
+    permissionsLoadError: null as string | null,
+    /** Em voo uma atribuição de permissões (PUT /roles/{roleName}/permissions) — evita duplo submit. */
+    assigningPermissions: false
   }),
   withProps(() => ({
     _roleDataService: inject(RoleDataService),
@@ -115,7 +118,10 @@ export const RolesStore = signalStore(
 
     /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions) e recarrega a listagem em caso de sucesso. */
     assignPermissions(roleName: string, permissionCodes: string[], onSuccess?: () => void): void {
-      store._roleDataService.assignPermissions(roleName, permissionCodes).subscribe({
+      patchState(store, { assigningPermissions: true });
+      store._roleDataService.assignPermissions(roleName, permissionCodes).pipe(
+        finalize(() => patchState(store, { assigningPermissions: false }))
+      ).subscribe({
         next: () => {
           patchState(store, { assignPermissionsError: null });
           store._listResource.reload();

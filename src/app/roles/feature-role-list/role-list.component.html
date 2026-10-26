@@ -15,6 +15,9 @@
 @if (store.listState().error) {
   <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }
+@if (colorContrastWarning(); as warning) {
+  <div class="alert alert-warning border-0 shadow-sm" role="alert">{{ warning }}</div>
+}
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
@@ -147,7 +150,12 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" (click)="onAssignPermissionsSubmit()">Salvar</button>
+        <button type="button" class="btn btn-primary" [disabled]="store.assigningPermissions()" (click)="onAssignPermissionsSubmit()">
+          @if (store.assigningPermissions()) {
+            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+          }
+          Salvar
+        </button>
       </div>
     </div>
   </div>

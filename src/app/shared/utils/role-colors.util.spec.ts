@@ -1,4 +1,4 @@
-import { getRoleColor, setRoleColor, clearRoleColor } from './role-colors.util';
+import { getRoleColor, setRoleColor, clearRoleColor, hasAccessibleRoleColorContrast } from './role-colors.util';
 
 const STORAGE_KEY = 'tickest.roleColors';
 
@@ -42,5 +42,21 @@ describe('role-colors.util', () => {
     spyOn(Storage.prototype, 'setItem').and.throwError('bloqueado (ex.: modo privado)');
 
     expect(() => setRoleColor('Agent', '#ff3e1d')).not.toThrow();
+  });
+
+  it('rejeita branco por não ter contraste suficiente pro badge', () => {
+    expect(hasAccessibleRoleColorContrast('#ffffff')).toBeFalse();
+  });
+
+  it('rejeita um amarelo claro por não ter contraste suficiente pro badge', () => {
+    expect(hasAccessibleRoleColorContrast('#ffff99')).toBeFalse();
+  });
+
+  it('aceita um vermelho saturado, com contraste suficiente pro badge', () => {
+    expect(hasAccessibleRoleColorContrast('#ff3e1d')).toBeTrue();
+  });
+
+  it('aceita preto, com contraste suficiente pro badge', () => {
+    expect(hasAccessibleRoleColorContrast('#000000')).toBeTrue();
   });
 });

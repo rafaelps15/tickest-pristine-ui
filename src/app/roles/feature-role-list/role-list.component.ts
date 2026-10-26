@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@ang
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
-import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor } from '../../shared';
+import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor, hasAccessibleRoleColorContrast } from '../../shared';
 import { RoleGuideComponent } from './role-guide.component';
 import { RoleInsightsComponent } from './role-insights.component';
 
@@ -45,6 +45,9 @@ export class RoleListComponent implements OnInit {
      */
     private readonly roleColorVersion = signal(0);
 
+    /** Aviso exibido quando a cor escolhida não teria contraste suficiente para o badge; `null` quando não há aviso. */
+    colorContrastWarning = signal<string | null>(null);
+
     /** Carrega as roles e os códigos de permissão disponíveis ao abrir a tela. */
     ngOnInit(): void {
         this.store.load();
@@ -83,8 +86,14 @@ export class RoleListComponent implements OnInit {
         return getRoleColor(roleName);
     }
 
-    /** Escolhe (ou troca) a cor de uma função já existente. */
+    /** Escolhe (ou troca) a cor de uma função já existente — rejeita cores sem contraste suficiente pro badge. */
     onPickColor(roleName: string, hex: string): void {
+        if (!hasAccessibleRoleColorContrast(hex)) {
+            this.colorContrastWarning.set('Essa cor não tem contraste suficiente para o badge ficar legível. Escolha uma cor mais escura/saturada.');
+            return;
+        }
+
+        this.colorContrastWarning.set(null);
         setRoleColor(roleName, hex);
         this.roleColorVersion.update(v => v + 1);
     }
@@ -147,21 +156,33 @@ export class RoleListComponent implements OnInit {
             !this.isChecked(code) && this.store.permissions().find(permission => permission.code === code)?.isAdministrative
         );
 
-        if (removedAdministrativeCodes.length === 0) {
-            this.submitAssignPermissions(role);
+        if (removedAdministrativeCodes.length > 0) {
+            const names = removedAdministrativeCodes.map(code => this.store.permissionName(code)).join(', ');
+            const plural = removedAdministrativeCodes.length > 1;
+            this.confirmDialogService.confirm({
+                title: `Remover permissão administrativa de "${role.name}"?`,
+                message: `${names} ${plural ? 'são permissões administrativas' : 'é uma permissão administrativa'}. Isso afeta todos os usuários que têm essa função, não só você.`,
+                confirmLabel: 'Remover',
+                variant: 'danger'
+            }).subscribe(confirmed => {
+                if (confirmed) this.submitAssignPermissions(role);
+            });
             return;
         }
 
-        const names = removedAdministrativeCodes.map(code => this.store.permissionName(code)).join(', ');
-        const plural = removedAdministrativeCodes.length > 1;
-        this.confirmDialogService.confirm({
-            title: `Remover permissão administrativa de "${role.name}"?`,
-            message: `${names} ${plural ? 'são permissões administrativas' : 'é uma permissão administrativa'}. Isso afeta todos os usuários que têm essa função, não só você.`,
-            confirmLabel: 'Remover',
-            variant: 'danger'
-        }).subscribe(confirmed => {
-            if (confirmed) this.submitAssignPermissions(role);
-        });
+        if (this.selectedPermissionCodes().size === 0) {
+            this.confirmDialogService.confirm({
+                title: `Salvar "${role.name}" sem nenhuma permissão?`,
+                message: 'Quem tem essa função vai ficar sem nenhum acesso liberado por ela. Isso afeta todos os usuários que têm essa função, não só você.',
+                confirmLabel: 'Salvar sem permissões',
+                variant: 'danger'
+            }).subscribe(confirmed => {
+                if (confirmed) this.submitAssignPermissions(role);
+            });
+            return;
+        }
+
+        this.submitAssignPermissions(role);
     }
 
     /** Envia a atribuição de permissões marcadas para a role selecionada. */

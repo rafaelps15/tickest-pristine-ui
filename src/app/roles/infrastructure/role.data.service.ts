@@ -22,6 +22,6 @@ export class RoleDataService {
 
   /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions). */
   assignPermissions(roleName: string, permissionCodes: string[]): Observable<void> {
-    return this.http.put<void>(`${this.apiUrl}/${roleName}/permissions`, { permissionCodes });
+    return this.http.put<void>(`${this.apiUrl}/${encodeURIComponent(roleName)}/permissions`, { permissionCodes });
   }
 }
