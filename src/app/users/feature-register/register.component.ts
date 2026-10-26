@@ -1,7 +1,6 @@
-import { Component, OnInit, inject, effect, ChangeDetectionStrategy } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { UsersStore } from '../application/users.store';
 import { strongPasswordValidator } from '../../shared';
 
@@ -14,21 +13,21 @@ export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): V
         : null;
 };
 
-/** Tela de registro de usuário — reaproveitada tanto no auto-registro público quanto no painel administrativo. */
+/** Tela pública de solicitação de cadastro (auto-registro). */
 @Component({
     selector: 'app-register',
-    imports: [NgTemplateOutlet, ReactiveFormsModule, RouterModule],
+    imports: [ReactiveFormsModule, RouterModule],
     templateUrl: './register.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrl: './register.component.css'
+    // Visual compartilhado com login/primeiro acesso (ver shared/ui/auth-form.css).
+    styleUrls: ['../../shared/ui/auth-form.css']
 })
 export class RegisterComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
-    private readonly router = inject(Router);
     protected readonly store = inject(UsersStore);
 
-    /** Determina se o componente está sendo usado para auto-registro ou dentro do painel administrativo. */
-    isSelfRegistration = false;
+    /** Controla a visibilidade dos dois campos de senha, juntos. */
+    showPasswords = signal(false);
 
     /** Formulário reativo com validações robustas e tipagem implícita. */
     readonly form = this.fb.group({
@@ -39,26 +38,13 @@ export class RegisterComponent implements OnInit {
         confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator });
 
-    private redirectedAfterRegister = false;
-
-    constructor() {
-        // Redireciona para o login uma única vez após um auto-registro bem-sucedido.
-        // Usar effect() em vez de polling: reage à mudança de estado e é destruído
-        // automaticamente junto com o componente, sem deixar timers pendurados.
-        effect(() => {
-            const success = this.store.success();
-            if (this.isSelfRegistration && success && !this.redirectedAfterRegister) {
-                this.redirectedAfterRegister = true;
-                setTimeout(() => this.router.navigate(['/login']), 2000);
-            }
-        });
-    }
-
     ngOnInit(): void {
         this.store.resetState();
+    }
 
-        // Verifica se a URL atual é de registro público ou administrativo
-        this.isSelfRegistration = this.router.url.includes('/register');
+    /** Alterna entre exibir e ocultar os dois campos de senha. */
+    togglePasswordsVisibility(): void {
+        this.showPasswords.update(v => !v);
     }
 
     /** Atalho para facilitar o acesso aos controles no template. */

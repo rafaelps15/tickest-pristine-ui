@@ -84,8 +84,13 @@ export const UsersStore = signalStore(
           store._listResource.reload();
         },
         error: (err: HttpErrorResponse) => {
+          // POST /users/register exige autenticação + a permissão de criar usuários — hoje não
+          // existe cadastro público de verdade; quem chama esta tela sem estar autenticado como
+          // administrador cai aqui com 401/403.
           const message = extractErrorMessage(err, {
             0: 'Sem conexão com o servidor.',
+            401: 'Você não tem permissão para solicitar este cadastro.',
+            403: 'Você não tem permissão para solicitar este cadastro.',
             409: 'Este e-mail já está cadastrado.'
           }, 'Ocorreu um erro inesperado.');
           patchState(store, { error: message });

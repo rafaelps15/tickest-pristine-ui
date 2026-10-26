@@ -185,6 +185,15 @@ describe('UsersStore', () => {
     expect(store.error()).toBe('Este e-mail já está cadastrado.');
   });
 
+  it('expõe mensagem própria quando a criação falhar por falta de permissão (401/403)', async () => {
+    authDataService.register.and.returnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.error()).toBe('Você não tem permissão para solicitar este cadastro.');
+  });
+
   it('reseta loading/success/error ao chamar resetState', () => {
     store.resetState();
 
