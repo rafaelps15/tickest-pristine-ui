@@ -22,7 +22,9 @@ describe('ProfileEditComponent', () => {
       passwordError: signal<string | null>(null),
       loadCurrentUser: jasmine.createSpy('loadCurrentUser'),
       save: jasmine.createSpy('save'),
-      changePassword: jasmine.createSpy('changePassword')
+      changePassword: jasmine.createSpy('changePassword'),
+      clearSaved: jasmine.createSpy('clearSaved'),
+      clearPasswordChanged: jasmine.createSpy('clearPasswordChanged')
     };
   }
 
@@ -152,5 +154,65 @@ describe('ProfileEditComponent', () => {
     fixture.componentInstance.onChangePassword();
 
     expect(storeFake.changePassword).not.toHaveBeenCalled();
+  });
+
+  it('mostra "mínimo de 2 caracteres" quando o nome é preenchido mas curto demais', async () => {
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+    const firstName = fixture.componentInstance.form.controls.firstName;
+
+    firstName.setValue('A');
+    firstName.markAsTouched();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('O nome deve ter no mínimo 2 caracteres.');
+  });
+
+  it('liga o campo de nome inválido à mensagem de erro via aria-describedby', async () => {
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+    const firstName = fixture.componentInstance.form.controls.firstName;
+
+    firstName.setValue('');
+    firstName.markAsTouched();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const input = fixture.nativeElement.querySelector('#firstName') as HTMLInputElement;
+    expect(input.getAttribute('aria-describedby')).toBe('firstName-error');
+  });
+
+  it('mostra os requisitos de senha antes de qualquer erro', async () => {
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.');
+  });
+
+  it('esconde a confirmação de "perfil atualizado" assim que o usuário volta a editar o nome', async () => {
+    storeFake.saved.set(true);
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+
+    const firstName = fixture.componentInstance.form.controls.firstName;
+    firstName.markAsDirty();
+    firstName.setValue('Outro nome');
+    await fixture.whenStable();
+
+    expect(storeFake.clearSaved).toHaveBeenCalled();
+  });
+
+  it('esconde a confirmação de "senha alterada" assim que o usuário volta a editar o formulário de senha', async () => {
+    storeFake.passwordChanged.set(true);
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+
+    const currentPassword = fixture.componentInstance.passwordForm.controls.currentPassword;
+    currentPassword.markAsDirty();
+    currentPassword.setValue('Nova123!');
+    await fixture.whenStable();
+
+    expect(storeFake.clearPasswordChanged).toHaveBeenCalled();
   });
 });

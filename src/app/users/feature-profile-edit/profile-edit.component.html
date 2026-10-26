@@ -46,16 +46,38 @@
             <label class="form-label" for="firstName">Nome</label>
             <input id="firstName" type="text" class="form-control" formControlName="firstName"
                    autocomplete="given-name" maxlength="50"
-                   [class.is-invalid]="isFieldInvalid('firstName')" />
-            <div class="invalid-feedback">O nome é obrigatório.</div>
+                   [class.is-invalid]="isFieldInvalid('firstName')"
+                   [attr.aria-describedby]="isFieldInvalid('firstName') ? 'firstName-error' : null" />
+            @if (isFieldInvalid('firstName')) {
+              <div class="invalid-feedback" id="firstName-error">
+                @if (form.controls.firstName.errors?.['required']) {
+                  O nome é obrigatório.
+                } @else if (form.controls.firstName.errors?.['minlength']) {
+                  O nome deve ter no mínimo 2 caracteres.
+                } @else if (form.controls.firstName.errors?.['maxlength']) {
+                  O nome deve ter no máximo 50 caracteres.
+                }
+              </div>
+            }
           </div>
 
           <div class="col-12 col-md-6">
             <label class="form-label" for="lastName">Sobrenome</label>
             <input id="lastName" type="text" class="form-control" formControlName="lastName"
                    autocomplete="family-name" maxlength="50"
-                   [class.is-invalid]="isFieldInvalid('lastName')" />
-            <div class="invalid-feedback">O sobrenome é obrigatório.</div>
+                   [class.is-invalid]="isFieldInvalid('lastName')"
+                   [attr.aria-describedby]="isFieldInvalid('lastName') ? 'lastName-error' : null" />
+            @if (isFieldInvalid('lastName')) {
+              <div class="invalid-feedback" id="lastName-error">
+                @if (form.controls.lastName.errors?.['required']) {
+                  O sobrenome é obrigatório.
+                } @else if (form.controls.lastName.errors?.['minlength']) {
+                  O sobrenome deve ter no mínimo 2 caracteres.
+                } @else if (form.controls.lastName.errors?.['maxlength']) {
+                  O sobrenome deve ter no máximo 50 caracteres.
+                }
+              </div>
+            }
           </div>
 
           <div class="col-12">
@@ -108,12 +130,15 @@
           <div class="input-group">
             <input id="currentPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control"
                    formControlName="currentPassword" autocomplete="current-password"
-                   [class.is-invalid]="isPasswordFieldInvalid('currentPassword')" />
+                   [class.is-invalid]="isPasswordFieldInvalid('currentPassword')"
+                   [attr.aria-describedby]="isPasswordFieldInvalid('currentPassword') ? 'currentPassword-error' : null" />
             <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
                     [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
               <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
             </button>
-            <div class="invalid-feedback">A senha atual é obrigatória.</div>
+            @if (isPasswordFieldInvalid('currentPassword')) {
+              <div class="invalid-feedback" id="currentPassword-error">A senha atual é obrigatória.</div>
+            }
           </div>
         </div>
 
@@ -122,14 +147,18 @@
           <div class="input-group">
             <input id="newPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control"
                    formControlName="newPassword" autocomplete="new-password"
-                   [class.is-invalid]="isPasswordFieldInvalid('newPassword')" />
+                   [class.is-invalid]="isPasswordFieldInvalid('newPassword')"
+                   [attr.aria-describedby]="isPasswordFieldInvalid('newPassword') ? 'newPassword-error' : 'newPassword-requirements'" />
             <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
                     [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
               <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
             </button>
           </div>
+          @if (!isPasswordFieldInvalid('newPassword')) {
+            <div class="form-text" id="newPassword-requirements">Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.</div>
+          }
           @if (isPasswordFieldInvalid('newPassword')) {
-            <div class="form-text text-danger">
+            <div class="form-text text-danger" id="newPassword-error">
               @if (passwordForm.controls.newPassword.errors?.['required']) {
                 <div>A nova senha é obrigatória.</div>
               }
@@ -154,17 +183,18 @@
           <div class="input-group">
             <input id="confirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control"
                    formControlName="confirmPassword" autocomplete="new-password"
-                   [class.is-invalid]="isPasswordFieldInvalid('confirmPassword') || (passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched)" />
+                   [class.is-invalid]="isPasswordFieldInvalid('confirmPassword') || (passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched)"
+                   [attr.aria-describedby]="(isPasswordFieldInvalid('confirmPassword') || (passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched)) ? 'confirmPassword-error' : null" />
             <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
                     [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
               <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
             </button>
             @if (isPasswordFieldInvalid('confirmPassword')) {
-              <div class="invalid-feedback">A confirmação de senha é obrigatória.</div>
+              <div class="invalid-feedback" id="confirmPassword-error">A confirmação de senha é obrigatória.</div>
             }
           </div>
           @if (passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched && passwordForm.controls.confirmPassword.valid) {
-            <div class="form-text text-danger">As senhas não coincidem.</div>
+            <div class="form-text text-danger" id="confirmPassword-error">As senhas não coincidem.</div>
           }
         </div>
       </div>

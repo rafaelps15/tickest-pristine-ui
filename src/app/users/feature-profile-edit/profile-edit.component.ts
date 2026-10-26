@@ -1,4 +1,5 @@
 import { Component, inject, effect, signal, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ProfileEditStore } from '../application/profile-edit.store';
@@ -47,6 +48,17 @@ export class ProfileEditComponent {
       if (this.store.passwordChanged()) {
         this.passwordForm.reset({ currentPassword: '', newPassword: '', confirmPassword: '' });
       }
+    });
+
+    // Esconde a confirmação de sucesso assim que o usuário volta a editar, para não dar falsa
+    // confiança de que uma mudança ainda não salva já foi aplicada. Checa `dirty` porque o
+    // próprio reset() dos efeitos acima (ao recarregar o perfil/limpar a senha) também emite
+    // valueChanges, mas deixa o formulário pristine — não é uma edição do usuário.
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.store.saved() && this.form.dirty) this.store.clearSaved();
+    });
+    this.passwordForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.store.passwordChanged() && this.passwordForm.dirty) this.store.clearPasswordChanged();
     });
   }
 

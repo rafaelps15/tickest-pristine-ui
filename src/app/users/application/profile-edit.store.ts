@@ -85,9 +85,23 @@ export const ProfileEditStore = signalStore(
       ).subscribe({
         next: () => patchState(store, { passwordChanged: true }),
         error: (err: HttpErrorResponse) => {
-          patchState(store, { passwordError: extractErrorMessage(err, {}, 'Erro ao alterar a senha.') });
+          patchState(store, {
+            passwordError: extractErrorMessage(err, {
+              429: 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.'
+            }, 'Erro ao alterar a senha.')
+          });
         }
       });
+    },
+
+    /** Esconde a confirmação de "perfil atualizado" — usado quando o usuário volta a editar o formulário. */
+    clearSaved(): void {
+      patchState(store, { saved: false });
+    },
+
+    /** Esconde a confirmação de "senha alterada" — usado quando o usuário volta a editar o formulário de senha. */
+    clearPasswordChanged(): void {
+      patchState(store, { passwordChanged: false });
     }
   }))
 );

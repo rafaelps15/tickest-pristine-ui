@@ -94,4 +94,25 @@ describe('ProfileEditStore', () => {
     expect(store.passwordChanged()).toBeFalse();
     expect(store.passwordError()).toBe('A senha atual informada está incorreta');
   });
+
+  it('deve expor mensagem própria quando o rate limiter bloquear a troca de senha (429, sem corpo)', async () => {
+    dataService.changePassword.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
+
+    store.changePassword({ currentPassword: 'Password123!', newPassword: 'NewPassword456#' });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.passwordError()).toBe('Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.');
+  });
+
+  it('clearSaved() esconde a confirmação de perfil atualizado', () => {
+    store.clearSaved();
+
+    expect(store.saved()).toBeFalse();
+  });
+
+  it('clearPasswordChanged() esconde a confirmação de senha alterada', () => {
+    store.clearPasswordChanged();
+
+    expect(store.passwordChanged()).toBeFalse();
+  });
 });
