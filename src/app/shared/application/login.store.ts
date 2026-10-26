@@ -65,8 +65,12 @@ export const LoginStore = signalStore(
 
             // Login responde 400 (UserErrors.InvalidCredentials) tanto para usuário
             // inexistente quanto para senha incorreta, para não vazar qual dos dois é o caso.
+            // 403 (Users.LockedOut) já chega com sua própria mensagem via ProblemDetails.detail
+            // (extractErrorMessage prioriza o corpo da API sobre este mapa). 429 vem do rate
+            // limiter do ASP.NET sem corpo, por isso precisa de mensagem própria aqui.
             const message = extractErrorMessage(err, {
               400: 'E-mail ou senha incorretos.',
+              429: 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.',
               500: 'Erro interno no servidor.'
             }, 'E-mail ou senha incorretos.');
             patchState(store, { error: message });

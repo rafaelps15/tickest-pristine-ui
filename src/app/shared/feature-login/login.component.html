@@ -30,7 +30,7 @@
   <div class="mb-4">
     <div class="d-flex justify-content-between align-items-center mb-1">
       <label class="form-label mb-0" for="password">Senha</label>
-      <span class="text-muted small">Esqueceu? Fale com o administrador do sistema.</span>
+      <span class="text-muted small">Esqueceu sua senha? Peça para um administrador redefini-la.</span>
     </div>
     <div class="input-group input-group-merge">
       <input
@@ -64,7 +64,7 @@
   <button
     class="btn btn-primary btn-lg w-100 py-3 fw-bold"
     type="submit"
-    [disabled]="form.invalid || store.loading()"
+    [disabled]="store.loading()"
   >
     @if (store.loading()) {
       <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -78,6 +78,6 @@
 <p class="text-center mt-4 mb-0">
   <span class="text-muted">Novo por aqui?</span>
   <a routerLink="/register" class="ms-1 fw-bold text-primary text-decoration-none">
-    Crie sua conta
+    Solicite seu acesso
   </a>
 </p>

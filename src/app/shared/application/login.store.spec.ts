@@ -78,6 +78,26 @@ describe('LoginStore', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
+  it('deve mostrar a mensagem da API quando a conta estiver bloqueada por tentativas (403)', () => {
+    dataService.login.and.returnValue(throwError(() => new HttpErrorResponse({
+      status: 403,
+      error: { title: 'Users.LockedOut', detail: 'Muitas tentativas de login sem sucesso. A conta está bloqueada por alguns minutos; tente de novo mais tarde.' }
+    })));
+
+    store.login(credentials);
+
+    expect(store.error()).toBe('Muitas tentativas de login sem sucesso. A conta está bloqueada por alguns minutos; tente de novo mais tarde.');
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('deve mostrar mensagem própria quando o rate limiter bloquear a requisição (429, sem corpo)', () => {
+    dataService.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
+
+    store.login(credentials);
+
+    expect(store.error()).toBe('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+  });
+
   it('deve trocar a senha provisória, limpar as credenciais e iniciar a sessão', () => {
     loginWithProvisionalPassword();
     dataService.changeRequiredPassword.and.returnValue(of(tokens));
