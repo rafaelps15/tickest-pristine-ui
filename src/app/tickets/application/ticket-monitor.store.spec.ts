@@ -76,6 +76,34 @@ describe('TicketMonitorStore', () => {
     expect(store.listState().error).toBe('Você não tem permissão para monitorar os tickets do sistema.');
   });
 
+  it('expõe a mensagem de erro quando o resumo de SLA falhar, e recarrega ao chamar reloadSlaSummary', async () => {
+    dataService.getSlaSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.slaSummaryState().error).toBe('Erro ao carregar o resumo de SLA');
+
+    dataService.getSlaSummary.calls.reset();
+    dataService.getSlaSummary.and.returnValue(of(slaSummary));
+    store.reloadSlaSummary();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getSlaSummary).toHaveBeenCalled();
+    expect(store.slaSummaryState().error).toBeNull();
+  });
+
+  it('limpa o erro de atribuição ao chamar clearMutationError', async () => {
+    dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    store.assignToMe('t1', 'u1');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.mutationError()).toBeTruthy();
+
+    store.clearMutationError();
+
+    expect(store.mutationError()).toBeNull();
+  });
+
   it('filtra por status e volta pra primeira página', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     store.goToPage(1);

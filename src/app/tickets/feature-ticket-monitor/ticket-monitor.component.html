@@ -9,6 +9,12 @@
 <p class="text-muted small mb-2">
   Resumo do setor selecionado, com todos os status e prioridades — não muda com os outros filtros da tabela abaixo.
 </p>
+@if (store.slaSummaryState().error) {
+  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
+    <span>{{ store.slaSummaryState().error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.reloadSlaSummary()">Tentar novamente</button>
+  </div>
+}
 <div class="row">
   <div class="col-12 col-sm-6 col-lg-3 mb-4">
     <button type="button" class="card card-stats card-stats-btn h-100"
@@ -100,7 +106,7 @@
         <div class="input-group">
           <span class="input-group-text"><i class="bx bx-search"></i></span>
           <input id="monitorSearch" type="text" class="form-control" placeholder="Título"
-                 [value]="store.filters().search ?? ''" (change)="store.setSearch($any($event.target).value)" />
+                 [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
         </div>
       </div>
       <div class="col-6 col-md-2">
@@ -170,7 +176,7 @@
                  (change)="store.setUnassignedOnly($any($event.target).checked)" />
           <label class="form-check-label small" for="monitorUnassignedOnly">Só sem responsável</label>
         </div>
-        <button type="button" class="btn btn-link btn-clear-filters text-decoration-none px-0" (click)="store.clearFilters()">
+        <button type="button" class="btn btn-link btn-clear-filters text-decoration-none px-0" (click)="onClearFilters()">
           <i class="bx bx-x me-1"></i>Limpar filtros
         </button>
       </div>
@@ -186,7 +192,10 @@
 }
 
 @if (store.mutationError()) {
-  <div class="alert alert-danger" role="alert">{{ store.mutationError() }}</div>
+  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
+    <span>{{ store.mutationError() }}</span>
+    <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar" (click)="store.clearMutationError()"></button>
+  </div>
 }
 
 <div class="row g-3">
@@ -258,30 +267,41 @@
                 {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
               </td>
               <td class="text-end" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                <div class="d-flex gap-1 justify-content-end">
-                  @if (canAssignToMe(ticket)) {
-                    <button type="button" class="btn btn-sm btn-outline-primary btn-icon rounded-circle"
-                            [disabled]="store.assigningToMeIds().includes(ticket.id)"
-                            [attr.aria-label]="'Atribuir o ticket ' + ticket.title + ' a mim'"
-                            (click)="onAssignToMe(ticket.id)">
-                      @if (store.assigningToMeIds().includes(ticket.id)) {
-                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                      } @else {
-                        <i class="bx bx-user-plus"></i>
-                      }
-                    </button>
-                  }
-                  @if (canAssignResponsible(ticket)) {
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
-                            data-bs-toggle="modal" data-bs-target="#monitorAssignResponsibleModal"
-                            [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo ticket ' : 'Atribuir responsável pelo ticket ') + ticket.title"
-                            (click)="onOpenAssignResponsibleModal(ticket.id)">
-                      <i class="bx bx-user-check"></i>
-                    </button>
-                  }
-                  <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
-                    <i class="bx bx-show"></i>
-                  </a>
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
+                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
+                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
+                    <i class="bx bx-dots-vertical-rounded"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    @if (canAssignToMe(ticket)) {
+                      <li>
+                        <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
+                                [attr.aria-label]="'Atribuir o ticket ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
+                          @if (store.assigningToMeIds().includes(ticket.id)) {
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                          } @else {
+                            <i class="bx bx-user-plus me-2"></i>
+                          }
+                          Atribuir a mim
+                        </button>
+                      </li>
+                    }
+                    @if (canAssignResponsible(ticket)) {
+                      <li>
+                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#monitorAssignResponsibleModal"
+                                [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo ticket ' : 'Atribuir responsável pelo ticket ') + ticket.title"
+                                (click)="onOpenAssignResponsibleModal(ticket.id)">
+                          <i class="bx bx-user-check me-2"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
+                        </button>
+                      </li>
+                    }
+                    <li>
+                      <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
+                        <i class="bx bx-show me-2"></i>Ver detalhes
+                      </a>
+                    </li>
+                  </ul>
                 </div>
               </td>
             </tr>

@@ -13,6 +13,7 @@ import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLAS
 import { TicketSortOrder, TICKET_SORT_ORDER_LABELS } from '../entities/ticket-sort-order';
 import { DepartmentsStore } from '../../departments';
 import { SessionService, ToastService } from '../../shared';
+import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
 import { UserSummary } from '../../users';
 import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
@@ -47,7 +48,7 @@ function parsePageParam(value: string | null): number {
 /** Tela de "Monitorar Tickets": todos os chamados do sistema, com filtros e resumo de SLA (role Administrador/Atendente, permissão tickets:manage). */
 @Component({
     selector: 'app-ticket-monitor',
-    imports: [CommonModule, RouterLink, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, TicketMonitorInsightsComponent],
+    imports: [CommonModule, RouterLink, DropdownFixedPositionDirective, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, TicketMonitorInsightsComponent],
     templateUrl: './ticket-monitor.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-monitor.component.css'
@@ -76,6 +77,9 @@ export class TicketMonitorComponent implements OnInit {
      */
     readonly selectedTicket = computed(() => this.store.tickets().find(t => t.id === this.selectedTicketId()));
 
+    /** Texto digitado na busca por título, antes do debounce. */
+    readonly searchInput = signal('');
+
     /** Texto digitado na busca de candidatos do modal "Atribuir responsável", antes do debounce. */
     readonly responsibleSearchInput = signal('');
 
@@ -87,6 +91,14 @@ export class TicketMonitorComponent implements OnInit {
         // ticket selecionado; trocar a seleção rápido cancela a busca anterior automaticamente
         // (characteristic do rxResource, que troca de observable a cada mudança de `ticketId`).
         effect(() => this.quickInfoStore.select(this.selectedTicketId()));
+
+        // Espera ~300ms após a última tecla antes de buscar por título, pra não buscar a cada
+        // letra digitada — mesmo padrão já usado no resto do app (ex.: busca de Usuários).
+        toObservable(this.searchInput).pipe(
+            debounceTime(300),
+            distinctUntilChanged(),
+            takeUntilDestroyed()
+        ).subscribe(search => this.store.setSearch(search));
 
         // Espera ~300ms após a última tecla antes de buscar, pra não buscar a cada letra digitada
         // (mesmo padrão do modal de atribuição do detalhe do chamado).
@@ -250,6 +262,12 @@ export class TicketMonitorComponent implements OnInit {
     onSlaCardClick(slaStatus: TicketSlaStatus | undefined): void {
         this.store.setSlaStatus(slaStatus);
         this.store.setSort(TicketSortOrder.DueDate);
+    }
+
+    /** Limpa todos os filtros, incluindo o texto de busca ainda não aplicado (debounce em andamento). */
+    onClearFilters(): void {
+        this.searchInput.set('');
+        this.store.clearFilters();
     }
 
     /** Índice (1-based) do primeiro item exibido na página atual, para o texto "Exibindo X–Y de Z". */

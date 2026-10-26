@@ -34,6 +34,7 @@ describe('TicketMonitorComponent', () => {
       tickets: signal<TicketMonitorItem[]>([ticket]),
       listState: signal({ loading: false, error: null as string | null }),
       slaSummary: signal<TicketSlaSummary | undefined>(slaSummary),
+      slaSummaryState: signal({ loading: false, error: null as string | null }),
       currentPage: signal(1),
       currentPageSize: signal(20),
       total: signal(1),
@@ -47,6 +48,8 @@ describe('TicketMonitorComponent', () => {
       responsibleSearchError: signal<string | null>(null),
       assigningResponsible: signal(false),
       load: jasmine.createSpy('load'),
+      reloadSlaSummary: jasmine.createSpy('reloadSlaSummary'),
+      clearMutationError: jasmine.createSpy('clearMutationError'),
       setStatus: jasmine.createSpy('setStatus'),
       setPriority: jasmine.createSpy('setPriority'),
       setSectorId: jasmine.createSpy('setSectorId'),
@@ -676,6 +679,66 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.assigningResponsibleTicketId()).toBe('t1');
     expect(fixture.componentInstance.responsibleSearchInput()).toBe('');
     expect(storeFake.clearResponsibleSearch).toHaveBeenCalled();
+  });
+
+  it('busca por título com debounce de 300ms após parar de digitar, sem buscar a cada letra', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const input = fixture.nativeElement.querySelector('#monitorSearch') as HTMLInputElement;
+    input.value = 'impressora';
+    input.dispatchEvent(new Event('input'));
+
+    expect(storeFake.setSearch).not.toHaveBeenCalled();
+
+    await new Promise(resolve => setTimeout(resolve, 350));
+
+    expect(storeFake.setSearch).toHaveBeenCalledWith('impressora');
+  });
+
+  it('ao limpar os filtros, também limpa o texto de busca ainda não aplicado', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.searchInput.set('impressora');
+
+    const clearButton = fixture.nativeElement.querySelector('.btn-clear-filters') as HTMLButtonElement;
+    clearButton.click();
+
+    expect(fixture.componentInstance.searchInput()).toBe('');
+    expect(storeFake.clearFilters).toHaveBeenCalled();
+  });
+
+  it('mostra o erro do resumo de SLA com botão de tentar novamente', async () => {
+    storeFake.slaSummaryState.set({ loading: false, error: 'Erro ao carregar o resumo de SLA' });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o resumo de SLA');
+
+    const retryButton = fixture.nativeElement.querySelector('.alert-danger button') as HTMLButtonElement;
+    retryButton.click();
+
+    expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
+  });
+
+  it('permite fechar o alerta de erro de atribuição', async () => {
+    storeFake.mutationError.set('Não foi possível atribuir.');
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const closeButton = fixture.nativeElement.querySelector('.alert-danger .btn-close') as HTMLButtonElement;
+    closeButton.click();
+
+    expect(storeFake.clearMutationError).toHaveBeenCalled();
+  });
+
+  it('agrupa as ações da linha (atribuir/ver detalhes) num único menu "⋮", em vez de botões soltos', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
+    expect(row.querySelector('.dropdown-menu')).toBeTruthy();
+    expect(row.querySelectorAll('[data-bs-toggle="dropdown"]').length).toBe(1);
   });
 
   it('busca candidatos a responsável com debounce de 300ms após parar de digitar', async () => {

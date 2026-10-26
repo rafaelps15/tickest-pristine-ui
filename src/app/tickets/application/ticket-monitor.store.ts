@@ -68,7 +68,15 @@ export const TicketMonitorStore = signalStore(
       };
     }),
     /** Resumo de SLA dos chamados ativos, respeitando o filtro de setor atual. */
-    slaSummary: computed(() => store._slaSummaryResource.value())
+    slaSummary: computed(() => store._slaSummaryResource.value()),
+    /** Estado agregado do resumo de SLA (carregamento e erro) — os 4 cards do topo mostram "—" sem nenhum aviso se isso não for tratado. */
+    slaSummaryState: computed(() => {
+      const resourceError = store._slaSummaryResource.error() as HttpErrorResponse | undefined;
+      return {
+        loading: store._slaSummaryResource.isLoading(),
+        error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar o resumo de SLA') : null
+      };
+    })
   })),
   withComputed((store) => ({
     /** Página atual (1-based). */
@@ -88,6 +96,16 @@ export const TicketMonitorStore = signalStore(
     /** Recarrega a página atual com os filtros atuais. */
     load(): void {
       store._listResource.reload();
+    },
+
+    /** Recarrega o resumo de SLA (ex.: botão "Tentar novamente" depois de uma falha). */
+    reloadSlaSummary(): void {
+      store._slaSummaryResource.reload();
+    },
+
+    /** Limpa o erro da última atribuição (ex.: ao trocar de filtro/página, pra não deixar um erro antigo preso na tela). */
+    clearMutationError(): void {
+      patchState(store, { mutationError: null });
     },
 
     /** Muda o filtro de status e volta para a primeira página. */
