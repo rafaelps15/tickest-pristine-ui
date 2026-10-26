@@ -11,7 +11,7 @@ import { RolesStore } from '../../roles';
 import {
     SessionService, ConfirmDialogService, ToastService,
     visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
-    getRoleColor
+    getRoleColor, strongPasswordValidator
 } from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
@@ -80,7 +80,7 @@ export class UserListComponent implements OnInit {
         firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
         lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
         email: ['', [Validators.required, Validators.email]],
-        password: ['', [Validators.required, Validators.minLength(6)]],
+        password: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
         confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator });
 
@@ -121,6 +121,18 @@ export class UserListComponent implements OnInit {
     infoPanelUser = computed(() => this.store.users().find(user => user.id === this.infoPanelUserId()));
 
     readonly pageSizeOptions = [10, 20, 50, 100];
+
+    /** Verifica se um campo do formulário de criação está inválido e já foi tocado. */
+    isCreateFieldInvalid(fieldName: keyof typeof this.createForm.controls): boolean {
+        const control = this.createForm.controls[fieldName];
+        return control.invalid && (control.dirty || control.touched);
+    }
+
+    /** Verifica se um campo do formulário de edição está inválido e já foi tocado. */
+    isEditFieldInvalid(fieldName: keyof typeof this.editForm.controls): boolean {
+        const control = this.editForm.controls[fieldName];
+        return control.invalid && (control.dirty || control.touched);
+    }
 
     constructor() {
         effect(() => {

@@ -168,14 +168,14 @@
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                      <a href="javascript:void(0);" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#userEditModal" (click)="openEditModal(user)">
+                      <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#userEditModal" (click)="openEditModal(user)">
                         <i class="bx bx-edit-alt me-2"></i>Editar Cadastro
-                      </a>
+                      </button>
                     </li>
                     <li>
-                      <a href="javascript:void(0);" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
+                      <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
                         <i class="bx bx-shield-quarter me-2"></i>Atribuir Funções
-                      </a>
+                      </button>
                     </li>
                     @if (!isCurrentUser(user)) {
                       <li><hr class="dropdown-divider" /></li>
@@ -271,49 +271,105 @@
         </div>
         <div class="modal-body">
           @if (store.error()) {
-            <div class="alert alert-danger border-0 py-2 small">{{ store.error() }}</div>
+            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.error() }}</div>
           }
           <div class="row g-3">
             <div class="col-12 col-md-6">
               <label class="form-label" for="userCreateFirstName">Nome</label>
-              <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50" />
+              <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
+                     [class.is-invalid]="isCreateFieldInvalid('firstName')"
+                     [attr.aria-describedby]="isCreateFieldInvalid('firstName') ? 'userCreateFirstName-error' : null" />
+              @if (isCreateFieldInvalid('firstName')) {
+                <div class="invalid-feedback" id="userCreateFirstName-error">
+                  @if (createForm.controls.firstName.errors?.['required']) {
+                    O nome é obrigatório.
+                  } @else if (createForm.controls.firstName.errors?.['minlength']) {
+                    O nome deve ter no mínimo 2 caracteres.
+                  } @else if (createForm.controls.firstName.errors?.['maxlength']) {
+                    O nome deve ter no máximo 50 caracteres.
+                  }
+                </div>
+              }
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="userCreateLastName">Sobrenome</label>
-              <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50" />
+              <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
+                     [class.is-invalid]="isCreateFieldInvalid('lastName')"
+                     [attr.aria-describedby]="isCreateFieldInvalid('lastName') ? 'userCreateLastName-error' : null" />
+              @if (isCreateFieldInvalid('lastName')) {
+                <div class="invalid-feedback" id="userCreateLastName-error">
+                  @if (createForm.controls.lastName.errors?.['required']) {
+                    O sobrenome é obrigatório.
+                  } @else if (createForm.controls.lastName.errors?.['minlength']) {
+                    O sobrenome deve ter no mínimo 2 caracteres.
+                  } @else if (createForm.controls.lastName.errors?.['maxlength']) {
+                    O sobrenome deve ter no máximo 50 caracteres.
+                  }
+                </div>
+              }
             </div>
             <div class="col-12">
               <label class="form-label" for="userCreateEmail">E-mail</label>
-              <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="email" />
+              <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="email"
+                     [class.is-invalid]="isCreateFieldInvalid('email')"
+                     [attr.aria-describedby]="isCreateFieldInvalid('email') ? 'userCreateEmail-error' : null" />
+              @if (isCreateFieldInvalid('email')) {
+                <div class="invalid-feedback" id="userCreateEmail-error">
+                  @if (createForm.controls.email.errors?.['required']) {
+                    O e-mail é obrigatório.
+                  } @else {
+                    Insira um e-mail válido.
+                  }
+                </div>
+              }
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="userCreatePassword">Senha</label>
               <div class="input-group">
-                <input id="userCreatePassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="new-password" />
+                <input id="userCreatePassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="new-password"
+                       [class.is-invalid]="isCreateFieldInvalid('password')"
+                       [attr.aria-describedby]="isCreateFieldInvalid('password') ? 'userCreatePassword-error' : null" />
                 <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
                         [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
                   <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
                 </button>
+                @if (isCreateFieldInvalid('password')) {
+                  <div class="invalid-feedback" id="userCreatePassword-error">
+                    @if (createForm.controls.password.errors?.['required']) {
+                      Informe a senha.
+                    } @else if (createForm.controls.password.errors?.['minlength']) {
+                      A senha deve ter no mínimo 6 caracteres.
+                    } @else if (createForm.controls.password.errors?.['uppercase']) {
+                      A senha deve conter pelo menos uma letra maiúscula.
+                    } @else if (createForm.controls.password.errors?.['specialChar']) {
+                      A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
+                    }
+                  </div>
+                }
               </div>
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="userCreateConfirmPassword">Confirmar Senha</label>
               <div class="input-group">
-                <input id="userCreateConfirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="confirmPassword" autocomplete="new-password" />
+                <input id="userCreateConfirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="confirmPassword" autocomplete="new-password"
+                       [class.is-invalid]="isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')"
+                       [attr.aria-describedby]="(isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')) ? 'userCreateConfirmPassword-error' : null" />
                 <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
                         [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
                   <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
                 </button>
+                @if (createForm.hasError('passwordMismatch') && createForm.controls.confirmPassword.touched) {
+                  <div class="invalid-feedback" id="userCreateConfirmPassword-error">As senhas não coincidem.</div>
+                } @else if (isCreateFieldInvalid('confirmPassword')) {
+                  <div class="invalid-feedback" id="userCreateConfirmPassword-error">Confirme a senha.</div>
+                }
               </div>
-              @if (createForm.hasError('passwordMismatch')) {
-                <div class="form-text text-danger">As senhas não coincidem.</div>
-              }
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="createForm.invalid || store.loading()">
+          <button type="submit" class="btn btn-primary" [disabled]="store.loading()">
             @if (store.loading()) {
               <span class="spinner-border spinner-border-sm me-1"></span>
             }
@@ -336,22 +392,48 @@
         </div>
         <div class="modal-body">
           @if (store.listState().error) {
-            <div class="alert alert-danger border-0 py-2 small">{{ store.listState().error }}</div>
+            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.listState().error }}</div>
           }
           <div class="row g-3">
             <div class="col-12 col-md-6">
               <label class="form-label" for="userEditFirstName">Nome</label>
-              <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50" />
+              <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
+                     [class.is-invalid]="isEditFieldInvalid('firstName')"
+                     [attr.aria-describedby]="isEditFieldInvalid('firstName') ? 'userEditFirstName-error' : null" />
+              @if (isEditFieldInvalid('firstName')) {
+                <div class="invalid-feedback" id="userEditFirstName-error">
+                  @if (editForm.controls.firstName.errors?.['required']) {
+                    O nome é obrigatório.
+                  } @else if (editForm.controls.firstName.errors?.['minlength']) {
+                    O nome deve ter no mínimo 2 caracteres.
+                  } @else if (editForm.controls.firstName.errors?.['maxlength']) {
+                    O nome deve ter no máximo 50 caracteres.
+                  }
+                </div>
+              }
             </div>
             <div class="col-12 col-md-6">
               <label class="form-label" for="userEditLastName">Sobrenome</label>
-              <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50" />
+              <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
+                     [class.is-invalid]="isEditFieldInvalid('lastName')"
+                     [attr.aria-describedby]="isEditFieldInvalid('lastName') ? 'userEditLastName-error' : null" />
+              @if (isEditFieldInvalid('lastName')) {
+                <div class="invalid-feedback" id="userEditLastName-error">
+                  @if (editForm.controls.lastName.errors?.['required']) {
+                    O sobrenome é obrigatório.
+                  } @else if (editForm.controls.lastName.errors?.['minlength']) {
+                    O sobrenome deve ter no mínimo 2 caracteres.
+                  } @else if (editForm.controls.lastName.errors?.['maxlength']) {
+                    O sobrenome deve ter no máximo 50 caracteres.
+                  }
+                </div>
+              }
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="editForm.invalid || store.updatingProfile()">
+          <button type="submit" class="btn btn-primary" [disabled]="store.updatingProfile()">
             @if (store.updatingProfile()) {
               <span class="spinner-border spinner-border-sm me-1"></span>
             }

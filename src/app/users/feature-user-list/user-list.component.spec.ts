@@ -671,6 +671,57 @@ describe('UserListComponent', () => {
     });
   });
 
+  it('não envia a criação quando a senha for fraca (sem maiúscula/caractere especial)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.createForm.setValue({
+      firstName: 'Ana',
+      lastName: 'Costa',
+      email: 'ana@empresa.com',
+      password: 'semmaiuscula1',
+      confirmPassword: 'semmaiuscula1'
+    });
+    fixture.componentInstance.onCreateSubmit();
+
+    expect(usersStoreFake.createUser).not.toHaveBeenCalled();
+  });
+
+  it('o botão "Criar" não fica desabilitado por formulário inválido, só durante o carregamento', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#userCreateModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeFalse();
+  });
+
+  it('mostra a mensagem de erro certa para o nome no modal de criação, por tipo de validação', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    const firstName = fixture.componentInstance.createForm.controls.firstName;
+
+    firstName.setValue('A');
+    firstName.markAsTouched();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('O nome deve ter no mínimo 2 caracteres.');
+  });
+
+  it('não envia a edição e marca os campos tocados quando o nome estiver vazio', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openEditModal(activeUser);
+
+    fixture.componentInstance.editForm.controls.firstName.setValue('');
+    fixture.componentInstance.onEditSubmit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(usersStoreFake.updateProfile).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('O nome é obrigatório.');
+  });
+
   it('mostra um toast de sucesso ao criar um usuário', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
