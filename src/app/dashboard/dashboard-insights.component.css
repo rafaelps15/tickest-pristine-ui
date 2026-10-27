@@ -64,6 +64,11 @@
   transition: background-color var(--tk-transition);
 }
 
+/* "Sem responsável" num alerta: o texto âmbar AA do sistema — pede alguém pra assumir. */
+.critical-ticket-unassigned {
+  color: var(--tk-warning-text);
+}
+
 .critical-ticket-title {
   font-weight: 500;
   text-underline-offset: 0.2em;

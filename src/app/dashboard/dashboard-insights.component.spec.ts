@@ -71,6 +71,16 @@ describe('DashboardInsightsComponent', () => {
     expect(link.getAttribute('href')).toBe('/tickets/t1');
   });
 
+  it('diz quem atende cada alerta, e destaca quando não tem responsável', async () => {
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [ticket, { ...ticket, id: 't2', assignedToUserId: null, assignedToName: null }]);
+    await fixture.whenStable();
+
+    const [assigned, unassigned] = Array.from(fixture.nativeElement.querySelectorAll('.critical-ticket-link') as NodeListOf<HTMLElement>);
+    expect(assigned.textContent).toContain('Com Atendente');
+    expect(unassigned.querySelector('.critical-ticket-unassigned')?.textContent?.trim()).toBe('Sem responsável');
+  });
+
   it('marca cada chamado como "Vencido" ou "Em risco" com texto, não só com cor', async () => {
     const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
     const fixture = TestBed.createComponent(DashboardInsightsComponent);

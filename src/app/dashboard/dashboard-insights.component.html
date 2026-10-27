@@ -68,6 +68,12 @@
                 {{ item.ticket.sectorName }} ·
                 <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">{{ item.relative }}</time>
               </span>
+              <!-- Quem atende: vencido sem dono e vencido em atendimento pedem ações opostas. -->
+              @if (item.ticket.assignedToName; as assignee) {
+                <span class="d-block small text-muted">Com {{ assignee }}</span>
+              } @else {
+                <span class="d-block small fw-semibold critical-ticket-unassigned">Sem responsável</span>
+              }
             </a>
           </li>
         }
