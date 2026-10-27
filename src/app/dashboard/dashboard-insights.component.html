@@ -12,7 +12,14 @@
     } @else if (error(); as errorMessage) {
       <p class="text-danger small mb-0">{{ errorMessage }}</p>
     } @else if (criticalTickets().length === 0) {
-      <p class="text-muted small mb-0">Nenhum ticket com SLA vencido ou em risco agora.</p>
+      <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
+      <div class="d-flex align-items-center gap-3 sla-all-clear">
+        <span class="badge bg-label-success rounded-circle sla-all-clear-icon" aria-hidden="true"><i class="bx bx-check fs-4"></i></span>
+        <div>
+          <p class="fw-semibold mb-0">Fila em dia</p>
+          <p class="text-muted small mb-0">Nenhum ticket com SLA vencido ou em risco agora.</p>
+        </div>
+      </div>
     } @else {
       <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
       <div class="sla-totals mb-3">
@@ -32,7 +39,7 @@
         @for (item of items(); track item.ticket.id) {
           <li class="critical-ticket-item">
             <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
-            <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link">
+            <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
               <span class="d-flex align-items-start justify-content-between gap-2">
                 <span class="critical-ticket-title">{{ item.ticket.title }}</span>
                 @if (item.overdue) {

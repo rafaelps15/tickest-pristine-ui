@@ -6,6 +6,9 @@ import { TicketMonitorItem, TicketSlaStatus } from '../tickets';
 /** De quanto em quanto tempo o prazo relativo ("vence em 2h 14min") é recalculado, com a aba visível. */
 const CLOCK_TICK_MS = 30_000;
 
+/** Duração do realce de um item que acabou de vencer — o mesmo tempo da animação `.just-crossed` no CSS. */
+const HIGHLIGHT_MS = 1_600;
+
 /** Item do card já com o prazo relativo e a situação efetiva (vencido mesmo que a API ainda diga "em risco"). */
 interface CriticalTicketView {
   /** Chamado vindo da API. */
@@ -97,20 +100,31 @@ export class DashboardInsightsComponent {
   /** Aviso pro leitor de tela (região `aria-live`) quando um item cruza o prazo com a tela aberta. */
   protected readonly announcement = signal('');
 
+  /**
+   * Ids que acabaram de cruzar o prazo com a tela aberta — recebem um realce breve (`.just-crossed`)
+   * pra explicar a mudança de etiqueta, e saem do conjunto quando a animação termina.
+   */
+  protected readonly justCrossedIds = signal<ReadonlySet<string>>(new Set());
+
   /** Situação já vista de cada chamado (id → vencido?), pra só anunciar a virada, não a carga inicial. */
   private readonly seenOverdue = new Map<string, boolean>();
 
+  /** Timers que tiram cada id de `justCrossedIds` — limpos se o card for destruído antes. */
+  private readonly highlightTimers = new Set<ReturnType<typeof setTimeout>>();
+
   constructor() {
-    // Anuncia só a transição "em risco → vencido" de um item que já estava na tela; dados novos
-    // (primeira carga, recarga) entram no mapa calados.
+    // Anuncia (e realça) só a transição "em risco → vencido" de um item que já estava na tela;
+    // dados novos (primeira carga, recarga) entram no mapa calados.
     effect(() => {
       for (const { ticket, overdue } of this.items()) {
         if (overdue && this.seenOverdue.get(ticket.id) === false) {
           this.announcement.set(`O ticket "${ticket.title}" venceu o prazo de SLA.`);
+          this.highlightCrossed(ticket.id);
         }
         this.seenOverdue.set(ticket.id, overdue);
       }
     });
+    this.destroyRef.onDestroy(() => this.highlightTimers.forEach(clearTimeout));
 
     if (!isPlatformBrowser(this.platformId)) return;
 
@@ -124,5 +138,19 @@ export class DashboardInsightsComponent {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', tick);
     });
+  }
+
+  /** Marca o item que acabou de vencer pelo tempo do realce (`HIGHLIGHT_MS`) e depois o desmarca. */
+  private highlightCrossed(ticketId: string): void {
+    this.justCrossedIds.update(ids => new Set(ids).add(ticketId));
+    const timer = setTimeout(() => {
+      this.highlightTimers.delete(timer);
+      this.justCrossedIds.update(ids => {
+        const next = new Set(ids);
+        next.delete(ticketId);
+        return next;
+      });
+    }, HIGHLIGHT_MS);
+    this.highlightTimers.add(timer);
   }
 }

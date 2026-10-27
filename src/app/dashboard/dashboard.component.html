@@ -2,9 +2,9 @@
 <div class="row mb-4">
   <div class="col-12">
     @if (sessionService.currentUser(); as user) {
-      <h4 class="fw-bold mb-1">Seja bem-vindo(a), <span class="text-primary">{{ user.firstName }}</span>!</h4>
+      <h4 class="fw-bold mb-1">{{ greeting }}, <span class="text-primary">{{ user.firstName }}</span>!</h4>
     } @else {
-      <h4 class="fw-bold mb-1">Seja bem-vindo(a)!</h4>
+      <h4 class="fw-bold mb-1">{{ greeting }}!</h4>
     }
     <p class="text-muted small mb-0">Veja como estão os tickets de toda a empresa.</p>
   </div>

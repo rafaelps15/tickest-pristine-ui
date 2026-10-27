@@ -18,6 +18,16 @@ import { DashboardInsightsComponent } from './dashboard-insights.component';
  */
 const CATEGORICAL_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4'];
 
+/**
+ * Saudação pela hora do dia (0–23) — "Bom dia"/"Boa tarde"/"Boa noite" é o que se diz em pt-BR ao
+ * começar o trabalho, mais natural que o "Seja bem-vindo(a)" de formulário. Madrugada é "Boa noite".
+ */
+export function greetingForHour(hour: number): string {
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
 /** Quantos períodos o back-end devolve por agrupamento (GetTicketVolumeQueryHandler) — usado só sem dados. */
 const VOLUME_DEFAULT_POINTS: Record<TicketVolumeGrouping, number> = { Day: 30, Week: 12, Month: 12 };
 
@@ -97,6 +107,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.sessionService.hasPermission('roles:manage') ||
       this.sessionService.hasPermission('departments:manage') ||
       this.sessionService.hasPermission('sectors:manage'));
+
+  /**
+   * Saudação pela hora local de quem está usando (ver {@link greetingForHour}) — calculada uma vez
+   * por visita à tela (não precisa virar de "tarde" pra "noite" ao vivo).
+   */
+  protected readonly greeting = greetingForHour(new Date().getHours());
 
   /**
    * Primeiro uso: os totais chegaram (sem carregar, sem erro) e a empresa não tem nenhum ticket —
@@ -244,7 +260,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       data: {
         labels,
         datasets: [{
-          label: 'Tickets abertos',
+          label: 'Tickets criados',
           data: counts,
           backgroundColor: counts.map((_, i) => CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]),
           borderColor: surfaceColor,
@@ -255,6 +271,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // Entrada curta (o padrão do Chart.js, ~1s, parece lentidão numa tela de operação) e
+        // nenhuma com prefers-reduced-motion — os dados aparecem direto.
+        animation: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? false
+          : { duration: 300, easing: 'easeOutQuart' },
         color: textColor,
         scales: {
           x: {

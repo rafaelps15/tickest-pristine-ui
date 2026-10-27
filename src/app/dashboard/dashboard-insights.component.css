@@ -84,3 +84,34 @@
   outline: 2px solid var(--tk-primary);
   outline-offset: 0;
 }
+
+/*
+ * Momento focal do card (animate, 2026-10-27): quando um alerta vence com a tela aberta, a linha
+ * acende num vermelho suave e apaga em 1,6s (mesmo tempo de HIGHLIGHT_MS no .ts) — explica por que a
+ * etiqueta virou "Vencido". Só cor de fundo, sem deslocamento; com movimento reduzido não anima (a
+ * etiqueta e a cor do prazo já mudam sozinhas).
+ */
+@keyframes sla-just-crossed {
+  from { background-color: rgba(255, 62, 29, 0.16); }
+  to { background-color: transparent; }
+}
+
+.critical-ticket-link.just-crossed {
+  animation: sla-just-crossed 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .critical-ticket-link.just-crossed {
+    animation: none;
+  }
+}
+
+/* "Fila em dia": o vazio do card dito com clareza, com o check na cor de sucesso do sistema. */
+.sla-all-clear-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

@@ -52,6 +52,7 @@ describe('DashboardInsightsComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum ticket com SLA vencido ou em risco agora.');
+    expect(fixture.nativeElement.textContent).toContain('Fila em dia');
   });
 
   it('lista os chamados em risco de SLA recebidos, com link pro detalhe', async () => {
@@ -111,14 +112,14 @@ describe('DashboardInsightsComponent', () => {
     it('mostra o prazo relativo ("vence em" / "venceu há"), pela hora do servidor', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [dueIn(2 * 3_600_000 + 14 * 60_000), { ...dueIn(-35 * 60_000), id: 't2' }]);
-      await fixture.whenStable();
+      fixture.detectChanges();
 
       const times = Array.from(fixture.nativeElement.querySelectorAll('time') as NodeListOf<HTMLElement>).map(t => t.textContent?.trim());
       expect(times).toEqual(['vence em 2h 14min', 'venceu há 35 min']);
 
       // Servidor 1h à frente do navegador: o mesmo prazo fica 1h mais perto.
       fixture.componentRef.setInput('clockOffsetMs', 3_600_000);
-      await fixture.whenStable();
+      fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('time').textContent.trim()).toBe('vence em 1h 14min');
     });
 
@@ -127,7 +128,7 @@ describe('DashboardInsightsComponent', () => {
       fixture.componentRef.setInput('criticalTickets', [dueIn(20_000)]);
       fixture.componentRef.setInput('breachedCount', 7);
       fixture.componentRef.setInput('atRiskCount', 2);
-      await fixture.whenStable();
+      fixture.detectChanges();
 
       const totals = () => Array.from(fixture.nativeElement.querySelectorAll('.sla-total .stat-value') as NodeListOf<HTMLElement>)
         .map(t => t.textContent?.trim());
@@ -139,10 +140,16 @@ describe('DashboardInsightsComponent', () => {
       expect(live()).toBe('');
 
       jasmine.clock().tick(30_000);
-      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(badge()).toBe('Vencido');
       expect(live()).toBe('O ticket "Chamado urgente" venceu o prazo de SLA.');
+      // Realce breve na linha que acabou de vencer, que some depois de 1,6s.
+      const link = () => fixture.nativeElement.querySelector('.critical-ticket-link') as HTMLElement;
+      expect(link().classList).toContain('just-crossed');
+      jasmine.clock().tick(1_600);
+      fixture.detectChanges();
+      expect(link().classList).not.toContain('just-crossed');
       // Os totais acompanham a virada, pra não dizer "2 em risco" com a lista já mostrando um vencido a mais.
       expect(totals()).toEqual(['8', '1']);
     });
@@ -150,7 +157,7 @@ describe('DashboardInsightsComponent', () => {
     it('não anuncia nada na carga inicial, mesmo com chamados já vencidos', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [dueIn(-60_000)]);
-      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect((fixture.nativeElement.querySelector('[aria-live]') as HTMLElement).textContent?.trim()).toBe('');
     });

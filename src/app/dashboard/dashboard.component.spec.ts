@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { DashboardComponent } from './dashboard.component';
+import { DashboardComponent, greetingForHour } from './dashboard.component';
 import { TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
 import { SessionService } from '../shared';
 
@@ -58,19 +58,31 @@ describe('DashboardComponent', () => {
     }).compileComponents();
   });
 
-  it('dá boas-vindas ao usuário logado pelo primeiro nome', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+  describe('saudação', () => {
+    it('cumprimenta pelo primeiro nome conforme a hora do dia', async () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Seja bem-vindo(a), Maria!');
-  });
+      const expected = `${greetingForHour(new Date().getHours())}, Maria!`;
+      expect(fixture.nativeElement.querySelector('h4').textContent).toContain(expected);
+    });
 
-  it('mostra uma saudação genérica quando o usuário logado ainda não foi carregado', async () => {
-    currentUser.set(null);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+    it('cumprimenta sem nome quando o usuário logado ainda não foi carregado', async () => {
+      currentUser.set(null);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Seja bem-vindo(a)!');
+      expect(fixture.nativeElement.querySelector('h4').textContent.trim()).toBe(`${greetingForHour(new Date().getHours())}!`);
+    });
+
+    it('escolhe "Bom dia", "Boa tarde" ou "Boa noite" pela hora (madrugada é noite)', () => {
+      expect(greetingForHour(5)).toBe('Bom dia');
+      expect(greetingForHour(11)).toBe('Bom dia');
+      expect(greetingForHour(12)).toBe('Boa tarde');
+      expect(greetingForHour(17)).toBe('Boa tarde');
+      expect(greetingForHour(18)).toBe('Boa noite');
+      expect(greetingForHour(2)).toBe('Boa noite');
+    });
   });
 
   it('carrega o resumo da empresa ao inicializar, para qualquer papel', async () => {
