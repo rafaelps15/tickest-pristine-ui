@@ -91,7 +91,7 @@
 
 <!-- Gráfico e Ações Rápidas -->
 <div class="row">
-  <div class="col-12 col-lg-8 mb-4">
+  <div class="col-12 col-lg-8 mb-4 order-2 order-lg-1">
     <div class="card">
       <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
         <h5 class="card-title m-0 fw-bold">Tickets Abertos por Período</h5>
@@ -174,9 +174,16 @@
     </div>
   </div>
 
-  <!-- Ações Rápidas -->
-  <div class="col-12 col-lg-4 mb-4">
-    <div class="card mb-3">
+  <!-- Alertas de SLA + Ações Rápidas: o que pede ação vem antes do volume histórico — abaixo de "lg"
+       a coluna sobe pra antes do gráfico (order-*); no desktop fica à direita, com os alertas no topo. -->
+  <div class="col-12 col-lg-4 mb-4 order-1 order-lg-2">
+    @if (sessionService.hasPermission('tickets:manage')) {
+      <app-dashboard-insights class="insights-rail" [criticalTickets]="store.criticalTickets()"
+                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
+                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()" />
+    }
+
+    <div class="card">
       <div class="card-header py-3">
         <h5 class="card-title m-0 fw-bold">Ações Rápidas</h5>
       </div>
@@ -230,9 +237,5 @@
         </div>
       </div>
     </div>
-
-    @if (sessionService.hasPermission('tickets:manage')) {
-      <app-dashboard-insights class="insights-rail" [criticalTickets]="store.criticalTickets()" [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()" />
-    }
   </div>
 </div>

@@ -29,6 +29,10 @@ describe('TicketSummaryStore', () => {
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.AtRisk
   };
 
+  const breachedTicket: TicketMonitorItem = {
+    ...criticalTicket, id: 't0', title: 'Chamado já vencido', dueAtUtc: '2026-01-01T09:00:00Z', slaStatus: TicketSlaStatus.Breached
+  };
+
   /** Injeta o store (disparando a busca inicial com o retorno já configurado no spy) e espera estabilizar. */
   async function createStore(): Promise<InstanceType<typeof TicketSummaryStore>> {
     const created = TestBed.inject(TicketSummaryStore);
@@ -43,9 +47,10 @@ describe('TicketSummaryStore', () => {
       { periodStart: '2026-01-05', count: 2 },
       { periodStart: '2026-01-06', count: 5 }
     ]));
-    dataService.getAll.and.returnValue(of({
-      items: [criticalTicket], page: 1, pageSize: 5, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
-    }));
+    // Responde conforme o filtro de SLA pedido: 1 em risco (t1) e 1 vencido (t0, prazo mais antigo), de um total de 7 vencidos.
+    dataService.getAll.and.callFake(filters => of(filters.slaStatus === TicketSlaStatus.Breached
+      ? { items: [breachedTicket], page: 1, pageSize: 5, totalCount: 7, totalPages: 2, hasPreviousPage: false, hasNextPage: true }
+      : { items: [criticalTicket], page: 1, pageSize: 5, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
 
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
@@ -116,18 +121,43 @@ describe('TicketSummaryStore', () => {
     expect(store.statusCountsFailed()).toBeFalse();
   });
 
-  it('busca os chamados com SLA em risco, ordenados por prazo, para quem tem tickets:manage', () => {
+  it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem tickets:manage', () => {
+    expect(dataService.getAll).toHaveBeenCalledWith({
+      slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5
+    });
     expect(dataService.getAll).toHaveBeenCalledWith({
       slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5
     });
-    expect(store.criticalTickets()).toEqual([criticalTicket]);
+    // O vencido (prazo mais antigo) vem primeiro.
+    expect(store.criticalTickets()).toEqual([breachedTicket, criticalTicket]);
   });
 
-  it('refaz a busca dos chamados em risco de SLA ao chamar load()', async () => {
+  it('expõe o total de vencidos e de em risco da empresa, não só os listados', () => {
+    expect(store.breachedCount()).toBe(7);
+    expect(store.atRiskCount()).toBe(1);
+  });
+
+  it('limita a lista a 5 chamados no total, somando vencidos e em risco', async () => {
+    const many = (prefix: string, status: TicketSlaStatus) => Array.from({ length: 5 }, (_, i) => ({
+      ...criticalTicket, id: `${prefix}${i}`, slaStatus: status, dueAtUtc: `2026-01-0${i + 1}T12:00:00Z`
+    }));
+    dataService.getAll.and.callFake(filters => of({
+      items: many(filters.slaStatus === TicketSlaStatus.Breached ? 'b' : 'r', filters.slaStatus!),
+      page: 1, pageSize: 5, totalCount: 5, totalPages: 1, hasPreviousPage: false, hasNextPage: false
+    }));
+
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledTimes(2);
+    expect(store.criticalTickets().length).toBe(5);
+  });
+
+  it('refaz a busca dos chamados críticos de SLA ao chamar load()', async () => {
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    // 2 chamadas na carga inicial (vencidos + em risco) e mais 2 no reload.
+    expect(dataService.getAll).toHaveBeenCalledTimes(4);
   });
 
   it('expõe mensagem de erro quando a busca dos chamados em risco de SLA falhar', async () => {

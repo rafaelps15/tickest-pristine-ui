@@ -7,6 +7,44 @@
   display: block;
 }
 
+/*
+ * Totais de vencidos / em risco no topo do card — o número grande é o mesmo `.stat-value` dos KPIs
+ * do Dashboard (vocabulário que a tela já tem, só aplicado ao SLA, o diferencial do produto). Cada
+ * total é um link pra fila filtrada; o fundo tinge no hover/foco como os cards de status.
+ */
+.sla-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.sla-total {
+  display: flex;
+  flex-direction: column;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--tk-radius-sm);
+  background-color: rgba(var(--tk-primary-rgb), 0.04);
+  color: var(--tk-text-secondary);
+  text-decoration: none;
+  transition: background-color var(--tk-transition);
+}
+
+.sla-total:hover,
+.sla-total:focus-visible {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+}
+
+.sla-total:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+.stat-value {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .critical-ticket-item + .critical-ticket-item {
   border-top: 1px solid var(--tk-border);
 }

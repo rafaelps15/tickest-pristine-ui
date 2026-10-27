@@ -1,10 +1,9 @@
 <div class="card insights-card mb-3">
   <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
+    <div class="d-flex align-items-center gap-2 mb-3">
       <i class="bx bx-error fs-5 text-warning" aria-hidden="true"></i>
       <h5 class="card-title fw-bold mb-0">Alertas de SLA</h5>
     </div>
-    <p class="text-muted small mb-3">Chamados em risco mais próximos de vencer o prazo.</p>
 
     @if (loading()) {
       <div class="d-flex justify-content-center py-2">
@@ -13,15 +12,36 @@
     } @else if (error(); as errorMessage) {
       <p class="text-danger small mb-0">{{ errorMessage }}</p>
     } @else if (criticalTickets().length === 0) {
-      <p class="text-muted small mb-0">Nenhum chamado em risco de SLA agora.</p>
+      <p class="text-muted small mb-0">Nenhum ticket com SLA vencido ou em risco agora.</p>
     } @else {
+      <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
+      <div class="sla-totals mb-3">
+        <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
+           [attr.aria-label]="breachedCount() + ' tickets com SLA vencido — ver na fila'">
+          <span class="stat-value fs-3 text-danger">{{ breachedCount() }}</span>
+          <span class="small">{{ breachedCount() === 1 ? 'vencido' : 'vencidos' }}</span>
+        </a>
+        <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
+           [attr.aria-label]="atRiskCount() + ' tickets com SLA em risco — ver na fila'">
+          <span class="stat-value fs-3 text-warning">{{ atRiskCount() }}</span>
+          <span class="small">em risco</span>
+        </a>
+      </div>
+
       <ul class="list-unstyled mb-0 critical-ticket-list">
         @for (ticket of criticalTickets(); track ticket.id) {
           <li class="critical-ticket-item">
             <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
             <a [routerLink]="['/tickets', ticket.id]" class="critical-ticket-link">
-              <span class="critical-ticket-title">{{ ticket.title }}</span>
-              <span class="d-block text-muted small">{{ ticket.sectorName }} — vence {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</span>
+              <span class="d-flex align-items-start justify-content-between gap-2">
+                <span class="critical-ticket-title">{{ ticket.title }}</span>
+                @if (ticket.slaStatus === TicketSlaStatus.Breached) {
+                  <span class="badge bg-label-danger flex-shrink-0">Vencido</span>
+                } @else {
+                  <span class="badge bg-label-warning flex-shrink-0">Em risco</span>
+                }
+              </span>
+              <span class="d-block text-muted small">{{ ticket.sectorName }} · prazo {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</span>
             </a>
           </li>
         }

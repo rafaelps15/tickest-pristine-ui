@@ -44,14 +44,14 @@ describe('DashboardInsightsComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar os alertas de SLA');
-    expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado em risco de SLA agora.');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum ticket com SLA vencido ou em risco agora.');
   });
 
   it('mostra a mensagem de vazio quando não há chamados em risco de SLA', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado em risco de SLA agora.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum ticket com SLA vencido ou em risco agora.');
   });
 
   it('lista os chamados em risco de SLA recebidos, com link pro detalhe', async () => {
@@ -62,7 +62,32 @@ describe('DashboardInsightsComponent', () => {
     const link = fixture.nativeElement.querySelector('.critical-ticket-link') as HTMLAnchorElement;
     expect(link.textContent).toContain('Chamado urgente');
     // A linha inteira (setor + prazo) fica dentro do link — alvo de toque maior que só o título.
-    expect(link.textContent).toContain('TI — vence');
+    expect(link.textContent).toContain('TI · prazo');
     expect(link.getAttribute('href')).toBe('/tickets/t1');
+  });
+
+  it('marca cada chamado como "Vencido" ou "Em risco" com texto, não só com cor', async () => {
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [{ ...ticket, id: 't0', slaStatus: TicketSlaStatus.Breached }, ticket]);
+    await fixture.whenStable();
+
+    const badges = Array.from(fixture.nativeElement.querySelectorAll('.critical-ticket-link .badge') as NodeListOf<HTMLElement>)
+      .map(b => b.textContent?.trim());
+    expect(badges).toEqual(['Vencido', 'Em risco']);
+  });
+
+  it('mostra os totais de vencidos e em risco da empresa, cada um levando à fila filtrada por esse SLA', async () => {
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [ticket]);
+    fixture.componentRef.setInput('breachedCount', 7);
+    fixture.componentRef.setInput('atRiskCount', 1);
+    await fixture.whenStable();
+
+    const [breached, atRisk] = Array.from(fixture.nativeElement.querySelectorAll('.sla-total') as NodeListOf<HTMLAnchorElement>);
+    expect(breached.textContent).toContain('7');
+    expect(breached.textContent).toContain('vencidos');
+    expect(breached.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.Breached}`);
+    expect(atRisk.textContent).toContain('1');
+    expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
   });
 });

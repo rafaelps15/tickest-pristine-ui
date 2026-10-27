@@ -2,11 +2,15 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { forkJoin } from 'rxjs';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, SessionService } from '../../shared';
+
+/** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
+const CRITICAL_TICKETS_LIMIT = 5;
 
 /**
  * Store do resumo de tickets de toda a empresa, para o dashboard — totais por status e volume de
@@ -32,18 +36,18 @@ export const TicketSummaryStore = signalStore(
       stream: ({ params }) => store._ticketDataService.getVolume(params)
     }),
     /**
-     * Os 5 chamados com SLA em risco mais próximos de vencer, pro card "Alertas de SLA" do
+     * Chamados com SLA vencido e em risco (até 5 de cada, com o total de cada grupo), pro card "Alertas de SLA" do
      * Dashboard — mesmo endpoint que Monitorar Tickets usa (GET /tickets), que exige a permissão
      * `tickets:manage`. `params` retorna `undefined` pra quem não tem a permissão, o que faz o
      * `rxResource` nem chamar a API (evita um 403 certo pra Solicitante).
      */
     _criticalTicketsResource: rxResource({
       params: () => (store._sessionService.hasPermission('tickets:manage') ? true : undefined),
-      stream: () => store._ticketDataService.getAll({
-        slaStatus: TicketSlaStatus.AtRisk,
-        sort: TicketSortOrder.DueDate,
-        page: 1,
-        pageSize: 5
+      // Vencidos (Breached) e em risco (AtRisk) — o filtro da API aceita um status por vez. Antes só
+      // AtRisk: os chamados que já estouraram o prazo, os mais graves, ficavam fora do alerta.
+      stream: () => forkJoin({
+        breached: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
+        atRisk: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT })
       })
     })
   })),
@@ -85,8 +89,21 @@ export const TicketSummaryStore = signalStore(
     closedCount: computed(() => store._statusCountsResource.value()?.closedCount ?? 0),
     /** Quantidade de tickets com status Cancelado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
     canceledCount: computed(() => store._statusCountsResource.value()?.canceledCount ?? 0),
-    /** Chamados com SLA em risco mais próximos de vencer (até 5), do mais urgente pro menos — vazio para quem não tem `tickets:manage`. */
-    criticalTickets: computed(() => store._criticalTicketsResource.value()?.items ?? []),
+    /**
+     * Chamados com SLA vencido ou em risco (até 5), do prazo mais antigo pro mais novo — o vencido há
+     * mais tempo primeiro — vazio para quem não tem `tickets:manage`.
+     */
+    criticalTickets: computed(() => {
+      const value = store._criticalTicketsResource.value();
+      if (!value) return [];
+      return [...value.breached.items, ...value.atRisk.items]
+        .sort((a, b) => a.dueAtUtc.localeCompare(b.dueAtUtc))
+        .slice(0, CRITICAL_TICKETS_LIMIT);
+    }),
+    /** Total de chamados ativos com SLA vencido em toda a empresa (não só os 5 listados). */
+    breachedCount: computed(() => store._criticalTicketsResource.value()?.breached.totalCount ?? 0),
+    /** Total de chamados ativos com SLA em risco em toda a empresa (não só os 5 listados). */
+    atRiskCount: computed(() => store._criticalTicketsResource.value()?.atRisk.totalCount ?? 0),
     /** Carregando os chamados em risco de SLA. */
     criticalTicketsLoading: computed(() => store._criticalTicketsResource.isLoading()),
     /** Mensagem de erro ao buscar os chamados em risco de SLA — não derruba o resto do dashboard, só esse card. */
