@@ -206,16 +206,19 @@
       <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} usuários</span>
 
       @if (store.totalPages() > 1) {
-        <div class="d-flex align-items-center gap-2">
+        <nav class="pagination-group d-flex align-items-center gap-2" aria-label="Paginação">
           <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
             Anterior
           </button>
 
-          @for (pageNumber of pageNumbers(); track pageNumber) {
+          <!-- No celular os números de página não cabem numa linha: só "Página X de Y" entre Anterior/Próxima. -->
+          <span class="page-indicator small text-muted text-nowrap">Página {{ store.currentPage() }} de {{ store.totalPages() }}</span>
+
+          @for (pageNumber of pageNumbers(); track $index) {
             @if (pageNumber === '…') {
-              <span class="px-1 text-muted">…</span>
+              <span class="page-ellipsis px-1 text-muted" aria-hidden="true">…</span>
             } @else {
-              <button type="button" class="btn btn-sm btn-page" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
+              <button type="button" class="btn btn-sm btn-page btn-page-number" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
                       [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
                       (click)="store.goToPage(pageNumber)">
                 {{ pageNumber }}
@@ -226,7 +229,7 @@
           <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
             Próxima
           </button>
-        </div>
+        </nav>
       }
 
       <div class="d-flex align-items-center gap-2">

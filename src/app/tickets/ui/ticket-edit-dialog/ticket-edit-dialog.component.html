@@ -3,7 +3,7 @@
 <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="ticketEditDialogTitle"
      (click)="onBackdropClick($event)">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div #dialogBox class="modal-content" (keydown)="onDialogKeydown($event)">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="modal-header">
           <div class="min-w-0">

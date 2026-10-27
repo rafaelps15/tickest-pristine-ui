@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, ElementRef, Injector, afterNextRender, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
@@ -21,6 +21,11 @@ export class TicketListComponent implements OnInit {
     protected readonly store = inject(TicketsStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
+    private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+    private readonly injector = inject(Injector);
+
+    /** Título da tela — recebe o foco quando a linha em foco some (ticket excluído). */
+    private readonly pageTitle = viewChild<ElementRef<HTMLElement>>('pageTitle');
 
     readonly statusLabels = TICKET_STATUS_LABELS;
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
@@ -97,19 +102,35 @@ export class TicketListComponent implements OnInit {
         return this.store.pendingTicketIds().includes(ticket.id);
     }
 
-    /** Reabre o ticket selecionado. */
-    onReopen(ticket: Ticket): void {
-        this.store.reopen(ticket.id);
+    /**
+     * Devolve o foco ao "⋮" da linha do ticket depois da próxima renderização. O item clicado no menu
+     * some ao fechar o dropdown (e a confirmação abre por código, sem devolver o foco), então sem isso
+     * o foco cairia no `<body>` e o teclado/leitor de tela voltaria ao topo da página.
+     */
+    private focusRowActions(ticketId: string): void {
+        afterNextRender(() => {
+            const toggle = this.host.nativeElement.querySelector<HTMLElement>(`[data-ticket-actions="${ticketId}"]`);
+            (toggle ?? this.pageTitle()?.nativeElement)?.focus();
+        }, { injector: this.injector });
     }
 
-    /** Abre o modal de edição da descrição para o ticket selecionado. */
+    /** Reabre o ticket selecionado. */
+    onReopen(ticket: Ticket): void {
+        this.store.reopen(ticket.id, () => this.toastService.show('Ticket reaberto.'));
+        this.focusRowActions(ticket.id);
+    }
+
+    /** Abre o modal de edição da descrição para o ticket selecionado, sem herdar o erro de uma ação anterior. */
     onStartEdit(ticket: Ticket): void {
+        this.store.clearMutationError();
         this.editingTicket.set(ticket);
     }
 
-    /** Fecha o modal de edição sem salvar. */
+    /** Fecha o modal de edição sem salvar, devolvendo o foco ao "⋮" da linha. */
     onEditClosed(): void {
+        const ticket = this.editingTicket();
         this.editingTicket.set(null);
+        if (ticket) this.focusRowActions(ticket.id);
     }
 
     /** Salva a descrição editada no modal, mantendo o status atual do ticket. */
@@ -119,7 +140,7 @@ export class TicketListComponent implements OnInit {
 
         this.store.update(ticket.id, { description, status: ticket.status }, () => {
             this.toastService.show('Descrição atualizada.');
-            this.editingTicket.set(null);
+            this.onEditClosed();
         });
     }
 
@@ -133,6 +154,7 @@ export class TicketListComponent implements OnInit {
             cancelLabel: 'Voltar',
             variant: 'danger'
         }).subscribe(confirmed => {
+            this.focusRowActions(ticket.id);
             if (!confirmed) return;
 
             this.store.update(ticket.id, { description: ticket.description, status: TicketStatus.Canceled }, () => {
@@ -141,7 +163,7 @@ export class TicketListComponent implements OnInit {
         });
     }
 
-    /** Confirma e exclui o ticket selecionado. */
+    /** Confirma e exclui o ticket selecionado; com a linha removida, o foco vai para o título da tela. */
     onDelete(ticket: Ticket): void {
         this.confirmDialogService.confirm({
             title: `Excluir o ticket "${ticket.title}"?`,
@@ -149,7 +171,13 @@ export class TicketListComponent implements OnInit {
             confirmLabel: 'Excluir',
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (confirmed) this.store.remove(ticket.id);
+            this.focusRowActions(ticket.id);
+            if (!confirmed) return;
+
+            this.store.remove(ticket.id, () => {
+                this.toastService.show('Ticket excluído.');
+                this.pageTitle()?.nativeElement.focus();
+            });
         });
     }
 }

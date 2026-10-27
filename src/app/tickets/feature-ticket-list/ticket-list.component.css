@@ -1,10 +1,3 @@
-.table th {
-  font-size: 0.8125rem;
-  text-transform: uppercase;
-  color: var(--tk-text-muted);
-  font-weight: 600;
-}
-
 /* Título do ticket é o link pro detalhe — cor de texto, sublinhado só no hover/foco. */
 .ticket-title {
   color: var(--tk-text-primary);
@@ -34,4 +27,22 @@
     min-width: 100%;
     max-width: none;
   }
+}
+
+/*
+ * Ao trocar de página ou recarregar depois de uma ação, mantém as linhas atuais e só esmaece — sem
+ * trocar a tabela por um spinner, o que destruía o "⋮" com o foco. Mesmo padrão do Monitor.
+ */
+.table {
+  transition: opacity 150ms ease;
+}
+
+.table.is-refreshing {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* O título só recebe foco por código (ticket excluído), como ponto de retorno — não é um controle. */
+#ticketListTitle:focus {
+  outline: none;
 }

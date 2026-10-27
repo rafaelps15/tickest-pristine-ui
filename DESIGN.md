@@ -10,7 +10,7 @@ colors:
   info: "#03c3ec"
   danger: "#ff3e1d"
   text-primary: "#2b2c40"
-  text-secondary: "#697a8d"
+  text-secondary: "#5f6f82"
   text-muted: "#6b7684"
   surface: "#ffffff"
   page-bg: "#f5f5f9"
@@ -140,11 +140,12 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 
 ### Neutral
 - **Grafite Texto** (`#2b2c40`): texto principal (claro).
-- **Ardósia Secundária** (`#697a8d`): texto secundário/rótulos de formulário (claro).
+- **Ardósia Secundária** (`#5f6f82`): texto secundário/rótulos de formulário (claro).
+  Escurecida em 2026-10-27 (era `#697a8d`: ~4,40:1 sobre branco, ~4,05:1 sobre o fundo de página)
+  — agora ~5,1:1 sobre branco e ~4,7:1 sobre `#f5f5f9`; achado do audit de Meus Tickets.
 - **Névoa Terciária** (`#6b7684`): texto terciário/placeholder, cabeçalho de tabela (claro).
   Escurecido em 2026-10-08 (era `#a1acb8`, ~2,31:1) pra passar 4,5:1 WCAG AA — auditado no
-  Dashboard. `--tk-text-secondary` (`#697a8d`, ~4,40:1) ficou próximo do limite nessa correção e
-  também merece revisão numa próxima rodada.
+  Dashboard.
 - **Branco Superfície** (`#ffffff`): fundo de cards, modais, inputs (claro).
 - **Lavanda Nebulosa** (`#f5f5f9`): fundo de página, por trás dos cards (claro).
 - **Contorno Lavanda** (`#e7e7ff`): bordas sutis entre superfícies (claro).

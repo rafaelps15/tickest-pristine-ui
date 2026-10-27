@@ -257,4 +257,33 @@ describe('TicketsStore', () => {
 
     expect(store.pendingTicketIds()).toEqual([]);
   });
+
+  it('separa o erro de mutação do erro de leitura, e descarta o de mutação sob pedido', async () => {
+    dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.remove('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.loadError()).toBeNull();
+    expect(store.mutationError()).toBe('Erro ao excluir o ticket');
+
+    store.clearMutationError();
+    expect(store.mutationError()).toBeNull();
+  });
+
+  it('chama onSuccess ao reabrir e ao excluir um ticket com sucesso', async () => {
+    dataService.reopen.and.returnValue(of(undefined));
+    dataService.delete.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+    const onReopened = jasmine.createSpy('onReopened');
+    const onRemoved = jasmine.createSpy('onRemoved');
+
+    store.reopen('t1', onReopened);
+    store.remove('t2', onRemoved);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(onReopened).toHaveBeenCalled();
+    expect(onRemoved).toHaveBeenCalled();
+  });
 });

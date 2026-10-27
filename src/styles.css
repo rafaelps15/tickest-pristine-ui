@@ -16,7 +16,8 @@
   --tk-border: #e7e7ff;
 
   --tk-text-primary: #2b2c40;
-  --tk-text-secondary: #697a8d;
+  /* Escurecido em 2026-10-27 (era #697a8d, ~4,05:1 sobre --tk-page-bg) — subtítulo de Meus Tickets reprovava AA. */
+  --tk-text-secondary: #5f6f82;
   /* Escurecido em 2026-10-08 (era #a1acb8, ~2,31:1) pra passar 4,5:1 WCAG AA sobre --tk-surface — auditado no Dashboard. */
   --tk-text-muted: #6b7684;
 
@@ -269,6 +270,31 @@ body {
 .btn-page {
   min-width: 2.75rem;
   min-height: 2.75rem;
+}
+
+/*
+ * Abaixo de "md", a fileira de números (até 5 botões de 44px + reticências + Anterior/Próxima,
+ * ~500px) estourava a largura do celular. Ali a paginação vira "Anterior · Página X de Y ·
+ * Próxima"; os números voltam a partir de "md". Achado do audit de Meus Tickets (2026-10-27).
+ */
+.page-indicator {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .pagination-group {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-group .btn-page-number,
+  .pagination-group .page-ellipsis {
+    display: none;
+  }
+
+  .page-indicator {
+    display: inline;
+  }
 }
 
 /*
@@ -525,4 +551,31 @@ body {
 router-outlet + * {
   display: block;
   animation: tk-fade-in 250ms ease-out;
+}
+
+/*
+ * Movimento reduzido (preferência do sistema): os deslocamentos somem, mas o feedback de estado
+ * fica — a rota ainda entra com fade (só opacidade), e hover/foco continuam mudando cor, fundo e
+ * sombra. Não é um "desliga tudo" (0.01ms): só tira o que move a tela. O `!important` vence os
+ * hovers com `transform` do CSS isolado dos componentes (menu lateral, cards do Dashboard, botões
+ * do login). A gaveta do menu no celular continua deslizando: é a origem do painel, não decoração.
+ * Achado do audit de Meus Tickets (2026-10-27) — o projeto não tinha nenhum.
+ */
+@keyframes tk-fade-in-static {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  router-outlet + * {
+    animation-name: tk-fade-in-static;
+  }
+
+  .btn:hover,
+  .btn:active,
+  .card:hover,
+  .menu-link:hover,
+  .form-control:focus {
+    transform: none !important;
+  }
 }

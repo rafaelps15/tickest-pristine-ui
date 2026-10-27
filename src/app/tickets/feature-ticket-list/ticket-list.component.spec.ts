@@ -33,6 +33,9 @@ describe('TicketListComponent', () => {
       hasPreviousPage: signal(false),
       hasNextPage: signal(false),
       pendingTicketIds: signal<string[]>([]),
+      loadError: signal<string | null>(null),
+      mutationError: signal<string | null>(null),
+      clearMutationError: jasmine.createSpy('clearMutationError'),
       loadForCurrentUser: jasmine.createSpy('loadForCurrentUser'),
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
@@ -97,8 +100,8 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você ainda não abriu nenhum ticket.');
   });
 
-  it('mostra a mensagem de erro do store', async () => {
-    storeFake.state.set({ data: [openTicket], loading: false, error: 'Erro ao carregar tickets' });
+  it('mostra a mensagem de erro de carregamento do store', async () => {
+    storeFake.loadError.set('Erro ao carregar tickets');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -106,7 +109,7 @@ describe('TicketListComponent', () => {
   });
 
   it('recarrega os tickets ao clicar em "Tentar novamente" no alerta de erro', async () => {
-    storeFake.state.set({ data: [], loading: false, error: 'Erro ao carregar tickets' });
+    storeFake.loadError.set('Erro ao carregar tickets');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -144,7 +147,9 @@ describe('TicketListComponent', () => {
 
     fixture.componentInstance.onReopen(resolvedTicket);
 
-    expect(storeFake.reopen).toHaveBeenCalledWith('t2');
+    expect(storeFake.reopen).toHaveBeenCalledWith('t2', jasmine.any(Function));
+    storeFake.reopen.calls.mostRecent().args[1]();
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket reaberto.');
   });
 
   it('exclui o ticket quando confirmado', async () => {
@@ -154,7 +159,10 @@ describe('TicketListComponent', () => {
 
     fixture.componentInstance.onDelete(openTicket);
 
-    expect(storeFake.remove).toHaveBeenCalledWith('t1');
+    expect(storeFake.remove).toHaveBeenCalledWith('t1', jasmine.any(Function));
+    storeFake.remove.calls.mostRecent().args[1]();
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket excluído.');
+    expect(document.activeElement?.id).toBe('ticketListTitle');
   });
 
   it('não exclui o ticket quando a confirmação for cancelada', async () => {
@@ -327,5 +335,35 @@ describe('TicketListComponent', () => {
     fixture.componentInstance.onPageSizeChange(50);
 
     expect(storeFake.setPageSize).toHaveBeenCalledWith(50);
+  });
+
+  it('mantém as linhas visíveis (só esmaecidas) ao recarregar com a lista já carregada', async () => {
+    storeFake.state.set({ data: [openTicket], loading: true, error: null });
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
+    expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
+  });
+
+  it('mostra o erro de uma ação sem "Tentar novamente", e o dispensa pelo botão de fechar', async () => {
+    storeFake.mutationError.set('Erro ao excluir o ticket');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Erro ao excluir o ticket');
+    expect(fixture.nativeElement.textContent).not.toContain('Tentar novamente');
+
+    (fixture.nativeElement.querySelector('.alert .btn-close') as HTMLButtonElement).click();
+    expect(storeFake.clearMutationError).toHaveBeenCalled();
+  });
+
+  it('descarta o erro de uma ação anterior ao abrir o modal de edição', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onStartEdit(openTicket);
+
+    expect(storeFake.clearMutationError).toHaveBeenCalled();
   });
 });

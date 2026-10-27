@@ -26,10 +26,10 @@ class HostComponent {
 }
 
 describe('TicketEditDialogComponent', () => {
-  let confirmDialogServiceFake: { confirm: jasmine.Spy };
+  let confirmDialogServiceFake: { confirm: jasmine.Spy; options: ReturnType<typeof signal<object | null>> };
 
   beforeEach(async () => {
-    confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
+    confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)), options: signal<object | null>(null) };
 
     await TestBed.configureTestingModule({
       imports: [HostComponent],
@@ -128,5 +128,37 @@ describe('TicketEditDialogComponent', () => {
     const saveButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(saveButton.disabled).toBeTrue();
     expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para editar este chamado.');
+  });
+
+  it('ignora o Esc enquanto a confirmação de descarte está aberta', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+    confirmDialogServiceFake.options.set({ title: 'Descartar as alterações?' });
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.closedCalled).toBeFalse();
+  });
+
+  it('prende o Tab dentro do diálogo e trava a rolagem da página enquanto está aberto', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+    expect(document.body.classList).toContain('modal-open');
+
+    const box = fixture.nativeElement.querySelector('.modal-content') as HTMLElement;
+    const closeButton = fixture.nativeElement.querySelector('.btn-close') as HTMLButtonElement;
+    const cancelButton = Array.from(box.querySelectorAll('button')).find(b => b.textContent?.includes('Cancelar')) as HTMLButtonElement;
+    cancelButton.focus();
+
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    cancelButton.dispatchEvent(tab);
+
+    // "Salvar" está desabilitado sem alteração, então "Cancelar" é o último controle focável.
+    expect(tab.defaultPrevented).toBeTrue();
+    expect(document.activeElement).toBe(closeButton);
+
+    fixture.destroy();
+    expect(document.body.classList).not.toContain('modal-open');
   });
 });

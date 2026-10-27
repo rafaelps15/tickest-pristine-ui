@@ -42,6 +42,11 @@ export const TicketsStore = signalStore(
     ticketsPage: computed(() => store._listResource.value()),
     /** Tickets da página atual, do mais novo para o mais antigo. */
     tickets: computed(() => store._listResource.value()?.items ?? ([] as Ticket[])),
+    /** Erro só da leitura da listagem (sem os erros de mutação) — o único que "Tentar novamente" resolve. */
+    loadError: computed(() => {
+      const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
+      return resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar tickets') : null;
+    }),
     /** Estado agregado da listagem: dados, carregamento e erro (de leitura ou de mutação). */
     state: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
@@ -79,6 +84,11 @@ export const TicketsStore = signalStore(
     /** Troca o tamanho da página e volta para a primeira. */
     setPageSize(pageSize: number): void {
       patchState(store, { pageSize, page: 1 });
+    },
+
+    /** Descarta a mensagem de erro da última mutação (editar, cancelar, reabrir ou excluir). */
+    clearMutationError(): void {
+      patchState(store, { mutationError: null });
     },
 
     /** Carrega (ou recarrega) os tickets do usuário logado. */
@@ -141,7 +151,7 @@ export const TicketsStore = signalStore(
      * Reabre um ticket inativo e recarrega a listagem em caso de sucesso. Marca o id como pendente
      * durante a chamada, pra travar o botão da linha e evitar duplo-envio num duplo-clique.
      */
-    reopen(ticketId: string): void {
+    reopen(ticketId: string, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
 
       store._ticketDataService.reopen(ticketId).pipe(
@@ -149,7 +159,10 @@ export const TicketsStore = signalStore(
           pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
         }))
       ).subscribe({
-        next: () => store._listResource.reload(),
+        next: () => {
+          store._listResource.reload();
+          onSuccess?.();
+        },
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao reabrir o ticket') });
         }
@@ -161,7 +174,7 @@ export const TicketsStore = signalStore(
      * página que não é a primeira, volta uma página para a tela não ficar vazia. Marca o id como pendente
      * durante a chamada, pra travar o botão da linha e evitar duplo-envio num duplo-clique.
      */
-    remove(ticketId: string): void {
+    remove(ticketId: string, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
 
       store._ticketDataService.delete(ticketId).pipe(
@@ -175,6 +188,7 @@ export const TicketsStore = signalStore(
           } else {
             store._listResource.reload();
           }
+          onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir o ticket') });
