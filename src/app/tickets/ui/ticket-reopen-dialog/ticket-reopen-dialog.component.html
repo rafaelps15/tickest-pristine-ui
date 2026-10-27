@@ -1,0 +1,48 @@
+<div class="modal-backdrop fade show"></div>
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="ticketReopenDialogTitle"
+     (click)="onBackdropClick($event)">
+  <div class="modal-dialog modal-dialog-centered">
+    <div #dialogBox class="modal-content" (keydown)="onDialogKeydown($event)">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="modal-header">
+          <div class="min-w-0">
+            <h5 class="modal-title" id="ticketReopenDialogTitle">Reabrir o chamado?</h5>
+            <p class="text-muted small mb-0 text-truncate">{{ ticketTitle() }}</p>
+          </div>
+          <button type="button" class="btn-close" aria-label="Fechar sem reabrir" [disabled]="saving()" (click)="closed.emit()"></button>
+        </div>
+
+        <div class="modal-body">
+          @if (error()) {
+            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ error() }}</div>
+          }
+
+          <p class="mb-3">O chamado volta para <strong>Aberto</strong> e o prazo de atendimento recomeça.</p>
+
+          <label class="form-label" for="ticketReopenReason">Por que está reabrindo? <span class="text-muted fw-normal">(opcional)</span></label>
+          <textarea #reasonField id="ticketReopenReason" class="form-control" rows="3" formControlName="reason"
+                    [class.is-invalid]="form.controls.reason.invalid"
+                    aria-describedby="ticketReopenReasonHint"></textarea>
+          @if (form.controls.reason.invalid) {
+            <div class="invalid-feedback">O motivo deve ter no máximo {{ maxLength }} caracteres.</div>
+          }
+          <div id="ticketReopenReasonHint" class="form-text d-flex justify-content-between gap-3">
+            <span>Vira uma mensagem no chamado, para quem atende entender o que faltou.</span>
+            <span class="text-nowrap">{{ form.controls.reason.value?.length ?? 0 }}/{{ maxLength }}</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" [disabled]="saving()" (click)="closed.emit()">Voltar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="form.invalid || saving()">
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            Reabrir chamado
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

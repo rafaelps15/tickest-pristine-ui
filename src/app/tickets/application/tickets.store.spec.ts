@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, Subject } from 'rxjs';
 import { TicketsStore } from './tickets.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
+import { TicketMessageDataService } from '../infrastructure/ticket-message.data.service';
 import { Ticket } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
@@ -27,16 +28,19 @@ describe('TicketsStore', () => {
 
   let store: InstanceType<typeof TicketsStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
+  let messageDataService: jasmine.SpyObj<TicketMessageDataService>;
 
   beforeEach(() => {
     dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'create', 'update', 'reopen', 'delete']);
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 1)));
+    messageDataService = jasmine.createSpyObj('TicketMessageDataService', ['post']);
 
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         TicketsStore,
         { provide: TicketDataService, useValue: dataService },
+        { provide: TicketMessageDataService, useValue: messageDataService },
         { provide: SessionService, useValue: { userId: signal('u1') } }
       ]
     });
@@ -201,7 +205,7 @@ describe('TicketsStore', () => {
     dataService.reopen.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.reopen('t1');
+    store.reopen('t1', null);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.reopen).toHaveBeenCalledWith('t1');
@@ -213,7 +217,7 @@ describe('TicketsStore', () => {
     dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.reopen('t1');
+    store.reopen('t1', null);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.state().error).toBe('Erro ao reabrir o ticket');
@@ -234,7 +238,7 @@ describe('TicketsStore', () => {
     dataService.reopen.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.reopen('t1');
+    store.reopen('t1', null);
     expect(store.pendingTicketIds()).toEqual(['t1']);
 
     subject.next();
@@ -279,11 +283,49 @@ describe('TicketsStore', () => {
     const onReopened = jasmine.createSpy('onReopened');
     const onRemoved = jasmine.createSpy('onRemoved');
 
-    store.reopen('t1', onReopened);
+    store.reopen('t1', null, onReopened);
     store.remove('t2', onRemoved);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(onReopened).toHaveBeenCalled();
     expect(onRemoved).toHaveBeenCalled();
+  });
+
+  it('publica o motivo como mensagem depois de reabrir, quando informado', async () => {
+    dataService.reopen.and.returnValue(of(undefined));
+    messageDataService.post.and.returnValue(of('m1'));
+    await TestBed.inject(ApplicationRef).whenStable();
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.reopen('t1', 'O problema voltou depois da atualização.', onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(messageDataService.post).toHaveBeenCalledWith('t1', 'O problema voltou depois da atualização.');
+    expect(onSuccess).toHaveBeenCalled();
+    expect(store.mutationError()).toBeNull();
+  });
+
+  it('não publica mensagem ao reabrir sem motivo', async () => {
+    dataService.reopen.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.reopen('t1', null);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(messageDataService.post).not.toHaveBeenCalled();
+  });
+
+  it('mantém o ticket reaberto e avisa quando só a publicação do motivo falha', async () => {
+    dataService.reopen.and.returnValue(of(undefined));
+    messageDataService.post.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.reopen('t1', 'Motivo qualquer.', onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(onSuccess).toHaveBeenCalled();
+    expect(store.mutationError()).toContain('o motivo não foi publicado');
+    expect(store.pendingTicketIds()).toEqual([]);
   });
 });

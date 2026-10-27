@@ -2,9 +2,10 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, switchMap, of, map, catchError } from 'rxjs';
 import { CreateTicketData, Ticket, UpdateTicketData } from '../entities/ticket';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
+import { TicketMessageDataService } from '../infrastructure/ticket-message.data.service';
 import { SessionService, extractErrorMessage } from '../../shared';
 
 /** Tamanho padrão da página de "Meus Tickets", o mesmo padrão do back-end. */
@@ -24,6 +25,7 @@ export const TicketsStore = signalStore(
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
+    _ticketMessageDataService: inject(TicketMessageDataService),
     _session: inject(SessionService)
   })),
   withProps((store) => ({
@@ -148,19 +150,33 @@ export const TicketsStore = signalStore(
     },
 
     /**
-     * Reabre um ticket inativo e recarrega a listagem em caso de sucesso. Marca o id como pendente
-     * durante a chamada, pra travar o botão da linha e evitar duplo-envio num duplo-clique.
+     * Reabre um ticket inativo e, se veio um motivo, publica-o como mensagem do solicitante no
+     * ticket (depois da reabertura, pra aparecer na ordem certa no histórico). Recarrega a listagem
+     * em caso de sucesso. Se a reabertura der certo e só a mensagem falhar, o ticket continua
+     * reaberto: chama `onSuccess` e avisa em `mutationError` que o motivo não foi publicado. Marca o
+     * id como pendente durante a chamada, pra travar o botão da linha e evitar duplo-envio.
      */
-    reopen(ticketId: string, onSuccess?: () => void): void {
+    reopen(ticketId: string, reason: string | null, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
 
       store._ticketDataService.reopen(ticketId).pipe(
+        switchMap(() => reason
+          ? store._ticketMessageDataService.post(ticketId, reason).pipe(
+              map(() => true),
+              catchError(() => of(false))
+            )
+          : of(true)),
         finalize(() => patchState(store, {
           pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
         }))
       ).subscribe({
-        next: () => {
+        next: (reasonPublished) => {
           store._listResource.reload();
+          if (!reasonPublished) {
+            patchState(store, {
+              mutationError: 'O ticket foi reaberto, mas o motivo não foi publicado — envie-o como mensagem no chamado.'
+            });
+          }
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {

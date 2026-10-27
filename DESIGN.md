@@ -159,8 +159,10 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
   ícones e qualquer uso de área (não texto pequeno).
 - **Âmbar Atenção** (`#ffab00`): status "Aberto", prioridade "Alta". Mesma ressalva de uso acima.
 - **Ciano Andamento** (`#03c3ec`): status "Em Andamento". Mesma ressalva de uso acima.
-- **Vermelho Alerta** (`#ff3e1d`): status "Cancelado", ação destrutiva (excluir, desativar),
-  prioridade "Urgente". Mesma ressalva de uso acima.
+- **Vermelho Alerta** (`#ff3e1d`): ação destrutiva (excluir, desativar), prioridade "Urgente",
+  SLA atrasado/perdido. Mesma ressalva de uso acima. Status "Cancelado" saiu do vermelho em
+  2026-10-27: é um estado final, muitas vezes escolhido pelo próprio solicitante, e não um alerta —
+  usa o badge neutro, como "Fechado" (achado do critique de Meus Tickets).
 
 ### Semantic Text (texto de badge "soft" — contraste AA sobre o fundo pastel)
 A cor semântica "pura" acima, usada direto como texto sobre o próprio fundo pastel do badge,

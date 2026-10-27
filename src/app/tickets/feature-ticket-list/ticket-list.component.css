@@ -26,6 +26,42 @@
     width: 0;
     min-width: 100%;
     max-width: none;
+    /* No toque não existe o tooltip do `title`: mostra até 2 linhas da descrição em vez de 1 cortada. */
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /*
+   * Card inteiro tocável: o link do título se estica sobre o card (o `tr` já é `position: relative`
+   * no `.table-stack`), e o "⋮" fica por cima dele. Só no celular — no desktop a linha continua com
+   * o título como único alvo, sem roubar o clique de seleção de texto.
+   */
+  .ticket-title::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .table-stack-actions {
+    z-index: 2;
+  }
+
+  /* Status logo abaixo do título: é a primeira coisa que quem abriu o chamado procura no card. */
+  .table-stack tr {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .table-stack td[data-label="Status"] {
+    order: 1;
+  }
+
+  .table-stack td[data-label="Abertura"],
+  .table-stack td[data-label="Prioridade"] {
+    order: 2;
   }
 }
 

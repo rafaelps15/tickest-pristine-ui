@@ -1,0 +1,4 @@
+/* Mesmo modal "renderizado pelo Angular" do diálogo de edição; permite o título truncar no cabeçalho flex. */
+.min-w-0 {
+  min-width: 0;
+}

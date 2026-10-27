@@ -49,7 +49,7 @@
             </button>
           }
           @if (canReopenTicket(t.status)) {
-            <button type="button" class="btn btn-sm btn-outline-success" [disabled]="detailStore.reopening()" (click)="onReopen()">
+            <button #reopenButton type="button" class="btn btn-sm btn-outline-success" [disabled]="detailStore.reopening()" (click)="onReopen()">
               @if (detailStore.reopening()) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
@@ -521,4 +521,9 @@
 @if (editingTicket(); as editing) {
   <app-ticket-edit-dialog [ticket]="editing" [saving]="detailStore.updatingDescription()" [error]="detailStore.mutationError()"
                            (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}
+
+@if (reopenDialogOpen() && detailStore.ticket(); as t) {
+  <app-ticket-reopen-dialog [ticketTitle]="t.title" [saving]="detailStore.reopening()" [error]="detailStore.mutationError()"
+                             (confirm)="onReopenConfirm($event)" (closed)="onReopenClosed()" />
 }

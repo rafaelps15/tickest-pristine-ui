@@ -23,12 +23,13 @@ import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-mes
 import { ConfirmDialogService, SessionService, ToastService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
+import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
 @Component({
     selector: 'app-ticket-detail',
-    imports: [DatePipe, NgClass, RouterLink, TicketEditDialogComponent],
+    imports: [DatePipe, NgClass, RouterLink, TicketEditDialogComponent, TicketReopenDialogComponent],
     templateUrl: './ticket-detail.component.html',
     styleUrl: './ticket-detail.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -474,12 +475,41 @@ export class TicketDetailComponent implements OnInit {
         }
     }
 
-    /** Reabre o chamado inativo. */
+    /** Indica se o modal de reabertura (com motivo opcional) está aberto. */
+    protected readonly reopenDialogOpen = signal(false);
+
+    /** Botão "Reabrir chamado" — recebe o foco de volta quando o modal de reabertura fecha. */
+    private readonly reopenButton = viewChild<ElementRef<HTMLButtonElement>>('reopenButton');
+
+    /** Abre o modal de reabertura, sem herdar o erro de uma ação anterior. */
     protected onReopen(): void {
+        this.detailStore.clearMutationError();
+        this.reopenDialogOpen.set(true);
+    }
+
+    /**
+     * Reabre o chamado e, se veio um motivo, publica-o como mensagem do solicitante logo depois
+     * (na ordem certa no histórico). Se só a mensagem falhar, o erro aparece no campo de mensagem,
+     * como qualquer envio — o chamado continua reaberto.
+     */
+    protected onReopenConfirm(reason: string | null): void {
         this.detailStore.reopen(this.ticketId, () => {
             this.toastService.show('Chamado reaberto.');
             this.historyStore.reload();
+            this.reopenDialogOpen.set(false);
+            if (reason) {
+                this.messagesStore.post(this.ticketId, reason, () => {
+                    this.historyStore.reload();
+                    this.detailStore.refreshSla();
+                });
+            }
         });
+    }
+
+    /** Fecha o modal de reabertura sem reabrir, devolvendo o foco ao botão que o abriu. */
+    protected onReopenClosed(): void {
+        this.reopenDialogOpen.set(false);
+        this.reopenButton()?.nativeElement.focus();
     }
 
     /** Reseta a busca e a seleção do modal de atribuição ao abri-lo. */

@@ -8,11 +8,12 @@ import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities
 import { ConfirmDialogService, ToastService } from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
+import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
     selector: 'app-ticket-list',
-    imports: [CommonModule, RouterLink, DropdownFixedPositionDirective, TicketEditDialogComponent],
+    imports: [CommonModule, RouterLink, DropdownFixedPositionDirective, TicketEditDialogComponent, TicketReopenDialogComponent],
     templateUrl: './ticket-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-list.component.css'
@@ -24,7 +25,7 @@ export class TicketListComponent implements OnInit {
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly injector = inject(Injector);
 
-    /** Título da tela — recebe o foco quando a linha em foco some (ticket excluído). */
+    /** Título da tela — recebe o foco quando a linha do ticket não existe mais na página. */
     private readonly pageTitle = viewChild<ElementRef<HTMLElement>>('pageTitle');
 
     readonly statusLabels = TICKET_STATUS_LABELS;
@@ -37,6 +38,9 @@ export class TicketListComponent implements OnInit {
 
     /** Ticket em edição no modal de descrição (null quando o modal está fechado). */
     editingTicket = signal<Ticket | null>(null);
+
+    /** Ticket em reabertura no modal de motivo (null quando o modal está fechado). */
+    reopeningTicket = signal<Ticket | null>(null);
 
     /** Carrega os tickets do usuário logado ao inicializar a tela. */
     ngOnInit(): void {
@@ -114,10 +118,28 @@ export class TicketListComponent implements OnInit {
         }, { injector: this.injector });
     }
 
-    /** Reabre o ticket selecionado. */
-    onReopen(ticket: Ticket): void {
-        this.store.reopen(ticket.id, () => this.toastService.show('Ticket reaberto.'));
-        this.focusRowActions(ticket.id);
+    /** Abre o modal de reabertura (com motivo opcional) para o ticket selecionado, sem herdar o erro de uma ação anterior. */
+    onStartReopen(ticket: Ticket): void {
+        this.store.clearMutationError();
+        this.reopeningTicket.set(ticket);
+    }
+
+    /** Reabre o ticket do modal, publicando o motivo (se houver) como mensagem no chamado. */
+    onReopenConfirm(reason: string | null): void {
+        const ticket = this.reopeningTicket();
+        if (!ticket) return;
+
+        this.store.reopen(ticket.id, reason, () => {
+            this.toastService.show('Ticket reaberto.');
+            this.onReopenClosed();
+        });
+    }
+
+    /** Fecha o modal de reabertura, devolvendo o foco ao "⋮" da linha. */
+    onReopenClosed(): void {
+        const ticket = this.reopeningTicket();
+        this.reopeningTicket.set(null);
+        if (ticket) this.focusRowActions(ticket.id);
     }
 
     /** Abre o modal de edição da descrição para o ticket selecionado, sem herdar o erro de uma ação anterior. */
@@ -148,7 +170,7 @@ export class TicketListComponent implements OnInit {
     onCancelTicket(ticket: Ticket): void {
         this.confirmDialogService.confirm({
             title: `Cancelar o ticket "${ticket.title}"?`,
-            message: 'O chamado passa para o status Cancelado e some da fila de atendimento — diferente de excluir, o histórico continua disponível e dá pra reabrir depois.',
+            message: 'O chamado passa para Cancelado e o setor deixa de atendê-lo. O histórico continua disponível e dá pra reabrir depois.',
             confirmLabel: 'Cancelar ticket',
             // "Cancelar" ao lado de "Cancelar ticket" deixava ambíguo qual botão desiste da ação.
             cancelLabel: 'Voltar',
@@ -159,24 +181,6 @@ export class TicketListComponent implements OnInit {
 
             this.store.update(ticket.id, { description: ticket.description, status: TicketStatus.Canceled }, () => {
                 this.toastService.show('Ticket cancelado.');
-            });
-        });
-    }
-
-    /** Confirma e exclui o ticket selecionado; com a linha removida, o foco vai para o título da tela. */
-    onDelete(ticket: Ticket): void {
-        this.confirmDialogService.confirm({
-            title: `Excluir o ticket "${ticket.title}"?`,
-            message: 'Essa ação não pode ser desfeita.',
-            confirmLabel: 'Excluir',
-            variant: 'danger'
-        }).subscribe(confirmed => {
-            this.focusRowActions(ticket.id);
-            if (!confirmed) return;
-
-            this.store.remove(ticket.id, () => {
-                this.toastService.show('Ticket excluído.');
-                this.pageTitle()?.nativeElement.focus();
             });
         });
     }

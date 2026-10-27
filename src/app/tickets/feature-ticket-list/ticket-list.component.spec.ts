@@ -40,7 +40,6 @@ describe('TicketListComponent', () => {
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
       reopen: jasmine.createSpy('reopen'),
-      remove: jasmine.createSpy('remove'),
       update: jasmine.createSpy('update')
     };
   }
@@ -141,40 +140,29 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.bx-show')).toBeNull();
   });
 
-  it('reabre o ticket selecionado', async () => {
+  it('reabre o ticket pelo modal, com o motivo informado, e fecha o modal em caso de sucesso', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    fixture.componentInstance.onReopen(resolvedTicket);
+    fixture.componentInstance.onStartReopen(resolvedTicket);
+    await fixture.whenStable();
+    expect(storeFake.clearMutationError).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('app-ticket-reopen-dialog')).not.toBeNull();
 
-    expect(storeFake.reopen).toHaveBeenCalledWith('t2', jasmine.any(Function));
-    storeFake.reopen.calls.mostRecent().args[1]();
+    fixture.componentInstance.onReopenConfirm('O monitor voltou a piscar.');
+    expect(storeFake.reopen).toHaveBeenCalledWith('t2', 'O monitor voltou a piscar.', jasmine.any(Function));
+
+    storeFake.reopen.calls.mostRecent().args[2]();
     expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket reaberto.');
+    expect(fixture.componentInstance.reopeningTicket()).toBeNull();
   });
 
-  it('exclui o ticket quando confirmado', async () => {
-    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+  it('não oferece "Excluir" ao solicitante', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    fixture.componentInstance.onDelete(openTicket);
-
-    expect(storeFake.remove).toHaveBeenCalledWith('t1', jasmine.any(Function));
-    storeFake.remove.calls.mostRecent().args[1]();
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket excluído.');
-    expect(document.activeElement?.id).toBe('ticketListTitle');
+    expect(fixture.nativeElement.querySelector('.bx-trash')).toBeNull();
   });
-
-  it('não exclui o ticket quando a confirmação for cancelada', async () => {
-    confirmDialogServiceFake.confirm.and.returnValue(of(false));
-    const fixture = TestBed.createComponent(TicketListComponent);
-    await fixture.whenStable();
-
-    fixture.componentInstance.onDelete(openTicket);
-
-    expect(storeFake.remove).not.toHaveBeenCalled();
-  });
-
   it('calcula o intervalo exibido no rodapé ("Exibindo X–Y de Z")', async () => {
     storeFake.currentPage.set(2);
     storeFake.currentPageSize.set(20);
@@ -252,7 +240,7 @@ describe('TicketListComponent', () => {
     expect(menuButtons[0].querySelector('.spinner-border')).toBeNull();
   });
 
-  it('mostra Editar descrição/Cancelar ticket/Excluir no "⋮" só para tickets ativos (Aberto/Em Andamento)', async () => {
+  it('mostra Editar descrição/Cancelar ticket no "⋮" só para tickets ativos (Aberto/Em Andamento)', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -263,7 +251,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.btn-row-actions').length).toBe(2);
     const itemLabels = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLElement>)
       .map(item => item.textContent?.trim());
-    expect(itemLabels).toEqual(['Editar descrição', 'Cancelar ticket', 'Excluir', 'Reabrir ticket']);
+    expect(itemLabels).toEqual(['Editar descrição', 'Cancelar ticket', 'Reabrir ticket']);
   });
 
   it('abre o modal de edição pré-carregando o ticket, e fecha sem salvar', async () => {
@@ -365,5 +353,15 @@ describe('TicketListComponent', () => {
     fixture.componentInstance.onStartEdit(openTicket);
 
     expect(storeFake.clearMutationError).toHaveBeenCalled();
+  });
+
+  it('mostra o status Cancelado em badge neutro, não no vermelho de alerta', async () => {
+    storeFake.tickets.set([{ ...openTicket, status: TicketStatus.Canceled }]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const badge = Array.from(fixture.nativeElement.querySelectorAll('.badge') as NodeListOf<HTMLElement>)
+      .find(b => b.textContent?.trim() === 'Cancelado');
+    expect(badge?.classList).toContain('bg-label-secondary');
   });
 });

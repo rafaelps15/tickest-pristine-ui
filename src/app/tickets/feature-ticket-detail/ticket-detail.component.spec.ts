@@ -934,10 +934,28 @@ describe('TicketDetailComponent', () => {
       await fixture.whenStable();
 
       findReopenButton(fixture)!.click();
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('app-ticket-reopen-dialog')).not.toBeNull();
+
+      (fixture.nativeElement.querySelector('app-ticket-reopen-dialog button[type="submit"]') as HTMLButtonElement).click();
 
       expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', jasmine.any(Function));
       expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto.');
       expect(historyStoreFake.reload).toHaveBeenCalled();
+      expect(messagesStoreFake.post).not.toHaveBeenCalled();
+    });
+
+    it('publica o motivo da reabertura como mensagem, quando informado', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      detailStoreFake.reopen.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findReopenButton(fixture)!.click();
+      await fixture.whenStable();
+      fixture.debugElement.componentInstance['onReopenConfirm']('A impressora parou de novo.');
+
+      expect(messagesStoreFake.post).toHaveBeenCalledWith('t1', 'A impressora parou de novo.', jasmine.any(Function));
     });
   });
 

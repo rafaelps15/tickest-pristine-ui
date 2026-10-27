@@ -19,9 +19,9 @@
   </div>
 }
 
-<!-- Erro de editar/cancelar/reabrir/excluir: "Tentar novamente" não refaria a ação, então só dá pra dispensar.
-     Com o modal de edição aberto, o erro aparece só dentro dele. -->
-@if (store.mutationError() && !editingTicket()) {
+<!-- Erro de editar/cancelar/reabrir: "Tentar novamente" não refaria a ação, então só dá pra dispensar.
+     Com um modal (edição/reabertura) aberto, o erro aparece só dentro dele. -->
+@if (store.mutationError() && !editingTicket() && !reopeningTicket()) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.mutationError() }}</span>
     <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso de erro" (click)="store.clearMutationError()"></button>
@@ -86,15 +86,9 @@
                           <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar ticket
                         </button>
                       </li>
-                      <li><hr class="dropdown-divider" /></li>
-                      <li>
-                        <button type="button" class="dropdown-item text-danger" [disabled]="isPending(ticket)" (click)="onDelete(ticket)">
-                          <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir
-                        </button>
-                      </li>
                     } @else if (canReopen(ticket)) {
                       <li>
-                        <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onReopen(ticket)">
+                        <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)">
                           <i class="bx bx-refresh me-2" aria-hidden="true"></i>Reabrir ticket
                         </button>
                       </li>
@@ -155,4 +149,9 @@
 @if (editingTicket(); as editing) {
   <app-ticket-edit-dialog [ticket]="editing" [saving]="isPending(editing)" [error]="store.mutationError()"
                            (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}
+
+@if (reopeningTicket(); as reopening) {
+  <app-ticket-reopen-dialog [ticketTitle]="reopening.title" [saving]="isPending(reopening)" [error]="store.mutationError()"
+                             (confirm)="onReopenConfirm($event)" (closed)="onReopenClosed()" />
 }
