@@ -53,12 +53,54 @@
  * reaproveita cores semânticas já existentes no design system (nunca inventa uma cor nova).
  */
 .quick-action-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+/*
+ * Atalhos de Ações Rápidas como linhas discretas (quieter, 2026-10-27): sem caixa com borda, alvo
+ * de 44px, realce leve no hover — o botão "Novo Ticket" acima fica sendo a única ação primária.
+ */
+.quick-links li + li {
+    border-top: 1px solid var(--tk-border);
+}
+
+.quick-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    margin: 0 -0.5rem;
+    padding: 0.625rem 0.5rem;
+    border-radius: var(--tk-radius-sm);
+    color: var(--tk-text-primary);
+    text-decoration: none;
+    transition: background-color var(--tk-transition);
+}
+
+.quick-link:hover,
+.quick-link:focus-visible {
+    background-color: rgba(var(--tk-primary-rgb), 0.06);
+    color: var(--tk-text-primary);
+}
+
+.quick-link:focus-visible {
+    outline: 2px solid var(--tk-primary);
+    outline-offset: 0;
+}
+
+/* "Ver na fila" dos KPIs clicáveis: índigo escuro pra passar 4.5:1 sobre o card claro; no escuro, o índigo da marca. */
+.kpi-cta {
+    color: var(--tk-primary-dark);
+    font-weight: 500;
+}
+
+:host-context([data-bs-theme="dark"]) .kpi-cta {
+    color: var(--tk-primary);
 }
 
 /*
@@ -117,10 +159,6 @@
     line-height: 1.2;
 }
 
-.badge {
-    text-transform: uppercase;
-    font-weight: 500;
-}
 
 /*
  * Trilhas laterais, mesma mecânica e mesmas contas do Monitorar Tickets (ver

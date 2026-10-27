@@ -18,6 +18,9 @@ import { DashboardInsightsComponent } from './dashboard-insights.component';
  */
 const CATEGORICAL_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4'];
 
+/** Quantos períodos o back-end devolve por agrupamento (GetTicketVolumeQueryHandler) — usado só sem dados. */
+const VOLUME_DEFAULT_POINTS: Record<TicketVolumeGrouping, number> = { Day: 30, Week: 12, Month: 12 };
+
 /** Nomes curtos dos meses em português, para rotular o gráfico quando o agrupamento é mensal. */
 const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -56,7 +59,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       badgeClass: 'bg-label-warning',
       icon: 'bx-error-circle',
       value: this.store.openCount(),
-      waitingLabel: 'Aguardando atendimento',
       loadingLabel: 'tickets em aberto',
       ariaNoun: 'em aberto'
     },
@@ -67,7 +69,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       badgeClass: 'bg-label-info',
       icon: 'bx-time-five',
       value: this.store.inProgressCount(),
-      waitingLabel: 'Em atendimento',
       loadingLabel: 'tickets em andamento',
       ariaNoun: 'em andamento'
     },
@@ -78,7 +79,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       badgeClass: 'bg-label-success',
       icon: 'bx-check-double',
       value: this.store.resolvedCount(),
-      waitingLabel: 'Finalizados',
       loadingLabel: 'tickets resolvidos',
       ariaNoun: 'resolvidos'
     }
@@ -127,6 +127,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   protected readonly groupByOptions = TICKET_VOLUME_GROUPING_OPTIONS;
   protected readonly groupByLabels = TICKET_VOLUME_GROUPING_LABELS;
+
+  /**
+   * Intervalo coberto pelo gráfico, pra dizer no título o que antes só dava pra deduzir pelos
+   * rótulos do eixo — conta os pontos recebidos; sem dados, usa a janela padrão do back-end
+   * (30 dias, 12 semanas, 12 meses).
+   */
+  protected readonly volumeRangeLabel = computed(() => {
+      const groupBy = this.store.groupBy();
+      const points = this.store.volume().length || VOLUME_DEFAULT_POINTS[groupBy];
+      switch (groupBy) {
+          case 'Week': return `Últimas ${points} semanas`;
+          case 'Month': return `Últimos ${points} meses`;
+          default: return `Últimos ${points} dias`;
+      }
+  });
 
   /** Rótulos formatados do período atual (um por ponto do volume), para o eixo do gráfico e a tabela acessível. */
   protected readonly periodLabels = computed(() => {
@@ -183,7 +198,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (canceledCount > 0) {
       parts.push(canceledCount === 1 ? '1 cancelado' : `${canceledCount} cancelados`);
     }
-    return `inclui ${parts.join(' e ')}`;
+    return `Inclui ${parts.join(' e ')}`;
   }
 
   /**

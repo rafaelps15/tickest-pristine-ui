@@ -27,7 +27,7 @@ describe('DashboardGuideComponent', () => {
     expect(text).toContain('Em Aberto');
     expect(text).toContain('Em Andamento');
     expect(text).toContain('Resolvidos');
-    expect(text).toContain('dia, semana ou mês');
+    expect(text).toContain('Dia, Semana ou Mês');
   });
 
   it('começa fechado quando não há preferência salva (tela mais visitada do sistema)', async () => {

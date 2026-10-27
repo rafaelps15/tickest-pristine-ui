@@ -196,7 +196,7 @@ describe('DashboardComponent', () => {
     const links = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
     expect(links).toHaveSize(3);
     expect(links.some(a => a.getAttribute('href')?.includes('status=1'))).toBeTrue();
-    expect(fixture.nativeElement.textContent).toContain('toque para ver na fila');
+    expect(fixture.nativeElement.textContent).toContain('Ver na fila');
   });
 
   it('inclui a contagem atual no aria-label dos cards de status, pra quem usa leitor de tela saber "quantos" antes de entrar', async () => {
@@ -216,7 +216,7 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelectorAll('a.stretched-link')).toHaveSize(0);
-    expect(fixture.nativeElement.textContent).not.toContain('toque para ver na fila');
+    expect(fixture.nativeElement.textContent).not.toContain('Ver na fila');
   });
 
   it('renderiza os cards de estatísticas com os valores do store', async () => {
@@ -234,7 +234,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('— inclui 1 fechado');
+    expect(fixture.nativeElement.textContent).toContain('Inclui 1 fechado');
   });
 
   it('não mostra a legenda de detalhamento quando não há fechados nem cancelados', async () => {
@@ -243,7 +243,23 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('inclui');
+    expect(fixture.nativeElement.textContent).not.toContain('Inclui');
+    expect(fixture.nativeElement.textContent).toContain('Todos os status');
+  });
+
+  it('diz no título do gráfico que conta tickets criados e qual o intervalo, conforme o agrupamento', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const header = () => (fixture.nativeElement.querySelector('.chart-container')!.closest('.card') as HTMLElement)
+      .querySelector('.card-header')!.textContent;
+    expect(header()).toContain('Tickets criados');
+    expect(header()).toContain('Últimos 2 dias');
+
+    ticketsStoreFake.groupBy.set('Week');
+    ticketsStoreFake.volume.set([]);
+    await fixture.whenStable();
+    expect(header()).toContain('Últimas 12 semanas');
   });
 
   it('pluraliza corretamente a legenda de detalhamento quando há mais de um fechado e mais de um cancelado', async () => {
@@ -252,7 +268,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('— inclui 2 fechados e 3 cancelados');
+    expect(fixture.nativeElement.textContent).toContain('Inclui 2 fechados e 3 cancelados');
   });
 
   it('muda o agrupamento do gráfico ao clicar em Semana/Mês', async () => {
@@ -276,7 +292,7 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Quantidade de tickets abertos por período');
+    expect(text).toContain('Quantidade de tickets criados por período');
     expect(text).toContain('05/01');
     expect(text).toContain('5');
   });
