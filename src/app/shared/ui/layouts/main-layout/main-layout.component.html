@@ -28,9 +28,9 @@
           </a>
         </li>
 
-        <li class="menu-item" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-          <a routerLink="/tickets" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-ticket"></i>
+        <li class="menu-item" [class.active]="activeTicketsItem() === 'mine'">
+          <a routerLink="/tickets" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'mine' ? 'page' : null">
+            <i class="menu-icon tf-icons bx bx-receipt"></i>
             <div>Meus Tickets</div>
           </a>
         </li>
@@ -45,8 +45,8 @@
         }
 
         @if (sessionService.hasPermission('tickets:manage')) {
-          <li class="menu-item" routerLinkActive="active">
-            <a routerLink="/tickets/monitorar" class="menu-link">
+          <li class="menu-item" [class.active]="activeTicketsItem() === 'monitor'">
+            <a routerLink="/tickets/monitorar" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'monitor' ? 'page' : null">
               <i class="menu-icon tf-icons bx bx-list-check"></i>
               <div>Monitorar Tickets</div>
             </a>
