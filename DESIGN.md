@@ -524,6 +524,9 @@ Ninguém define a senha de outra pessoa (spec 008 do back-end):
   digitar). Três estados: formulário, "Conta ativada" com o botão "Entrar" (a ativação não abre
   sessão) e "Link inválido ou expirado", que troca o formulário pela orientação de pedir outro
   convite — a API não diz se expirou, foi usado ou revogado, e a tela também não.
+- **Desativar quem atende chamados:** a confirmação diz quantos chamados em aberto a pessoa atende
+  ("atende 3 chamados em aberto, que continuam atribuídos a essa pessoa: reatribua em Monitorar
+  Chamados"). Se a contagem falhar, a confirmação sai sem o aviso — nunca bloqueia a desativação.
 - **Reenviar convite:** no ⋮ da linha e no painel, só pra conta pendente e ativa. Recusa do
   back-end (limite de 5 em 24 horas) aparece acima da lista, com o motivo dele.
 

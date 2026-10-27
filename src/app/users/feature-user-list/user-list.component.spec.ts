@@ -46,6 +46,8 @@ describe('UserListComponent', () => {
       activatingIds: signal<string[]>([]),
       resendingInvitationIds: signal<string[]>([]),
       resendInvitation: jasmine.createSpy('resendInvitation'),
+      countOpenAssignedTickets: jasmine.createSpy('countOpenAssignedTickets')
+        .and.callFake((_userId: string, onDone: (count: number | null) => void) => onDone(0)),
       success: signal(false),
       error: signal<string | null>(null),
       createdUserId: signal<string | null>(null),
@@ -1052,6 +1054,51 @@ describe('UserListComponent', () => {
     action.run();
 
     expect(usersStoreFake.activate).toHaveBeenCalledWith('u1', jasmine.any(Function));
+  });
+
+  it('avisa na confirmação quantos chamados em aberto a pessoa atende, e que continuam atribuídos', async () => {
+    usersStoreFake.countOpenAssignedTickets.and.callFake((_id: string, onDone: (count: number | null) => void) => onDone(3));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(usersStoreFake.countOpenAssignedTickets).toHaveBeenCalledWith('u1', jasmine.any(Function));
+    expect(options.message).toContain('Maria Silva atende 3 chamados em aberto, que continuam atribuídos a essa pessoa');
+    expect(options.message).toContain('reatribua em Monitorar Chamados');
+  });
+
+  it('usa o singular quando é 1 chamado em aberto', async () => {
+    usersStoreFake.countOpenAssignedTickets.and.callFake((_id: string, onDone: (count: number | null) => void) => onDone(1));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toContain('atende 1 chamado em aberto, que continua atribuído');
+  });
+
+  it('confirma sem o aviso de chamados quando a contagem falha, sem bloquear a desativação', async () => {
+    usersStoreFake.countOpenAssignedTickets.and.callFake((_id: string, onDone: (count: number | null) => void) => onDone(null));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toBe('O acesso de Maria Silva ao Tickest é bloqueado na hora. Dá pra reativar depois.');
+  });
+
+  it('não consulta chamados de quem ainda não ativou a conta', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate({ ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null });
+
+    expect(usersStoreFake.countOpenAssignedTickets).not.toHaveBeenCalled();
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
   });
 
   it('usa texto sem gênero gramatical na confirmação de desativação', async () => {

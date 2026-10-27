@@ -512,15 +512,31 @@ export class UserListComponent implements OnInit {
     }
 
     /**
-     * Confirma e desativa o usuário selecionado, bloqueando o acesso. O toast de sucesso oferece
-     * "Desfazer" (reativa na hora) — desativar é reversível, e o atalho poupa achar a linha de novo.
-     * Textos sem gênero gramatical: o nome da pessoa não diz o gênero.
+     * Desativa o usuário, avisando antes quantos chamados em aberto ele atende — num helpdesk, a
+     * pergunta real ao bloquear alguém é o que acontece com a fila dele (achado do critique de
+     * 2026-10-27). Conta pendente de ativação não tem chamados: pula a consulta.
      */
     onDeactivate(user: UserSummary): void {
+        if (user.pendingActivation) {
+            this.confirmDeactivate(user, 0);
+            return;
+        }
+        this.store.countOpenAssignedTickets(user.id, count => this.confirmDeactivate(user, count));
+    }
+
+    /**
+     * Confirma e desativa, bloqueando o acesso. Os chamados em aberto continuam atribuídos (o
+     * back-end não os devolve à fila), então o aviso orienta a reatribuir. O toast de sucesso
+     * oferece "Desfazer" (reativa na hora). Textos sem gênero gramatical: o nome não diz o gênero.
+     */
+    private confirmDeactivate(user: UserSummary, openTickets: number | null): void {
         const name = `${user.firstName} ${user.lastName}`;
+        const ticketsWarning = openTickets && openTickets > 0
+            ? ` ${name} atende ${openTickets === 1 ? '1 chamado em aberto, que continua atribuído' : `${openTickets} chamados em aberto, que continuam atribuídos`} a essa pessoa: reatribua em Monitorar Chamados.`
+            : '';
         this.confirmDialogService.confirm({
             title: `Desativar "${name}"?`,
-            message: `O acesso de ${name} ao Tickest é bloqueado na hora. Dá pra reativar depois.`,
+            message: `O acesso de ${name} ao Tickest é bloqueado na hora.${ticketsWarning} Dá pra reativar depois.`,
             confirmLabel: 'Desativar',
             variant: 'danger'
         }).subscribe(confirmed => {

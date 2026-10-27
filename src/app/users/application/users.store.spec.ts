@@ -37,7 +37,7 @@ describe('UsersStore', () => {
   let authDataService: jasmine.SpyObj<AuthDataService>;
 
   beforeEach(() => {
-    userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'updateProfile', 'assignRoles', 'deactivate', 'activate', 'resendInvitation']);
+    userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'updateProfile', 'assignRoles', 'deactivate', 'activate', 'resendInvitation', 'countOpenAssignedTickets']);
     authDataService = jasmine.createSpyObj('AuthDataService', ['register']);
     userDataService.getAll.and.returnValue(of(buildPage([user])));
 
@@ -267,6 +267,25 @@ describe('UsersStore', () => {
     expect(store.createdUserId()).toBe('new-id');
     expect(store.error()).toBeNull();
     expect(store.loading()).toBeFalse();
+  });
+
+  it('devolve quantos chamados em aberto estão atribuídos ao usuário', () => {
+    userDataService.countOpenAssignedTickets.and.returnValue(of(4));
+    const onDone = jasmine.createSpy('onDone');
+
+    store.countOpenAssignedTickets('u1', onDone);
+
+    expect(userDataService.countOpenAssignedTickets).toHaveBeenCalledWith('u1');
+    expect(onDone).toHaveBeenCalledWith(4);
+  });
+
+  it('devolve null quando a contagem de chamados falha, pra não bloquear a desativação', () => {
+    userDataService.countOpenAssignedTickets.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    const onDone = jasmine.createSpy('onDone');
+
+    store.countOpenAssignedTickets('u1', onDone);
+
+    expect(onDone).toHaveBeenCalledWith(null);
   });
 
   it('reenvia o convite, recarrega a listagem e libera o indicador de andamento', async () => {

@@ -105,6 +105,17 @@ export const UsersStore = signalStore(
   })),
   withMethods((store) => ({
     /**
+     * Conta os chamados em aberto atribuídos ao usuário, pra confirmação de desativação avisar.
+     * Falha devolve `null`: o aviso some, mas a desativação não fica bloqueada por causa dele.
+     */
+    countOpenAssignedTickets(userId: string, onDone: (count: number | null) => void): void {
+      store._userDataService.countOpenAssignedTickets(userId).subscribe({
+        next: count => onDone(count),
+        error: () => onDone(null)
+      });
+    },
+
+    /**
      * Reenvia o convite de ativação (o anterior deixa de valer). Falha vai pro erro da listagem:
      * a ação parte da linha ou do painel, fora de modal.
      */

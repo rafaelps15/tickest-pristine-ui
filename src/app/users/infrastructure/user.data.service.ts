@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { ChangePasswordRequest, UpdateProfileRequest, UserProfile } from '../entities/user-profile';
@@ -58,6 +58,24 @@ export class UserDataService {
     /** Desativa um usuário, bloqueando seu login (PUT /users/{id}/deactivate). */
     deactivate(userId: string): Observable<void> {
         return this.http.put<void>(`${this.apiUrl}/${userId}/deactivate`, {});
+    }
+
+    /**
+     * Quantos chamados ainda em aberto (Aberto ou Em Andamento) estão atribuídos ao usuário — lido
+     * do `totalCount` de GET /tickets com `pageSize=1`, sem trazer a lista. Fica aqui, e não no
+     * domínio de chamados, porque `tickets` já importa `users`: o caminho inverso fecharia um ciclo
+     * entre os barrels. Os status são os números do enum TicketStatus do back-end (1 = Aberto,
+     * 2 = Em Andamento), os mesmos de `TICKET_ACTIVE_STATUSES`.
+     */
+    countOpenAssignedTickets(userId: string): Observable<number> {
+        const params = new HttpParams()
+            .set('assignedToUserId', userId)
+            .append('status', 1)
+            .append('status', 2)
+            .set('page', 1)
+            .set('pageSize', 1);
+        return this.http.get<PagedResponse<unknown>>(`${environment.apiUrl}/tickets`, { params })
+            .pipe(map(page => page.totalCount));
     }
 
     /** Reemite o convite de ativação de quem ainda não ativou a conta, revogando o anterior e enviando novo e-mail (POST /users/{id}/invitation). */
