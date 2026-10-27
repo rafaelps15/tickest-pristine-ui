@@ -237,4 +237,15 @@ describe('DepartmentsStore', () => {
 
     expect(store.mutationError()).toBeNull();
   });
+
+  it('não quebra a tela quando a listagem falha: departamentos vazio e erro exposto, em vez de lançar', async () => {
+    departmentDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(() => store.departments()).not.toThrow();
+    expect(store.departments()).toEqual([]);
+    expect(store.listState().loading).toBeFalse();
+    expect(store.listState().error).toBeTruthy();
+  });
 });

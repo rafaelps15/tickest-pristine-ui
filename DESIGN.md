@@ -183,6 +183,8 @@ mede entre 1,6:1 e 3,8:1 de contraste — falha WCAG AA (4,5:1). Auditado e corr
 elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor
 nova inventada para aquela tela.
 
+**The No Factory Blue Rule.** Componente do Bootstrap que usa a cor primária (ex.: `btn-outline-primary`, `text-primary`, `border-primary`) é sobrescrito pro índigo da marca em `styles.css` — nunca aparece o azul de fábrica `#0d6efd`. Texto sobre índigo preenchido usa `--tk-primary-dark` ou mais escuro (o `--tk-primary` não passa AA com texto branco pequeno).
+
 *Exceção deliberada:* o gráfico "Chamados criados" do Dashboard usa uma paleta categórica de 5 cores
 (azul, laranja, verde, âmbar, rosa — validada pra daltonismo) só como ritmo visual entre barras, a
 pedido do usuário em 2026-10-24. A cor ali não carrega significado; a exceção vale só pra esse

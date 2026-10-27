@@ -302,6 +302,30 @@ body {
   transition: transform var(--tk-transition), box-shadow var(--tk-transition);
 }
 
+/*
+ * O contornado primário vinha com o azul padrão do Bootstrap (#0d6efd), fora da marca. Texto em
+ * Índigo Profundo (AA sobre branco); no hover, preenchido com `--tk-primary-dark` (branco a 4,8:1 —
+ * o `--tk-primary` daria 4,05:1, abaixo do AA). No escuro, o índigo claro dos badges escuros.
+ */
+.btn-outline-primary {
+  --bs-btn-color: var(--tk-primary-darker);
+  --bs-btn-border-color: var(--tk-primary);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--tk-primary-dark);
+  --bs-btn-hover-border-color: var(--tk-primary-dark);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--tk-primary-darker);
+  --bs-btn-active-border-color: var(--tk-primary-darker);
+  --bs-btn-disabled-color: var(--tk-primary);
+  --bs-btn-disabled-border-color: var(--tk-primary);
+  --bs-btn-focus-shadow-rgb: var(--tk-primary-rgb);
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+  --bs-btn-color: #b3b5ff;
+  --bs-btn-disabled-color: #b3b5ff;
+}
+
 .btn-outline-secondary:hover, .btn-outline-primary:hover {
   transform: translateY(-1px);
 }

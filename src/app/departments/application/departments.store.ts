@@ -7,7 +7,7 @@ import { Department, DepartmentData, DepartmentDetail } from '../entities/depart
 import { CreateSectorData, UpdateSectorData } from '../entities/sector';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
-import { extractErrorMessage } from '../../shared';
+import { extractErrorMessage, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
 
 /**
@@ -35,11 +35,11 @@ export const DepartmentsStore = signalStore(
     _listResource: rxResource({ stream: () => store._departmentDataService.getAll() })
   })),
   withComputed((store) => ({
-    departments: computed(() => store._listResource.value() ?? []),
+    departments: computed(() => valueOf(store._listResource) ?? []),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._listResource.value() ?? ([] as Department[]),
+        data: valueOf(store._listResource) ?? ([] as Department[]),
         loading: store._listResource.isLoading(),
         error: store.mutationError() ?? (resourceError
           ? extractErrorMessage(resourceError, {}, 'Erro ao carregar departamentos')

@@ -137,7 +137,7 @@
 }
 
 @if (openDialog() === 'department') {
-<app-dialog id="departmentModal" [title]="editingDepartment() ? 'Editar departamento' : 'Novo departamento'" (closed)="closeDialog()">
+<app-dialog id="departmentModal" [busy]="store.mutating()" [title]="editingDepartment() ? 'Editar departamento' : 'Novo departamento'" (closed)="closeDialog()">
   <form dialogContent [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="modal-body">
       @if (store.mutationError()) {
@@ -179,8 +179,8 @@
 
         @if (loadingCurrentResponsible()) {
           <div class="small text-muted mb-2">
-            <span class="spinner-border spinner-border-sm me-1" role="status"><span class="visually-hidden">Carregando responsável atual…</span></span>
-            Carregando responsável atual…
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            <span role="status">Carregando responsável atual…</span>
           </div>
         } @else if (selectedResponsibleName(); as currentName) {
           <p class="small mb-2">
@@ -200,7 +200,7 @@
         @if (store.responsibleSearchError()) {
           <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.responsibleSearchError() }}</div>
         } @else if (store.searchingResponsible()) {
-          <div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
+          <div class="text-center py-2"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Buscando usuários…</span></div>
         } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
           <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
         } @else if (store.responsibleCandidates().length > 0) {
@@ -235,7 +235,7 @@
 }
 
 @if (openDialog() === 'sector') {
-<app-dialog id="sectorModal" [title]="editingSector() ? 'Editar setor' : 'Novo setor'" [subtitle]="sectorDepartment() ? 'em ' + sectorDepartment()!.name : null" (closed)="closeDialog()">
+<app-dialog id="sectorModal" [busy]="store.mutating()" [title]="editingSector() ? 'Editar setor' : 'Novo setor'" [subtitle]="sectorDepartment() ? 'em ' + sectorDepartment()!.name : null" (closed)="closeDialog()">
   <form dialogContent [formGroup]="sectorForm" (ngSubmit)="onSubmitSector()">
     <div class="modal-body">
       @if (store.mutationError()) {
