@@ -1,24 +1,26 @@
-<app-screen-guide storageKey="tickest.dashboardGuide.open">
+<!-- Fechado por padrão aqui (exceção à regra "Guia aberto" das outras telas): é a tela de leitura diária,
+     e aberto ele ocupava a primeira tela inteira no celular antes de qualquer dado. -->
+<app-screen-guide storageKey="tickest.dashboardGuide.open" [defaultOpen]="false">
   @if (showMine()) {
-    <app-guide-section title="Seus chamados">
+    <app-guide-section title="Como ler seus chamados">
       <p class="small text-muted mb-0">Os chamados que você abriu, por situação. Clique em um card pra ver a lista em Meus Chamados.</p>
     </app-guide-section>
   }
 
-  <app-guide-section title="Cards de estatística">
+  <app-guide-section title="Como ler os números da empresa">
     <p class="small text-muted mb-2"><strong>Total de Chamados:</strong> todos os chamados da empresa, incluindo fechados e cancelados.</p>
     <p class="small text-muted mb-2"><strong>Em Aberto:</strong> aguardando atendimento.</p>
     <p class="small text-muted mb-2"><strong>Em Andamento:</strong> já em atendimento por alguém.</p>
     <p class="small text-muted mb-0"><strong>Resolvidos:</strong> finalizados com solução.</p>
   </app-guide-section>
 
-  <app-guide-section title="Chamados criados">
-    <p class="small text-muted mb-2">Quantos chamados foram criados em cada período: últimos 30 dias, 12 semanas ou 12 meses, conforme o botão Dia, Semana ou Mês.</p>
+  <app-guide-section title="Como ler o gráfico">
+    <p class="small text-muted mb-2">Quantos chamados foram criados em cada período, agrupados por dia, semana ou mês (botões Dia, Semana ou Mês); o intervalo coberto aparece logo abaixo do título do gráfico.</p>
     <p class="small text-muted mb-0">Os números são de toda a empresa e iguais para qualquer papel logado. Não é uma visão pessoal.</p>
   </app-guide-section>
 
   @if (showSla()) {
-    <app-guide-section title="Alertas de SLA">
+    <app-guide-section title="Como ler os alertas de SLA">
       <p class="small text-muted mb-2"><strong>Em risco:</strong> já passou do ponto de alerta do SLA, mas ainda está dentro do prazo. Ainda dá pra salvar.</p>
       <p class="small text-muted mb-2"><strong>Atrasado:</strong> passou do prazo de atendimento.</p>
       <p class="small text-muted mb-0">A lista mostra até 3 atrasados e 2 em risco; os números do topo levam à fila completa. O prazo de cada um anda sozinho, e "Atualizado às" diz de quando é a lista.</p>

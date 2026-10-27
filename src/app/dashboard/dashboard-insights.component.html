@@ -1,89 +1,101 @@
-<div class="card insights-card mb-3">
-  <div class="card-body">
-    <div class="d-flex align-items-start gap-2 mb-3">
-      <!-- Âmbar de alerta só quando há alerta; com a fila em dia (ou sem dados), um ícone neutro. -->
-      <i class="bx fs-5 mt-1" aria-hidden="true"
-         [class.bx-error]="criticalTickets().length > 0" [class.text-warning]="criticalTickets().length > 0"
-         [class.bx-time-five]="criticalTickets().length === 0" [class.text-muted]="criticalTickets().length === 0"></i>
-      <div>
-        <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
-        <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
-        @if (loadedAtMs(); as loadedAt) {
-          <p class="text-muted small mb-0">Atualizado às {{ loadedAt | date:'HH:mm' }}</p>
-        }
+<!--
+  Faixa de largura total no topo da tela (layout, critique de 2026-10-27): resumo à esquerda e lista à
+  direita no desktop; com a fila em dia, vira uma linha compacta — o tamanho da faixa é a mensagem.
+-->
+<div class="card insights-card mb-4">
+  <div class="card-body sla-band" [class.sla-band-quiet]="isQuiet()">
+    <div class="sla-band-summary">
+      <div class="d-flex align-items-start gap-2 sla-band-header">
+        <!-- Âmbar de alerta só quando há alerta; com a fila em dia (ou sem dados), um ícone neutro. -->
+        <i class="bx fs-5 mt-1" aria-hidden="true"
+           [class.bx-error]="criticalTickets().length > 0" [class.text-warning]="criticalTickets().length > 0"
+           [class.bx-time-five]="criticalTickets().length === 0" [class.text-muted]="criticalTickets().length === 0"></i>
+        <div>
+          <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
+          <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
+          @if (loadedAtMs(); as loadedAt) {
+            <p class="text-muted small mb-0">Atualizado às {{ loadedAt | date:'HH:mm' }}</p>
+          }
+        </div>
+        <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
+                [disabled]="loading() || refreshing()" aria-label="Atualizar alertas de SLA" (click)="refresh.emit()">
+          @if (refreshing()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          } @else {
+            <i class="bx bx-refresh fs-5" aria-hidden="true"></i>
+          }
+        </button>
       </div>
-      <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
-              [disabled]="loading() || refreshing()" aria-label="Atualizar alertas de SLA" (click)="refresh.emit()">
-        @if (refreshing()) {
-          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-        } @else {
-          <i class="bx bx-refresh fs-5" aria-hidden="true"></i>
-        }
-      </button>
+
+      @if (loading()) {
+        <div class="d-flex justify-content-center py-2">
+          <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando alertas de SLA…</span></span>
+        </div>
+      } @else if (error(); as errorMessage) {
+        <div class="d-flex flex-column align-items-start gap-2" role="alert">
+          <p class="text-danger small mb-0">{{ errorMessage }}</p>
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="refresh.emit()">Tentar novamente</button>
+        </div>
+      } @else if (criticalTickets().length === 0) {
+        <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
+        <div class="d-flex align-items-center gap-3 sla-all-clear">
+          <span class="badge bg-label-success rounded-circle icon-tile" aria-hidden="true"><i class="bx bx-check fs-4"></i></span>
+          <div>
+            <p class="fw-semibold mb-0">Fila em dia</p>
+            <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco agora.</p>
+          </div>
+        </div>
+      } @else {
+        <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
+        <div class="sla-totals">
+          <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
+             [attr.aria-label]="shownBreachedCount() + ' chamados atrasados — ver na fila'">
+            <span class="stat-value fs-3 text-danger">{{ shownBreachedCount() }}</span>
+            <span class="small">{{ shownBreachedCount() === 1 ? 'atrasado' : 'atrasados' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
+          </a>
+          <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
+             [attr.aria-label]="shownAtRiskCount() + ' chamados em risco — ver na fila'">
+            <span class="stat-value fs-3 text-warning">{{ shownAtRiskCount() }}</span>
+            <span class="small">em risco <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
+          </a>
+        </div>
+        <!-- A definição no ponto de uso, não só no Guia (que no Dashboard começa fechado). -->
+        <p class="small text-muted mb-0 mt-2">Em risco: passou do ponto de alerta, mas ainda está no prazo.</p>
+      }
     </div>
 
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-2">
-        <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando alertas de SLA…</span></span>
-      </div>
-    } @else if (error(); as errorMessage) {
-      <div class="d-flex flex-column align-items-start gap-2" role="alert">
-        <p class="text-danger small mb-0">{{ errorMessage }}</p>
-        <button type="button" class="btn btn-sm btn-outline-danger" (click)="refresh.emit()">Tentar novamente</button>
-      </div>
-    } @else if (criticalTickets().length === 0) {
-      <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
-      <div class="d-flex align-items-center gap-3 sla-all-clear">
-        <span class="badge bg-label-success rounded-circle icon-tile" aria-hidden="true"><i class="bx bx-check fs-4"></i></span>
-        <div>
-          <p class="fw-semibold mb-0">Fila em dia</p>
-          <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco agora.</p>
-        </div>
-      </div>
-    } @else {
-      <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
-      <div class="sla-totals mb-3">
-        <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
-           [attr.aria-label]="shownBreachedCount() + ' chamados atrasados — ver na fila'">
-          <span class="stat-value fs-3 text-danger">{{ shownBreachedCount() }}</span>
-          <span class="small">{{ shownBreachedCount() === 1 ? 'atrasado' : 'atrasados' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
-        </a>
-        <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
-           [attr.aria-label]="shownAtRiskCount() + ' chamados em risco — ver na fila'">
-          <span class="stat-value fs-3 text-warning">{{ shownAtRiskCount() }}</span>
-          <span class="small">em risco <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
-        </a>
-      </div>
-
-      <ul class="list-unstyled mb-0 critical-ticket-list">
-        @for (item of items(); track item.ticket.id) {
-          <li class="critical-ticket-item">
-            <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
-            <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
-              <span class="d-flex align-items-start justify-content-between gap-2">
-                <span class="critical-ticket-title">{{ item.ticket.title }}</span>
-                @if (item.overdue) {
-                  <span class="badge bg-label-danger flex-shrink-0">Atrasado</span>
+    @if (hasAlerts()) {
+      <div class="sla-band-list">
+        <ul class="list-unstyled mb-0 critical-ticket-list">
+          @for (item of items(); track item.ticket.id) {
+            <li class="critical-ticket-item">
+              <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
+              <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
+                <span class="d-flex align-items-start justify-content-between gap-2">
+                  <span class="critical-ticket-title">{{ item.ticket.title }}</span>
+                  @if (item.overdue) {
+                    <span class="badge bg-label-danger flex-shrink-0">Atrasado</span>
+                  } @else {
+                    <span class="badge bg-label-warning flex-shrink-0">Em risco</span>
+                  }
+                </span>
+                <!-- Prazo relativo vivo (anda a cada 30s); a data absoluta fica no `datetime`/title pra quem precisar. -->
+                <span class="d-block small" [class.text-danger]="item.overdue" [class.text-muted]="!item.overdue">
+                  {{ item.ticket.sectorName }} ·
+                  <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">{{ item.relative }}</time>
+                </span>
+                <!-- Quem atende: atrasado sem dono e atrasado em atendimento pedem ações opostas. -->
+                @if (item.ticket.assignedToName; as assignee) {
+                  <span class="d-block small text-muted">Com {{ assignee }}</span>
                 } @else {
-                  <span class="badge bg-label-warning flex-shrink-0">Em risco</span>
+                  <span class="d-block small fw-semibold critical-ticket-unassigned">Sem responsável</span>
                 }
-              </span>
-              <!-- Prazo relativo vivo (anda a cada 30s); a data absoluta fica no `datetime`/title pra quem precisar. -->
-              <span class="d-block small" [class.text-danger]="item.overdue" [class.text-muted]="!item.overdue">
-                {{ item.ticket.sectorName }} ·
-                <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">{{ item.relative }}</time>
-              </span>
-              <!-- Quem atende: atrasado sem dono e atrasado em atendimento pedem ações opostas. -->
-              @if (item.ticket.assignedToName; as assignee) {
-                <span class="d-block small text-muted">Com {{ assignee }}</span>
-              } @else {
-                <span class="d-block small fw-semibold critical-ticket-unassigned">Sem responsável</span>
-              }
-            </a>
-          </li>
-        }
-      </ul>
-      <div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+              </a>
+            </li>
+          }
+        </ul>
+        <div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+      </div>
     }
   </div>
 </div>

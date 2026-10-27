@@ -84,6 +84,12 @@ export class DashboardInsightsComponent {
   /** Relógio local (ms), avançado a cada 30s com a aba visível — dispara o recálculo do prazo relativo. */
   protected readonly nowMs = signal(Date.now());
 
+  /** Há alertas pra listar (carregado, sem erro, com pelo menos um chamado) — a faixa mostra a coluna da lista. */
+  protected readonly hasAlerts = computed(() => !this.loading() && !this.error() && this.criticalTickets().length > 0);
+
+  /** Fila em dia (carregado, sem erro, nenhum alerta): a faixa vira uma linha compacta. */
+  protected readonly isQuiet = computed(() => !this.loading() && !this.error() && this.criticalTickets().length === 0);
+
   /** Itens com prazo relativo e situação efetiva, recalculados a cada tick do relógio. */
   protected readonly items = computed<CriticalTicketView[]>(() => {
     const serverNow = this.nowMs() + this.clockOffsetMs();

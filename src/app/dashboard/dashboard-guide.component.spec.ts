@@ -31,14 +31,31 @@ describe('DashboardGuideComponent', () => {
   it('explica "em risco" e "atrasado" só pra quem vê os Alertas de SLA', async () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).not.toContain('Alertas de SLA');
+    expect(fixture.nativeElement.textContent).not.toContain('alertas de SLA');
 
     fixture.componentRef.setInput('showSla', true);
     await fixture.whenStable();
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Alertas de SLA');
+    expect(text).toContain('Como ler os alertas de SLA');
     expect(text).toContain('Em risco:');
     expect(text).toContain('Atrasado:');
+  });
+
+  it('começa fechado no Dashboard até na primeira visita (exceção à regra do Guia aberto)', async () => {
+    const fixture = TestBed.createComponent(DashboardGuideComponent);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement.querySelector('.guide-toggle') as HTMLElement).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('não repete nos títulos das seções o nome de um card da tela (leitor de tela confundia ajuda com conteúdo)', async () => {
+    const fixture = TestBed.createComponent(DashboardGuideComponent);
+    fixture.componentRef.setInput('showSla', true);
+    await fixture.whenStable();
+
+    const titles = Array.from(fixture.nativeElement.querySelectorAll('h2, h3') as NodeListOf<HTMLElement>).map(h => h.textContent?.trim());
+    expect(titles).not.toContain('Chamados criados');
+    expect(titles).not.toContain('Alertas de SLA');
   });
 
   it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
@@ -48,6 +65,6 @@ describe('DashboardGuideComponent', () => {
     (fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
   });
 });

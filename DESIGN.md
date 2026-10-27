@@ -356,6 +356,9 @@ uso).
 
 ### Alertas de SLA (assinatura do produto)
 O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
+- Fica numa **faixa de largura total entre o cabeçalho e os KPIs** (pra quem atende a fila), não
+  numa coluna lateral: no desktop, resumo (totais + definição de "em risco") à esquerda e lista à
+  direita; com a fila em dia, vira uma linha compacta — o tamanho da faixa é a mensagem.
 - Lista vencidos **e** em risco em 5 vagas: até 3 vencidos (o vencido há mais tempo primeiro) e até
   2 em risco (o que vence primeiro), e a sobra de um grupo vai pro outro — só por prazo, muitos
   vencidos escondiam os em risco, os únicos que ainda dá pra salvar. Os totais da empresa ficam no
@@ -420,6 +423,12 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
   apoio, mais discreto que o conteúdo. Seções com título `h2` em versalete. O componente do domínio
   (`*-guide.component`) só escreve o texto. Explica legenda e comportamento da tela — nunca repete
   o que a interface já diz.
+- **Exceção — Dashboard:** o Guia começa fechado até na primeira visita (`[defaultOpen]="false"`).
+  É a tela de leitura diária e, aberto, ocupava a primeira tela inteira no celular antes de
+  qualquer dado (critique de 2026-10-27); as definições que importam (ex. "em risco") ficam junto
+  dos próprios números. Os títulos das seções do Guia não repetem o título de um card da tela
+  ("Como ler o gráfico", não "Chamados criados") — no leitor de tela, títulos iguais confundem
+  ajuda com conteúdo.
 - **Sempre no fluxo:** Guia e Resumo ficam no topo da tela, na largura do conteúdo, em qualquer
   resolução e navegador. Nunca `position: fixed` nas margens do `container-xxl`: o antigo modo
   "trilha lateral" (≥1900px, ~130–170px de largura) dependia do viewport real — zoom, escala do

@@ -110,6 +110,27 @@ describe('DashboardInsightsComponent', () => {
     expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
   });
 
+  describe('faixa', () => {
+    it('com a fila em dia, vira a forma compacta, sem coluna de lista', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.sla-band').classList).toContain('sla-band-quiet');
+      expect(fixture.nativeElement.querySelector('.sla-band-list')).toBeNull();
+    });
+
+    it('com alertas, mostra a coluna da lista e define "em risco" junto dos totais', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [{ ...ticket, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() }]);
+      await fixture.whenStable();
+
+      const band = fixture.nativeElement.querySelector('.sla-band') as HTMLElement;
+      expect(band.classList).not.toContain('sla-band-quiet');
+      expect(band.querySelector('.sla-band-list .critical-ticket-link')).not.toBeNull();
+      expect(band.querySelector('.sla-band-summary')!.textContent).toContain('Em risco: passou do ponto de alerta');
+    });
+  });
+
   describe('atualidade da lista', () => {
     it('mostra a hora da última carga e pede atualização pelo botão', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);

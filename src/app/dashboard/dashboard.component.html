@@ -53,6 +53,16 @@
   </div>
 }
 
+<!-- Alertas de SLA em faixa própria, antes dos KPIs: é o que pede ação de quem atende a fila. -->
+@if (sessionService.hasPermission('tickets:manage')) {
+  <app-dashboard-insights [criticalTickets]="store.criticalTickets()"
+                          [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
+                          [clockOffsetMs]="store.clockOffsetMs()"
+                          [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
+                          [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
+                          (refresh)="store.reloadCritical()" />
+}
+
 <!-- Cards de Estatísticas -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
@@ -83,17 +93,9 @@
 
 <!-- Gráfico e Ações Rápidas -->
 <div class="row">
-  <!-- Alertas de SLA + Ações Rápidas: o que pede ação vem primeiro — antes do gráfico no DOM (ordem de
-       leitura/Tab igual à visual no celular); só no desktop o gráfico vai pra esquerda (order-lg-*). -->
+  <!-- Ações Rápidas antes do gráfico no DOM (ordem de leitura/Tab igual à visual no celular); só no
+       desktop o gráfico vai pra esquerda (order-lg-*). -->
   <div class="col-12 col-lg-4 mb-4 order-lg-2">
-    @if (sessionService.hasPermission('tickets:manage')) {
-      <app-dashboard-insights [criticalTickets]="store.criticalTickets()"
-                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
-                              [clockOffsetMs]="store.clockOffsetMs()"
-                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
-                              [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
-                              (refresh)="store.reloadCritical()" />
-    }
 
     <!-- Sem nenhum atalho pra este papel (admin sem tickets:manage), o card não aparece vazio. -->
     @if (!isAdministrative() || sessionService.hasPermission('tickets:manage')) {
