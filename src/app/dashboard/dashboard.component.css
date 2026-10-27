@@ -61,11 +61,6 @@
     flex-shrink: 0;
 }
 
-.card-title {
-    color: var(--tk-text-secondary);
-    font-weight: 500;
-}
-
 /*
  * Alvo de toque mínimo (44x44px) pros controles compactos do cabeçalho do gráfico (agrupar por
  * dia/semana/mês, "Ver como tabela") — `.btn-group-sm`/`.btn-sm` do Bootstrap rendem ~30px de

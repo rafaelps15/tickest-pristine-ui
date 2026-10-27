@@ -22,9 +22,11 @@ const CATEGORICAL_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4
 const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 /**
- * Tela de dashboard: visão ao vivo dos tickets de toda a empresa (não filtrada por quem está
- * logado) — todo papel vê os mesmos números, inclusive Administrador, para dar noção de volume de
- * chamados abertos por dia/semana/mês. Vive no shell (fora de qualquer domínio) porque é a tela
+ * Tela de dashboard: visão dos tickets de toda a empresa (não filtrada por quem está logado) —
+ * todo papel vê os mesmos números, inclusive Administrador, para dar noção de volume de chamados
+ * abertos por dia/semana/mês. Carregada ao abrir a tela, sem atualização automática: cada reload
+ * dos `resource()` troca os números por spinner, então um polling faria os cards piscarem — por
+ * isso a tela não promete "ao vivo". Vive no shell (fora de qualquer domínio) porque é a tela
  * que cruza dados de mais de um domínio — hoje só tickets, mas é aqui que uma futura métrica de
  * outro domínio entraria, não dentro do domínio de tickets.
  */
@@ -170,7 +172,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (canceledCount > 0) {
       parts.push(canceledCount === 1 ? '1 cancelado' : `${canceledCount} cancelados`);
     }
-    return `Inclui ${parts.join(' e ')}`;
+    return `inclui ${parts.join(' e ')}`;
   }
 
   /**

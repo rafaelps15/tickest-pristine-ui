@@ -168,7 +168,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Inclui 1 fechado');
+    expect(fixture.nativeElement.textContent).toContain('— inclui 1 fechado');
   });
 
   it('não mostra a legenda de detalhamento quando não há fechados nem cancelados', async () => {
@@ -177,7 +177,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Inclui');
+    expect(fixture.nativeElement.textContent).not.toContain('inclui');
   });
 
   it('pluraliza corretamente a legenda de detalhamento quando há mais de um fechado e mais de um cancelado', async () => {
@@ -186,7 +186,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Inclui 2 fechados e 3 cancelados');
+    expect(fixture.nativeElement.textContent).toContain('— inclui 2 fechados e 3 cancelados');
   });
 
   it('muda o agrupamento do gráfico ao clicar em Semana/Mês', async () => {

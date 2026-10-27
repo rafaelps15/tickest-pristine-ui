@@ -20,13 +20,14 @@ describe('DashboardInsightsComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra o card "Atividade Recente" claramente marcado como "Em breve"', async () => {
+  it('mostra só os Alertas de SLA, sem card provisório "Em breve" sem dados', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Atividade Recente');
-    expect(text).toContain('Em breve');
+    expect(text).toContain('Alertas de SLA');
+    expect(text).not.toContain('Atividade Recente');
+    expect(text).not.toContain('Em breve');
   });
 
   it('mostra o spinner enquanto carrega os alertas de SLA', async () => {
@@ -60,7 +61,8 @@ describe('DashboardInsightsComponent', () => {
 
     const link = fixture.nativeElement.querySelector('.critical-ticket-link') as HTMLAnchorElement;
     expect(link.textContent).toContain('Chamado urgente');
-    expect(fixture.nativeElement.textContent).toContain('TI');
+    // A linha inteira (setor + prazo) fica dentro do link — alvo de toque maior que só o título.
+    expect(link.textContent).toContain('TI — vence');
     expect(link.getAttribute('href')).toBe('/tickets/t1');
   });
 });

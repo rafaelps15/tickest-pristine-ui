@@ -1,17 +1,48 @@
+/*
+ * Host em bloco: elemento customizado é `inline` por padrão, e aí uma altura percentual dentro
+ * dele (o antigo `h-100` do card) era resolvida contra a coluna inteira do Dashboard — esticava o
+ * card até o fim da página (achado no audit de 2026-10-27).
+ */
+:host {
+  display: block;
+}
+
 .critical-ticket-item + .critical-ticket-item {
-  margin-top: 0.65rem;
-  padding-top: 0.65rem;
   border-top: 1px solid var(--tk-border);
 }
 
+/*
+ * A linha inteira (título + setor/prazo) é o link: bloco com no mínimo 44px de altura, sangrando
+ * um pouco pras laterais pra o realce de hover não encostar no texto.
+ */
 .critical-ticket-link {
+  display: block;
+  min-height: 2.75rem;
+  margin: 0 -0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--tk-radius-sm);
   color: var(--tk-text-primary);
-  font-weight: 500;
   text-decoration: none;
+  transition: background-color var(--tk-transition);
+}
+
+.critical-ticket-title {
+  font-weight: 500;
+  text-underline-offset: 0.2em;
 }
 
 .critical-ticket-link:hover,
 .critical-ticket-link:focus-visible {
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.critical-ticket-link:hover .critical-ticket-title,
+.critical-ticket-link:focus-visible .critical-ticket-title {
   color: var(--tk-primary);
   text-decoration: underline;
+}
+
+.critical-ticket-link:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 0;
 }

@@ -1,4 +1,38 @@
-import { activeTicketsMenu } from './main-layout.component';
+import { TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { MainLayoutComponent, activeTicketsMenu } from './main-layout.component';
+
+describe('MainLayoutComponent', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [MainLayoutComponent],
+      providers: [provideZonelessChangeDetection(), provideRouter([]), provideHttpClient(), provideHttpClientTesting()]
+    }).compileComponents();
+  });
+
+  it('abre e fecha o menu off-canvas por botões com nome acessível e aria-expanded', async () => {
+    const fixture = TestBed.createComponent(MainLayoutComponent);
+    await fixture.whenStable();
+
+    const openButton = fixture.nativeElement.querySelector('button[aria-label="Abrir menu"]') as HTMLButtonElement;
+    const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar menu"]') as HTMLButtonElement;
+    expect(openButton).withContext('o ☰ deve ser um <button> rotulado, não um link javascript:void(0)').toBeTruthy();
+    expect(closeButton).toBeTruthy();
+    expect(openButton.getAttribute('aria-expanded')).toBe('false');
+
+    openButton.click();
+    await fixture.whenStable();
+    expect(openButton.getAttribute('aria-expanded')).toBe('true');
+    expect(fixture.nativeElement.querySelector('.layout-wrapper').classList).toContain('menu-open');
+
+    closeButton.click();
+    await fixture.whenStable();
+    expect(openButton.getAttribute('aria-expanded')).toBe('false');
+  });
+});
 
 describe('activeTicketsMenu', () => {
   it('ativa "Meus Tickets" na lista, no Novo Ticket e no detalhe', () => {

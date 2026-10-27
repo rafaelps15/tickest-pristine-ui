@@ -157,6 +157,22 @@
   display: none;
 }
 
+/*
+ * Botões de abrir (☰, na navbar) e fechar (‹, no topo do menu) o menu off-canvas: <button> de
+ * verdade com rótulo e 44px (.btn-icon) — antes eram <a href="javascript:void(0)"> só com ícone,
+ * sem nome acessível e com ~25px de largura. Achado no audit do Dashboard de 2026-10-27.
+ */
+.menu-toggle-btn {
+  border: 0;
+  color: var(--tk-text-secondary);
+}
+
+.menu-toggle-btn:hover,
+.menu-toggle-btn:focus-visible {
+  background-color: rgba(var(--tk-primary-rgb), 0.08);
+  color: var(--tk-primary);
+}
+
 @media (max-width: 1199px) {
   .layout-menu {
     position: fixed;

@@ -2,7 +2,7 @@
   <div class="card-body">
     <div class="d-flex align-items-center gap-2 mb-2">
       <i class="bx bx-error fs-5 text-warning" aria-hidden="true"></i>
-      <h6 class="fw-bold mb-0">Alertas de SLA</h6>
+      <h5 class="card-title fw-bold mb-0">Alertas de SLA</h5>
     </div>
     <p class="text-muted small mb-3">Chamados em risco mais próximos de vencer o prazo.</p>
 
@@ -18,22 +18,14 @@
       <ul class="list-unstyled mb-0 critical-ticket-list">
         @for (ticket of criticalTickets(); track ticket.id) {
           <li class="critical-ticket-item">
-            <a [routerLink]="['/tickets', ticket.id]" class="critical-ticket-link">{{ ticket.title }}</a>
-            <div class="text-muted small">{{ ticket.sectorName }} — vence {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</div>
+            <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
+            <a [routerLink]="['/tickets', ticket.id]" class="critical-ticket-link">
+              <span class="critical-ticket-title">{{ ticket.title }}</span>
+              <span class="d-block text-muted small">{{ ticket.sectorName }} — vence {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</span>
+            </a>
           </li>
         }
       </ul>
     }
-  </div>
-</div>
-
-<div class="card insights-card h-100">
-  <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <i class="bx bx-pulse fs-5 text-muted" aria-hidden="true"></i>
-      <h6 class="fw-bold mb-0">Atividade Recente</h6>
-      <span class="badge bg-label-secondary ms-auto">Em breve</span>
-    </div>
-    <p class="text-muted small mb-0">Espaço reservado pra atividade da fila — ainda não conectado a dados reais: últimas atribuições e mudanças de status em toda a fila, de toda a empresa.</p>
   </div>
 </div>
