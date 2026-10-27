@@ -1,0 +1,8 @@
+/*
+ * Usa as classes do modal do Bootstrap (mesmo visual dos modais de Departamentos/Usuários), mas
+ * renderizado direto pelo Angular com `show d-block` em vez do JS do Bootstrap — o componente só
+ * existe enquanto a edição está aberta. Permite o título truncar dentro do cabeçalho flex.
+ */
+.min-w-0 {
+  min-width: 0;
+}

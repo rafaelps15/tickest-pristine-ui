@@ -232,6 +232,32 @@ body {
 }
 
 /*
+ * Botão de ações (⋮) por linha: discreto até o hover/foco, pra não pesar a tabela com N linhas.
+ * O tamanho vem do `.btn-icon` acima — aqui só a aparência "fantasma". Usado em Usuários e Meus Tickets.
+ */
+.btn-row-actions {
+  border-color: transparent;
+  color: var(--tk-text-secondary);
+}
+
+.btn-row-actions:hover,
+.btn-row-actions:focus,
+.btn-row-actions[aria-expanded="true"] {
+  border-color: var(--tk-border);
+  color: var(--tk-text-primary);
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus {
+  background-color: rgba(255, 62, 29, 0.08);
+}
+
+.dropdown-item.text-success:hover,
+.dropdown-item.text-success:focus {
+  background-color: rgba(113, 221, 55, 0.1);
+}
+
+/*
  * Botões de paginação (Anterior/números de página/Próxima): mesmo alvo de toque mínimo de
  * 2,75rem (44px) do `.btn-icon`, só que como largura/altura mínima (não fixa), pra acomodar
  * "Anterior"/"Próxima" sem cortar o texto. Reaproveitado nas 3 telas com paginação (Meus

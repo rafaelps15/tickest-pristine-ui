@@ -22,12 +22,13 @@ import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
 import { ConfirmDialogService, SessionService, ToastService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
+import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
 @Component({
     selector: 'app-ticket-detail',
-    imports: [DatePipe, NgClass, RouterLink],
+    imports: [DatePipe, NgClass, RouterLink, TicketEditDialogComponent],
     templateUrl: './ticket-detail.component.html',
     styleUrl: './ticket-detail.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -298,6 +299,55 @@ export class TicketDetailComponent implements OnInit {
 
         const days = Math.round(hours / 24);
         return days === 1 ? '1 dia' : `${days} dias`;
+    }
+
+    /** Ticket em edição no modal de descrição (null quando o modal está fechado). */
+    editingTicket = signal<TicketDetail | null>(null);
+
+    /** Indica se o usuário logado foi quem abriu o chamado. */
+    protected isOwner(t: TicketDetail): boolean {
+        return t.openedByUserId === this.sessionService.userId();
+    }
+
+    /**
+     * Indica se o botão "Editar" (descrição) deve aparecer: quem abriu o chamado ou quem administra
+     * chamados, com o chamado ativo — mesma regra do back-end (`tickets:update-own` ou `tickets:manage`).
+     */
+    protected canEditTicket(t: TicketDetail): boolean {
+        return (this.isOwner(t) || this.sessionService.hasPermission('tickets:manage')) && TICKET_ACTIVE_STATUSES.has(t.status);
+    }
+
+    /**
+     * Indica se o botão dedicado "Cancelar chamado" deve aparecer pra quem abriu o chamado — só
+     * quando a pessoa NÃO já vê essa opção pelo fluxo de transição de status de quem administra
+     * (`nextStatusOptions`, que já inclui Cancelar), pra não duplicar o botão quando as duas
+     * condições coincidirem.
+     */
+    protected canCancelAsOwner(t: TicketDetail): boolean {
+        return !this.canChangeStatus() && this.isOwner(t) && TICKET_ACTIVE_STATUSES.has(t.status);
+    }
+
+    /** Abre o modal de edição da descrição, limpando o erro de uma mutação anterior. */
+    onStartEditDescription(t: TicketDetail): void {
+        this.detailStore.clearMutationError();
+        this.editingTicket.set(t);
+    }
+
+    /** Fecha o modal de edição sem salvar. */
+    onEditClosed(): void {
+        this.editingTicket.set(null);
+    }
+
+    /** Salva a descrição editada no modal, mantendo o status atual do ticket. */
+    onEditSave(description: string): void {
+        const t = this.editingTicket();
+        if (!t) return;
+
+        this.detailStore.updateDescription(this.ticketId, description, t.status, () => {
+            this.toastService.show('Descrição atualizada.');
+            this.editingTicket.set(null);
+            this.historyStore.reload();
+        });
     }
 
     /** Indica se o botão "Atribuir/Alterar responsável" deve aparecer: só pra quem administra, com o chamado ativo. */

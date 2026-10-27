@@ -108,15 +108,31 @@ export const TicketsStore = signalStore(
       });
     },
 
-    /** Atualiza descrição/status de um ticket existente e recarrega a listagem em caso de sucesso. */
-    update(ticketId: string, data: UpdateTicketData): void {
-      store._ticketDataService.update(ticketId, data).subscribe({
+    /**
+     * Atualiza a descrição e/ou o status de um ticket ativo (editar o texto, ou cancelar) e
+     * recarrega a listagem em caso de sucesso. Marca o id como pendente durante a chamada, pra
+     * travar os botões da linha e evitar duplo-envio.
+     */
+    update(ticketId: string, data: UpdateTicketData, onSuccess?: () => void): void {
+      patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
+
+      store._ticketDataService.update(ticketId, data).pipe(
+        finalize(() => patchState(store, {
+          pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
+        }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
           store._listResource.reload();
+          onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao atualizar o ticket') });
+          patchState(store, {
+            mutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para atualizar este ticket.',
+              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              409: 'Não foi possível atualizar o ticket — tente novamente.'
+            }, 'Erro ao atualizar o ticket')
+          });
         }
       });
     },

@@ -4,3 +4,21 @@
   color: var(--tk-text-muted);
   font-weight: 600;
 }
+
+/* Título do ticket é o link pro detalhe — cor de texto, sublinhado só no hover/foco. */
+.ticket-title {
+  color: var(--tk-text-primary);
+  text-decoration: none;
+}
+
+.ticket-title:hover,
+.ticket-title:focus-visible {
+  color: var(--tk-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Resumo da descrição numa linha só, cortado com reticências. */
+.ticket-summary {
+  max-width: 24rem;
+}

@@ -76,6 +76,7 @@ describe('TicketDetailComponent', () => {
       removingAssignee: signal(false),
       assigningTicket: signal(false),
       updatingStatus: signal(false),
+      updatingDescription: signal(false),
       reopening: signal(false),
       sla: signal<TicketSla | null>(sla),
       slaRefreshing: signal(false),
@@ -88,6 +89,7 @@ describe('TicketDetailComponent', () => {
       removeAssignee: jasmine.createSpy('removeAssignee'),
       assignTicket: jasmine.createSpy('assignTicket'),
       updateStatus: jasmine.createSpy('updateStatus'),
+      updateDescription: jasmine.createSpy('updateDescription'),
       reopen: jasmine.createSpy('reopen'),
       searchAssignees: jasmine.createSpy('searchAssignees'),
       clearAssigneeSearch: jasmine.createSpy('clearAssigneeSearch'),
@@ -917,6 +919,115 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', jasmine.any(Function));
       expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto.');
       expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+  });
+
+  describe('editar descrição', () => {
+    function findEditButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
+      return fixture.nativeElement.querySelector(`[aria-label="Editar a descrição do ticket ${ticket.title}"]`) ?? undefined;
+    }
+
+    it('mostra "Editar" pra quem administra chamados mesmo não sendo o dono, com o chamado ativo', async () => {
+      sessionServiceFake.userId.set('outro-usuario');
+      sessionServiceFake.hasPermission.and.returnValue(true);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findEditButton(fixture)).toBeTruthy();
+    });
+
+    it('mostra "Editar" pro dono mesmo sem tickets:manage, com o chamado ativo', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findEditButton(fixture)).toBeTruthy();
+    });
+
+    it('não mostra "Editar" pra quem não é dono nem administra chamados', async () => {
+      sessionServiceFake.userId.set('outro-usuario');
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findEditButton(fixture)).toBeFalsy();
+    });
+
+    it('não mostra "Editar" pro dono quando o chamado não está ativo', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findEditButton(fixture)).toBeFalsy();
+    });
+
+    it('abre o modal limpando o erro de uma mutação anterior, e salva a descrição recarregando o histórico', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      detailStoreFake.updateDescription.and.callFake(
+        (_id: string, _desc: string, _status: TicketStatus, onSuccess?: () => void) => onSuccess?.());
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findEditButton(fixture)!.click();
+      expect(detailStoreFake.clearMutationError).toHaveBeenCalled();
+      expect(fixture.componentInstance.editingTicket()).toEqual(jasmine.objectContaining({ id: 't1' }));
+
+      fixture.componentInstance.onEditSave('Descrição corrigida com mais detalhes.');
+
+      expect(detailStoreFake.updateDescription).toHaveBeenCalledWith('t1', 'Descrição corrigida com mais detalhes.', TicketStatus.Open, jasmine.any(Function));
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Descrição atualizada.');
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+      expect(fixture.componentInstance.editingTicket()).toBeNull();
+    });
+  });
+
+  describe('cancelar como dono', () => {
+    it('mostra o botão dedicado "Cancelar chamado" pro dono sem tickets:manage', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const cancelButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Cancelar chamado'));
+      expect(cancelButton).toBeTruthy();
+
+      cancelButton!.click();
+      expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, ticket.description, jasmine.any(Function));
+    });
+
+    it('não duplica o botão "Cancelar chamado" pra quem já administra chamados (já vem das transições de status)', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(true);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const cancelButtons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .filter(b => b.textContent?.includes('Cancelar chamado'));
+      expect(cancelButtons.length).toBe(1);
+    });
+
+    it('não mostra "Cancelar chamado" pra quem não é dono nem administra chamados', async () => {
+      sessionServiceFake.userId.set('outro-usuario');
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const cancelButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Cancelar chamado'));
+      expect(cancelButton).toBeFalsy();
     });
   });
 

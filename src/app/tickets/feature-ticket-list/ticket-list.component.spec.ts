@@ -7,7 +7,7 @@ import { TicketsStore } from '../application/tickets.store';
 import { Ticket } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
-import { ConfirmDialogService } from '../../shared';
+import { ConfirmDialogService, ToastService } from '../../shared';
 
 describe('TicketListComponent', () => {
   const openTicket: Ticket = {
@@ -37,16 +37,19 @@ describe('TicketListComponent', () => {
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
       reopen: jasmine.createSpy('reopen'),
-      remove: jasmine.createSpy('remove')
+      remove: jasmine.createSpy('remove'),
+      update: jasmine.createSpy('update')
     };
   }
 
   let storeFake: ReturnType<typeof createStoreFake>;
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
+  let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
     storeFake = createStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
+    toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
       imports: [TicketListComponent],
@@ -54,7 +57,8 @@ describe('TicketListComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketsStore, useValue: storeFake },
-        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -121,6 +125,17 @@ describe('TicketListComponent', () => {
     expect(fixture.componentInstance.canReopen(openTicket)).toBeFalse();
     expect(fixture.componentInstance.canReopen(resolvedTicket)).toBeTrue();
     expect(fixture.nativeElement.querySelectorAll('.dropdown-item.text-success').length).toBe(1);
+  });
+
+  it('leva ao detalhe pelo título do ticket, sem um botão "Ver detalhes" separado', async () => {
+    storeFake.tickets.set([openTicket]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const titleLink = fixture.nativeElement.querySelector('a.ticket-title') as HTMLAnchorElement;
+    expect(titleLink.textContent?.trim()).toBe(openTicket.title);
+    expect(titleLink.getAttribute('href')).toBe(`/tickets/${openTicket.id}`);
+    expect(fixture.nativeElement.querySelector('.bx-show')).toBeNull();
   });
 
   it('reabre o ticket selecionado', async () => {
@@ -213,7 +228,7 @@ describe('TicketListComponent', () => {
     expect(pageTwoButton?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('desabilita e mostra um spinner nos botões "Reabrir"/"Excluir" do ticket pendente', async () => {
+  it('desabilita as ações e troca o ícone do "⋮" por um spinner no ticket pendente', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     storeFake.pendingTicketIds.set(['t2']);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -224,6 +239,83 @@ describe('TicketListComponent', () => {
 
     const reopenButton = fixture.nativeElement.querySelector('.dropdown-item.text-success') as HTMLButtonElement;
     expect(reopenButton.disabled).toBeTrue();
+    const menuButtons = fixture.nativeElement.querySelectorAll('.btn-row-actions');
+    expect(menuButtons[1].querySelector('.spinner-border')).not.toBeNull();
+    expect(menuButtons[0].querySelector('.spinner-border')).toBeNull();
+  });
+
+  it('mostra Editar descrição/Cancelar ticket/Excluir no "⋮" só para tickets ativos (Aberto/Em Andamento)', async () => {
+    storeFake.tickets.set([openTicket, resolvedTicket]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.isActive(openTicket)).toBeTrue();
+    expect(fixture.componentInstance.isActive(resolvedTicket)).toBeFalse();
+    // Cada linha tem um único "⋮"; o do ticket ativo (t1) traz as três ações, o do inativo (t2) só Reabrir.
+    expect(fixture.nativeElement.querySelectorAll('.btn-row-actions').length).toBe(2);
+    const itemLabels = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLElement>)
+      .map(item => item.textContent?.trim());
+    expect(itemLabels).toEqual(['Editar descrição', 'Cancelar ticket', 'Excluir', 'Reabrir ticket']);
+  });
+
+  it('abre o modal de edição pré-carregando o ticket, e fecha sem salvar', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onStartEdit(openTicket);
+    expect(fixture.componentInstance.editingTicket()).toBe(openTicket);
+
+    fixture.componentInstance.onEditClosed();
+    expect(fixture.componentInstance.editingTicket()).toBeNull();
+  });
+
+  it('salva a descrição editada no modal mantendo o status atual, e fecha a edição em caso de sucesso', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onStartEdit(openTicket);
+    fixture.componentInstance.onEditSave('Descrição corrigida com mais detalhes.');
+
+    expect(storeFake.update).toHaveBeenCalledWith('t1', { description: 'Descrição corrigida com mais detalhes.', status: TicketStatus.Open }, jasmine.any(Function));
+
+    storeFake.update.calls.mostRecent().args[2]();
+    expect(fixture.componentInstance.editingTicket()).toBeNull();
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Descrição atualizada.');
+  });
+
+  it('renderiza o modal de edição ao clicar em "Editar descrição"', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const editButton = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLButtonElement>)
+      .find(item => item.textContent?.includes('Editar descrição'))!;
+    editButton.click();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-ticket-edit-dialog')).not.toBeNull();
+  });
+
+  it('cancela o ticket quando confirmado, preservando a descrição atual', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onCancelTicket(openTicket);
+
+    expect(storeFake.update).toHaveBeenCalledWith('t1', { description: openTicket.description, status: TicketStatus.Canceled }, jasmine.any(Function));
+
+    storeFake.update.calls.mostRecent().args[2]();
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket cancelado.');
+  });
+
+  it('não cancela o ticket quando a confirmação for cancelada', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onCancelTicket(openTicket);
+
+    expect(storeFake.update).not.toHaveBeenCalled();
   });
 
   it('muda o tamanho da página', async () => {

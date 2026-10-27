@@ -62,30 +62,6 @@
   color: var(--tk-primary);
 }
 
-/*
- * Botão de ações (⋮) por linha: discreto até o hover/foco, pra não pesar a tabela com N linhas.
- * O tamanho vem da classe global `.btn-icon` (styles.css) — aqui só a aparência "fantasma".
- */
-.btn-row-actions {
-  border-color: transparent;
-  color: var(--tk-text-secondary);
-}
-
-.btn-row-actions:hover,
-.btn-row-actions:focus {
-  border-color: var(--tk-border);
-  color: var(--tk-text-primary);
-}
-
-.dropdown-item.text-danger:hover,
-.dropdown-item.text-danger:focus {
-  background-color: rgba(255, 62, 29, 0.08);
-}
-
-.dropdown-item.text-success:hover,
-.dropdown-item.text-success:focus {
-  background-color: rgba(113, 221, 55, 0.1);
-}
 
 /*
  * Painel "Informações do Usuário": de "lg" pra cima, é só uma coluna normal ao lado da tabela.

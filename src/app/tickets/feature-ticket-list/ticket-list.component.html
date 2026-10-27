@@ -46,48 +46,48 @@
           @for (ticket of store.tickets(); track ticket.id) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ ticket.title }}</div>
-                <div class="text-muted small text-truncate" style="max-width: 24rem;" [title]="ticket.description">{{ ticket.description }}</div>
+                <a [routerLink]="['/tickets', ticket.id]" class="ticket-title fw-semibold">{{ ticket.title }}</a>
+                <div class="ticket-summary text-muted small text-truncate" [title]="ticket.description">{{ ticket.description }}</div>
               </td>
               <td class="text-nowrap small">{{ ticket.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
               <td><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
               <td><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
               <td class="text-end">
                 <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
                           [attr.aria-label]="'Ações para o ticket ' + ticket.title">
-                    <i class="bx bx-dots-vertical-rounded"></i>
+                    @if (isPending(ticket)) {
+                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    } @else {
+                      <i class="bx bx-dots-vertical-rounded"></i>
+                    }
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                      <a [routerLink]="['/tickets', ticket.id]" class="dropdown-item">
-                        <i class="bx bx-paperclip me-2"></i>Ver detalhes
-                      </a>
-                    </li>
-                    @if (canReopen(ticket)) {
+                    @if (isActive(ticket)) {
+                      <li>
+                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)">
+                          <i class="bx bx-edit me-2"></i>Editar descrição
+                        </button>
+                      </li>
+                      <li>
+                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
+                          <i class="bx bx-x-circle me-2"></i>Cancelar ticket
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider" /></li>
+                      <li>
+                        <button type="button" class="dropdown-item text-danger" [disabled]="isPending(ticket)" (click)="onDelete(ticket)">
+                          <i class="bx bx-trash me-2"></i>Excluir
+                        </button>
+                      </li>
+                    } @else if (canReopen(ticket)) {
                       <li>
                         <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onReopen(ticket)">
-                          @if (isPending(ticket)) {
-                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                          } @else {
-                            <i class="bx bx-refresh me-2"></i>
-                          }
-                          Reabrir
+                          <i class="bx bx-refresh me-2"></i>Reabrir ticket
                         </button>
                       </li>
                     }
-                    <li><hr class="dropdown-divider" /></li>
-                    <li>
-                      <button type="button" class="dropdown-item text-danger" [disabled]="isPending(ticket)" (click)="onDelete(ticket)">
-                        @if (isPending(ticket)) {
-                          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                        } @else {
-                          <i class="bx bx-trash me-2"></i>
-                        }
-                        Excluir
-                      </button>
-                    </li>
                   </ul>
                 </div>
               </td>
@@ -137,3 +137,8 @@
     </div>
   }
 </div>
+
+@if (editingTicket(); as editing) {
+  <app-ticket-edit-dialog [ticket]="editing" [saving]="isPending(editing)" [error]="store.state().error"
+                           (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}

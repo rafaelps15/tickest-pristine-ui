@@ -23,6 +23,7 @@ export const TicketDetailStore = signalStore(
     removingAssignee: false,
     assigningTicket: false,
     updatingStatus: false,
+    updatingDescription: false,
     reopening: false,
     /**
      * Bloco de SLA mais recente buscado via `refreshSla()` (GET /tickets/{id}/sla), sem recarregar
@@ -188,6 +189,33 @@ export const TicketDetailStore = signalStore(
               404: 'Ticket não encontrado — ele pode ter sido removido.',
               409: 'Não foi possível mudar o status — tente novamente.'
             }, 'Erro ao mudar o status do chamado.')
+          });
+        }
+      });
+    },
+
+    /**
+     * Atualiza a descrição do ticket mantendo o status atual (PUT /tickets/{id}, que exige os
+     * dois campos juntos) e recarrega o detalhe em caso de sucesso. Exige ser quem abriu o chamado
+     * (permissão `tickets:update-own`) ou ter `tickets:manage`.
+     */
+    updateDescription(ticketId: string, description: string, currentStatus: TicketStatus, onSuccess?: () => void): void {
+      patchState(store, { mutationError: null, updatingDescription: true });
+
+      store._ticketDataService.update(ticketId, { description, status: currentStatus }).pipe(
+        finalize(() => patchState(store, { updatingDescription: false }))
+      ).subscribe({
+        next: () => {
+          store._detailResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            mutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para editar este chamado.',
+              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              409: 'Não foi possível salvar a edição — tente novamente.'
+            }, 'Erro ao editar o chamado.')
           });
         }
       });

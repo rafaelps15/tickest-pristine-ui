@@ -171,6 +171,32 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBe('Erro ao atualizar o ticket');
   });
 
+  it('chama onSuccess ao atualizar um ticket com sucesso', async () => {
+    dataService.update.and.returnValue(of(undefined));
+    const onSuccess = jasmine.createSpy('onSuccess');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.update('t1', { description: 'Atualizado', status: TicketStatus.Canceled }, onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('marca o ticket como pendente durante a atualização, e libera ao terminar', async () => {
+    const subject = new Subject<void>();
+    dataService.update.and.returnValue(subject);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.update('t1', { description: 'Atualizado', status: TicketStatus.Canceled });
+    expect(store.pendingTicketIds()).toEqual(['t1']);
+
+    subject.next();
+    subject.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.pendingTicketIds()).toEqual([]);
+  });
+
   it('reabre um ticket e recarrega a listagem', async () => {
     dataService.reopen.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();

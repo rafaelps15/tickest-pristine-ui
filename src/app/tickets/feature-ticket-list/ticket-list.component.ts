@@ -1,17 +1,18 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { Ticket } from '../entities/ticket';
-import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
+import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
-import { ConfirmDialogService } from '../../shared';
+import { ConfirmDialogService, ToastService } from '../../shared';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
+import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
     selector: 'app-ticket-list',
-    imports: [CommonModule, RouterLink, DropdownFixedPositionDirective],
+    imports: [CommonModule, RouterLink, DropdownFixedPositionDirective, TicketEditDialogComponent],
     templateUrl: './ticket-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-list.component.css'
@@ -19,6 +20,7 @@ import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropd
 export class TicketListComponent implements OnInit {
     protected readonly store = inject(TicketsStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
+    private readonly toastService = inject(ToastService);
 
     readonly statusLabels = TICKET_STATUS_LABELS;
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
@@ -27,6 +29,9 @@ export class TicketListComponent implements OnInit {
 
     /** Opções de itens por página no rodapé da listagem. */
     readonly pageSizeOptions = [10, 20, 50];
+
+    /** Ticket em edição no modal de descrição (null quando o modal está fechado). */
+    editingTicket = signal<Ticket | null>(null);
 
     /** Carrega os tickets do usuário logado ao inicializar a tela. */
     ngOnInit(): void {
@@ -82,7 +87,12 @@ export class TicketListComponent implements OnInit {
             || ticket.status === TicketStatus.Canceled;
     }
 
-    /** Indica se o ticket tem uma reabertura ou exclusão em andamento — trava o botão da linha. */
+    /** Só um ticket ativo (Aberto/Em Andamento) pode ter a descrição editada ou ser cancelado. */
+    isActive(ticket: Ticket): boolean {
+        return TICKET_ACTIVE_STATUSES.has(ticket.status);
+    }
+
+    /** Indica se o ticket tem uma edição, cancelamento, reabertura ou exclusão em andamento — trava os botões da linha. */
     isPending(ticket: Ticket): boolean {
         return this.store.pendingTicketIds().includes(ticket.id);
     }
@@ -90,6 +100,43 @@ export class TicketListComponent implements OnInit {
     /** Reabre o ticket selecionado. */
     onReopen(ticket: Ticket): void {
         this.store.reopen(ticket.id);
+    }
+
+    /** Abre o modal de edição da descrição para o ticket selecionado. */
+    onStartEdit(ticket: Ticket): void {
+        this.editingTicket.set(ticket);
+    }
+
+    /** Fecha o modal de edição sem salvar. */
+    onEditClosed(): void {
+        this.editingTicket.set(null);
+    }
+
+    /** Salva a descrição editada no modal, mantendo o status atual do ticket. */
+    onEditSave(description: string): void {
+        const ticket = this.editingTicket();
+        if (!ticket) return;
+
+        this.store.update(ticket.id, { description, status: ticket.status }, () => {
+            this.toastService.show('Descrição atualizada.');
+            this.editingTicket.set(null);
+        });
+    }
+
+    /** Confirma e cancela o ticket selecionado, preservando a descrição atual. */
+    onCancelTicket(ticket: Ticket): void {
+        this.confirmDialogService.confirm({
+            title: `Cancelar o ticket "${ticket.title}"?`,
+            message: 'O chamado passa para o status Cancelado e some da fila de atendimento — diferente de excluir, o histórico continua disponível e dá pra reabrir depois.',
+            confirmLabel: 'Cancelar ticket',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (!confirmed) return;
+
+            this.store.update(ticket.id, { description: ticket.description, status: TicketStatus.Canceled }, () => {
+                this.toastService.show('Ticket cancelado.');
+            });
+        });
     }
 
     /** Confirma e exclui o ticket selecionado. */

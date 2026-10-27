@@ -270,6 +270,43 @@ describe('TicketDetailStore', () => {
     });
   });
 
+  describe('updateDescription', () => {
+    beforeEach(async () => {
+      store.loadTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('atualiza a descrição mantendo o status, recarrega o detalhe e chama onSuccess', async () => {
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open, onSuccess);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Descrição corrigida.', status: TicketStatus.Open });
+      expect(dataService.getById).toHaveBeenCalledTimes(2);
+      expect(onSuccess).toHaveBeenCalled();
+      expect(store.mutationError()).toBeNull();
+    });
+
+    it('expõe mensagem própria quando falta permissão (403)', async () => {
+      dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.mutationError()).toBe('Você não tem permissão para editar este chamado.');
+    });
+
+    it('volta updatingDescription pra false depois do erro', async () => {
+      dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.updatingDescription()).toBeFalse();
+    });
+  });
+
   describe('reopen', () => {
     beforeEach(async () => {
       store.loadTicket('t1');

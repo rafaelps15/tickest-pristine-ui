@@ -26,9 +26,17 @@
         <span class="badge" [ngClass]="priorityBadgeClass[t.priority]">{{ priorityLabels[t.priority] }}</span>
         <span class="badge" [ngClass]="slaStatusBadgeClass[t.slaStatus]">SLA: {{ slaStatusLabels[t.slaStatus] }}</span>
       </div>
-      <p class="text-muted mb-4">{{ t.description }}</p>
+      <p class="d-flex align-items-start justify-content-between gap-2 mb-4">
+        <span class="text-muted">{{ t.description }}</span>
+        @if (canEditTicket(t)) {
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle flex-shrink-0"
+                  [attr.aria-label]="'Editar a descrição do ticket ' + t.title" (click)="onStartEditDescription(t)">
+            <i class="bx bx-edit"></i>
+          </button>
+        }
+      </p>
 
-      @if (nextStatusOptions(t.status).length > 0 || canReopenTicket(t.status)) {
+      @if (nextStatusOptions(t.status).length > 0 || canReopenTicket(t.status) || canCancelAsOwner(t)) {
         <div class="d-flex gap-2 flex-wrap mb-4">
           @for (nextStatus of nextStatusOptions(t.status); track nextStatus) {
             <button type="button" class="btn btn-sm"
@@ -47,6 +55,14 @@
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
               Reabrir chamado
+            </button>
+          }
+          @if (canCancelAsOwner(t)) {
+            <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(TicketStatus.Canceled, t.description)">
+              @if (detailStore.updatingStatus()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Cancelar chamado
             </button>
           }
         </div>
@@ -502,3 +518,8 @@
     </div>
   </div>
 </div>
+
+@if (editingTicket(); as editing) {
+  <app-ticket-edit-dialog [ticket]="editing" [saving]="detailStore.updatingDescription()" [error]="detailStore.mutationError()"
+                           (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}
