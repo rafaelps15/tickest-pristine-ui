@@ -1,7 +1,7 @@
-<div class="card info-panel h-100">
+<div class="card info-panel h-100" [appSidePanel]="ticket().id" [sidePanelModal]="modal()" aria-labelledby="ticketInfoPanelTitle">
   <div class="card-body">
     <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
-      <h5 class="fw-bold mb-0">{{ ticket().title }}</h5>
+      <h2 id="ticketInfoPanelTitle" class="h5 info-panel-title fw-bold mb-0" tabindex="-1" data-side-panel-title>{{ ticket().title }}</h2>
       <button type="button" class="btn btn-sm btn-icon rounded-circle btn-outline-secondary flex-shrink-0"
               aria-label="Fechar painel de informações do chamado" (click)="close.emit()">
         <i class="bx bx-x"></i>
@@ -50,8 +50,26 @@
       }
     </div>
 
-    <a [routerLink]="['/tickets', ticket().id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-primary w-100">
-      Ver detalhes completos
-    </a>
+    <!-- Os mesmos atalhos do "⋮" da linha, como no painel de Usuários — o painel nunca tem ação que a tela não tenha. -->
+    <div class="d-flex flex-column gap-2">
+      @if (canAssignToMe()) {
+        <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="assigningToMe()" (click)="assignToMeClick.emit()">
+          @if (assigningToMe()) {
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          } @else {
+            <i class="bx bx-user-plus me-1" aria-hidden="true"></i>
+          }
+          Atribuir a mim
+        </button>
+      }
+      @if (canAssignResponsible()) {
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="assignResponsibleClick.emit()">
+          <i class="bx bx-user-check me-1" aria-hidden="true"></i>{{ ticket().assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
+        </button>
+      }
+      <a [routerLink]="['/tickets', ticket().id]" [queryParams]="{ from: 'monitor' }" class="btn btn-sm btn-outline-secondary">
+        Ver detalhes completos
+      </a>
+    </div>
   </div>
 </div>

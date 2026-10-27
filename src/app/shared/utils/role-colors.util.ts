@@ -22,13 +22,20 @@ function writeMap(map: RoleColorMap): void {
   }
 }
 
+/** Formato aceito pra cor de função: hex de 6 dígitos, o mesmo que o `<input type="color">` produz. */
+const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
 /**
  * Cor escolhida pra uma função, ou `null` se nenhuma foi escolhida (cai no acento padrão,
  * índigo). **Prévia só neste navegador** — o back-end não tem campo de cor na função ainda,
- * então isso não é dado real, não sincroniza entre usuários/dispositivos.
+ * então isso não é dado real, não sincroniza entre usuários/dispositivos. Cor salva que não passa
+ * no contraste do badge (gravada antes da validação existir, ou editada à mão no navegador) também
+ * cai no índigo — nenhuma tela que mostra o badge precisa revalidar por conta própria.
  */
 export function getRoleColor(roleName: string): string | null {
-  return readMap()[roleName] ?? null;
+  const color = readMap()[roleName];
+  if (!color || !HEX_COLOR_PATTERN.test(color) || !hasAccessibleRoleColorContrast(color)) return null;
+  return color;
 }
 
 /** Salva a cor escolhida pra uma função. */

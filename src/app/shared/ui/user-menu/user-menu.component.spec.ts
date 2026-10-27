@@ -35,8 +35,28 @@ describe('UserMenuComponent', () => {
     await fixture.whenStable();
 
     const toggle = fixture.nativeElement.querySelector('[data-bs-toggle="dropdown"]') as HTMLElement;
-    expect(toggle.getAttribute('role')).toBe('button');
+    expect(toggle.tagName).toBe('BUTTON');
     expect(toggle.getAttribute('aria-label')).toBe('Menu do usuário');
+  });
+
+  it('mostra as iniciais do usuário no avatar, sem imagem externa', async () => {
+    const fixture = TestBed.createComponent(UserMenuComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.user-menu-toggle .avatar-initials').textContent.trim()).toBe('MS');
+    expect(fixture.nativeElement.querySelector('img')).toBeNull();
+  });
+
+  it('tem um único link pro perfil e "Sair" como botão, sem href="javascript:"', async () => {
+    const fixture = TestBed.createComponent(UserMenuComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelectorAll('a[href="/perfil"]').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('a[href^="javascript"]')).toBeNull();
+    const logout = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Sair'));
+    logout!.click();
+    expect(loginStoreFake.logout).toHaveBeenCalled();
   });
 
   it('mostra o e-mail do usuário logado no dropdown', async () => {

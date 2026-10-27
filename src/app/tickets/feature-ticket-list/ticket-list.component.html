@@ -1,16 +1,9 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-      <div>
-        <h4 #pageTitle id="ticketListTitle" class="fw-bold mb-1" tabindex="-1"><span class="text-muted fw-light">Início /</span> Meus Chamados</h4>
-        <p class="page-subtitle small mb-0">Os chamados que você abriu, com prioridade e status atuais.</p>
-      </div>
-      <a routerLink="/tickets/novo" class="btn btn-primary">
-        <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
-      </a>
-    </div>
-  </div>
-</div>
+<app-page-header title="Meus Chamados" subtitle="Os chamados que você abriu, com prioridade e status atuais."
+                 [crumbs]="[{ label: 'Início', link: '/dashboard' }]">
+  <a pageActions routerLink="/tickets/novo" class="btn btn-primary">
+    <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
+  </a>
+</app-page-header>
 
 @if (store.loadError()) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
@@ -43,14 +36,14 @@
       </thead>
       <tbody>
         @if (store.state().loading && store.tickets().length === 0) {
-          <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando chamados…</span></span></td></tr>
+          <tr><td colspan="5"><app-loading-state label="Carregando chamados…" /></td></tr>
         } @else if (store.tickets().length === 0) {
           <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro ticket. -->
           <tr>
             <td colspan="5" class="first-use py-5">
               <div class="first-use-body">
                 <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
-                <h5 class="fw-bold mb-2">Nenhum chamado aberto ainda</h5>
+                <h2 class="h5 fw-bold mb-2">Nenhum chamado aberto ainda</h2>
                 <p class="first-use-lead mb-3">
                   Precisa de algo de outro departamento? Abra um chamado em vez de mandar e-mail ou WhatsApp:
                   o pedido chega ao setor certo e você acompanha tudo por aqui.
@@ -80,38 +73,26 @@
               <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
               <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
               <td class="text-end table-stack-actions">
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
-                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
-                          [attr.data-ticket-actions]="ticket.id"
-                          [attr.aria-label]="'Ações para o chamado ' + ticket.title">
-                    @if (isPending(ticket)) {
-                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                    } @else {
-                      <i class="bx bx-dots-vertical-rounded" aria-hidden="true"></i>
-                    }
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    @if (isActive(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)">
-                          <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar descrição
-                        </button>
-                      </li>
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
-                          <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar chamado
-                        </button>
-                      </li>
-                    } @else if (canReopen(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)">
-                          <i class="bx bx-refresh me-2" aria-hidden="true"></i>Reabrir chamado
-                        </button>
-                      </li>
-                    }
-                  </ul>
-                </div>
+                <app-row-actions [label]="'Ações para o chamado ' + ticket.title" [busy]="isPending(ticket)" [rowKey]="ticket.id">
+                  @if (isActive(ticket)) {
+                    <li>
+                      <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)">
+                        <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar descrição
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
+                        <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar chamado
+                      </button>
+                    </li>
+                  } @else if (canReopen(ticket)) {
+                    <li>
+                      <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)">
+                        <i class="bx bx-refresh me-2" aria-hidden="true"></i>Reabrir chamado
+                      </button>
+                    </li>
+                  }
+                </app-row-actions>
               </td>
             </tr>
           }
@@ -121,45 +102,9 @@
   </div>
 
   @if (store.total() > 0) {
-    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} chamados</span>
-
-      @if (store.totalPages() > 1) {
-        <nav class="pagination-group d-flex align-items-center gap-2" aria-label="Paginação">
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.state().loading" (click)="store.goToPage(store.currentPage() - 1)">
-            Anterior
-          </button>
-
-          <!-- No celular os números de página não cabem numa linha: só "Página X de Y" entre Anterior/Próxima. -->
-          <span class="page-indicator small text-muted text-nowrap">Página {{ store.currentPage() }} de {{ store.totalPages() }}</span>
-
-          @for (pageNumber of pageNumbers(); track $index) {
-            @if (pageNumber === '…') {
-              <span class="page-ellipsis px-1 text-muted" aria-hidden="true">…</span>
-            } @else {
-              <button type="button" class="btn btn-sm btn-page btn-page-number" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
-                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
-                      (click)="store.goToPage(pageNumber)">
-                {{ pageNumber }}
-              </button>
-            }
-          }
-
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.state().loading" (click)="store.goToPage(store.currentPage() + 1)">
-            Próxima
-          </button>
-        </nav>
-      }
-
-      <div class="d-flex align-items-center gap-2">
-        <label class="form-label small mb-0" for="ticketPageSize">Por página</label>
-        <select id="ticketPageSize" class="form-select form-select-sm w-auto" [value]="store.currentPageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
-          @for (size of pageSizeOptions; track size) {
-            <option [value]="size">{{ size }}</option>
-          }
-        </select>
-      </div>
-    </div>
+    <app-pagination [page]="store.currentPage()" [totalPages]="store.totalPages()" [total]="store.total()"
+                    [pageSize]="store.currentPageSize()" [pageSizeOptions]="pageSizeOptions" noun="chamados" [disabled]="store.state().loading"
+                    (pageChange)="store.goToPage($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
 </div>
 

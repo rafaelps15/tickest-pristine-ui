@@ -42,4 +42,16 @@ describe('RoleInsightsComponent', () => {
     expect(text).toContain('funções sem nenhuma permissão atribuída');
     expect(text).not.toContain('Todas as funções têm pelo menos uma permissão atribuída.');
   });
+
+  it('não afirma que "todas têm permissão" sobre uma lista vazia ou que ainda não chegou', async () => {
+    const fixture = TestBed.createComponent(RoleInsightsComponent);
+    fixture.componentRef.setInput('roles', []);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).not.toContain('Todas as funções');
+
+    fixture.componentRef.setInput('loading', true);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.insights-stat').textContent).toBe('—');
+    expect(fixture.nativeElement.textContent).not.toContain('funções cadastradas');
+  });
 });

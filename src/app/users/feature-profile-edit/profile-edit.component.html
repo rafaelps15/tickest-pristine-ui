@@ -1,25 +1,18 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Conta /</span> Meu Perfil</h4>
-      <button type="button" class="btn btn-outline-secondary btn-sm" routerLink="/dashboard">
-        <i class="bx bx-arrow-back me-1"></i> Voltar ao Painel
-      </button>
-    </div>
-  </div>
-</div>
+<app-page-header title="Meu Perfil" subtitle="Seu nome no sistema e a senha de acesso." [crumbs]="[{ label: 'Conta' }]">
+  <a pageActions routerLink="/dashboard" class="btn btn-outline-secondary btn-sm">
+    <i class="bx bx-arrow-back me-1" aria-hidden="true"></i> Voltar ao início
+  </a>
+</app-page-header>
 
 <div class="card shadow-sm border-0 overflow-hidden">
   <div class="card-header py-4">
-    <h5 class="mb-0 fw-bold">Dados pessoais</h5>
+    <h2 class="h5 mb-0 fw-bold">Dados pessoais</h2>
     <p class="text-muted small mb-0 mt-1">Atualize o nome exibido no sistema.</p>
   </div>
 
   <div class="card-body p-4 p-lg-5">
     @if (store.loading() && !store.profile()) {
-      <div class="text-center py-5">
-        <span class="spinner-border text-primary" role="status"></span>
-      </div>
+      <app-loading-state label="Carregando seu perfil…" />
     } @else if (store.loadError()) {
       <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert">
         <i class="bx bx-error-circle fs-4 me-3"></i>
@@ -32,12 +25,6 @@
           <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
             <i class="bx bx-error-circle fs-4 me-3"></i>
             <div class="fw-medium">{{ store.mutationError() }}</div>
-          </div>
-        }
-        @if (store.saved()) {
-          <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-            <i class="bx bx-check-circle fs-4 me-3"></i>
-            <div class="fw-medium">Perfil atualizado com sucesso.</div>
           </div>
         }
 
@@ -104,7 +91,7 @@
 
 <div class="card shadow-sm border-0 overflow-hidden mt-4">
   <div class="card-header py-4">
-    <h5 class="mb-0 fw-bold">Alterar senha</h5>
+    <h2 class="h5 mb-0 fw-bold">Alterar senha</h2>
     <p class="text-muted small mb-0 mt-1">Ao trocar a senha, suas demais sessões são desconectadas.</p>
   </div>
 
@@ -115,12 +102,6 @@
         <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
           <i class="bx bx-error-circle fs-4 me-3"></i>
           <div class="fw-medium">{{ store.passwordError() }}</div>
-        </div>
-      }
-      @if (store.passwordChanged()) {
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-          <i class="bx bx-check-circle fs-4 me-3"></i>
-          <div class="fw-medium">Senha alterada com sucesso.</div>
         </div>
       }
 

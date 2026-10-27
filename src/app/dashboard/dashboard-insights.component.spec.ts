@@ -48,14 +48,14 @@ describe('DashboardInsightsComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar os alertas de SLA');
-    expect(fixture.nativeElement.textContent).not.toContain('Nenhum ticket com SLA vencido ou em risco agora.');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado com SLA vencido ou em risco agora.');
   });
 
   it('mostra a mensagem de vazio quando não há chamados em risco de SLA', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum ticket com SLA vencido ou em risco agora.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado com SLA vencido ou em risco agora.');
     expect(fixture.nativeElement.textContent).toContain('Fila em dia');
   });
 
@@ -212,7 +212,7 @@ describe('DashboardInsightsComponent', () => {
       fixture.detectChanges();
 
       expect(badge()).toBe('Vencido');
-      expect(live()).toBe('O ticket "Chamado urgente" venceu o prazo de SLA.');
+      expect(live()).toBe('O chamado "Chamado urgente" venceu o prazo de SLA.');
       // Realce breve na linha que acabou de vencer, que some depois de 1,6s.
       const link = () => fixture.nativeElement.querySelector('.critical-ticket-link') as HTMLElement;
       expect(link().classList).toContain('just-crossed');

@@ -25,7 +25,7 @@
         <li class="menu-item" routerLinkActive="active">
           <a routerLink="/dashboard" class="menu-link">
             <i class="menu-icon tf-icons bx bx-home-circle"></i>
-            <div>Dashboard</div>
+            <div>Início</div>
           </a>
         </li>
 
@@ -81,12 +81,6 @@
           </li>
         }
 
-        <li class="menu-item mt-4">
-          <a href="javascript:void(0);" class="menu-link text-danger" (click)="userMenu.logout()">
-            <i class="menu-icon tf-icons bx bx-power-off"></i>
-            <div>Sair</div>
-          </a>
-        </li>
       </ul>
     </aside>
     <!-- / Menu -->
@@ -102,7 +96,7 @@
           </button>
         </div>
 
-        <app-user-menu #userMenu />
+        <app-user-menu />
       </nav>
       <!-- / Navbar -->
 

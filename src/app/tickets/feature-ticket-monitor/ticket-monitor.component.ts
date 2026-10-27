@@ -12,12 +12,16 @@ import { TicketPriority, TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } f
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketSortOrder, TICKET_SORT_ORDER_LABELS } from '../entities/ticket-sort-order';
 import { DepartmentsStore } from '../../departments';
-import { SessionService, ToastService } from '../../shared';
-import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
-import { UserSummary } from '../../users';
+import { SessionService, ToastService, injectSidePanelOverlay, isEscapeFromNestedLayer } from '../../shared';
+import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
-import { TicketMonitorInsightsComponent } from './ticket-monitor-insights.component';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { StatCardComponent, StatTone } from '../../shared/ui/stat-card/stat-card.component';
+import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
+import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
+import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 
 const DEFAULT_SORT = TicketSortOrder.Newest;
 const DEFAULT_PAGE = 1;
@@ -48,7 +52,7 @@ function parsePageParam(value: string | null): number {
 /** Tela de "Monitorar Tickets": todos os chamados do sistema, com filtros e resumo de SLA (role Administrador/Atendente, permissão tickets:manage). */
 @Component({
     selector: 'app-ticket-monitor',
-    imports: [CommonModule, RouterLink, DropdownFixedPositionDirective, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, TicketMonitorInsightsComponent],
+    imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, StatCardComponent, TicketAssignDialogComponent],
     templateUrl: './ticket-monitor.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-monitor.component.css'
@@ -80,11 +84,43 @@ export class TicketMonitorComponent implements OnInit {
     /** Texto digitado na busca por título, antes do debounce. */
     readonly searchInput = signal('');
 
-    /** Texto digitado na busca de candidatos do modal "Atribuir responsável", antes do debounce. */
-    readonly responsibleSearchInput = signal('');
+    /** Os 4 cards de SLA do topo: rótulo, contagem do resumo, legenda, ícone, tom e o filtro que aplicam. */
+    protected readonly slaCards: { label: string; count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'; hint: string; icon: string; tone: StatTone; slaStatus: TicketSlaStatus | undefined }[] = [
+        { label: 'Ativos', count: 'activeCount', hint: 'Com o relógio do SLA correndo', icon: 'bx-receipt', tone: 'primary', slaStatus: undefined },
+        { label: 'No Prazo', count: 'onTimeCount', hint: 'Dentro do SLA', icon: 'bx-check-circle', tone: 'success', slaStatus: TicketSlaStatus.OnTime },
+        { label: 'Em Risco', count: 'atRiskCount', hint: 'Perto de vencer', icon: 'bx-error-circle', tone: 'warning', slaStatus: TicketSlaStatus.AtRisk },
+        { label: 'Atrasados', count: 'breachedCount', hint: 'Já passaram do prazo', icon: 'bx-error', tone: 'danger', slaStatus: TicketSlaStatus.Breached }
+    ];
 
-    /** Ticket para o qual o modal "Atribuir responsável" está aberto — `undefined` quando fechado. */
+    /** Se a linha "Mais filtros" (Prioridade, Ordenar, Só sem responsável) está aberta. */
+    readonly moreFiltersOpen = signal(false);
+
+    /** Quantos filtros da linha "Mais filtros" estão aplicados — mostrado no botão e usado pra abri-la sozinha. */
+    readonly secondaryFilterCount = computed(() => {
+        const filters = this.store.filters();
+        return (filters.priority !== undefined ? 1 : 0)
+            + (filters.sort !== TicketSortOrder.Newest ? 1 : 0)
+            + (filters.unassignedOnly ? 1 : 0);
+    });
+
+    /** Contagem de um card de SLA no resumo carregado (`null` enquanto não há resumo). */
+    slaCount(count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'): number | null {
+        return this.store.slaSummary()?.[count] ?? null;
+    }
+
+    /** Abre ou fecha a linha "Mais filtros". */
+    toggleMoreFilters(): void {
+        this.moreFiltersOpen.update(open => !open);
+    }
+
+    /** Ticket para o qual o diálogo "Atribuir responsável" está aberto — `undefined` quando fechado. */
     readonly assigningResponsibleTicketId = signal<string | undefined>(undefined);
+
+    /** Chamado (da página atual) cujo diálogo "Atribuir responsável" está aberto. */
+    readonly assigningResponsibleTicket = computed(() => {
+        const ticketId = this.assigningResponsibleTicketId();
+        return ticketId ? this.store.tickets().find(ticket => ticket.id === ticketId) ?? null : null;
+    });
 
     constructor() {
         // O painel busca a descrição completa (único campo que a linha da tabela não tem) do
@@ -100,13 +136,6 @@ export class TicketMonitorComponent implements OnInit {
             takeUntilDestroyed()
         ).subscribe(search => this.store.setSearch(search));
 
-        // Espera ~300ms após a última tecla antes de buscar, pra não buscar a cada letra digitada
-        // (mesmo padrão do modal de atribuição do detalhe do chamado).
-        toObservable(this.responsibleSearchInput).pipe(
-            debounceTime(300),
-            distinctUntilChanged(),
-            takeUntilDestroyed()
-        ).subscribe(search => this.store.searchResponsibleCandidates(search));
 
         // Toda mudança de filtro/ordenação/página/seleção se reflete na URL (RF-28), sem empilhar
         // histórico a cada alternância — "Voltar" deve levar pra fora da tela, não filtro por
@@ -161,6 +190,9 @@ export class TicketMonitorComponent implements OnInit {
     readonly sortOptions = Object.values(TicketSortOrder).filter((v): v is TicketSortOrder => typeof v === 'number');
 
     readonly pageSizeOptions = [10, 20, 50];
+
+    /** Se a janela está abaixo de "lg", onde o painel "Informações do Ticket" vira um diálogo modal de tela cheia. */
+    readonly isOverlayViewport = injectSidePanelOverlay();
 
     /**
      * Restaura busca, filtros, ordenação, página e tamanho da página a partir da query string
@@ -226,9 +258,16 @@ export class TicketMonitorComponent implements OnInit {
         this.lastFocusedElement = null;
     }
 
-    /** Esc fecha o painel "Informações do Ticket", de qualquer lugar da tela — essencial no overlay de tela cheia, sem botão "fora" pra clicar. */
-    @HostListener('document:keydown.escape')
-    onEscapeKey(): void {
+    /**
+     * Esc fecha o painel "Informações do Ticket", de qualquer lugar da tela — essencial no overlay
+     * de tela cheia, sem botão "fora" pra clicar. Exceto quando o Esc nasce dentro de um modal
+     * ("Atribuir responsável", confirmação) ou de um menu "⋮": ali ele só fecha aquela camada, sem
+     * levar o painel junto.
+     */
+    @HostListener('document:keydown.escape', ['$event'])
+    onEscapeKey(event: Event): void {
+        if (isEscapeFromNestedLayer(event)) return;
+
         if (this.selectedTicketId()) {
             this.closeInfoPanel();
         }
@@ -274,43 +313,6 @@ export class TicketMonitorComponent implements OnInit {
         this.store.clearFilters();
     }
 
-    /** Índice (1-based) do primeiro item exibido na página atual, para o texto "Exibindo X–Y de Z". */
-    rangeStart(): number {
-        return this.store.total() === 0 ? 0 : (this.store.currentPage() - 1) * this.store.currentPageSize() + 1;
-    }
-
-    /** Índice (1-based) do último item exibido na página atual, para o texto "Exibindo X–Y de Z". */
-    rangeEnd(): number {
-        return Math.min(this.store.currentPage() * this.store.currentPageSize(), this.store.total());
-    }
-
-    /**
-     * Janela de números de página pro rodapé: sempre mostra a primeira, a última e as vizinhas da
-     * atual, com "…" nos saltos — pra não listar 1 botão por página quando há muitas.
-     */
-    pageNumbers(): (number | '…')[] {
-        const total = this.store.totalPages();
-        const current = this.store.currentPage();
-
-        if (total <= 7) {
-            return Array.from({ length: total }, (_, i) => i + 1);
-        }
-
-        const kept = new Set([1, total, current - 1, current, current + 1]);
-        const sorted = Array.from(kept).filter(page => page >= 1 && page <= total).sort((a, b) => a - b);
-
-        const result: (number | '…')[] = [];
-        let previous = 0;
-        for (const page of sorted) {
-            if (previous && page - previous > 1) {
-                result.push('…');
-            }
-            result.push(page);
-            previous = page;
-        }
-        return result;
-    }
-
     /** Muda a quantidade de itens por página. */
     onPageSizeChange(pageSize: number): void {
         this.store.setPageSize(pageSize);
@@ -339,21 +341,21 @@ export class TicketMonitorComponent implements OnInit {
         return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(ticket.status);
     }
 
-    /** Abre o modal "Atribuir responsável" para o ticket clicado, limpando a busca de uma abertura anterior. */
+    /** Abre o diálogo "Atribuir responsável" para o ticket clicado, sem herdar a busca nem o erro de uma abertura anterior. */
     onOpenAssignResponsibleModal(ticketId: string): void {
-        this.assigningResponsibleTicketId.set(ticketId);
-        this.responsibleSearchInput.set('');
         this.store.clearResponsibleSearch();
+        this.store.clearMutationError();
+        this.assigningResponsibleTicketId.set(ticketId);
     }
 
-    /** Atribui o candidato escolhido no modal como responsável do ticket aberto, e fecha o modal em caso de sucesso. */
-    onSelectResponsibleCandidate(candidate: UserSummary): void {
+    /** Atribui o candidato confirmado no diálogo como responsável do ticket aberto, e fecha o diálogo em caso de sucesso. */
+    onConfirmResponsible(choice: { userId: string; name: string }): void {
         const ticketId = this.assigningResponsibleTicketId();
         if (!ticketId) return;
 
-        this.store.assignResponsible(ticketId, candidate.id, () => {
-            this.toastService.show(`${candidate.firstName} ${candidate.lastName} agora é o responsável.`);
-            document.getElementById('monitorAssignResponsibleModalCloseButton')?.click();
+        this.store.assignResponsible(ticketId, choice.userId, () => {
+            this.toastService.show(`${choice.name} agora é o responsável.`);
+            this.assigningResponsibleTicketId.set(undefined);
         });
     }
 }

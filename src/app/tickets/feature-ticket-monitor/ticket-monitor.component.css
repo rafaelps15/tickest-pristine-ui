@@ -1,53 +1,9 @@
+/* Seletor de Setor (escopo da tela): largura de um campo, não da linha inteira. */
+.monitor-scope-field {
+  min-width: 16rem;
+}
+
 /* .page-subtitle agora é classe global (src/styles.css) — usada em mais de uma tela de tickets. */
-
-/* Cards de resumo de SLA: mesmo visual dos cards de estatística do Dashboard. */
-.card-stats {
-  background-color: var(--tk-surface);
-}
-
-/*
- * Cards de resumo como botão: cada um filtra a tabela pelo mesmo SLA que mostra. Reset de
- * `<button>` nativo (borda, fundo, alinhamento) pra herdar só o visual do `.card`; o estado
- * selecionado usa tingimento de fundo no Índigo Confiança (não uma borda colorida — banida
- * pelo craft-floor), o mesmo acento usado no item ativo do menu lateral.
- */
-.card-stats-btn {
-  width: 100%;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--tk-transition);
-}
-
-.card-stats-btn:hover {
-  background-color: rgba(var(--tk-primary-rgb), 0.06);
-}
-
-.card-stats-btn:focus-visible {
-  outline: 2px solid var(--tk-primary);
-  outline-offset: 2px;
-}
-
-.card-stats-btn[aria-pressed="true"] {
-  background-color: rgba(var(--tk-primary-rgb), 0.1);
-}
-
-/* Card de filtros: mais discreto que o card da tabela, que é o conteúdo principal da tela. */
-.filters-card {
-  box-shadow: none;
-  border: 1px solid var(--tk-border);
-}
-
-.filters-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--tk-text-muted);
-  font-weight: 700;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 
 /* Linha da tabela selecionável (fatia "Seleção de ticket"): cursor de clique e foco visível, já que um <tr> não tem nenhum dos dois por padrão. */
 .ticket-row {
@@ -75,67 +31,6 @@
 }
 
 /*
- * Trilhas laterais (Guia da Tela à esquerda, "Visão da Equipe" à direita), fora do limite de
- * 1320px do `container-xxl` — contas a partir do CSS real do layout (`.layout-menu` = 260px fixos
- * em `main-layout.component.css`, `container-xxl` = até 1320px do Bootstrap), não valores
- * inventados. Numa janela de 1920px (maximizada, confirmado com o usuário) sobram só uns 170px de
- * cada lado — pouco pra uma trilha "confortável", por isso a largura é flexível (`clamp`, encolhe
- * em telas só um pouco largas e cresce em telas realmente largas) em vez de um valor fixo; abaixo
- * do limiar mínimo em que nem o piso do `clamp` cabe sem encostar no conteúdo central, as trilhas
- * desaparecem — o Guia volta pro fluxo normal (acima da tabela) e a Visão da Equipe simplesmente
- * não existe (não há versão mobile dela).
- */
-.insights-rail {
-  display: none;
-}
-
-@media (min-width: 1900px) {
-  .guide-rail {
-    position: fixed;
-    top: 100px;
-    left: 268px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-
-  .insights-rail {
-    display: block;
-    position: fixed;
-    top: 100px;
-    right: 8px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-}
-
-/*
- * Painel "Informações do Ticket": de "lg" pra cima, é só uma coluna normal ao lado da tabela. Abaixo
- * disso a tabela não tem espaço pra encolher mais sem virar inutilizável, então o painel vira um
- * overlay de tela cheia sobre o conteúdo (RF-04) — acima do cabeçalho/sidebar do layout (z-index até
- * 1045) e abaixo da pilha de toasts global (1080), pra uma confirmação continuar visível por cima.
- */
-@media (max-width: 991.98px) {
-  .info-panel-col {
-    position: fixed;
-    inset: 0;
-    z-index: 1055;
-    overflow-y: auto;
-    padding: 1rem;
-  }
-}
-
-.info-panel-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1050;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-/*
  * Ao trocar filtro/página com a lista já carregada, a tabela some e vira um spinner solitário.
  * Em vez disso, mantém as linhas atuais visíveis e só esmaece — a troca de página some suave
  * quando os dados novos chegam, sem o "pisca-tudo" de recarregar do zero. Mesmo padrão já usado
@@ -150,12 +45,3 @@
   pointer-events: none;
 }
 
-/* Botão "Limpar filtros": ação secundária de baixa frequência. */
-.btn-clear-filters {
-  color: var(--tk-text-secondary);
-  font-weight: 500;
-}
-
-.btn-clear-filters:hover {
-  color: var(--tk-text-primary);
-}

@@ -7,11 +7,11 @@ import { signal, WritableSignal } from '@angular/core';
  * de rail (Monitor, Funções, Departamentos, Usuários, Dashboard) — achado no simplify de 2026-10-27.
  */
 export function createPersistedToggle(storageKey: string, defaultValue: boolean): WritableSignal<boolean> {
-  return signal(readStoredValue(storageKey, defaultValue));
+  return signal(readPersistedToggle(storageKey, defaultValue));
 }
 
 /** Lê o valor booleano salvo; devolve `defaultValue` se não houver nada salvo ou a leitura falhar. */
-function readStoredValue(storageKey: string, defaultValue: boolean): boolean {
+export function readPersistedToggle(storageKey: string, defaultValue: boolean): boolean {
   try {
     const saved = localStorage.getItem(storageKey);
     return saved === null ? defaultValue : saved === 'true';

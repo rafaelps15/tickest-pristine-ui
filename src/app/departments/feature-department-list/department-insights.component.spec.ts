@@ -59,4 +59,15 @@ describe('DepartmentInsightsComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('1 departamento sem responsável definido');
   });
+
+  it('mostra "—" e o motivo, em vez de "0 departamentos", quando a lista falhou ao carregar', async () => {
+    const fixture = TestBed.createComponent(DepartmentInsightsComponent);
+    fixture.componentRef.setInput('departments', []);
+    fixture.componentRef.setInput('failed', true);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.insights-stat').textContent).toBe('—');
+    expect(fixture.nativeElement.textContent).toContain('Resumo indisponível');
+    expect(fixture.nativeElement.textContent).not.toContain('0 departamentos');
+  });
 });

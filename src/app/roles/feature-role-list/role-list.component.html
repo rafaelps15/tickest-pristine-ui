@@ -1,19 +1,20 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Funções</h4>
-      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#roleCreateModal" (click)="openCreateModal()">
-        <i class="bx bx-plus me-1"></i> Nova Função
-      </button>
-    </div>
+<app-page-header title="Funções" subtitle="Cada função reúne permissões e define o que quem a recebe pode ver e fazer no sistema."
+                 [crumbs]="[{ label: 'Administração' }]">
+  <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
+    <i class="bx bx-plus me-1" aria-hidden="true"></i> Nova Função
+  </button>
+</app-page-header>
+
+<app-role-guide />
+<app-role-insights [roles]="store.roles()"
+                   [loading]="store.listState().loading && store.roles().length === 0"
+                   [failed]="!!store.listState().error && store.roles().length === 0" />
+
+@if (store.listState().error; as error) {
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2" role="alert">
+    <span>{{ error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
   </div>
-</div>
-
-<app-role-guide class="guide-rail" />
-<app-role-insights class="insights-rail" [roles]="store.roles()" />
-
-@if (store.listState().error) {
-  <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }
 @if (colorContrastWarning(); as warning) {
   <div class="alert alert-warning border-0 shadow-sm" role="alert">{{ warning }}</div>
@@ -21,7 +22,8 @@
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
+    <table class="table table-hover align-middle mb-0 table-stack">
+      <caption class="visually-hidden">Funções cadastradas e as permissões de cada uma</caption>
       <thead>
         <tr>
           <th scope="col">Nome</th>
@@ -31,9 +33,18 @@
       </thead>
       <tbody>
         @if (store.listState().loading) {
-          <tr><td colspan="3" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
+          <tr><td colspan="3"><app-loading-state label="Carregando funções…" /></td></tr>
         } @else if (store.roles().length === 0) {
-          <tr><td colspan="3" class="text-center py-5 text-muted"><i class="bx bx-shield-quarter display-6 d-block mb-2 opacity-50"></i>Nenhuma função cadastrada ainda.</td></tr>
+          <tr>
+            <td colspan="3">
+              <app-empty-state icon="bx-shield-quarter" title="Nenhuma função cadastrada ainda."
+                               hint="Crie uma função pra agrupar permissões e atribuí-la aos usuários.">
+                <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
+                  <i class="bx bx-plus me-1" aria-hidden="true"></i>Nova Função
+                </button>
+              </app-empty-state>
+            </td>
+          </tr>
         } @else {
           @for (role of store.roles(); track role.name) {
             <tr>
@@ -43,22 +54,17 @@
                          (change)="onPickColor(role.name, $any($event.target).value)"
                          [attr.aria-label]="'Cor da função ' + role.name + ' (prévia só neste navegador)'" />
                   <span>{{ role.name }}</span>
-                  @if (roleColor(role.name)) {
-                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 small" (click)="onClearColor(role.name)">
-                      Remover cor
-                    </button>
-                  }
                 </div>
                 @if (role.isDefault) {
                   <span class="badge bg-label-secondary ms-1">Padrão para novos colaboradores</span>
                 }
                 @if (role.isAdministrator) {
-                  <span class="badge bg-label-danger ms-1">Administrador</span>
+                  <span class="badge bg-label-primary ms-1">Administrador</span>
                 }
               </td>
-              <td>
+              <td data-label="Permissões">
                 @for (code of visiblePermissionCodes(role); track code) {
-                  <span class="badge bg-label-info me-1 mb-1">{{ store.permissionName(code) }}</span>
+                  <span class="badge bg-label-secondary me-1 mb-1">{{ store.permissionName(code) }}</span>
                 } @empty {
                   <span class="text-muted small">Nenhuma permissão atribuída</span>
                 }
@@ -68,12 +74,22 @@
                   </span>
                 }
               </td>
-              <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#rolePermissionsModal"
-                        (click)="openPermissionsModal(role)" [disabled]="role.isAdministrator"
-                        [title]="role.isAdministrator ? 'As permissões do administrador são gerenciadas pelo sistema' : ''">
-                  <i class="bx bx-lock-alt me-1"></i> Permissões
-                </button>
+              <td class="text-end table-stack-actions">
+                <app-row-actions [label]="'Ações para a função ' + role.name">
+                  <li>
+                    <button type="button" class="dropdown-item" (click)="openPermissionsModal(role)" [disabled]="role.isAdministrator"
+                            [title]="role.isAdministrator ? 'As permissões do administrador são gerenciadas pelo sistema' : ''">
+                      <i class="bx bx-lock-alt me-2" aria-hidden="true"></i>Permissões
+                    </button>
+                  </li>
+                  @if (roleColor(role.name)) {
+                    <li>
+                      <button type="button" class="dropdown-item" (click)="onClearColor(role.name)">
+                        <i class="bx bx-reset me-2" aria-hidden="true"></i>Remover cor
+                      </button>
+                    </li>
+                  }
+                </app-row-actions>
               </td>
             </tr>
           }
@@ -83,80 +99,72 @@
   </div>
 </div>
 
-<!-- Modal de criação -->
-<div class="modal fade" id="roleCreateModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="roleCreateModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="roleCreateModalTitle">Nova Função</h5>
-          <button id="roleCreateModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.createError()) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.createError() }}</div>
-          }
-          <label class="form-label" for="roleName">Nome</label>
-          <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
+@if (openDialog() === 'create') {
+<app-dialog id="roleCreateModal" title="Nova Função" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
+    <div class="modal-body">
+      @if (store.createError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.createError() }}</div>
+      }
+      <label class="form-label" for="roleName">Nome</label>
+      <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
 
-          <label class="form-label mt-3" for="roleCreateColor">Cor</label>
-          <div class="d-flex align-items-center gap-2">
-            <input id="roleCreateColor" type="color" class="role-color-input" [value]="createColor()" (change)="createColor.set($any($event.target).value)" />
-            <span class="text-muted small">Prévia só neste navegador — o back-end ainda não guarda cor de função.</span>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="createForm.invalid">Criar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de atribuição de permissões -->
-<div class="modal fade" id="rolePermissionsModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="rolePermissionsModalTitle">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="rolePermissionsModalTitle">Permissões — {{ selectedRole()?.name }}</h5>
-        <button id="rolePermissionsModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      <label class="form-label mt-3" for="roleCreateColor">Cor</label>
+      <div class="d-flex align-items-center gap-2">
+        <input id="roleCreateColor" type="color" class="role-color-input" [value]="createColor()" (change)="createColor.set($any($event.target).value)"
+               [attr.aria-invalid]="createColorLacksContrast()" [attr.aria-describedby]="createColorLacksContrast() ? 'roleCreateColor-error' : null" />
+        <span class="text-muted small">Prévia só neste navegador — o back-end ainda não guarda cor de função.</span>
       </div>
-      <div class="modal-body">
-        @if (store.assignPermissionsError()) {
-          <div class="alert alert-danger border-0 py-2 small mb-3" role="alert">{{ store.assignPermissionsError() }}</div>
-        }
-        @for (group of store.permissionGroups(); track group.title) {
-          <h6 class="text-uppercase text-muted small fw-bold mt-3 mb-2">{{ group.title }}</h6>
-          <div class="row g-2 mb-2">
-            @for (permission of group.permissions; track permission.code) {
-              <div class="col-12 col-md-6">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" [id]="'perm-' + permission.code"
-                         [checked]="isChecked(permission.code)"
-                         (change)="togglePermission(permission.code, $any($event.target).checked)" />
-                  <label class="form-check-label" [for]="'perm-' + permission.code">
-                    {{ permission.name }}
-                    @if (permission.isAdministrative) {
-                      <span class="badge bg-label-danger ms-1">administrativa</span>
-                    }
-                    <div class="text-muted small">{{ permission.description }}</div>
-                  </label>
-                </div>
+      @if (createColorLacksContrast()) {
+        <div class="invalid-feedback d-block" id="roleCreateColor-error">Essa cor deixaria o badge ilegível. Escolha uma cor mais escura ou saturada.</div>
+      }
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="createForm.invalid">Criar</button>
+    </div>
+  </form>
+</app-dialog>
+}
+
+@if (openDialog() === 'permissions') {
+<app-dialog id="rolePermissionsModal" title="Permissões da função" [subtitle]="selectedRole()?.name ?? null" size="lg" [busy]="store.assigningPermissions()" (closed)="closeDialog()">
+  <div dialogContent class="dialog-content">
+    <div class="modal-body">
+      @if (store.assignPermissionsError()) {
+        <div class="alert alert-danger border-0 py-2 small mb-3" role="alert">{{ store.assignPermissionsError() }}</div>
+      }
+      @for (group of store.permissionGroups(); track group.title) {
+        <h3 class="h6 text-uppercase text-muted small fw-bold mt-3 mb-2">{{ group.title }}</h3>
+        <div class="row g-2 mb-2">
+          @for (permission of group.permissions; track permission.code) {
+            <div class="col-12 col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" [id]="'perm-' + permission.code"
+                       [checked]="isChecked(permission.code)"
+                       (change)="togglePermission(permission.code, $any($event.target).checked)" />
+                <label class="form-check-label" [for]="'perm-' + permission.code">
+                  {{ permission.name }}
+                  @if (permission.isAdministrative) {
+                    <span class="badge bg-label-danger ms-1">administrativa</span>
+                  }
+                  <div class="text-muted small">{{ permission.description }}</div>
+                </label>
               </div>
-            }
-          </div>
-        }
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" [disabled]="store.assigningPermissions()" (click)="onAssignPermissionsSubmit()">
-          @if (store.assigningPermissions()) {
-            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            </div>
           }
-          Salvar
-        </button>
-      </div>
+        </div>
+      }
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="button" class="btn btn-primary" [disabled]="store.assigningPermissions()" (click)="onAssignPermissionsSubmit()">
+        @if (store.assigningPermissions()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+        }
+        Salvar
+      </button>
     </div>
   </div>
-</div>
+</app-dialog>
+}

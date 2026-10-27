@@ -190,8 +190,7 @@ describe('TicketListComponent', () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.rangeStart()).toBe(21);
-    expect(fixture.componentInstance.rangeEnd()).toBe(40);
+    expect(fixture.nativeElement.querySelector('.card-footer').textContent).toContain('Exibindo 21–40 de');
   });
 
   it('usa reticências em vez de um botão por página quando há muitas páginas', async () => {
@@ -202,7 +201,9 @@ describe('TicketListComponent', () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.pageNumbers()).toEqual([1, '…', 24, 25, 26, '…', 50]);
+    const windowItems = Array.from(fixture.nativeElement.querySelectorAll('.btn-page-number, .page-ellipsis') as NodeListOf<HTMLElement>)
+      .map(item => item.textContent?.trim());
+    expect(windowItems).toEqual(['1', '…', '24', '25', '26', '…', '50']);
     expect(fixture.nativeElement.querySelectorAll('.card-footer button').length).toBeLessThan(10);
   });
 

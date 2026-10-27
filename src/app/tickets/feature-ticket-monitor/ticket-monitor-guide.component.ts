@@ -1,11 +1,9 @@
-import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { GuideSectionComponent, ScreenGuideComponent } from '../../shared/ui/screen-guide/screen-guide.component';
 import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TicketPriority, TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
-
-/** Chave usada para lembrar se o Guia da Tela ficou aberto ou fechado, entre sessões. */
-const GUIDE_OPEN_STORAGE_KEY = 'tickest.ticketMonitorGuide.open';
 
 /** Explicação de uma linha por valor de SLA — mesmos 6 valores que a coluna SLA da tabela pode exibir. */
 const SLA_EXPLANATIONS: Record<TicketSlaStatus, string> = {
@@ -17,26 +15,15 @@ const SLA_EXPLANATIONS: Record<TicketSlaStatus, string> = {
   [TicketSlaStatus.NotApplicable]: 'Este chamado não tem uma política de SLA aplicável.'
 };
 
-/** Lê a preferência salva de aberto/fechado; `true` (aberto) se não houver nada salvo ou a leitura falhar. */
-function readStoredOpenPreference(): boolean {
-  try {
-    const saved = localStorage.getItem(GUIDE_OPEN_STORAGE_KEY);
-    return saved === null ? true : saved === 'true';
-  } catch {
-    return true;
-  }
-}
-
 /**
- * Painel "Guia da Tela" de Monitorar Tickets: legenda de prioridade e status (mesma fonte única
+ * Conteúdo do "Guia da Tela" de Monitorar Chamados: legenda de prioridade e status (mesma fonte única
  * da tabela) e uma explicação de uma linha por valor de SLA que a coluna SLA pode exibir.
- * Componente de apresentação — não injeta nenhum Store, só lê os rótulos/badges compartilhados.
+ * Não injeta nenhum Store, só lê os rótulos/badges compartilhados; o card vem de `<app-screen-guide>`.
  */
 @Component({
   selector: 'app-ticket-monitor-guide',
-  imports: [NgClass],
+  imports: [NgClass, ScreenGuideComponent, GuideSectionComponent],
   templateUrl: './ticket-monitor-guide.component.html',
-  styleUrl: './ticket-monitor-guide.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketMonitorGuideComponent {
@@ -51,19 +38,4 @@ export class TicketMonitorGuideComponent {
   protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
   protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
   protected readonly slaExplanations = SLA_EXPLANATIONS;
-
-  /** Se o painel está aberto — restaurado do localStorage, sem quebrar a tela se a leitura falhar. */
-  protected readonly open = signal(readStoredOpenPreference());
-
-  /** Alterna o painel e salva a preferência, sem quebrar a tela se a escrita falhar. */
-  protected toggle(): void {
-    const next = !this.open();
-    this.open.set(next);
-
-    try {
-      localStorage.setItem(GUIDE_OPEN_STORAGE_KEY, String(next));
-    } catch {
-      // Preferência não persiste nesta sessão (ex.: modo privado); a tela continua funcionando.
-    }
-  }
 }

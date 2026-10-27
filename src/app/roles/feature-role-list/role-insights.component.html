@@ -1,22 +1,17 @@
-<div class="card insights-card h-100">
-  <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <i class="bx bx-bar-chart-alt-2 fs-5 text-muted" aria-hidden="true"></i>
-      <h6 class="fw-bold mb-0">Resumo</h6>
-    </div>
-
-    <div class="insights-section">
-      <div class="insights-stat">{{ roles().length }}</div>
-      <p class="text-muted small mb-0">{{ roles().length === 1 ? 'função cadastrada' : 'funções cadastradas' }}</p>
-    </div>
-
-    <div class="insights-section mb-0">
-      @if (rolesWithoutPermissions() === 0) {
-        <p class="text-muted small mb-0"><i class="bx bx-check text-success me-1"></i>Todas as funções têm pelo menos uma permissão atribuída.</p>
-      } @else {
-        <div class="insights-stat">{{ rolesWithoutPermissions() }}</div>
-        <p class="text-muted small mb-0">{{ rolesWithoutPermissions() === 1 ? 'função sem nenhuma permissão atribuída' : 'funções sem nenhuma permissão atribuída' }}</p>
-      }
-    </div>
+<app-summary-card [loading]="loading()" [failed]="failed()">
+  <div class="insights-section">
+    <div class="insights-stat">{{ roles().length }}</div>
+    <p class="text-muted small mb-0">{{ roles().length === 1 ? 'função cadastrada' : 'funções cadastradas' }}</p>
   </div>
-</div>
+
+  @if (roles().length > 0) {
+  <div class="insights-section mb-0">
+    @if (rolesWithoutPermissions() === 0) {
+      <p class="text-muted small mb-0"><i class="bx bx-check text-success me-1"></i>Todas as funções têm pelo menos uma permissão atribuída.</p>
+    } @else {
+      <div class="insights-stat">{{ rolesWithoutPermissions() }}</div>
+      <p class="text-muted small mb-0">{{ rolesWithoutPermissions() === 1 ? 'função sem nenhuma permissão atribuída' : 'funções sem nenhuma permissão atribuída' }}</p>
+    }
+  </div>
+  }
+</app-summary-card>

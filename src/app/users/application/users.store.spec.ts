@@ -159,6 +159,19 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.listState().error).toBe('A data inicial do período de cadastro não pode ser maior que a data final.');
+    expect(store.listLoadFailed()).toBeTrue();
+  });
+
+  it('não marca falha de carga quando o erro é de uma ação (desativar), que recarregar não resolve', async () => {
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+    userDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.deactivate('u1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.listState().error).toBe('Erro ao desativar usuário');
+    expect(store.listLoadFailed()).toBeFalse();
   });
 
   it('cria um usuário, marca sucesso e recarrega a listagem', async () => {
@@ -211,29 +224,85 @@ describe('UsersStore', () => {
 
     expect(userDataService.updateProfile).toHaveBeenCalledWith('u1', { firstName: 'Ana', lastName: 'Costa' });
     expect(onSuccess).toHaveBeenCalled();
-    expect(store.listState().error).toBeNull();
+    expect(store.profileError()).toBeNull();
   });
 
-  it('expõe a mensagem de erro quando a atualização de cadastro falhar', async () => {
+  it('cria o usuário e já atribui as funções escolhidas com o id devolvido pelo cadastro', async () => {
+    authDataService.register.and.returnValue(of('new-id'));
+    userDataService.assignRoles.and.returnValue(of(undefined));
+
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' }, ['Agent']);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.assignRoles).toHaveBeenCalledWith('new-id', ['Agent']);
+    expect(store.success()).toBeTrue();
+    expect(store.createdUserId()).toBe('new-id');
+    expect(store.createRolesFailed()).toBeFalse();
+  });
+
+  it('não chama a atribuição de funções quando nenhuma foi escolhida', async () => {
+    authDataService.register.and.returnValue(of('new-id'));
+
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.assignRoles).not.toHaveBeenCalled();
+    expect(store.success()).toBeTrue();
+  });
+
+  it('trata como cadastro concluído, mas sinaliza, quando só a atribuição de funções falha', async () => {
+    authDataService.register.and.returnValue(of('new-id'));
+    userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' }, ['Agent']);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.success()).toBeTrue();
+    expect(store.createRolesFailed()).toBeTrue();
+    expect(store.createdUserId()).toBe('new-id');
+    expect(store.error()).toBeNull();
+    expect(store.loading()).toBeFalse();
+  });
+
+  it('expõe a falha de atualização de cadastro no erro do modal, sem poluir o erro da listagem', async () => {
     userDataService.updateProfile.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.updateProfile('u1', { firstName: 'Ana', lastName: 'Costa' });
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Erro ao atualizar cadastro');
+    expect(store.profileError()).toBe('Erro ao atualizar cadastro');
+    expect(store.listState().error).toBeNull();
   });
 
-  it('não deixa um erro de atribuição de funções aparecer numa tentativa de atualização de cadastro seguinte', async () => {
+  it('expõe a falha de atribuição de funções no erro do modal, sem poluir o erro da listagem', async () => {
+    userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.assignRoles('u1', ['Agent']);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.rolesError()).toBe('Erro ao atribuir funções');
+    expect(store.listState().error).toBeNull();
+  });
+
+  it('não deixa um erro de atribuição de funções aparecer no modal de edição de cadastro', async () => {
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.assignRoles('u1', ['Agent']);
     await TestBed.inject(ApplicationRef).whenStable();
-    expect(store.listState().error).toBe('Erro ao atribuir funções');
 
-    userDataService.updateProfile.and.returnValue(of(undefined));
+    expect(store.profileError()).toBeNull();
+  });
+
+  it('limpa os erros dos dois modais de uma vez', async () => {
+    userDataService.updateProfile.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.updateProfile('u1', { firstName: 'Ana', lastName: 'Costa' });
+    store.assignRoles('u1', ['Agent']);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBeNull();
+    store.clearDialogErrors();
+
+    expect(store.profileError()).toBeNull();
+    expect(store.rolesError()).toBeNull();
   });
 
   it('atribui funções a um usuário e recarrega a listagem em caso de sucesso', async () => {

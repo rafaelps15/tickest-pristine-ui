@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, from, mergeMap, toArray, of, catchError, map } from 'rxjs';
+import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
@@ -23,7 +23,13 @@ export const UsersStore = signalStore(
     loading: false,
     success: false,
     error: null as string | null,
+    /** Id do último usuário criado — pra tela destacar a linha dele. */
+    createdUserId: null as string | null,
+    /** O último cadastro criou o usuário, mas a atribuição das funções escolhidas falhou. */
+    createRolesFailed: false,
     listMutationError: null as string | null,
+    profileError: null as string | null,
+    rolesError: null as string | null,
     updatingProfile: false,
     assigningRoles: false,
     deactivatingIds: [] as string[],
@@ -42,6 +48,11 @@ export const UsersStore = signalStore(
   withComputed((store) => ({
     /** Página atual devolvida pela API (itens + dados de paginação). */
     usersPage: computed(() => store._listResource.value()),
+    /**
+     * Se a última carga da lista falhou — distinto de um erro de ação (desativar, reativar…), que
+     * também aparece em {@link listState}: só a falha de carga se resolve recarregando.
+     */
+    listLoadFailed: computed(() => !!store._listResource.error()),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
@@ -72,15 +83,27 @@ export const UsersStore = signalStore(
     hasNextPage: computed(() => store.usersPage()?.hasNextPage ?? false)
   })),
   withMethods((store) => ({
-    /** Registra um novo usuário (único caminho de criação exposto pelo back-end: POST /users/register). */
-    createUser(data: CreateUserData): void {
-      patchState(store, { loading: true, success: false, error: null });
+    /**
+     * Registra um novo usuário (POST /users/register, único caminho de criação do back-end) e, se
+     * vierem funções, já as atribui com o id devolvido (PUT /users/{id}/roles) — o cadastro não
+     * aceita funções direto. Se só a atribuição falhar, o usuário continua criado: é sucesso com
+     * {@link createRolesFailed}, pra tela avisar como concluir em vez de sugerir criar de novo
+     * (o que daria "e-mail já cadastrado").
+     */
+    createUser(data: CreateUserData, roleNames: string[] = []): void {
+      patchState(store, { loading: true, success: false, error: null, createdUserId: null, createRolesFailed: false });
 
       store._authDataService.register(data).pipe(
+        switchMap(userId => roleNames.length === 0
+          ? of({ userId, rolesFailed: false })
+          : store._userDataService.assignRoles(userId, roleNames).pipe(
+              map(() => ({ userId, rolesFailed: false })),
+              catchError(() => of({ userId, rolesFailed: true }))
+            )),
         finalize(() => patchState(store, { loading: false }))
       ).subscribe({
-        next: () => {
-          patchState(store, { success: true });
+        next: ({ userId, rolesFailed }) => {
+          patchState(store, { success: true, createdUserId: userId, createRolesFailed: rolesFailed });
           store._listResource.reload();
         },
         error: (err: HttpErrorResponse) => {
@@ -100,7 +123,7 @@ export const UsersStore = signalStore(
 
     /** Reseta o estado de criação (loading/success/error), usado ao reabrir o formulário. */
     resetState(): void {
-      patchState(store, { loading: false, success: false, error: null });
+      patchState(store, { loading: false, success: false, error: null, createdUserId: null, createRolesFailed: false });
     },
 
     /** Recarrega a página atual com os filtros atuais (GET /users, requer users:read). */
@@ -109,9 +132,9 @@ export const UsersStore = signalStore(
       store._listResource.reload();
     },
 
-    /** Limpa o erro de mutação da listagem — chamado ao abrir um modal, pra não mostrar o erro de uma ação/usuário anterior. */
-    clearListMutationError(): void {
-      patchState(store, { listMutationError: null });
+    /** Limpa os erros dos modais de edição de cadastro e de atribuição de funções — chamado ao abrir um deles, pra não mostrar o erro de uma tentativa anterior. */
+    clearDialogErrors(): void {
+      patchState(store, { profileError: null, rolesError: null });
     },
 
     /** Muda o termo de busca e volta para a primeira página. */
@@ -153,21 +176,21 @@ export const UsersStore = signalStore(
       patchState(store, { filters });
     },
 
-    /** Atualiza nome/sobrenome de um usuário (PUT /users/{userId}/profile) e recarrega a listagem em caso de sucesso. */
+    /** Atualiza nome/sobrenome de um usuário (PUT /users/{userId}/profile) e recarrega a listagem em caso de sucesso; falha vai pra {@link profileError}, exibido dentro do próprio modal. */
     updateProfile(userId: string, data: UpdateProfileRequest, onSuccess?: () => void): void {
-      patchState(store, { listMutationError: null, updatingProfile: true });
+      patchState(store, { profileError: null, updatingProfile: true });
 
       store._userDataService.updateProfile(userId, data).pipe(
         finalize(() => patchState(store, { updatingProfile: false }))
       ).subscribe({
         next: () => {
-          patchState(store, { listMutationError: null });
+          patchState(store, { profileError: null });
           store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
-            listMutationError: extractErrorMessage(err, {
+            profileError: extractErrorMessage(err, {
               403: 'Você não tem permissão para editar o cadastro deste usuário.',
               404: 'Usuário não encontrado — a lista pode estar desatualizada.'
             }, 'Erro ao atualizar cadastro')
@@ -176,21 +199,21 @@ export const UsersStore = signalStore(
       });
     },
 
-    /** Atribui um conjunto de roles a um usuário (PUT /users/{userId}/roles). */
+    /** Atribui um conjunto de roles a um usuário (PUT /users/{userId}/roles); falha vai pra {@link rolesError}, exibido dentro do próprio modal. */
     assignRoles(userId: string, roleNames: string[], onSuccess?: () => void): void {
-      patchState(store, { listMutationError: null, assigningRoles: true });
+      patchState(store, { rolesError: null, assigningRoles: true });
 
       store._userDataService.assignRoles(userId, roleNames).pipe(
         finalize(() => patchState(store, { assigningRoles: false }))
       ).subscribe({
         next: () => {
-          patchState(store, { listMutationError: null });
+          patchState(store, { rolesError: null });
           store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
-            listMutationError: extractErrorMessage(err, {
+            rolesError: extractErrorMessage(err, {
               403: 'Você não tem permissão para alterar as funções deste usuário.',
               404: 'Usuário não encontrado — a lista pode estar desatualizada.'
             }, 'Erro ao atribuir funções')
@@ -199,7 +222,7 @@ export const UsersStore = signalStore(
       });
     },
 
-    /** Desativa um usuário (bloqueia o login dele) e recarrega a listagem em caso de sucesso. */
+    /** Desativa um usuário (bloqueia o acesso ao sistema) e recarrega a listagem em caso de sucesso. */
     deactivate(userId: string, onSuccess?: () => void): void {
       patchState(store, { listMutationError: null, deactivatingIds: [...store.deactivatingIds(), userId] });
 
@@ -271,7 +294,7 @@ export const UsersStore = signalStore(
       });
     },
 
-    /** Reativa um usuário (libera o login dele de novo) e recarrega a listagem em caso de sucesso. */
+    /** Reativa um usuário (libera o acesso de novo) e recarrega a listagem em caso de sucesso. */
     activate(userId: string, onSuccess?: () => void): void {
       patchState(store, { listMutationError: null, activatingIds: [...store.activatingIds(), userId] });
 

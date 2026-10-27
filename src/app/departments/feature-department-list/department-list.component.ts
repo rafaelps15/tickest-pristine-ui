@@ -4,10 +4,14 @@ import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { DepartmentsStore } from '../application/departments.store';
 import { Department, DepartmentSector } from '../entities/department';
-import { ConfirmDialogService, SessionService } from '../../shared';
+import { ConfirmDialogService, SessionService , ToastService} from '../../shared';
 import { UserSummary } from '../../users';
 import { DepartmentGuideComponent } from './department-guide.component';
 import { DepartmentInsightsComponent } from './department-insights.component';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
+import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 
 /**
  * Tela administrativa de departamentos e setores: cada departamento mostra os seus setores, e o setor é
@@ -15,16 +19,25 @@ import { DepartmentInsightsComponent } from './department-insights.component';
  */
 @Component({
     selector: 'app-department-list',
-    imports: [ReactiveFormsModule, DepartmentGuideComponent, DepartmentInsightsComponent],
+    imports: [ReactiveFormsModule, PageHeaderComponent, DepartmentGuideComponent, DepartmentInsightsComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent],
     templateUrl: './department-list.component.html',
     styleUrl: './department-list.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DepartmentListComponent implements OnInit {
+    /** Diálogo aberto agora (renderizado com `@if`, via `<app-dialog>`), ou `null`. */
+    protected readonly openDialog = signal<'department' | 'sector' | null>(null);
+
+    /** Fecha o diálogo aberto (X, Esc, clique fora, "Cancelar" ou depois de salvar). */
+    closeDialog(): void {
+        this.openDialog.set(null);
+    }
+
     private readonly fb = inject(FormBuilder);
     protected readonly store = inject(DepartmentsStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly sessionService = inject(SessionService);
+    private readonly toastService = inject(ToastService);
 
     /** Se o usuário logado pode criar, editar e excluir departamentos. */
     readonly canManageDepartments = computed(() => this.sessionService.hasPermission('departments:manage'));
@@ -108,6 +121,7 @@ export class DepartmentListComponent implements OnInit {
 
     /** Prepara o modal de departamento para criação. */
     openCreateModal(): void {
+        this.openDialog.set('department');
         this.store.clearMutationError();
         this.store.clearResponsibleSearch();
         this.editingDepartment.set(null);
@@ -124,6 +138,7 @@ export class DepartmentListComponent implements OnInit {
      * quem está selecionado antes do admin trocar.
      */
     openEditModal(department: Department): void {
+        this.openDialog.set('department');
         this.store.clearMutationError();
         this.store.clearResponsibleSearch();
         this.editingDepartment.set(department);
@@ -172,7 +187,10 @@ export class DepartmentListComponent implements OnInit {
         };
         const editing = this.editingDepartment();
 
-        const onSuccess = () => document.getElementById('departmentModalCloseButton')?.click();
+        const onSuccess = () => {
+            this.closeDialog();
+            this.toastService.show(editing ? `Departamento "${data.name}" atualizado.` : `Departamento "${data.name}" criado.`);
+        };
 
         if (editing) {
             this.store.update(editing.id, data, onSuccess);
@@ -202,6 +220,7 @@ export class DepartmentListComponent implements OnInit {
 
     /** Prepara o modal de setor para criar um setor dentro do departamento informado. */
     openCreateSectorModal(department: Department): void {
+        this.openDialog.set('sector');
         this.store.clearMutationError();
         this.sectorDepartment.set(department);
         this.editingSector.set(null);
@@ -210,6 +229,7 @@ export class DepartmentListComponent implements OnInit {
 
     /** Prepara o modal de setor para edição do setor informado. */
     openEditSectorModal(department: Department, sector: DepartmentSector): void {
+        this.openDialog.set('sector');
         this.store.clearMutationError();
         this.sectorDepartment.set(department);
         this.editingSector.set(sector);
@@ -229,7 +249,10 @@ export class DepartmentListComponent implements OnInit {
         const data = { name: raw.name!.trim(), description: raw.description?.trim() || undefined };
         const editing = this.editingSector();
 
-        const onSuccess = () => document.getElementById('sectorModalCloseButton')?.click();
+        const onSuccess = () => {
+            this.closeDialog();
+            this.toastService.show(editing ? `Setor "${data.name}" atualizado.` : `Setor "${data.name}" criado em ${department.name}.`);
+        };
 
         if (editing) {
             this.store.updateSector(editing.id, data, onSuccess);

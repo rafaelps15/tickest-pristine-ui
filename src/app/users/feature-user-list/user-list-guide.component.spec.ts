@@ -42,37 +42,13 @@ describe('UserListGuideComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('não fica salvo no link');
   });
 
-  it('começa aberto quando não há preferência salva', async () => {
+  it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
     const fixture = TestBed.createComponent(UserListGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#userListGuideBody')).toBeTruthy();
-  });
-
-  it('fecha e abre ao clicar no cabeçalho, e persiste a preferência', async () => {
-    const fixture = TestBed.createComponent(UserListGuideComponent);
+    (fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    const toggleButton = fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement;
-    toggleButton.click();
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('#userListGuideBody')).toBeNull();
     expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
-
-    toggleButton.click();
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('#userListGuideBody')).toBeTruthy();
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
-  });
-
-  it('restaura o painel fechado quando a preferência salva é "false"', async () => {
-    localStorage.setItem(STORAGE_KEY, 'false');
-
-    const fixture = TestBed.createComponent(UserListGuideComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('#userListGuideBody')).toBeNull();
   });
 });

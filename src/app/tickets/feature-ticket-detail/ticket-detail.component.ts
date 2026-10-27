@@ -1,8 +1,6 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef } from '@angular/core';
 import { DatePipe, NgClass } from '@angular/common';
-import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TicketHistoryStore } from '../application/ticket-history.store';
@@ -20,16 +18,18 @@ import {
 } from '../entities/ticket-sla';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
-import { ConfirmDialogService, SessionService, ToastService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
-import { UserSummary } from '../../users';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
+import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
 @Component({
     selector: 'app-ticket-detail',
-    imports: [DatePipe, NgClass, RouterLink, TicketEditDialogComponent, TicketReopenDialogComponent],
+    imports: [DatePipe, NgClass, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, LoadingStateComponent, TicketAssignDialogComponent],
     templateUrl: './ticket-detail.component.html',
     styleUrl: './ticket-detail.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -128,7 +128,10 @@ export class TicketDetailComponent implements OnInit {
      * (achado do critique de 2026-10-25: aqui descartava esse nível, perdendo o pai que o usuário
      * acabou de ver um clique antes).
      */
-    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Administração / Monitorar Chamados /' : 'Meus Chamados /';
+    /** Trilha do cabeçalho — a tela de onde o usuário veio (Monitorar ou Meus Chamados). */
+    protected readonly crumbs: PageCrumb[] = this.cameFromMonitor
+        ? [{ label: 'Administração' }, { label: 'Monitorar Chamados', link: '/tickets/monitorar' }]
+        : [{ label: 'Meus Chamados', link: '/tickets' }];
 
     /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
     protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';
@@ -149,29 +152,12 @@ export class TicketDetailComponent implements OnInit {
         this.fileInput().nativeElement.click();
     }
 
-    /** Texto digitado na busca de candidatos a responsável, antes do debounce. */
-    assigneeSearchInput = signal('');
+    /** Se o diálogo "Atribuir/Alterar responsável" está aberto. */
 
-    /** Id do candidato selecionado no modal de atribuição, antes de confirmar. */
-    selectedAssigneeId = signal<string | null>(null);
-
-    /** Índice do candidato com foco (tabindex circulante), pra navegação por seta no listbox de busca. */
-    focusedAssigneeIndex = signal(0);
+    readonly assignDialogOpen = signal(false);
 
     /** Detalhe do ticket carregado pelo id da rota. */
     protected readonly ticket = this.detailStore.ticket;
-
-    constructor() {
-        // Espera ~300ms após a última tecla antes de buscar, pra não buscar a cada letra digitada.
-        toObservable(this.assigneeSearchInput).pipe(
-            debounceTime(300),
-            distinctUntilChanged(),
-            takeUntilDestroyed()
-        ).subscribe(search => {
-            this.focusedAssigneeIndex.set(0);
-            this.detailStore.searchAssignees(search);
-        });
-    }
 
     /** Carrega o detalhe do ticket, o histórico, os anexos e as mensagens ao inicializar a tela. */
     ngOnInit(): void {
@@ -512,79 +498,19 @@ export class TicketDetailComponent implements OnInit {
         this.reopenButton()?.nativeElement.focus();
     }
 
-    /** Reseta a busca e a seleção do modal de atribuição ao abri-lo. */
+    /** Abre o diálogo de atribuição, sem herdar a busca nem o erro de uma abertura anterior. */
     onOpenAssignModal(): void {
-        this.assigneeSearchInput.set('');
-        this.selectedAssigneeId.set(null);
-        this.focusedAssigneeIndex.set(0);
         this.detailStore.clearMutationError();
         this.detailStore.clearAssigneeSearch();
+        this.assignDialogOpen.set(true);
     }
 
-    /** Nome do candidato selecionado no modal de atribuição, pra mostrar no aviso de substituição do responsável atual. */
-    selectedAssigneeName(): string | null {
-        const candidate = this.detailStore.assigneeCandidates().find(c => c.id === this.selectedAssigneeId());
-        return candidate ? `${candidate.firstName} ${candidate.lastName}` : null;
-    }
-
-    /** Até 2 funções do candidato exibidas como badge; o restante vira um badge "+N" (mesma regra da Gestão de Usuários). */
-    visibleCandidateRoles(candidate: UserSummary) {
-        return visibleRoles(candidate.roles);
-    }
-
-    hiddenCandidateRolesCount(candidate: UserSummary): number {
-        return hiddenRolesCount(candidate.roles);
-    }
-
-    hiddenCandidateRolesNames(candidate: UserSummary): string {
-        return hiddenRolesNames(candidate.roles);
-    }
-
-    /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
-    roleColor(roleName: string): string | null {
-        return getRoleColor(roleName);
-    }
-
-    /** Marca (ou desmarca, ao clicar de novo) um candidato como o escolhido para responsável; limpa o erro de uma tentativa anterior. */
-    onSelectAssignee(userId: string, index: number): void {
-        this.selectedAssigneeId.update(current => current === userId ? null : userId);
-        this.focusedAssigneeIndex.set(index);
-        this.detailStore.clearMutationError();
-    }
-
-    /**
-     * Navega entre os candidatos encontrados com as setas (padrão ARIA Listbox de tabindex
-     * circulante: só o item focado tem tabindex 0, os demais ficam fora do Tab).
-     */
-    onAssigneeListKeydown(event: KeyboardEvent, candidateCount: number): void {
-        if (candidateCount === 0) return;
-
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            this.focusedAssigneeIndex.update(i => (i + 1) % candidateCount);
-            this.focusAssigneeRow();
-        } else if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            this.focusedAssigneeIndex.update(i => (i - 1 + candidateCount) % candidateCount);
-            this.focusAssigneeRow();
-        }
-    }
-
-    /** Move o foco do navegador pro candidato atualmente marcado como circulante. */
-    private focusAssigneeRow(): void {
-        document.getElementById(`assignee-candidate-${this.focusedAssigneeIndex()}`)?.focus();
-    }
-
-    /** Atribui o candidato selecionado como responsável e fecha o modal em caso de sucesso. */
-    onConfirmAssign(): void {
-        const userId = this.selectedAssigneeId();
-        if (!userId) return;
-
-        const name = this.selectedAssigneeName();
-        this.detailStore.assignTicket(this.ticketId, userId, () => {
-            this.toastService.show(name ? `${name} agora é o responsável.` : 'Responsável atribuído.');
+    /** Atribui o candidato confirmado no diálogo e fecha o diálogo em caso de sucesso. */
+    onConfirmAssign(choice: { userId: string; name: string }): void {
+        this.detailStore.assignTicket(this.ticketId, choice.userId, () => {
+            this.toastService.show(`${choice.name} agora é o responsável.`);
             this.historyStore.reload();
-            document.getElementById('ticketAssignModalCloseButton')?.click();
+            this.assignDialogOpen.set(false);
         });
     }
 

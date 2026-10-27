@@ -27,6 +27,99 @@ describe('UserListInfoPanelComponent', () => {
     return fixture;
   }
 
+  it('é uma região rotulada pelo nome do usuário fora do modo modal', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const panel = fixture.nativeElement.querySelector('.info-panel') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('region');
+    expect(panel.hasAttribute('aria-modal')).toBeFalse();
+    expect(document.getElementById(panel.getAttribute('aria-labelledby')!)?.textContent).toContain('Maria Silva');
+  });
+
+  it('vira diálogo modal no modo overlay', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    await fixture.whenStable();
+
+    const panel = fixture.nativeElement.querySelector('.info-panel') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('no modo overlay, move o foco pro título ao abrir e de novo ao trocar de usuário', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const title = fixture.nativeElement.querySelector('#userInfoPanelTitle') as HTMLElement;
+    expect(document.activeElement).toBe(title);
+
+    (document.activeElement as HTMLElement).blur();
+    fixture.componentRef.setInput('user', { ...activeUser, id: 'u9', firstName: 'Ana' });
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(title);
+
+    fixture.nativeElement.remove();
+  });
+
+  it('não rouba o foco quando a lista recarrega e entrega um objeto novo pro mesmo usuário', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const searchInput = document.createElement('input');
+    document.body.appendChild(searchInput);
+    searchInput.focus();
+
+    fixture.componentRef.setInput('user', { ...activeUser, roles: [...activeUser.roles] });
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(searchInput);
+
+    searchInput.remove();
+    fixture.nativeElement.remove();
+  });
+
+  it('no modo modal, Tab no último controle volta pro primeiro e Shift+Tab no primeiro vai pro último', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+
+    last.focus();
+    last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(last);
+
+    fixture.nativeElement.remove();
+  });
+
+  it('fora do modo modal, não prende o Tab dentro do painel', async () => {
+    const fixture = createFixture();
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const last = buttons[buttons.length - 1];
+    last.focus();
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    last.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBeFalse();
+    expect(document.activeElement).toBe(last);
+
+    fixture.nativeElement.remove();
+  });
+
   it('renderiza os campos instantâneos recebidos por @Input', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
@@ -39,7 +132,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(text).toContain('01/01/2026');
   });
 
-  it('mostra no máximo 2 badges de função e agrupa o restante em "+N"', async () => {
+  it('mostra todas as funções do usuário, sem agrupar em "+N" (o painel é o detalhe)', async () => {
     const userWithManyRoles: UserSummary = {
       ...activeUser,
       roles: [{ name: 'Agent' }, { name: 'Supervisor' }, { name: 'Financeiro' }]
@@ -48,7 +141,17 @@ describe('UserListInfoPanelComponent', () => {
     fixture.componentRef.setInput('user', userWithManyRoles);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('+1');
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Financeiro');
+    expect(text).not.toContain('+1');
+  });
+
+  it('diz "Nenhuma função" quando o usuário não tem função', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('user', { ...activeUser, roles: [] });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nenhuma função');
   });
 
   it('usa a cor customizada da função quando escolhida (prévia local)', async () => {
@@ -123,8 +226,9 @@ describe('UserListInfoPanelComponent', () => {
     fixture.componentInstance.assignRolesClick.subscribe(rolesSpy);
     fixture.componentInstance.toggleActiveClick.subscribe(toggleSpy);
 
-    (fixture.nativeElement.querySelector('[data-bs-target="#userEditModal"]') as HTMLButtonElement).click();
-    (fixture.nativeElement.querySelector('[data-bs-target="#userRolesModal"]') as HTMLButtonElement).click();
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>);
+    buttons.find(button => button.textContent?.includes('Editar cadastro'))!.click();
+    buttons.find(button => button.textContent?.includes('Atribuir funções'))!.click();
     (fixture.nativeElement.querySelector('.btn-outline-danger') as HTMLButtonElement).click();
 
     expect(editSpy).toHaveBeenCalled();

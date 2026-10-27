@@ -1,20 +1,22 @@
-import { Component, inject, effect, signal, ChangeDetectionStrategy } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, inject, effect, signal, untracked, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ProfileEditStore } from '../application/profile-edit.store';
-import { passwordChangeValidator, strongPasswordValidator } from '../../shared';
+import { ToastService, passwordChangeValidator, strongPasswordValidator } from '../../shared';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 
 /** Tela de edição do perfil do usuário logado (nome e sobrenome). */
 @Component({
   selector: 'app-profile-edit',
-  imports: [ReactiveFormsModule, RouterModule],
+  imports: [ReactiveFormsModule, RouterModule, PageHeaderComponent, LoadingStateComponent],
   templateUrl: './profile-edit.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProfileEditComponent {
   private readonly fb = inject(FormBuilder);
   protected readonly store = inject(ProfileEditStore);
+  private readonly toastService = inject(ToastService);
 
   /** Formulário com as mesmas regras do UpdateUserProfileCommandValidator, mais o limite de tamanho já usado no cadastro administrativo. */
   readonly form = this.fb.nonNullable.group({
@@ -43,22 +45,24 @@ export class ProfileEditComponent {
       }
     });
 
-    // Limpa o formulário de senha após uma troca bem-sucedida.
+    // Sucesso vira toast (mesmo retorno de Chamados e Usuários) e o estado é limpo na hora — um
+    // alerta inline ficava na tela e dava falsa confiança se o usuário voltasse a editar.
     effect(() => {
-      if (this.store.passwordChanged()) {
-        this.passwordForm.reset({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      }
+      if (!this.store.saved()) return;
+      untracked(() => {
+        this.toastService.show('Perfil atualizado.');
+        this.store.clearSaved();
+      });
     });
 
-    // Esconde a confirmação de sucesso assim que o usuário volta a editar, para não dar falsa
-    // confiança de que uma mudança ainda não salva já foi aplicada. Checa `dirty` porque o
-    // próprio reset() dos efeitos acima (ao recarregar o perfil/limpar a senha) também emite
-    // valueChanges, mas deixa o formulário pristine — não é uma edição do usuário.
-    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
-      if (this.store.saved() && this.form.dirty) this.store.clearSaved();
-    });
-    this.passwordForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
-      if (this.store.passwordChanged() && this.passwordForm.dirty) this.store.clearPasswordChanged();
+    // Limpa o formulário de senha após uma troca bem-sucedida, avisando por toast.
+    effect(() => {
+      if (!this.store.passwordChanged()) return;
+      untracked(() => {
+        this.passwordForm.reset({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        this.toastService.show('Senha alterada.');
+        this.store.clearPasswordChanged();
+      });
     });
   }
 

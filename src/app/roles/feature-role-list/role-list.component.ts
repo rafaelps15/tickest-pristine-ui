@@ -1,10 +1,14 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
-import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor, hasAccessibleRoleColorContrast } from '../../shared';
+import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor, hasAccessibleRoleColorContrast , ToastService} from '../../shared';
 import { RoleGuideComponent } from './role-guide.component';
 import { RoleInsightsComponent } from './role-insights.component';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
+import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 
 /** Cor padrão pré-marcada no seletor de cor ao criar uma função — o próprio índigo do sistema. */
 const DEFAULT_ROLE_COLOR = '#696cff';
@@ -15,15 +19,24 @@ const MAX_VISIBLE_PERMISSION_BADGES = 2;
 /** Tela administrativa de gestão de roles e atribuição de permissões (RBAC). */
 @Component({
     selector: 'app-role-list',
-    imports: [ReactiveFormsModule, RoleGuideComponent, RoleInsightsComponent],
+    imports: [ReactiveFormsModule, PageHeaderComponent, RoleGuideComponent, RoleInsightsComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, RowActionsComponent],
     templateUrl: './role-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './role-list.component.css'
 })
 export class RoleListComponent implements OnInit {
+    /** Diálogo aberto agora (renderizado com `@if`, via `<app-dialog>`), ou `null`. */
+    protected readonly openDialog = signal<'create' | 'permissions' | null>(null);
+
+    /** Fecha o diálogo aberto (X, Esc, clique fora, "Cancelar" ou depois de salvar). */
+    closeDialog(): void {
+        this.openDialog.set(null);
+    }
+
     private readonly fb = inject(FormBuilder);
     protected readonly store = inject(RolesStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
+    private readonly toastService = inject(ToastService);
 
     createForm = this.fb.group({
         name: ['', [Validators.required, Validators.maxLength(100)]]
@@ -37,6 +50,9 @@ export class RoleListComponent implements OnInit {
 
     /** Cor marcada no seletor do modal de criação. */
     createColor = signal(DEFAULT_ROLE_COLOR);
+
+    /** Se a cor escolhida no modal de criação deixaria o badge ilegível — mostrado dentro do próprio modal e bloqueia o envio. */
+    readonly createColorLacksContrast = computed(() => !hasAccessibleRoleColorContrast(this.createColor()));
 
     /**
      * Incrementado a cada escolha/remoção de cor, só pra forçar `roleColor()` a reavaliar —
@@ -56,6 +72,7 @@ export class RoleListComponent implements OnInit {
 
     /** Prepara o modal de criação, limpando o erro de uma tentativa anterior. */
     openCreateModal(): void {
+        this.openDialog.set('create');
         this.store.clearCreateError();
         this.createForm.reset({ name: '' });
         this.createColor.set(DEFAULT_ROLE_COLOR);
@@ -67,13 +84,15 @@ export class RoleListComponent implements OnInit {
             this.createForm.markAllAsTouched();
             return;
         }
+        if (this.createColorLacksContrast()) return;
 
         const name = this.createForm.getRawValue().name!;
         this.store.create(name, () => {
             setRoleColor(name, this.createColor());
             this.roleColorVersion.update(v => v + 1);
             this.createForm.reset({ name: '' });
-            document.getElementById('roleCreateModalCloseButton')?.click();
+            this.closeDialog();
+            this.toastService.show(`Função "${name}" criada.`);
         });
     }
 
@@ -106,6 +125,7 @@ export class RoleListComponent implements OnInit {
 
     /** Abre o modal de atribuição de permissões pré-marcando as permissões já atribuídas à role. */
     openPermissionsModal(role: Role): void {
+        this.openDialog.set('permissions');
         this.store.clearAssignPermissionsError();
         this.selectedRole.set(role);
         this.selectedPermissionCodes.set(new Set(role.permissionCodes));
@@ -188,7 +208,8 @@ export class RoleListComponent implements OnInit {
     /** Envia a atribuição de permissões marcadas para a role selecionada. */
     private submitAssignPermissions(role: Role): void {
         this.store.assignPermissions(role.name, Array.from(this.selectedPermissionCodes()), () => {
-            document.getElementById('rolePermissionsModalCloseButton')?.click();
+            this.closeDialog();
+            this.toastService.show(`Permissões da função "${role.name}" salvas.`);
         });
     }
 }

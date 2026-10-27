@@ -1,7 +1,8 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { UserSummary, UserRoleSummary } from '../entities/user-summary';
-import { visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames, getRoleColor } from '../../shared';
+import { UserSummary } from '../entities/user-summary';
+import { getRoleColor } from '../../shared';
+import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
 
 /**
  * Painel "Informações do Usuário" de Usuários: mostra os mesmos dados já carregados na linha
@@ -12,13 +13,17 @@ import { visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRol
  */
 @Component({
   selector: 'app-user-list-info-panel',
-  imports: [DatePipe],
+  imports: [DatePipe, SidePanelDirective],
   templateUrl: './user-list-info-panel.component.html',
-  styleUrl: './user-list-info-panel.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserListInfoPanelComponent {
   readonly user = input.required<UserSummary>();
+  /**
+   * Se o painel está no modo overlay de tela cheia (abaixo de "lg"): vira um diálogo modal de
+   * verdade (`aria-modal`) e prende o Tab dentro dele, já que a tabela por trás fica coberta.
+   */
+  readonly modal = input(false);
   /** Esconde o botão Ativar/Desativar — usado pra própria conta logada, que não pode se auto-(des)ativar. */
   readonly canToggleActive = input(true);
   readonly deactivating = input(false);
@@ -28,19 +33,6 @@ export class UserListInfoPanelComponent {
   readonly editClick = output<void>();
   readonly assignRolesClick = output<void>();
   readonly toggleActiveClick = output<void>();
-
-  /** Até 2 funções exibidas como badge; o restante vira um badge "+N" (mesma regra da tabela). */
-  visibleRoles(user: UserSummary): UserRoleSummary[] {
-    return sharedVisibleRoles(user.roles);
-  }
-
-  hiddenRolesCount(user: UserSummary): number {
-    return sharedHiddenRolesCount(user.roles);
-  }
-
-  hiddenRolesNames(user: UserSummary): string {
-    return sharedHiddenRolesNames(user.roles);
-  }
 
   /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
   roleColor(roleName: string): string | null {

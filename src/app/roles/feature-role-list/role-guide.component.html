@@ -1,30 +1,15 @@
-<div class="card filters-card mb-3">
-  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
-          [attr.aria-expanded]="open()" aria-controls="roleGuideBody" (click)="toggle()">
-    <span class="fw-bold">
-      <i class="bx bx-info-circle me-2"></i>Guia da Tela
-    </span>
-    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
-  </button>
+<app-screen-guide storageKey="tickest.roleGuide.open">
+  <app-guide-section title="O que é uma função">
+    <p class="small text-muted mb-0">Um conjunto de permissões atribuído a usuários — define o que cada um pode ver e fazer no sistema.</p>
+  </app-guide-section>
 
-  @if (open()) {
-    <div id="roleGuideBody" class="card-body pt-0">
-      <div class="guide-section">
-        <h6 class="guide-section-title">O que é uma função</h6>
-        <p class="small text-muted mb-0">Um conjunto de permissões atribuído a usuários — define o que cada um pode ver e fazer no sistema.</p>
-      </div>
+  <app-guide-section title="Permissões">
+    <p class="small text-muted mb-2">Uma função sem nenhuma permissão atribuída não dá acesso a nada administrativo pra quem a tem.</p>
+    <p class="small text-muted mb-0">Permissões marcadas como <span class="badge bg-label-danger">administrativa</span> afetam todos os usuários com a função — removê-las pede confirmação extra.</p>
+  </app-guide-section>
 
-      <div class="guide-section">
-        <h6 class="guide-section-title">Permissões</h6>
-        <p class="small text-muted mb-2">Uma função sem nenhuma permissão atribuída não dá acesso a nada administrativo pra quem a tem.</p>
-        <p class="small text-muted mb-0">Permissões marcadas como <span class="badge bg-label-danger">administrativa</span> afetam todos os usuários com a função — removê-las pede confirmação extra.</p>
-      </div>
-
-      <div class="guide-section mb-0">
-        <h6 class="guide-section-title">Badges especiais</h6>
-        <p class="small text-muted mb-2"><span class="badge bg-label-secondary">Padrão para novos colaboradores</span> — atribuída automaticamente a quem se cadastra.</p>
-        <p class="small text-muted mb-0"><span class="badge bg-label-danger">Administrador</span> — permissões gerenciadas pelo sistema, não editáveis aqui.</p>
-      </div>
-    </div>
-  }
-</div>
+  <app-guide-section title="Badges especiais">
+    <p class="small text-muted mb-2"><span class="badge bg-label-secondary">Padrão para novos colaboradores</span> — atribuída automaticamente a quem se cadastra.</p>
+    <p class="small text-muted mb-0"><span class="badge bg-label-danger">Administrador</span> — permissões gerenciadas pelo sistema, não editáveis aqui.</p>
+  </app-guide-section>
+</app-screen-guide>

@@ -323,7 +323,7 @@ describe('DepartmentListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).not.toContain('Adicionar setor');
-    expect(fixture.nativeElement.querySelector('button[data-bs-target="#departmentModal"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.page-actions button')?.textContent).toContain('Novo Departamento');
   });
 
   it('esconde as ações de departamento para quem só gerencia setores', async () => {

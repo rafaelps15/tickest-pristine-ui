@@ -14,6 +14,7 @@
   --tk-page-bg: #f5f5f9;
   --tk-surface: #ffffff;
   --tk-border: #e7e7ff;
+  --tk-input-border: #d9dee3;
 
   --tk-text-primary: #2b2c40;
   /* Escurecido em 2026-10-27 (era #697a8d, ~4,05:1 sobre --tk-page-bg) — subtítulo de Meus Tickets reprovava AA. */
@@ -55,6 +56,7 @@
   --tk-page-bg: #1a1d20;
   --tk-surface: #212529;
   --tk-border: #3a3f44;
+  --tk-input-border: #3a3f44;
 
   --tk-text-primary: #e9ecef;
   --tk-text-secondary: #adb5bd;
@@ -114,6 +116,149 @@ body {
 .page-subtitle {
   color: var(--tk-text-secondary);
   max-width: 48rem;
+}
+
+/*
+ * Cabeçalho de tela (`<app-page-header>`, shared/ui/page-header): título e subtítulo à esquerda,
+ * ações à direita, quebrando pra baixo no celular. A trilha fica acima do título, pequena e fora
+ * do `h1`; os níveis com tela própria são links.
+ */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.page-actions:empty {
+  display: none;
+}
+
+.page-title:focus {
+  outline: none;
+}
+
+.page-title:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+  border-radius: var(--tk-radius-sm);
+}
+
+.page-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--tk-text-secondary);
+}
+
+.page-crumbs li + li::before {
+  content: "/";
+  padding: 0 0.5rem;
+  color: var(--tk-text-muted);
+}
+
+.page-crumbs a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.page-crumbs a:hover {
+  color: var(--tk-primary);
+}
+
+/*
+ * Diálogo (`<app-dialog>`, shared/ui/dialog): o conteúdo projetado (um `<form>` ou `.dialog-content`
+ * envolvendo corpo + rodapé) continua sendo um flex em coluna, pra `.modal-dialog-scrollable`
+ * rolar só o `.modal-body` e manter o rodapé com os botões sempre visível.
+ */
+.modal-content > form,
+.modal-content > .dialog-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/*
+ * Card de estatística (`<app-stat-card>`, shared/ui/stat-card), do Dashboard e do Monitorar. Só o
+ * card que responde a clique (filtro ou link pra fila) sobe e ganha realce — o "Total" nunca é
+ * clicável, e elevar card sem ação é afordância falsa. A área de clique é o `::after` do
+ * `.stretched-link` (idiom do Bootstrap) cobrindo o card inteiro; o card filtrado agora fica com
+ * tingimento índigo (não uma borda colorida — banida pelo craft-floor).
+ */
+.card-stats {
+  background-color: var(--tk-surface);
+  position: relative;
+}
+
+.card-stats-clickable:hover {
+  box-shadow: var(--tk-shadow-md);
+  transform: translateY(-5px);
+}
+
+.card-stats-pressed {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+}
+
+.stat-press {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.card-stats-clickable .stretched-link::after {
+  border-radius: inherit;
+  transition: background-color var(--tk-transition);
+}
+
+.card-stats-clickable .stretched-link:hover::after {
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.card-stats-clickable .stretched-link:focus-visible {
+  outline: none;
+}
+
+.card-stats-clickable .stretched-link:focus-visible::after {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+/* Número do card: não é um heading (não é título de seção) — só peso e altura de linha. */
+.stat-value {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.kpi-icon {
+  border-radius: var(--tk-radius-md);
+}
+
+/* Celular: KPIs em grade 2x2 (`col-6`) — o ícone sai pra não espremer o número, que é o que importa. */
+@media (max-width: 575.98px) {
+  .card-stats .kpi-icon {
+    display: none;
+  }
+}
+
+.min-w-0 {
+  min-width: 0;
 }
 
 /* Cards: elevação suave e consistente em todas as telas */
@@ -189,7 +334,7 @@ body {
 
 .form-control, .form-select {
   border-radius: var(--tk-radius-sm);
-  border: 1.5px solid #d9dee3;
+  border: 1.5px solid var(--tk-input-border);
   transition: border-color var(--tk-transition), box-shadow var(--tk-transition), transform var(--tk-transition);
 }
 
@@ -353,7 +498,7 @@ body {
 
   .table-stack tr {
     position: relative;
-    padding: 0.875rem 1rem;
+    padding: 1rem;
     border-bottom: 1px solid var(--bs-border-color);
   }
 
@@ -362,7 +507,7 @@ body {
   }
 
   .table-stack td {
-    padding: 0.2rem 0;
+    padding: 0.25rem 0;
     border: 0;
     text-align: start !important;
   }
@@ -516,6 +661,20 @@ body {
   color: color-mix(in srgb, var(--role-color) 70%, white) !important;
 }
 
+/*
+ * Ponto colorido antes do texto do badge de status (Ativo/Inativo) — reforça a leitura rápida por
+ * cor, não só por texto. Global porque aparece na tabela, no painel e no Guia de Usuários (três
+ * componentes com encapsulamento de view); antes era a mesma regra copiada em cada um.
+ */
+.status-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  margin-right: 0.25rem;
+  background-color: currentColor;
+}
+
 /* Alertas */
 .alert {
   border: none;
@@ -608,4 +767,204 @@ router-outlet + * {
   .form-control:focus {
     transform: none !important;
   }
+}
+
+
+/*
+ * ============================================================================================
+ * Padrões de tela extraídos (extract, 2026-10-27) — antes copiados em cada componente.
+ * ============================================================================================
+ */
+
+/*
+ * Guia da Tela: card recolhível no topo de cada tela administrativa (Dashboard, Departamentos,
+ * Funções, Monitorar Tickets, Usuários). O botão de alternar usa só o visual do .card por baixo —
+ * reset do <button> nativo.
+ */
+/*
+ * Card de filtros (`<app-filter-bar>`, shared/ui/filter-bar): mais discreto que o card da tabela,
+ * que é o conteúdo principal da tela. "Limpar filtros" é ação secundária de baixa frequência e não
+ * compete com o botão primário do cabeçalho.
+ */
+.filters-card {
+  box-shadow: none;
+  border: 1px solid var(--tk-border);
+}
+
+.filters-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.filters-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.filters-footer:empty {
+  display: none;
+}
+
+.btn-clear-filters,
+.btn-more-filters {
+  color: var(--tk-text-secondary);
+  font-weight: 500;
+}
+
+.btn-clear-filters:hover,
+.btn-more-filters:hover {
+  color: var(--tk-text-primary);
+}
+
+/*
+ * Card "Resumo" (`<app-summary-card>`, shared/ui/summary-card): mesma linguagem do Guia — seções
+ * separadas por um fio. O número usa o passo Title da escala (1.5rem), não um tamanho próprio.
+ */
+.insights-section + .insights-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tk-border);
+}
+
+.insights-stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--tk-text-primary);
+  line-height: 1.2;
+}
+
+/* Card do Guia: borda fina e sem sombra — apoio da tela, mais discreto que a tabela/conteúdo. */
+.guide-card {
+  box-shadow: none;
+  border: 1px solid var(--tk-border);
+}
+
+.guide-section {
+  display: block;
+}
+
+.guide-toggle {
+  border: none;
+  background: transparent;
+  color: var(--tk-text-primary);
+}
+
+.guide-toggle:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: -2px;
+}
+
+.guide-section + .guide-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tk-border);
+}
+
+.guide-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tk-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/*
+ * Guia da Tela e Resumo ficam sempre no fluxo da tela, no topo, com a largura do conteúdo. Até
+ * 2026-10-27 havia um modo "trilha lateral" (≥1900px) que os tirava do fluxo com `position: fixed`
+ * numa faixa de ~130–170px ao lado do `container-xxl`: o limiar e a largura dependiam do viewport
+ * real (zoom do navegador, escala do Windows, barra lateral do Edge, largura da barra de rolagem
+ * dentro de `100vw`), então o mesmo monitor caía num modo no Chrome e no outro no Edge — e na
+ * trilha estreita o texto era cortado. Não reintroduzir.
+ */
+
+/*
+ * Painel lateral "Informações do X" (Usuários, Monitorar Tickets) — o comportamento de
+ * acessibilidade (região/diálogo, foco, Tab preso) vem da diretiva `appSidePanel`
+ * (shared/ui/directives/side-panel.directive.ts). De "lg" pra cima é só uma coluna ao lado da
+ * tabela e acompanha a rolagem; abaixo disso a tabela não tem espaço pra encolher, então o painel
+ * vira overlay de tela cheia — acima do cabeçalho/sidebar do layout (z-index até 1045) e abaixo da
+ * pilha de toasts global (1080). O fundo escurecido é o mesmo preto a 50% do `.modal-backdrop` do
+ * Bootstrap, pra parecer a mesma camada que os modais.
+ */
+.info-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 991.98px) {
+  .info-panel-col {
+    position: fixed;
+    inset: 0;
+    z-index: 1055;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+}
+
+.info-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Título recebe foco programático ao abrir o painel (tabindex="-1"): sem anel, mas ainda visível se alguém navegar por ele com teclado. */
+.info-panel-title:focus {
+  outline: none;
+}
+
+.info-panel-title:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+  border-radius: var(--tk-radius-sm);
+}
+
+/*
+ * Lista de campos rótulo/valor do painel (E-mail, Funções, Solicitante, Prazo...). Rótulo no passo
+ * Label do DESIGN.md (0.72rem, versalete rastreado — o mesmo do título "Descrição" e do Guia) e
+ * valor no corpo (1rem); antes eram 0.8rem/0.85rem, dois tamanhos fora da escala que deixavam
+ * rótulo e valor quase do mesmo tamanho. `baseline` alinha o rótulo menor à linha do valor.
+ */
+.info-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.info-list dt {
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.info-list dd {
+  margin: 0;
+}
+
+/*
+ * Estado vazio (tabela ou card sem itens): ícone em cinza neutro — nunca `opacity`, que derruba o
+ * contraste junto com o que estiver dentro — e texto num bloco de largura confortável. Todo estado
+ * vazio oferece uma ação (limpar filtros, criar o primeiro item) quando existir uma.
+ */
+.empty-state-icon {
+  color: var(--tk-text-muted);
+}
+
+.empty-state p {
+  max-width: 28rem;
+  margin-inline: auto;
 }

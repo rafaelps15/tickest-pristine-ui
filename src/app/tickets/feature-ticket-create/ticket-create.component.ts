@@ -6,11 +6,12 @@ import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
 import { ToastService } from '../../shared';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 
 /** Tela de abertura de um novo ticket. */
 @Component({
     selector: 'app-ticket-create',
-    imports: [ReactiveFormsModule, RouterLink],
+    imports: [ReactiveFormsModule, RouterLink, PageHeaderComponent],
     templateUrl: './ticket-create.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-create.component.css'

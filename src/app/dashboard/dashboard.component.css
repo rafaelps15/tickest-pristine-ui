@@ -1,51 +1,3 @@
-.card-stats {
-    background-color: var(--tk-surface);
-    position: relative;
-}
-
-/*
- * Documentado em DESIGN.md (Cards/Containers): cards de estatística do dashboard sobem para uma
- * sombra maior e elevam 5px no hover — `.card` já tem a transition pronta em styles.css. Restrito
- * a `.card-stats-clickable` (não a `.card-stats` em geral): o card "Total de Tickets" nunca é
- * clicável, e os 3 cards de status só são pra quem tem o papel administrativo — elevar os outros
- * do mesmo jeito é afordância falsa (convida ao clique, não faz nada). Achado no critique de
- * 2026-10-24.
- */
-.card-stats-clickable:hover {
-    box-shadow: var(--tk-shadow-md);
-    transform: translateY(-5px);
-}
-
-/*
- * Cards de status com permissão tickets:manage: card inteiro clicável via .stretched-link (link
- * invisível cobrindo o card, idiom do Bootstrap) pra "Monitorar Tickets" já filtrado pelo mesmo
- * status — mesmo tingimento de fundo índigo do .card-stats-btn do Monitorar Tickets (que filtra
- * dentro da própria tela); aqui é navegação entre telas, por isso <a>, não <button>.
- */
-.card-stats-clickable .stretched-link {
-    transition: background-color var(--tk-transition);
-}
-
-.card-stats-clickable .stretched-link:hover,
-.card-stats-clickable .stretched-link:focus-visible {
-    background-color: rgba(var(--tk-primary-rgb), 0.06);
-    border-radius: inherit;
-}
-
-.card-stats-clickable .stretched-link:focus-visible {
-    outline: 2px solid var(--tk-primary);
-    outline-offset: 2px;
-}
-
-/*
- * Ícone dos KPIs: tamanho/centralização vêm do `.icon-tile` global (styles.css); aqui só o canto do
- * card. Os ícones coloridos (bg-label-*) dos KPIs e das Ações Rápidas foram pedido do usuário em
- * 2026-10-24 pra deixar a tela mais colorida — reaproveitam cores semânticas do design system.
- */
-.kpi-icon {
-    border-radius: var(--tk-radius-md) !important;
-}
-
 /*
  * Atalhos de Ações Rápidas como linhas discretas (quieter, 2026-10-27): sem caixa com borda, alvo
  * de 44px, realce leve no hover — o botão "Novo Ticket" acima fica sendo a única ação primária.
@@ -60,7 +12,7 @@
     gap: 0.75rem;
     min-height: 2.75rem;
     margin: 0 -0.5rem;
-    padding: 0.625rem 0.5rem;
+    padding: 0.5rem;
     border-radius: var(--tk-radius-sm);
     color: var(--tk-text-primary);
     text-decoration: none;
@@ -111,58 +63,13 @@
 }
 
 /*
- * Celular: KPIs em grade 2x2 (`col-6`, como o DESIGN.md pede pra pares compactos) — o ícone do card
- * sai pra não espremer o número, que é o que importa; o gráfico encolhe pra não empurrar o resto da
- * tela pra baixo. Achado da critique de 2026-10-27 (quatro KPIs empilhados + 380px de gráfico
- * jogavam as ações ~3000px pra baixo).
+ * Celular: o gráfico encolhe pra não empurrar o resto da tela pra baixo (o ícone dos KPIs some pelo
+ * CSS global do `<app-stat-card>`). Achado da critique de 2026-10-27 (quatro KPIs empilhados + 380px
+ * de gráfico jogavam as ações ~3000px pra baixo).
  */
 @media (max-width: 575.98px) {
-    .kpi-icon {
-        display: none !important;
-    }
-
     .chart-container {
         height: 260px;
     }
 }
 
-/*
- * Número do card de estatística — não é um h3 (não é título de seção; os títulos reais da tela
- * são h2 com visual de h5, ex. "Tickets criados"). Achado no audit de 2026-10-26: usar h3 aqui invertia
- * a hierarquia de heading (nível maior num dado, antes de títulos de seção com nível menor).
- */
-.stat-value {
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-
-/*
- * Trilhas laterais, mesma mecânica e mesmas contas do Monitorar Tickets (ver
- * ticket-monitor.component.css) — só escapam do fluxo normal (pra fora do limite de 1320px do
- * `container-xxl`) numa janela realmente larga (≥1900px). Diferente do Monitor/Usuários, o
- * conteúdo da direita aqui tem dado real (Alertas de SLA) — não é só uma prévia "Em breve" — então
- * não pode ficar escondido abaixo de 1900px como lá; por isso fica no fluxo normal por padrão
- * (dentro da coluna de Ações Rápidas), igual o Guia já fica, em vez de some/aparece.
- */
-@media (min-width: 1900px) {
-  .guide-rail {
-    position: fixed;
-    top: 100px;
-    left: 268px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-
-  .insights-rail {
-    position: fixed;
-    top: 100px;
-    right: 8px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-}

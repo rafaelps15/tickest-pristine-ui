@@ -1,54 +1,62 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <h4 class="fw-bold pt-3 mb-1"><span class="text-muted fw-light">Administração /</span> Departamentos e setores</h4>
-        <p class="text-muted small mb-0">Os chamados são abertos para um setor dentro de um departamento. Cadastre cada setor no departamento a que ele pertence.</p>
-      </div>
-      @if (canManageDepartments()) {
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#departmentModal" (click)="openCreateModal()">
-          <i class="bx bx-plus me-1"></i> Novo departamento
-        </button>
-      }
-    </div>
+<app-page-header title="Departamentos e setores"
+                 subtitle="Os chamados são abertos para um setor dentro de um departamento. Cadastre cada setor no departamento a que ele pertence."
+                 [crumbs]="[{ label: 'Administração' }]">
+  @if (canManageDepartments()) {
+    <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
+      <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Departamento
+    </button>
+  }
+</app-page-header>
+
+<app-department-guide />
+<app-department-insights [departments]="store.departments()"
+                         [loading]="store.listState().loading && store.departments().length === 0"
+                         [failed]="!!store.listState().error && store.departments().length === 0" />
+
+@if (store.listState().error; as error) {
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2" role="alert">
+    <span>{{ error }}</span>
+    <!-- Recarregar só resolve falha de carga; o erro de uma ação (excluir etc.) não some recarregando. -->
+    @if (!store.mutationError()) {
+      <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
+    }
   </div>
-</div>
-
-<app-department-guide class="guide-rail" />
-<app-department-insights class="insights-rail" [departments]="store.departments()" />
-
-@if (store.listState().error) {
-  <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }
 
 @if (store.departments().length > 0) {
-  <div class="row mb-3">
-    <div class="col-12 col-md-4">
+  <app-filter-bar label="Busca" clearLabel="Limpar busca" [clearable]="searchInput() !== ''" (clear)="searchInput.set('')">
+    <div class="col-12 col-md-6 col-lg-4">
       <label class="form-label small" for="departmentSearch">Buscar</label>
       <div class="input-group">
-        <span class="input-group-text"><i class="bx bx-search"></i></span>
-        <input id="departmentSearch" type="text" class="form-control" placeholder="Departamento ou setor"
+        <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+        <input id="departmentSearch" type="search" class="form-control" placeholder="Departamento ou setor"
                [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
       </div>
     </div>
-  </div>
+  </app-filter-bar>
 }
 
 @if (store.listState().loading && store.departments().length === 0) {
-  <div class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando…</span></span></div>
+  <app-loading-state label="Carregando departamentos…" />
 } @else if (store.departments().length === 0) {
   <div class="card shadow-sm border-0">
-    <div class="card-body text-center py-5 text-muted">
-      <i class="bx bx-sitemap display-6 d-block mb-2 opacity-50"></i>
-      Nenhum departamento cadastrado ainda.
-    </div>
+    <app-empty-state icon="bx-sitemap" title="Nenhum departamento cadastrado ainda."
+                     hint="Crie o primeiro departamento e cadastre nele os setores que atendem chamados.">
+      @if (canManageDepartments()) {
+        <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
+          <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Departamento
+        </button>
+      }
+    </app-empty-state>
   </div>
 } @else if (filteredDepartments().length === 0) {
   <div class="card shadow-sm border-0">
-    <div class="card-body text-center py-5 text-muted">
-      <i class="bx bx-search-alt display-6 d-block mb-2 opacity-50"></i>
-      Nenhum departamento ou setor encontrado para "{{ searchInput() }}".
-    </div>
+    <app-empty-state icon="bx-search-alt" [title]="'Nenhum departamento ou setor encontrado para &quot;' + searchInput() + '&quot;.'"
+                     hint="Confira a grafia ou busque pelo nome do departamento.">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="searchInput.set('')">
+        <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar busca
+      </button>
+    </app-empty-state>
   </div>
 } @else {
   <div class="row g-4">
@@ -57,12 +65,12 @@
         <div class="card shadow-sm border-0">
           <div class="card-header d-flex align-items-start justify-content-between gap-3">
             <div>
-              <h5 class="mb-1 fw-bold">
+              <h2 class="h5 mb-1 fw-bold">
                 {{ department.name }}
                 <span class="badge bg-label-secondary ms-1 align-middle">
                   {{ department.sectors.length }} {{ department.sectors.length === 1 ? 'setor' : 'setores' }}
                 </span>
-              </h5>
+              </h2>
               <div class="text-muted small">{{ department.description }}</div>
               @if (department.responsibleUserName) {
                 <div class="text-muted small mt-1"><i class="bx bx-user me-1"></i>Responsável: {{ department.responsibleUserName }}</div>
@@ -70,7 +78,7 @@
             </div>
             @if (canManageDepartments()) {
               <div class="d-flex flex-shrink-0">
-                <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" data-bs-toggle="modal" data-bs-target="#departmentModal" (click)="openEditModal(department)" [attr.aria-label]="'Editar o departamento ' + department.name">
+                <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" (click)="openEditModal(department)" [attr.aria-label]="'Editar o departamento ' + department.name">
                   <i class="bx bx-edit"></i>
                 </button>
                 <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" (click)="onDelete(department)" [attr.aria-label]="'Excluir o departamento ' + department.name">
@@ -91,7 +99,7 @@
                 </div>
                 @if (canManageSectors()) {
                   <div class="d-flex flex-shrink-0">
-                    <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" data-bs-toggle="modal" data-bs-target="#sectorModal" (click)="openEditSectorModal(department, sector)" [attr.aria-label]="'Editar o setor ' + sector.name">
+                    <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" (click)="openEditSectorModal(department, sector)" [attr.aria-label]="'Editar o setor ' + sector.name">
                       <i class="bx bx-edit"></i>
                     </button>
                     <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" (click)="onDeleteSector(department, sector)" [attr.aria-label]="'Excluir o setor ' + sector.name">
@@ -109,7 +117,7 @@
 
           @if (canManageSectors()) {
             <div class="card-footer bg-transparent">
-              <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#sectorModal" (click)="openCreateSectorModal(department)">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="openCreateSectorModal(department)">
                 <i class="bx bx-plus me-1"></i> Adicionar setor
               </button>
             </div>
@@ -120,162 +128,145 @@
   </div>
 }
 
-<!-- Modal de criação/edição de departamento -->
-<div class="modal fade" id="departmentModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="departmentModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="departmentModalTitle">{{ editingDepartment() ? 'Editar departamento' : 'Novo departamento' }}</h5>
-          <button id="departmentModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.mutationError()) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
-          }
-          <div class="mb-3">
-            <label class="form-label" for="departmentName">Nome</label>
-            <input id="departmentName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Tecnologia da Informação"
-                   [class.is-invalid]="isFieldInvalid('name')"
-                   [attr.aria-describedby]="isFieldInvalid('name') ? 'departmentName-error' : null" />
-            @if (isFieldInvalid('name')) {
-              <div class="invalid-feedback" id="departmentName-error">
-                @if (form.controls.name.errors?.['required']) {
-                  O nome é obrigatório.
-                } @else if (form.controls.name.errors?.['maxlength']) {
-                  O nome deve ter no máximo 100 caracteres.
-                }
-              </div>
+@if (openDialog() === 'department') {
+<app-dialog id="departmentModal" [title]="editingDepartment() ? 'Editar departamento' : 'Novo departamento'" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="modal-body">
+      @if (store.mutationError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
+      }
+      <div class="mb-3">
+        <label class="form-label" for="departmentName">Nome</label>
+        <input id="departmentName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Tecnologia da Informação"
+               [class.is-invalid]="isFieldInvalid('name')"
+               [attr.aria-describedby]="isFieldInvalid('name') ? 'departmentName-error' : null" />
+        @if (isFieldInvalid('name')) {
+          <div class="invalid-feedback" id="departmentName-error">
+            @if (form.controls.name.errors?.['required']) {
+              O nome é obrigatório.
+            } @else if (form.controls.name.errors?.['maxlength']) {
+              O nome deve ter no máximo 100 caracteres.
             }
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="departmentDescription">Descrição</label>
-            <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"
-                      [class.is-invalid]="isFieldInvalid('description')"
-                      [attr.aria-describedby]="isFieldInvalid('description') ? 'departmentDescription-error' : null"></textarea>
-            @if (isFieldInvalid('description')) {
-              <div class="invalid-feedback" id="departmentDescription-error">
-                @if (form.controls.description.errors?.['required']) {
-                  A descrição é obrigatória.
-                } @else if (form.controls.description.errors?.['maxlength']) {
-                  A descrição deve ter no máximo 500 caracteres.
-                }
-              </div>
+        }
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="departmentDescription">Descrição</label>
+        <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"
+                  [class.is-invalid]="isFieldInvalid('description')"
+                  [attr.aria-describedby]="isFieldInvalid('description') ? 'departmentDescription-error' : null"></textarea>
+        @if (isFieldInvalid('description')) {
+          <div class="invalid-feedback" id="departmentDescription-error">
+            @if (form.controls.description.errors?.['required']) {
+              A descrição é obrigatória.
+            } @else if (form.controls.description.errors?.['maxlength']) {
+              A descrição deve ter no máximo 500 caracteres.
             }
           </div>
+        }
+      </div>
 
-          <div class="mb-3">
-            <label class="form-label" for="departmentResponsibleSearch">Responsável <span class="text-muted fw-normal">(opcional)</span></label>
+      <div class="mb-3">
+        <label class="form-label" for="departmentResponsibleSearch">Responsável <span class="text-muted fw-normal">(opcional)</span></label>
 
-            @if (loadingCurrentResponsible()) {
-              <div class="small text-muted mb-2">
-                <span class="spinner-border spinner-border-sm me-1" role="status"><span class="visually-hidden">Carregando responsável atual…</span></span>
-                Carregando responsável atual…
-              </div>
-            } @else if (selectedResponsibleName(); as currentName) {
-              <p class="small mb-2">
-                Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
-                <button type="button" class="btn btn-link btn-sm p-0 ms-2 align-baseline" (click)="onClearResponsible()">Remover</button>
-              </p>
-            } @else {
-              <p class="text-muted small mb-2">Nenhum responsável selecionado.</p>
-            }
-
-            <div class="input-group mb-2">
-              <span class="input-group-text"><i class="bx bx-search"></i></span>
-              <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
-                     [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
-            </div>
-
-            @if (store.responsibleSearchError()) {
-              <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.responsibleSearchError() }}</div>
-            } @else if (store.searchingResponsible()) {
-              <div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
-            } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
-              <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
-            } @else if (store.responsibleCandidates().length > 0) {
-              <ul class="list-group">
-                @for (candidate of store.responsibleCandidates(); track candidate.id) {
-                  <li class="list-group-item p-0">
-                    <button type="button" class="btn w-100 text-start p-2 rounded-0" (click)="onSelectResponsible(candidate)">
-                      <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
-                      <div class="small text-muted">{{ candidate.email }}</div>
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
+        @if (loadingCurrentResponsible()) {
+          <div class="small text-muted mb-2">
+            <span class="spinner-border spinner-border-sm me-1" role="status"><span class="visually-hidden">Carregando responsável atual…</span></span>
+            Carregando responsável atual…
           </div>
+        } @else if (selectedResponsibleName(); as currentName) {
+          <p class="small mb-2">
+            Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
+            <button type="button" class="btn btn-link btn-sm p-0 ms-2 align-baseline" (click)="onClearResponsible()">Remover</button>
+          </p>
+        } @else {
+          <p class="text-muted small mb-2">Nenhum responsável selecionado.</p>
+        }
 
-          @if (!editingDepartment()) {
-            <p class="text-muted small mb-0">Depois de salvar, adicione os setores do departamento no próprio card dele.</p>
-          }
+        <div class="input-group mb-2">
+          <span class="input-group-text"><i class="bx bx-search"></i></span>
+          <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
+                 [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || loadingCurrentResponsible()">
-            @if (store.mutating()) {
-              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+
+        @if (store.responsibleSearchError()) {
+          <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.responsibleSearchError() }}</div>
+        } @else if (store.searchingResponsible()) {
+          <div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
+        } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
+          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+        } @else if (store.responsibleCandidates().length > 0) {
+          <ul class="list-group">
+            @for (candidate of store.responsibleCandidates(); track candidate.id) {
+              <li class="list-group-item p-0">
+                <button type="button" class="btn w-100 text-start p-2 rounded-0" (click)="onSelectResponsible(candidate)">
+                  <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
+                  <div class="small text-muted">{{ candidate.email }}</div>
+                </button>
+              </li>
             }
-            Salvar
-          </button>
-        </div>
-      </form>
+          </ul>
+        }
+      </div>
+
+      @if (!editingDepartment()) {
+        <p class="text-muted small mb-0">Depois de salvar, adicione os setores do departamento no próprio card dele.</p>
+      }
     </div>
-  </div>
-</div>
-
-<!-- Modal de criação/edição de setor (sempre dentro de um departamento) -->
-<div class="modal fade" id="sectorModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="sectorModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="sectorForm" (ngSubmit)="onSubmitSector()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="sectorModalTitle">
-            {{ editingSector() ? 'Editar setor' : 'Novo setor' }}
-            <span class="d-block text-muted small fw-normal mt-1">em {{ sectorDepartment()?.name }}</span>
-          </h5>
-          <button id="sectorModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.mutationError()) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
-          }
-          <div class="mb-3">
-            <label class="form-label" for="sectorName">Nome</label>
-            <input id="sectorName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Suporte técnico"
-                   [class.is-invalid]="isSectorFieldInvalid('name')"
-                   [attr.aria-describedby]="isSectorFieldInvalid('name') ? 'sectorName-error' : null" />
-            @if (isSectorFieldInvalid('name')) {
-              <div class="invalid-feedback" id="sectorName-error">
-                @if (sectorForm.controls.name.errors?.['required']) {
-                  O nome é obrigatório.
-                } @else if (sectorForm.controls.name.errors?.['maxlength']) {
-                  O nome deve ter no máximo 100 caracteres.
-                }
-              </div>
-            }
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="sectorDescription">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
-            <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description" placeholder="Que tipo de chamado este setor atende"
-                      [class.is-invalid]="isSectorFieldInvalid('description')"
-                      [attr.aria-describedby]="isSectorFieldInvalid('description') ? 'sectorDescription-error' : null"></textarea>
-            @if (isSectorFieldInvalid('description')) {
-              <div class="invalid-feedback" id="sectorDescription-error">A descrição deve ter no máximo 500 caracteres.</div>
-            }
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
-            @if (store.mutating()) {
-              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-            }
-            Salvar
-          </button>
-        </div>
-      </form>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || loadingCurrentResponsible()">
+        @if (store.mutating()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+        }
+        Salvar
+      </button>
     </div>
-  </div>
-</div>
+  </form>
+</app-dialog>
+}
+
+@if (openDialog() === 'sector') {
+<app-dialog id="sectorModal" [title]="editingSector() ? 'Editar setor' : 'Novo setor'" [subtitle]="sectorDepartment() ? 'em ' + sectorDepartment()!.name : null" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="sectorForm" (ngSubmit)="onSubmitSector()">
+    <div class="modal-body">
+      @if (store.mutationError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
+      }
+      <div class="mb-3">
+        <label class="form-label" for="sectorName">Nome</label>
+        <input id="sectorName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Suporte técnico"
+               [class.is-invalid]="isSectorFieldInvalid('name')"
+               [attr.aria-describedby]="isSectorFieldInvalid('name') ? 'sectorName-error' : null" />
+        @if (isSectorFieldInvalid('name')) {
+          <div class="invalid-feedback" id="sectorName-error">
+            @if (sectorForm.controls.name.errors?.['required']) {
+              O nome é obrigatório.
+            } @else if (sectorForm.controls.name.errors?.['maxlength']) {
+              O nome deve ter no máximo 100 caracteres.
+            }
+          </div>
+        }
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="sectorDescription">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
+        <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description" placeholder="Que tipo de chamado este setor atende"
+                  [class.is-invalid]="isSectorFieldInvalid('description')"
+                  [attr.aria-describedby]="isSectorFieldInvalid('description') ? 'sectorDescription-error' : null"></textarea>
+        @if (isSectorFieldInvalid('description')) {
+          <div class="invalid-feedback" id="sectorDescription-error">A descrição deve ter no máximo 500 caracteres.</div>
+        }
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
+        @if (store.mutating()) {
+          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+        }
+        Salvar
+      </button>
+    </div>
+  </form>
+</app-dialog>
+}

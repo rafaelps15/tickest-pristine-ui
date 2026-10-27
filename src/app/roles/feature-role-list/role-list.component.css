@@ -30,31 +30,3 @@
   border: none;
   border-radius: 50%;
 }
-
-/*
- * Trilhas laterais, mesma mecânica do Monitorar Tickets (ver ticket-monitor.component.css) — só
- * escapam do fluxo normal numa janela realmente larga (≥1900px). O Resumo tem dado real (não é
- * "Em breve"), então fica sempre visível no fluxo normal por padrão, igual o Guia — nunca some
- * abaixo de 1900px.
- */
-@media (min-width: 1900px) {
-  .guide-rail {
-    position: fixed;
-    top: 100px;
-    left: 268px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-
-  .insights-rail {
-    position: fixed;
-    top: 100px;
-    right: 8px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-}

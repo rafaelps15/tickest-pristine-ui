@@ -1,21 +1,12 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-      <div class="text-break">
-        <h4 class="fw-bold mb-0"><span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Chamado' }}</h4>
-      </div>
-      <a [routerLink]="backLink" class="btn btn-outline-secondary btn-sm">
-        <i class="bx bx-arrow-back me-1"></i> Voltar
-      </a>
-    </div>
-  </div>
-</div>
+<app-page-header [title]="ticket()?.title ?? 'Chamado'" [crumbs]="crumbs">
+  <a pageActions [routerLink]="backLink" class="btn btn-outline-secondary btn-sm">
+    <i class="bx bx-arrow-back me-1" aria-hidden="true"></i> Voltar
+  </a>
+</app-page-header>
 
 @if (detailStore.state().loading) {
   <div class="card shadow-sm border-0 mb-3">
-    <div class="card-body p-4 text-center py-5">
-      <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando o chamado…</span></span>
-    </div>
+    <app-loading-state label="Carregando o chamado…" />
   </div>
 } @else if (ticket(); as t) {
   <div class="card shadow-sm border-0 mb-3">
@@ -36,11 +27,13 @@
       </p>
 
       @if (nextStatusOptions(t.status).length > 0 || canReopenTicket(t.status) || canCancelAsOwner(t)) {
-        <div class="d-flex gap-2 flex-wrap mb-4">
+        <!-- Uma ação principal por vez: a próxima etapa natural é o primário; Cancelar fica no fim, separado. -->
+        <div class="ticket-actions d-flex gap-2 flex-wrap mb-4">
           @for (nextStatus of nextStatusOptions(t.status); track nextStatus) {
             <button type="button" class="btn btn-sm"
                     [class.btn-outline-danger]="nextStatus === TicketStatus.Canceled"
-                    [class.btn-outline-primary]="nextStatus !== TicketStatus.Canceled"
+                    [class.btn-primary]="nextStatus !== TicketStatus.Canceled"
+                    [class.ms-sm-auto]="nextStatus === TicketStatus.Canceled"
                     [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(nextStatus, t.description)">
               @if (detailStore.updatingStatus() && pendingStatus() === nextStatus) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
@@ -49,7 +42,7 @@
             </button>
           }
           @if (canReopenTicket(t.status)) {
-            <button #reopenButton type="button" class="btn btn-sm btn-outline-success" [disabled]="detailStore.reopening()" (click)="onReopen()">
+            <button #reopenButton type="button" class="btn btn-sm btn-primary" [disabled]="detailStore.reopening()" (click)="onReopen()">
               @if (detailStore.reopening()) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
@@ -57,7 +50,7 @@
             </button>
           }
           @if (canCancelAsOwner(t)) {
-            <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(TicketStatus.Canceled, t.description)">
+            <button type="button" class="btn btn-sm btn-outline-danger ms-sm-auto" [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(TicketStatus.Canceled, t.description)">
               @if (detailStore.updatingStatus() && pendingStatus() === TicketStatus.Canceled) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
@@ -67,20 +60,20 @@
         </div>
       }
 
-      <dl class="row small mb-0 max-w-700">
-        <dt class="col-12 col-sm-3 text-muted fw-normal">Aberto por</dt>
-        <dd class="col-12 col-sm-9">{{ t.openedByName }}</dd>
+      <dl class="info-list mb-0 max-w-700">
+        <dt>Aberto por</dt>
+        <dd>{{ t.openedByName }}</dd>
 
-        <dt class="col-12 col-sm-3 text-muted fw-normal">Responsável</dt>
-        <dd class="col-12 col-sm-9 d-flex align-items-center gap-2 flex-wrap">
+        <dt>Responsável</dt>
+        <dd class="d-flex align-items-center gap-2 flex-wrap">
           {{ t.assignedToName ?? 'Ainda não atribuído' }}
           @if (canAssignTicket(t.status)) {
-            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ticketAssignModal" (click)="onOpenAssignModal()">
+            <button type="button" class="btn btn-link btn-sm p-0" (click)="onOpenAssignModal()">
               {{ t.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
             </button>
           }
           @if (canRemoveAssignee(t.status, t.assignedToName)) {
-            <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.removingAssignee()" (click)="onRemoveAssignee(t.assignedToName!)">
+            <button type="button" class="btn btn-link btn-sm p-0 link-danger" [disabled]="detailStore.removingAssignee()" (click)="onRemoveAssignee(t.assignedToName!)">
               @if (detailStore.removingAssignee()) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
@@ -89,22 +82,22 @@
           }
         </dd>
 
-        <dt class="col-12 col-sm-3 text-muted fw-normal">Setor</dt>
-        <dd class="col-12 col-sm-9">{{ t.sectorName }}</dd>
+        <dt>Setor</dt>
+        <dd>{{ t.sectorName }}</dd>
 
-        <dt class="col-12 col-sm-3 text-muted fw-normal">Aberto em</dt>
-        <dd class="col-12 col-sm-9">{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        <dt>Aberto em</dt>
+        <dd>{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
 
         @if (t.resolvedAtUtc) {
-          <dt class="col-12 col-sm-3 text-muted fw-normal">Resolvido em</dt>
-          <dd class="col-12 col-sm-9">{{ t.resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+          <dt>Resolvido em</dt>
+          <dd>{{ t.resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
         }
 
         <!-- Só sem o painel de SLA: com ele, o prazo vigente (que muda a cada reabertura) já está lá —
              este `dueAtUtc` é sempre o do primeiro ciclo. -->
         @if (!detailStore.sla()) {
-          <dt class="col-12 col-sm-3 text-muted fw-normal">Prazo</dt>
-          <dd class="col-12 col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
+          <dt>Prazo</dt>
+          <dd class="mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
             {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
             @if (dueRelativeLabel(t); as relative) {
               <span class="fw-semibold">— {{ relative }}</span>
@@ -130,7 +123,7 @@
 @if (detailStore.sla(); as slaBlock) {
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <h5 class="mb-0 fw-bold">SLA</h5>
+      <h2 class="h5 mb-0 fw-bold">SLA</h2>
       <div class="d-flex align-items-center gap-2">
         <span class="text-muted small">{{ slaBlock.plan.policyName }} · {{ slaBlock.plan.calendarName }}</span>
         @if (slaBlock.plan.isLegacy) {
@@ -204,7 +197,7 @@
 
 <div class="card shadow-sm border-0 mb-3">
   <div class="card-header py-3">
-    <h5 class="mb-0 fw-bold">Mensagens</h5>
+    <h2 class="h5 mb-0 fw-bold">Mensagens</h2>
   </div>
 
   <div class="card-body p-4">
@@ -308,8 +301,8 @@
 
 <div class="card shadow-sm border-0">
   <div class="card-header py-3 d-flex align-items-center justify-content-between">
-    <h5 class="mb-0 fw-bold">Anexos</h5>
-    <button type="button" class="btn btn-sm btn-primary mb-0" [disabled]="store.uploading()" (click)="openFilePicker()">
+    <h2 class="h5 mb-0 fw-bold">Anexos</h2>
+    <button type="button" class="btn btn-sm btn-outline-primary mb-0" [disabled]="store.uploading()" (click)="openFilePicker()">
       @if (store.uploading()) {
         <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
       } @else {
@@ -376,7 +369,7 @@
 
 <div class="card shadow-sm border-0 mt-3">
   <div class="card-header py-3">
-    <h5 class="mb-0 fw-bold">Histórico</h5>
+    <h2 class="h5 mb-0 fw-bold">Histórico</h2>
   </div>
 
   <div class="card-body p-4">
@@ -418,105 +411,15 @@
   </div>
 </div>
 
-<!-- Modal de atribuição de responsável -->
-<div class="modal fade" id="ticketAssignModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="ticketAssignModalTitle">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="ticketAssignModalTitle">{{ ticket()?.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}</h5>
-        <button id="ticketAssignModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        @if (ticket()?.assignedToName; as currentName) {
-          <p class="text-muted small mb-3">Responsável atual: <span class="fw-semibold">{{ currentName }}</span></p>
-        }
-
-        <label class="form-label small" for="ticketAssigneeSearch">Buscar usuário</label>
-        <div class="input-group mb-3">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="ticketAssigneeSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
-                 [value]="assigneeSearchInput()" (input)="assigneeSearchInput.set($any($event.target).value)" />
-        </div>
-
-        <!-- Anúncio só pra leitor de tela: a contagem muda a cada busca, sem outro sinal sonoro disso. -->
-        <div class="visually-hidden" aria-live="polite">
-          @if (!detailStore.searchingAssignees() && assigneeSearchInput().trim().length > 0) {
-            {{ detailStore.assigneeCandidates().length }} usuário(s) encontrado(s)
-          }
-        </div>
-
-        @if (detailStore.assigneeSearchError()) {
-          <div class="alert alert-danger border-0 shadow-sm py-2 small mb-0" role="alert">{{ detailStore.assigneeSearchError() }}</div>
-        } @else if (detailStore.searchingAssignees()) {
-          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
-        } @else if (assigneeSearchInput().trim().length === 0) {
-          <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
-        } @else if (detailStore.assigneeCandidates().length === 0) {
-          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
-        } @else {
-          <ul class="list-group assignee-candidates" role="listbox" aria-label="Usuários encontrados"
-              [attr.aria-activedescendant]="'assignee-candidate-' + focusedAssigneeIndex()"
-              (keydown)="onAssigneeListKeydown($event, detailStore.assigneeCandidates().length)">
-            @for (candidate of detailStore.assigneeCandidates(); track candidate.id; let i = $index) {
-              <li [id]="'assignee-candidate-' + i" class="list-group-item assignee-candidate" role="option"
-                  [attr.tabindex]="focusedAssigneeIndex() === i ? 0 : -1"
-                  [class.is-selected]="selectedAssigneeId() === candidate.id"
-                  [attr.aria-selected]="selectedAssigneeId() === candidate.id"
-                  (click)="onSelectAssignee(candidate.id, i)" (keydown.enter)="onSelectAssignee(candidate.id, i)">
-                <div class="d-flex align-items-start justify-content-between gap-2">
-                  <div class="assignee-candidate-info">
-                    <div class="fw-semibold assignee-candidate-name text-break">{{ candidate.firstName }} {{ candidate.lastName }}</div>
-                    <div class="small text-break" [class.text-muted]="selectedAssigneeId() !== candidate.id">{{ candidate.email }}</div>
-                    @if (candidate.roles.length > 0) {
-                      <div class="mt-1">
-                        @for (role of visibleCandidateRoles(candidate); track role.name) {
-                          @let color = roleColor(role.name);
-                          <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
-                        }
-                        @if (hiddenCandidateRolesCount(candidate) > 0) {
-                          <span class="badge bg-label-secondary badge-roles-overflow" tabindex="0"
-                                [title]="hiddenCandidateRolesNames(candidate)" [attr.aria-label]="'Funções adicionais: ' + hiddenCandidateRolesNames(candidate)">
-                            +{{ hiddenCandidateRolesCount(candidate) }}
-                          </span>
-                        }
-                      </div>
-                    }
-                  </div>
-                  <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                    @if (candidate.id === ticket()?.assignedToUserId) {
-                      <span class="text-muted small text-nowrap">Atual</span>
-                    }
-                    @if (selectedAssigneeId() === candidate.id) {
-                      <i class="bx bx-check-circle fs-5 assignee-candidate-check" aria-hidden="true"></i>
-                    }
-                  </div>
-                </div>
-              </li>
-            }
-          </ul>
-        }
-
-        @if (detailStore.mutationError()) {
-          <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ detailStore.mutationError() }}</div>
-        }
-      </div>
-      <div class="modal-footer flex-column align-items-stretch">
-        @if (ticket()?.assignedToName && selectedAssigneeName(); as newName) {
-          <p class="text-muted small mb-2">Isso substitui <span class="fw-semibold">{{ ticket()?.assignedToName }}</span> por <span class="fw-semibold">{{ newName }}</span> como responsável.</p>
-        }
-        <div class="d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" [disabled]="!selectedAssigneeId() || detailStore.assigningTicket()" (click)="onConfirmAssign()">
-            @if (detailStore.assigningTicket()) {
-              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            }
-            {{ ticket()?.assignedToName ? 'Reatribuir' : 'Atribuir' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+@if (assignDialogOpen()) {
+  <app-ticket-assign-dialog [ticketTitle]="ticket()?.title ?? ''" [currentName]="ticket()?.assignedToName ?? null"
+                            [currentUserId]="ticket()?.assignedToUserId ?? null"
+                            [candidates]="detailStore.assigneeCandidates()" [searching]="detailStore.searchingAssignees()"
+                            [searchError]="detailStore.assigneeSearchError()"
+                            [saving]="detailStore.assigningTicket()" [error]="detailStore.mutationError()"
+                            (search)="detailStore.searchAssignees($event)" (selectionChange)="detailStore.clearMutationError()"
+                            (confirm)="onConfirmAssign($event)" (closed)="assignDialogOpen.set(false)" />
+}
 
 @if (editingTicket(); as editing) {
   <app-ticket-edit-dialog [ticket]="editing" [saving]="detailStore.updatingDescription()" [error]="detailStore.mutationError()"

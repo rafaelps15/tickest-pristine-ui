@@ -1,30 +1,31 @@
-<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
-  <div>
-    <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Administração /</span> Gestão de Usuários</h4>
-    <p class="page-subtitle small mb-0">Cadastre colaboradores, atribua funções e controle quem pode acessar o sistema.</p>
-  </div>
-  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userCreateModal" (click)="store.resetState()">
-    <i class="bx bx-plus me-1"></i> Novo Usuário
+<app-page-header title="Usuários" subtitle="Cadastre colaboradores, atribua funções e controle quem pode acessar o sistema."
+                 [crumbs]="[{ label: 'Administração' }]">
+  <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
+    <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Usuário
   </button>
-</div>
+</app-page-header>
 
-@if (store.listState().error) {
-  <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
+<app-user-list-guide />
+
+@if (store.listState().error; as error) {
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2" role="alert">
+    <span>{{ error }}</span>
+    <!-- Recarregar só resolve falha de carga; erro de uma ação (desativar etc.) não some recarregando. -->
+    @if (store.listLoadFailed()) {
+      <button type="button" class="btn btn-sm btn-outline-danger" (click)="store.loadAll()">
+        <i class="bx bx-refresh me-1"></i>Recarregar lista
+      </button>
+    }
+  </div>
 }
 
 <!-- Filtros -->
-<div class="card filters-card mb-3">
-  <div class="card-body p-3">
-    <div class="filters-label mb-3">
-      <i class="bx bx-filter-alt"></i>
-      Filtros
-    </div>
-    <div class="row g-3 align-items-end">
+<app-filter-bar (clear)="onClearFilters()">
       <div class="col-12 col-md-4">
         <label class="form-label small" for="userSearch">Buscar</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="userSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
+          <input id="userSearch" type="search" class="form-control" placeholder="Nome, sobrenome ou e-mail"
                  [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
         </div>
       </div>
@@ -40,26 +41,27 @@
         <label class="form-label small" for="userCreatedFrom">Período de cadastro</label>
         <div class="d-flex align-items-center gap-2">
           <input id="userCreatedFrom" type="date" class="form-control" aria-label="Cadastrado a partir de"
+                 [class.is-invalid]="periodError()" [attr.aria-invalid]="!!periodError()" [attr.aria-describedby]="periodError() ? 'userPeriod-error' : null"
                  [value]="store.filters().createdFrom ?? ''" (change)="onCreatedFromChange($any($event.target).value)" />
           <span class="text-muted small">até</span>
           <input id="userCreatedTo" type="date" class="form-control" aria-label="Cadastrado até"
+                 [class.is-invalid]="periodError()" [attr.aria-invalid]="!!periodError()" [attr.aria-describedby]="periodError() ? 'userPeriod-error' : null"
                  [value]="store.filters().createdTo ?? ''" (change)="onCreatedToChange($any($event.target).value)" />
         </div>
+        @if (periodError(); as message) {
+          <div class="invalid-feedback d-block" id="userPeriod-error">{{ message }}</div>
+        }
       </div>
-      <div class="col-12 col-md-2 text-md-end">
-        <button type="button" class="btn btn-link btn-clear-filters text-decoration-none px-0" (click)="onClearFilters()">
-          <i class="bx bx-x me-1"></i>Limpar filtros
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+</app-filter-bar>
+
+<!-- Região sempre presente: um aria-live que nasce junto com o conteúdo não anuncia a primeira mudança. -->
+<div class="visually-hidden" aria-live="polite">{{ selectionAnnouncement() }}</div>
 
 @if (selectedCount() > 0) {
   <div class="bulk-actions-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
     <div class="d-flex align-items-center gap-2">
       <i class="bx bx-check-square fs-5"></i>
-      <span class="fw-semibold" aria-live="polite">{{ selectedCount() === 1 ? '1 selecionado' : selectedCount() + ' selecionados' }}</span>
+      <span class="fw-semibold">{{ selectedCount() === 1 ? '1 selecionado' : selectedCount() + ' selecionados' }}</span>
       @if (store.totalPages() > 1) {
         <span class="text-muted small">(só desta página)</span>
       }
@@ -69,7 +71,7 @@
     </div>
     <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deactivatingIds().length > 0" (click)="onBulkDeactivate()">
       @if (store.deactivatingIds().length > 0) {
-        <span class="spinner-border spinner-border-sm me-1"></span>
+        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
       }
       <i class="bx bx-block me-1"></i>Desativar selecionados
     </button>
@@ -78,17 +80,20 @@
 
 <div class="row g-3">
   <div class="col-12" [class.col-lg-8]="infoPanelUser()">
-  <app-user-list-guide class="guide-rail" />
   <div class="card shadow-sm border-0">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0"
-           [class.is-refreshing]="store.listState().loading && store.users().length > 0">
+    <table class="table table-hover align-middle mb-0 table-stack"
+           [class.is-refreshing]="store.listState().loading && store.users().length > 0"
+           [attr.aria-busy]="store.listState().loading">
+      <caption class="visually-hidden">Usuários da empresa, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
           <th scope="col" class="col-select">
-            <input type="checkbox" class="form-check-input" aria-label="Selecionar todos os usuários elegíveis desta página"
-                   [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()"
-                   (change)="toggleSelectAll($any($event.target).checked)" />
+            <label class="select-hit">
+              <input type="checkbox" class="form-check-input" aria-label="Selecionar todos os usuários elegíveis desta página"
+                     [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()"
+                     (change)="toggleSelectAll($any($event.target).checked)" />
+            </label>
           </th>
           <th scope="col">Nome</th>
           <th scope="col" class="d-none d-md-table-cell">E-mail</th>
@@ -100,39 +105,52 @@
       </thead>
       <tbody>
         @if (store.listState().loading && store.users().length === 0) {
-          <tr><td colspan="7" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
+          <tr><td colspan="7"><app-loading-state label="Carregando usuários…" /></td></tr>
         } @else if (store.users().length === 0) {
           <tr>
-            <td colspan="7" class="text-center py-5 text-muted">
-              <i class="bx bx-group display-6 d-block mb-2 opacity-50"></i>
+            <td colspan="7">
               @if (store.total() === 0 && store.filters().status === 'All' && !store.filters().search && !store.filters().createdFrom && !store.filters().createdTo) {
-                Nenhum usuário cadastrado ainda.
+                <app-empty-state icon="bx-group" title="Nenhum usuário cadastrado ainda."
+                                 hint="Cadastre o primeiro colaborador pra atribuir funções e liberar o acesso ao Tickest.">
+                  <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
+                    <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Usuário
+                  </button>
+                </app-empty-state>
               } @else {
-                Nenhum usuário encontrado com esses filtros.
+                <app-empty-state icon="bx-group" title="Nenhum usuário encontrado com esses filtros."
+                                 hint="Tente outro termo de busca, outro status ou um período maior.">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">
+                    <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+                  </button>
+                </app-empty-state>
               }
             </td>
           </tr>
         } @else {
           @for (user of store.users(); track user.id) {
-            <tr tabindex="0" role="button" class="user-row" [class.opacity-75]="isInactive(user)"
+            <!-- O clique em qualquer ponto da linha é só atalho de mouse; teclado e leitor de tela usam o botão do nome, sem tirar do <tr> o papel de linha de tabela. -->
+            <tr class="user-row" [class.user-row-inactive]="isInactive(user)" [class.user-row-new]="highlightedUserId() === user.id"
                 [class.user-row-info-open]="infoPanelUserId() === user.id"
-                [attr.aria-pressed]="infoPanelUserId() === user.id"
-                [attr.aria-label]="(infoPanelUserId() === user.id ? 'Fechar informações de ' : 'Ver informações de ') + user.firstName + ' ' + user.lastName"
-                (click)="selectRow(user.id)"
-                (keydown.enter)="selectRow(user.id)"
-                (keydown.space)="selectRow(user.id); $event.preventDefault()">
-              <td (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                (click)="selectRow(user.id)">
+              <td class="col-select" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                 @if (canSelectForBulk(user)) {
-                  <input type="checkbox" class="form-check-input" [attr.aria-label]="'Marcar ' + user.firstName + ' ' + user.lastName + ' para ação em lote'"
-                         [checked]="isSelected(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
+                  <label class="select-hit">
+                    <input type="checkbox" class="form-check-input" [attr.aria-label]="'Marcar ' + user.firstName + ' ' + user.lastName + ' para ação em lote'"
+                           [checked]="isSelected(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
+                  </label>
                 }
               </td>
               <td class="fw-semibold">
-                {{ user.firstName }} {{ user.lastName }}
+                <!-- Nome acessível = texto visível (WCAG 2.5.3); o estado aberto/fechado do painel vem do aria-expanded, sem rótulo que repita o estado. -->
+                <button type="button" class="btn-row-name"
+                        [attr.aria-expanded]="infoPanelUserId() === user.id"
+                        (click)="selectRow(user.id); $event.stopPropagation()">
+                  {{ user.firstName }} {{ user.lastName }}
+                </button>
                 <div class="text-muted small fw-normal d-md-none">{{ user.email }}</div>
               </td>
               <td class="text-muted small d-none d-md-table-cell">{{ user.email }}</td>
-              <td>
+              <td data-label="Funções">
                 @for (role of visibleRoles(user); track role.name) {
                   @let color = roleColor(role.name);
                   <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
@@ -140,13 +158,13 @@
                   <span class="text-muted small">—</span>
                 }
                 @if (hiddenRolesCount(user) > 0) {
-                  <span class="badge bg-label-secondary badge-roles-overflow" tabindex="0"
-                        [title]="hiddenRolesNames(user)" [attr.aria-label]="'Funções adicionais: ' + hiddenRolesNames(user)">
-                    +{{ hiddenRolesCount(user) }}
+                  <!-- Não é controle (era um span focável com aria-label, que o ARIA proíbe): o leitor de tela lê os nomes ocultos; a lista completa fica no painel do usuário. -->
+                  <span class="badge bg-label-secondary badge-roles-overflow" [title]="hiddenRolesNames(user)">
+                    <span aria-hidden="true">+{{ hiddenRolesCount(user) }}</span><span class="visually-hidden">e mais: {{ hiddenRolesNames(user) }}</span>
                   </span>
                 }
               </td>
-              <td>
+              <td data-label="Status">
                 @if (user.isActive) {
                   <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
                 } @else {
@@ -156,43 +174,36 @@
               <td class="text-muted small d-none d-md-table-cell">
                 {{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
                 @if (user.deactivatedAtUtc) {
-                  <div class="text-danger deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+                  <div class="deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
                 }
               </td>
-              <td class="text-end" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
-                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
-                          [attr.aria-label]="'Ações para ' + user.firstName + ' ' + user.lastName">
-                    <i class="bx bx-dots-vertical-rounded"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
+              <td class="text-end table-stack-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                <app-row-actions [label]="'Ações para ' + user.firstName + ' ' + user.lastName">
+                  <li>
+                    <button type="button" class="dropdown-item" (click)="openEditModal(user)">
+                      <i class="bx bx-edit-alt me-2"></i>Editar cadastro
+                    </button>
+                  </li>
+                  <li>
+                    <button type="button" class="dropdown-item" (click)="openAssignRolesModal(user)">
+                      <i class="bx bx-shield-quarter me-2"></i>Atribuir funções
+                    </button>
+                  </li>
+                  @if (!isCurrentUser(user)) {
+                    <li><hr class="dropdown-divider" /></li>
                     <li>
-                      <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#userEditModal" (click)="openEditModal(user)">
-                        <i class="bx bx-edit-alt me-2"></i>Editar Cadastro
-                      </button>
+                      @if (isInactive(user)) {
+                        <button type="button" class="dropdown-item text-success" [disabled]="store.activatingIds().includes(user.id)" (click)="onActivate(user)">
+                          <i class="bx bx-check me-2"></i>Reativar
+                        </button>
+                      } @else {
+                        <button type="button" class="dropdown-item text-danger" [disabled]="store.deactivatingIds().includes(user.id)" (click)="onDeactivate(user)">
+                          <i class="bx bx-block me-2"></i>Desativar
+                        </button>
+                      }
                     </li>
-                    <li>
-                      <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="openAssignRolesModal(user)">
-                        <i class="bx bx-shield-quarter me-2"></i>Atribuir Funções
-                      </button>
-                    </li>
-                    @if (!isCurrentUser(user)) {
-                      <li><hr class="dropdown-divider" /></li>
-                      <li>
-                        @if (isInactive(user)) {
-                          <button type="button" class="dropdown-item text-success" [disabled]="store.activatingIds().includes(user.id)" (click)="onActivate(user)">
-                            <i class="bx bx-check me-2"></i>Reativar
-                          </button>
-                        } @else {
-                          <button type="button" class="dropdown-item text-danger" [disabled]="store.deactivatingIds().includes(user.id)" (click)="onDeactivate(user)">
-                            <i class="bx bx-block me-2"></i>Desativar
-                          </button>
-                        }
-                      </li>
-                    }
-                  </ul>
-                </div>
+                  }
+                </app-row-actions>
               </td>
             </tr>
           }
@@ -202,45 +213,9 @@
   </div>
 
   @if (store.total() > 0) {
-    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} usuários</span>
-
-      @if (store.totalPages() > 1) {
-        <nav class="pagination-group d-flex align-items-center gap-2" aria-label="Paginação">
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
-            Anterior
-          </button>
-
-          <!-- No celular os números de página não cabem numa linha: só "Página X de Y" entre Anterior/Próxima. -->
-          <span class="page-indicator small text-muted text-nowrap">Página {{ store.currentPage() }} de {{ store.totalPages() }}</span>
-
-          @for (pageNumber of pageNumbers(); track $index) {
-            @if (pageNumber === '…') {
-              <span class="page-ellipsis px-1 text-muted" aria-hidden="true">…</span>
-            } @else {
-              <button type="button" class="btn btn-sm btn-page btn-page-number" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
-                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
-                      (click)="store.goToPage(pageNumber)">
-                {{ pageNumber }}
-              </button>
-            }
-          }
-
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
-            Próxima
-          </button>
-        </nav>
-      }
-
-      <div class="d-flex align-items-center gap-2">
-        <label class="form-label small mb-0" for="userPageSize">Por página</label>
-        <select id="userPageSize" class="form-select form-select-sm w-auto" [value]="store.pageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
-          @for (size of pageSizeOptions; track size) {
-            <option [value]="size">{{ size }}</option>
-          }
-        </select>
-      </div>
-    </div>
+    <app-pagination [page]="store.currentPage()" [totalPages]="store.totalPages()" [total]="store.total()"
+                    [pageSize]="store.pageSize()" [pageSizeOptions]="pageSizeOptions" noun="usuários" [disabled]="store.listState().loading"
+                    (pageChange)="store.goToPage($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
   </div>
   </div>
@@ -249,7 +224,7 @@
     <!-- Abaixo de "lg", o painel vira um overlay de tela cheia: a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
-      <app-user-list-info-panel [user]="user" [canToggleActive]="!isCurrentUser(user)"
+      <app-user-list-info-panel [user]="user" [modal]="isOverlayViewport()" [canToggleActive]="!isCurrentUser(user)"
                                  [deactivating]="store.deactivatingIds().includes(user.id)"
                                  [activating]="store.activatingIds().includes(user.id)"
                                  (close)="closeInfoPanel()"
@@ -260,227 +235,273 @@
   }
 </div>
 
-<!-- Só aparece em telas muito largas, no espaço livre à direita do container central (ver CSS). -->
-<app-user-list-insights class="insights-rail" />
-
-<!-- Modal de criação -->
-<div class="modal fade" id="userCreateModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userCreateModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="userCreateModalTitle">Novo Usuário</h5>
-          <button id="userCreateModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.error()) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.error() }}</div>
+@if (openDialog() === 'create') {
+<app-dialog id="userCreateModal" title="Novo Usuário" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
+    <div class="modal-body">
+      @if (store.error()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.error() }}</div>
+      }
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="userCreateFirstName">Nome</label>
+          <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
+                 [class.is-invalid]="isCreateFieldInvalid('firstName')"
+                 [attr.aria-describedby]="isCreateFieldInvalid('firstName') ? 'userCreateFirstName-error' : null" />
+          @if (isCreateFieldInvalid('firstName')) {
+            <div class="invalid-feedback" id="userCreateFirstName-error">
+              @if (createForm.controls.firstName.errors?.['required']) {
+                O nome é obrigatório.
+              } @else if (createForm.controls.firstName.errors?.['minlength']) {
+                O nome deve ter no mínimo 2 caracteres.
+              } @else if (createForm.controls.firstName.errors?.['maxlength']) {
+                O nome deve ter no máximo 50 caracteres.
+              }
+            </div>
           }
-          <div class="row g-3">
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="userCreateFirstName">Nome</label>
-              <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
-                     [class.is-invalid]="isCreateFieldInvalid('firstName')"
-                     [attr.aria-describedby]="isCreateFieldInvalid('firstName') ? 'userCreateFirstName-error' : null" />
-              @if (isCreateFieldInvalid('firstName')) {
-                <div class="invalid-feedback" id="userCreateFirstName-error">
-                  @if (createForm.controls.firstName.errors?.['required']) {
-                    O nome é obrigatório.
-                  } @else if (createForm.controls.firstName.errors?.['minlength']) {
-                    O nome deve ter no mínimo 2 caracteres.
-                  } @else if (createForm.controls.firstName.errors?.['maxlength']) {
-                    O nome deve ter no máximo 50 caracteres.
-                  }
-                </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="userCreateLastName">Sobrenome</label>
+          <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
+                 [class.is-invalid]="isCreateFieldInvalid('lastName')"
+                 [attr.aria-describedby]="isCreateFieldInvalid('lastName') ? 'userCreateLastName-error' : null" />
+          @if (isCreateFieldInvalid('lastName')) {
+            <div class="invalid-feedback" id="userCreateLastName-error">
+              @if (createForm.controls.lastName.errors?.['required']) {
+                O sobrenome é obrigatório.
+              } @else if (createForm.controls.lastName.errors?.['minlength']) {
+                O sobrenome deve ter no mínimo 2 caracteres.
+              } @else if (createForm.controls.lastName.errors?.['maxlength']) {
+                O sobrenome deve ter no máximo 50 caracteres.
               }
             </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="userCreateLastName">Sobrenome</label>
-              <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
-                     [class.is-invalid]="isCreateFieldInvalid('lastName')"
-                     [attr.aria-describedby]="isCreateFieldInvalid('lastName') ? 'userCreateLastName-error' : null" />
-              @if (isCreateFieldInvalid('lastName')) {
-                <div class="invalid-feedback" id="userCreateLastName-error">
-                  @if (createForm.controls.lastName.errors?.['required']) {
-                    O sobrenome é obrigatório.
-                  } @else if (createForm.controls.lastName.errors?.['minlength']) {
-                    O sobrenome deve ter no mínimo 2 caracteres.
-                  } @else if (createForm.controls.lastName.errors?.['maxlength']) {
-                    O sobrenome deve ter no máximo 50 caracteres.
-                  }
-                </div>
+          }
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="userCreateEmail">E-mail</label>
+          <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="email"
+                 [class.is-invalid]="isCreateFieldInvalid('email')"
+                 [attr.aria-describedby]="isCreateFieldInvalid('email') ? 'userCreateEmail-error' : null" />
+          @if (isCreateFieldInvalid('email')) {
+            <div class="invalid-feedback" id="userCreateEmail-error">
+              @if (createForm.controls.email.errors?.['required']) {
+                O e-mail é obrigatório.
+              } @else {
+                Insira um e-mail válido.
               }
             </div>
-            <div class="col-12">
-              <label class="form-label" for="userCreateEmail">E-mail</label>
-              <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="email"
-                     [class.is-invalid]="isCreateFieldInvalid('email')"
-                     [attr.aria-describedby]="isCreateFieldInvalid('email') ? 'userCreateEmail-error' : null" />
-              @if (isCreateFieldInvalid('email')) {
-                <div class="invalid-feedback" id="userCreateEmail-error">
-                  @if (createForm.controls.email.errors?.['required']) {
-                    O e-mail é obrigatório.
-                  } @else {
-                    Insira um e-mail válido.
-                  }
-                </div>
-              }
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="userCreatePassword">Senha</label>
-              <div class="input-group">
-                <input id="userCreatePassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="new-password"
-                       [class.is-invalid]="isCreateFieldInvalid('password')"
-                       [attr.aria-describedby]="isCreateFieldInvalid('password') ? 'userCreatePassword-error' : null" />
-                <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
-                        [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
-                  <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
-                </button>
-                @if (isCreateFieldInvalid('password')) {
-                  <div class="invalid-feedback" id="userCreatePassword-error">
-                    @if (createForm.controls.password.errors?.['required']) {
-                      Informe a senha.
-                    } @else if (createForm.controls.password.errors?.['minlength']) {
-                      A senha deve ter no mínimo 6 caracteres.
-                    } @else if (createForm.controls.password.errors?.['uppercase']) {
-                      A senha deve conter pelo menos uma letra maiúscula.
-                    } @else if (createForm.controls.password.errors?.['specialChar']) {
-                      A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
-                    }
-                  </div>
+          }
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="userCreatePassword">Senha provisória</label>
+          <div class="input-group">
+            <input id="userCreatePassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="new-password"
+                   [class.is-invalid]="isCreateFieldInvalid('password')"
+                   [attr.aria-describedby]="isCreateFieldInvalid('password') ? 'userCreatePassword-hint userCreatePassword-error' : 'userCreatePassword-hint'" />
+            <button type="button" class="input-group-text btn-password-toggle" (click)="togglePasswordsVisibility()"
+                    [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+              <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+            </button>
+            @if (isCreateFieldInvalid('password')) {
+              <div class="invalid-feedback" id="userCreatePassword-error">
+                @if (createForm.controls.password.errors?.['required']) {
+                  Informe a senha.
+                } @else if (createForm.controls.password.errors?.['minlength']) {
+                  A senha deve ter no mínimo 6 caracteres.
+                } @else if (createForm.controls.password.errors?.['uppercase']) {
+                  A senha deve conter pelo menos uma letra maiúscula.
+                } @else if (createForm.controls.password.errors?.['specialChar']) {
+                  A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
                 }
               </div>
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="userCreateConfirmPassword">Confirmar Senha</label>
-              <div class="input-group">
-                <input id="userCreateConfirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="confirmPassword" autocomplete="new-password"
-                       [class.is-invalid]="isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')"
-                       [attr.aria-describedby]="(isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')) ? 'userCreateConfirmPassword-error' : null" />
-                <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
-                        [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
-                  <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
-                </button>
-                @if (createForm.hasError('passwordMismatch') && createForm.controls.confirmPassword.touched) {
-                  <div class="invalid-feedback" id="userCreateConfirmPassword-error">As senhas não coincidem.</div>
-                } @else if (isCreateFieldInvalid('confirmPassword')) {
-                  <div class="invalid-feedback" id="userCreateConfirmPassword-error">Confirme a senha.</div>
-                }
-              </div>
-            </div>
+            }
+          </div>
+          <!-- Regras antes de digitar (antes só apareciam depois do erro). -->
+          <div class="form-text" id="userCreatePassword-hint">
+            Mínimo de 6 caracteres, com uma letra maiúscula e um caractere especial (ex.: #, $, %).
+            @if (registerForcesPasswordChange) {
+              No primeiro acesso, a pessoa vai criar a própria senha.
+            }
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="store.loading()">
-            @if (store.loading()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="userCreateConfirmPassword">Confirmar Senha</label>
+          <div class="input-group">
+            <input id="userCreateConfirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="confirmPassword" autocomplete="new-password"
+                   [class.is-invalid]="isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')"
+                   [attr.aria-describedby]="(isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')) ? 'userCreateConfirmPassword-error' : null" />
+            <button type="button" class="input-group-text btn-password-toggle" (click)="togglePasswordsVisibility()"
+                    [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+              <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+            </button>
+            @if (createForm.hasError('passwordMismatch') && createForm.controls.confirmPassword.touched) {
+              <div class="invalid-feedback" id="userCreateConfirmPassword-error">As senhas não coincidem.</div>
+            } @else if (isCreateFieldInvalid('confirmPassword')) {
+              <div class="invalid-feedback" id="userCreateConfirmPassword-error">Confirme a senha.</div>
             }
-            Criar
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de edição de cadastro -->
-<div class="modal fade" id="userEditModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userEditModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="userEditModalTitle">Editar Cadastro — {{ selectedUserForEdit()?.firstName }} {{ selectedUserForEdit()?.lastName }}</h5>
-          <button id="userEditModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.listState().error) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.listState().error }}</div>
-          }
-          <div class="row g-3">
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="userEditFirstName">Nome</label>
-              <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
-                     [class.is-invalid]="isEditFieldInvalid('firstName')"
-                     [attr.aria-describedby]="isEditFieldInvalid('firstName') ? 'userEditFirstName-error' : null" />
-              @if (isEditFieldInvalid('firstName')) {
-                <div class="invalid-feedback" id="userEditFirstName-error">
-                  @if (editForm.controls.firstName.errors?.['required']) {
-                    O nome é obrigatório.
-                  } @else if (editForm.controls.firstName.errors?.['minlength']) {
-                    O nome deve ter no mínimo 2 caracteres.
-                  } @else if (editForm.controls.firstName.errors?.['maxlength']) {
-                    O nome deve ter no máximo 50 caracteres.
-                  }
-                </div>
-              }
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label" for="userEditLastName">Sobrenome</label>
-              <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
-                     [class.is-invalid]="isEditFieldInvalid('lastName')"
-                     [attr.aria-describedby]="isEditFieldInvalid('lastName') ? 'userEditLastName-error' : null" />
-              @if (isEditFieldInvalid('lastName')) {
-                <div class="invalid-feedback" id="userEditLastName-error">
-                  @if (editForm.controls.lastName.errors?.['required']) {
-                    O sobrenome é obrigatório.
-                  } @else if (editForm.controls.lastName.errors?.['minlength']) {
-                    O sobrenome deve ter no mínimo 2 caracteres.
-                  } @else if (editForm.controls.lastName.errors?.['maxlength']) {
-                    O sobrenome deve ter no máximo 50 caracteres.
-                  }
-                </div>
-              }
-            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="store.updatingProfile()">
-            @if (store.updatingProfile()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
-            }
-            Salvar
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de atribuição de roles -->
-<div class="modal fade" id="userRolesModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="userRolesModalTitle">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="userRolesModalTitle">Atribuir Funções — {{ selectedUser()?.firstName }} {{ selectedUser()?.lastName }}</h5>
-        <button id="userRolesModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
-      <div class="modal-body">
-        <div class="alert alert-warning small border-0">
-          <i class="bx bx-info-circle me-1"></i>
-          As funções já atribuídas ao usuário vêm pré-marcadas abaixo. Salvar <strong>substitui completamente</strong> o conjunto de funções do usuário pelo que estiver marcado aqui.
+      <fieldset class="mt-4">
+        <legend class="form-label mb-2">Funções</legend>
+        @for (role of rolesStore.roles(); track role.name) {
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" [id]="'create-role-' + role.name"
+                   [checked]="isCreateRoleChecked(role.name)"
+                   (change)="toggleCreateRole(role.name, $any($event.target).checked)" />
+            <label class="form-check-label" [for]="'create-role-' + role.name">
+              {{ role.name }}
+              @if (isAdminRole(role.name)) {
+                <span class="badge bg-label-primary ms-1">Administrador</span>
+              }
+              <span class="d-block small text-muted">{{ role.permissionCodes.length === 1 ? '1 permissão' : role.permissionCodes.length + ' permissões' }}</span>
+            </label>
+          </div>
+        } @empty {
+          <p class="text-muted small mb-0">Nenhuma função cadastrada ainda — dá pra atribuir depois, pelo menu ⋮ da linha.</p>
+        }
+        @if (rolesStore.roles().length > 0 && createRoleNames().size === 0) {
+          <div class="alert alert-warning border-0 py-2 small mt-2 mb-0" role="status">
+            Sem nenhuma função, a pessoa entra no sistema mas não consegue fazer nada.
+          </div>
+        }
+      </fieldset>
+      <div class="visually-hidden" aria-live="polite">{{ createAnnouncement() }}</div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="button" class="btn btn-outline-primary" [disabled]="store.loading()" (click)="onCreateSubmit(true)">
+        Criar e cadastrar outro
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="store.loading()">
+        @if (store.loading()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        Criar
+      </button>
+    </div>
+  </form>
+</app-dialog>
+}
+
+@if (openDialog() === 'edit') {
+<app-dialog id="userEditModal" title="Editar cadastro" [subtitle]="selectedUserForEdit() ? selectedUserForEdit()!.firstName + ' ' + selectedUserForEdit()!.lastName : null" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
+    <div class="modal-body">
+      @if (store.profileError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.profileError() }}</div>
+      }
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="userEditFirstName">Nome</label>
+          <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
+                 [class.is-invalid]="isEditFieldInvalid('firstName')"
+                 [attr.aria-describedby]="isEditFieldInvalid('firstName') ? 'userEditFirstName-error' : null" />
+          @if (isEditFieldInvalid('firstName')) {
+            <div class="invalid-feedback" id="userEditFirstName-error">
+              @if (editForm.controls.firstName.errors?.['required']) {
+                O nome é obrigatório.
+              } @else if (editForm.controls.firstName.errors?.['minlength']) {
+                O nome deve ter no mínimo 2 caracteres.
+              } @else if (editForm.controls.firstName.errors?.['maxlength']) {
+                O nome deve ter no máximo 50 caracteres.
+              }
+            </div>
+          }
         </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="userEditLastName">Sobrenome</label>
+          <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
+                 [class.is-invalid]="isEditFieldInvalid('lastName')"
+                 [attr.aria-describedby]="isEditFieldInvalid('lastName') ? 'userEditLastName-error' : null" />
+          @if (isEditFieldInvalid('lastName')) {
+            <div class="invalid-feedback" id="userEditLastName-error">
+              @if (editForm.controls.lastName.errors?.['required']) {
+                O sobrenome é obrigatório.
+              } @else if (editForm.controls.lastName.errors?.['minlength']) {
+                O sobrenome deve ter no mínimo 2 caracteres.
+              } @else if (editForm.controls.lastName.errors?.['maxlength']) {
+                O sobrenome deve ter no máximo 50 caracteres.
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="store.updatingProfile()">
+        @if (store.updatingProfile()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        Salvar
+      </button>
+    </div>
+  </form>
+</app-dialog>
+}
+
+@if (openDialog() === 'roles') {
+<app-dialog id="userRolesModal" title="Atribuir funções" [subtitle]="selectedUser() ? selectedUser()!.firstName + ' ' + selectedUser()!.lastName : null" size="lg" (closed)="closeDialog()">
+  <div dialogContent class="dialog-content">
+    <div class="modal-body">
+      @if (store.rolesError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.rolesError() }}</div>
+      }
+      <fieldset>
+        <legend class="small text-muted mb-3">Marque as funções que {{ selectedUser()?.firstName }} deve ter — as atuais já vêm marcadas.</legend>
         @for (role of rolesStore.roles(); track role.name) {
           <div class="form-check mb-2">
             <input class="form-check-input" type="checkbox" [id]="'role-' + role.name"
                    [checked]="isChecked(role.name)"
                    (change)="toggleRole(role.name, $any($event.target).checked)" />
-            <label class="form-check-label" [for]="'role-' + role.name">{{ role.name }}</label>
+            <label class="form-check-label" [for]="'role-' + role.name">
+              {{ role.name }}
+              @if (isAdminRole(role.name)) {
+                <span class="badge bg-label-primary ms-1">Administrador</span>
+              }
+              <span class="d-block small text-muted">{{ role.permissionCodes.length === 1 ? '1 permissão' : role.permissionCodes.length + ' permissões' }}</span>
+            </label>
           </div>
         } @empty {
           <p class="text-muted small">Nenhuma função cadastrada ainda.</p>
         }
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" [disabled]="store.assigningRoles()" (click)="onAssignRolesSubmit()">
-          @if (store.assigningRoles()) {
-            <span class="spinner-border spinner-border-sm me-1"></span>
+      </fieldset>
+
+      <!-- Prévia do que o "Salvar" muda: substitui o aviso genérico de "substitui completamente", que assustava sem dizer o quê. -->
+      <div class="roles-diff small mt-3" aria-live="polite">
+        @if (rolesDiff().added.length === 0 && rolesDiff().removed.length === 0) {
+          <span class="text-muted">Nenhuma alteração ainda.</span>
+        } @else {
+          @if (rolesDiff().added.length > 0) {
+            <div><span class="fw-semibold">Vai adicionar:</span> {{ rolesDiff().added.join(', ') }}</div>
           }
-          Salvar
-        </button>
+          @if (rolesDiff().removed.length > 0) {
+            <div><span class="fw-semibold">Vai remover:</span> {{ rolesDiff().removed.join(', ') }}</div>
+          }
+        }
       </div>
+
+      @if (removesOwnAdminAccess()) {
+        <div class="alert alert-danger border-0 py-2 small mt-3 mb-0" role="alert" id="userRolesOwnAdmin">
+          Você não pode tirar de si a função de administrador: perderia o acesso a esta tela. Peça a outro administrador.
+        </div>
+      } @else if (leavesWithoutRoles()) {
+        <div class="alert alert-warning border-0 py-2 small mt-3 mb-0" role="status">
+          Sem nenhuma função, {{ selectedUser()?.firstName }} entra no sistema mas não consegue fazer nada.
+        </div>
+      }
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="button" class="btn btn-primary" [disabled]="store.assigningRoles() || removesOwnAdminAccess()"
+              [attr.aria-describedby]="removesOwnAdminAccess() ? 'userRolesOwnAdmin' : null" (click)="onAssignRolesSubmit()">
+        @if (store.assigningRoles()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        Salvar
+      </button>
     </div>
   </div>
-</div>
+</app-dialog>
+}

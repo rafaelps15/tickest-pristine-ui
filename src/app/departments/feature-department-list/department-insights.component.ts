@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
+import { SummaryCardComponent } from '../../shared/ui/summary-card/summary-card.component';
 import { Department } from '../entities/department';
 
 /**
@@ -9,12 +10,17 @@ import { Department } from '../entities/department';
 @Component({
   selector: 'app-department-insights',
   templateUrl: './department-insights.component.html',
-  styleUrl: './department-insights.component.css',
+  imports: [SummaryCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DepartmentInsightsComponent {
   /** Departamentos carregados na tela. */
   readonly departments = input<Department[]>([]);
+
+  /** A lista ainda está carregando — o card mostra "—" em vez de números. */
+  readonly loading = input(false);
+  /** A lista falhou ao carregar — o card mostra "—" e o motivo em vez de números. */
+  readonly failed = input(false);
 
   /** Total de setores, somando os de todos os departamentos. */
   readonly totalSectors = computed(() =>

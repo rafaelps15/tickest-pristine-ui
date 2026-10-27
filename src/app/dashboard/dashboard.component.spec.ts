@@ -97,15 +97,15 @@ describe('DashboardComponent', () => {
   });
 
   it('mostra o alerta de erro quando o resumo da empresa falhar', async () => {
-    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos tickets');
+    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos chamados');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o resumo dos tickets');
+    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o resumo dos chamados');
   });
 
   it('recarrega o resumo ao clicar em "Tentar novamente" no alerta de erro', async () => {
-    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos tickets');
+    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos chamados');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
@@ -136,8 +136,8 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const chart = fixture.nativeElement.querySelector('.chart-container') as HTMLElement;
-    expect(chart.textContent).toContain('Não foi possível carregar o volume de tickets.');
-    expect(chart.textContent).not.toContain('Nenhum ticket aberto');
+    expect(chart.textContent).toContain('Não foi possível carregar o volume de chamados.');
+    expect(chart.textContent).not.toContain('Nenhum chamado aberto');
     (chart.querySelector('button') as HTMLButtonElement).click();
     expect(ticketsStoreFake.load).toHaveBeenCalled();
   });
@@ -165,7 +165,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum ticket aberto neste período ainda.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado aberto neste período ainda.');
   });
 
   describe('primeiro uso (empresa sem nenhum ticket)', () => {
@@ -179,9 +179,9 @@ describe('DashboardComponent', () => {
       await fixture.whenStable();
 
       const chart = fixture.nativeElement.querySelector('.chart-container') as HTMLElement;
-      expect(chart.textContent).toContain('A empresa ainda não tem nenhum ticket.');
+      expect(chart.textContent).toContain('A empresa ainda não tem nenhum chamado.');
       expect(chart.querySelector('a')?.getAttribute('href')).toBe('/tickets/novo');
-      expect(chart.textContent).not.toContain('Nenhum ticket aberto neste período');
+      expect(chart.textContent).not.toContain('Nenhum chamado aberto neste período');
     });
 
     it('leva quem administra a estrutura a cadastrar departamentos e setores primeiro', async () => {
@@ -199,7 +199,7 @@ describe('DashboardComponent', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.textContent).not.toContain('A empresa ainda não tem nenhum ticket.');
+      expect(fixture.nativeElement.textContent).not.toContain('A empresa ainda não tem nenhum chamado.');
     });
   });
 
@@ -220,9 +220,9 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const links = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
-    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 3 tickets em aberto na fila de monitoramento')).toBeTrue();
-    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 2 tickets em andamento na fila de monitoramento')).toBeTrue();
-    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 4 tickets resolvidos na fila de monitoramento')).toBeTrue();
+    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 3 chamados em aberto na fila de monitoramento')).toBeTrue();
+    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 2 chamados em andamento na fila de monitoramento')).toBeTrue();
+    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 4 chamados resolvidos na fila de monitoramento')).toBeTrue();
   });
 
   it('não linka os cards de status sem a permissão tickets:manage', async () => {
@@ -268,7 +268,7 @@ describe('DashboardComponent', () => {
 
     const header = () => (fixture.nativeElement.querySelector('.chart-container')!.closest('.card') as HTMLElement)
       .querySelector('.card-header')!.textContent;
-    expect(header()).toContain('Tickets criados');
+    expect(header()).toContain('Chamados criados');
     expect(header()).toContain('Últimos 2 dias');
 
     ticketsStoreFake.groupBy.set('Week');
@@ -320,7 +320,7 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Quantidade de tickets criados por período');
+    expect(text).toContain('Quantidade de chamados criados por período');
     expect(text).toContain('05/01');
     expect(text).toContain('5');
     // O foco vai pra tabela, pro leitor de tela anunciar a troca (antes o conteúdo mudava em silêncio).
@@ -333,9 +333,9 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Novo Ticket');
-    expect(text).toContain('Meus Tickets');
-    expect(text).toContain('Tickets sem responsável');
+    expect(text).toContain('Novo Chamado');
+    expect(text).toContain('Meus Chamados');
+    expect(text).toContain('Chamados sem responsável');
   });
 
   it('não mostra o atalho "Tickets sem responsável" pra quem não tem a permissão tickets:manage (ex. Solicitante)', async () => {
@@ -343,7 +343,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Tickets sem responsável');
+    expect(fixture.nativeElement.textContent).not.toContain('Chamados sem responsável');
   });
 
   it('troca Novo Ticket/Meus Tickets por "Tickets sem responsável" pra quem tem papel administrativo (users:read, roles:manage, departments:manage ou sectors:manage)', async () => {
@@ -352,9 +352,9 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Tickets sem responsável');
-    expect(text).not.toContain('Novo Ticket');
-    expect(text).not.toContain('Meus Tickets');
+    expect(text).toContain('Chamados sem responsável');
+    expect(text).not.toContain('Novo Chamado');
+    expect(text).not.toContain('Meus Chamados');
   });
 
   it('mantém Ações Rápidas restrito a atalhos contextuais ao dashboard, não a um menu de administração duplicado', async () => {
@@ -363,7 +363,7 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).not.toContain('Monitorar Tickets');
+    expect(text).not.toContain('Monitorar Chamados');
     expect(text).not.toContain('Gestão de Usuários');
     expect(text).not.toContain('Funções');
     expect(text).not.toContain('Departamentos e setores');
@@ -374,7 +374,7 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const novoTicketLink = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.textContent?.includes('Novo Ticket'));
+      .find(a => a.textContent?.includes('Novo Chamado'));
 
     expect(novoTicketLink).withContext('o atalho "Novo Ticket" deve ser <a>, não <button>').toBeTruthy();
   });

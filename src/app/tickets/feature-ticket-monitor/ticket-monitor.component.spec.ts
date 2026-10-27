@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { TicketMonitorComponent } from './ticket-monitor.component';
+import { By } from '@angular/platform-browser';
+import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketMonitorStore } from '../application/ticket-monitor.store';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { TicketDetail } from '../entities/ticket';
@@ -381,18 +383,21 @@ describe('TicketMonitorComponent', () => {
     expect(document.activeElement).toBe(row.querySelector('.ticket-select'));
   });
 
-  it('mostra o Guia da Tela dentro da mesma coluna da tabela, depois do resumo de SLA e dos filtros', async () => {
+  it('mostra o Guia da Tela logo abaixo do cabeçalho, antes do resumo de SLA e da tabela, fora da coluna da tabela', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     const html = fixture.nativeElement.innerHTML as string;
-    const slaIndex = html.indexOf('Resumo do setor selecionado');
-    const guideIndex = html.indexOf('app-ticket-monitor-guide');
+    const headerIndex = html.indexOf('<app-page-header');
+    const guideIndex = html.indexOf('<app-ticket-monitor-guide');
+    const slaIndex = html.indexOf('monitor-scope');
     const tableIndex = html.indexOf('<table');
 
-    expect(slaIndex).toBeGreaterThanOrEqual(0);
-    expect(guideIndex).toBeGreaterThan(slaIndex);
+    expect(headerIndex).toBeGreaterThanOrEqual(0);
+    expect(guideIndex).toBeGreaterThan(headerIndex);
+    expect(guideIndex).toBeLessThan(slaIndex);
     expect(guideIndex).toBeLessThan(tableIndex);
+    expect(fixture.nativeElement.querySelector('.row app-ticket-monitor-guide')).toBeNull();
   });
 
   it('mostra "Não atribuído" quando o chamado não tem atendente, e o nome quando tem', async () => {
@@ -480,11 +485,30 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('1');
   });
 
-  it('explica que o resumo de SLA não muda com os filtros da tabela (só com o setor)', async () => {
+  it('põe o Setor acima dos números de SLA, explicando que eles só mudam com o setor', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('não muda com os outros filtros da tabela abaixo');
+    const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
+    const hint = fixture.nativeElement.querySelector(`#${sector.getAttribute('aria-describedby')}`) as HTMLElement;
+    expect(hint.textContent).toContain('Os números ignoram os outros filtros');
+    expect(sector.compareDocumentPosition(fixture.nativeElement.querySelector('app-stat-card')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sector.closest('app-filter-bar')).toBeNull();
+  });
+
+  it('recolhe Prioridade, Ordenar e "Só sem responsável" em "Mais filtros", com a contagem dos aplicados', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), priority: 3, unassignedOnly: true });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const more = fixture.nativeElement.querySelector('.btn-more-filters') as HTMLButtonElement;
+    expect(fixture.nativeElement.querySelector('#monitorMoreFilters').hidden).toBeTrue();
+    expect(more.textContent).toContain('Mais filtros (2)');
+
+    more.click();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#monitorMoreFilters').hidden).toBeFalse();
+    expect(more.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('separa os estados de SLA "em monitoramento" dos "já resolvidos" no dropdown, em optgroups distintos', async () => {
@@ -509,6 +533,44 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Nenhum chamado encontrado com esses filtros.');
   });
 
+  it('oferece "Limpar filtros" no estado vazio, e limpa ao clicar', async () => {
+    storeFake.tickets.set([]);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('.empty-state button') as HTMLButtonElement).click();
+
+    expect(storeFake.clearFilters).toHaveBeenCalled();
+  });
+
+  it('não fecha o painel quando o Esc nasce dentro de um modal (só fecha o modal)', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.selectTicket(storeFake.tickets()[0].id);
+    fixture.componentInstance.onOpenAssignResponsibleModal(storeFake.tickets()[0].id);
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('app-ticket-assign-dialog .modal') as HTMLElement;
+    modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedTicketId()).toBe(storeFake.tickets()[0].id);
+  });
+
+  it('passa o painel pro modo modal (overlay) só abaixo de "lg"', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.selectTicket(storeFake.tickets()[0].id);
+
+    fixture.componentInstance.isOverlayViewport.set(true);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.info-panel').getAttribute('aria-modal')).toBe('true');
+
+    fixture.componentInstance.isOverlayViewport.set(false);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.info-panel').hasAttribute('aria-modal')).toBeFalse();
+  });
+
   it('mostra a mensagem de erro do store, com botão para tentar novamente', async () => {
     storeFake.listState.set({ loading: false, error: 'Você não tem permissão para monitorar os chamados do sistema.' });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -527,7 +589,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const cards = fixture.nativeElement.querySelectorAll('.card-stats-btn') as NodeListOf<HTMLButtonElement>;
+    const cards = fixture.nativeElement.querySelectorAll('.stat-press') as NodeListOf<HTMLButtonElement>;
     expect(cards.length).toBe(4);
     expect(cards[0].getAttribute('aria-pressed')).toBe('true'); // "Ativos": sem filtro de SLA é o padrão
 
@@ -542,7 +604,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const cards = fixture.nativeElement.querySelectorAll('.card-stats-btn') as NodeListOf<HTMLButtonElement>;
+    const cards = fixture.nativeElement.querySelectorAll('.stat-press') as NodeListOf<HTMLButtonElement>;
     cards[2].click(); // "Em Risco"
 
     expect(storeFake.setSlaStatus).toHaveBeenCalledWith(TicketSlaStatus.AtRisk);
@@ -578,7 +640,9 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('table caption')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.spinner-border')?.getAttribute('role')).toBe('status');
+    const status = fixture.nativeElement.querySelector('app-loading-state') as HTMLElement;
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.textContent).toContain('Carregando chamados');
   });
 
   it('mantém a lista atual visível (só esmaecida) ao recarregar com filtro/página, em vez de sumir com tudo', async () => {
@@ -610,8 +674,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.rangeStart()).toBe(21);
-    expect(fixture.componentInstance.rangeEnd()).toBe(40);
+    expect(fixture.nativeElement.querySelector('.card-footer').textContent).toContain('Exibindo 21–40 de');
   });
 
   it('navega para a página clicada', async () => {
@@ -670,17 +733,18 @@ describe('TicketMonitorComponent', () => {
     expect(buttons.length).withContext('só os chamados ativos (t1, t2) devem ter o botão').toBe(2);
   });
 
-  it('abre o modal "Atribuir responsável" pro chamado clicado, limpando a busca de uma abertura anterior', async () => {
+  it('abre o diálogo "Atribuir responsável" pro chamado clicado, sem herdar a busca de uma abertura anterior', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
-    fixture.componentInstance.responsibleSearchInput.set('resquício');
 
     const openButton = fixture.nativeElement.querySelector('button[aria-label*="responsável pelo chamado"]') as HTMLButtonElement;
     openButton.click();
+    await fixture.whenStable();
 
     expect(fixture.componentInstance.assigningResponsibleTicketId()).toBe('t1');
-    expect(fixture.componentInstance.responsibleSearchInput()).toBe('');
     expect(storeFake.clearResponsibleSearch).toHaveBeenCalled();
+    const dialog = fixture.debugElement.query(By.directive(TicketAssignDialogComponent)).componentInstance as TicketAssignDialogComponent;
+    expect(dialog.ticketTitle()).toBe(ticket.title);
   });
 
   it('busca por título com debounce de 300ms após parar de digitar, sem buscar a cada letra', async () => {
@@ -743,68 +807,33 @@ describe('TicketMonitorComponent', () => {
     expect(row.querySelectorAll('[data-bs-toggle="dropdown"]').length).toBe(1);
   });
 
-  it('busca candidatos a responsável com debounce de 300ms após parar de digitar', async () => {
-    const fixture = TestBed.createComponent(TicketMonitorComponent);
-    await fixture.whenStable();
-
-    fixture.componentInstance.responsibleSearchInput.set('joão');
-    await new Promise(resolve => setTimeout(resolve, 350));
-
-    expect(storeFake.searchResponsibleCandidates).toHaveBeenCalledWith('joão');
-  });
-
-  it('atribui o candidato clicado como responsável, mostra um toast e fecha o modal em caso de sucesso', async () => {
-    const candidate: UserSummary = {
-      id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-      roles: [], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null
-    };
-    storeFake.responsibleCandidates.set([candidate]);
+  it('liga a busca do diálogo ao store e atribui o candidato confirmado, com toast, fechando o diálogo', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.onOpenAssignResponsibleModal('t1');
-    fixture.componentInstance.responsibleSearchInput.set('joão');
     await fixture.whenStable();
 
-    const candidateButton = fixture.nativeElement.querySelector('.list-group button') as HTMLButtonElement;
-    candidateButton.click();
+    const dialog = fixture.debugElement.query(By.directive(TicketAssignDialogComponent)).componentInstance as TicketAssignDialogComponent;
+    dialog.search.emit('joão');
+    expect(storeFake.searchResponsibleCandidates).toHaveBeenCalledWith('joão');
 
+    dialog.confirm.emit({ userId: 'u2', name: 'João Pedro' });
     expect(storeFake.assignResponsible).toHaveBeenCalledWith('t1', 'u2', jasmine.any(Function));
 
-    const closeButton = fixture.nativeElement.querySelector('#monitorAssignResponsibleModalCloseButton') as HTMLButtonElement;
-    const closeSpy = spyOn(closeButton, 'click');
     const onSuccess = storeFake.assignResponsible.calls.mostRecent().args[2] as () => void;
     onSuccess();
+    await fixture.whenStable();
 
     expect(toastServiceFake.show).toHaveBeenCalledWith('João Pedro agora é o responsável.');
-    expect(closeSpy).toHaveBeenCalled();
+    expect(fixture.debugElement.query(By.directive(TicketAssignDialogComponent))).toBeNull();
   });
 
-  it('não dispara a atribuição de responsável se nenhum chamado estiver com o modal aberto', async () => {
+  it('não dispara a atribuição se nenhum chamado estiver com o diálogo aberto', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const candidate: UserSummary = {
-      id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-      roles: [], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null
-    };
-    fixture.componentInstance.onSelectResponsibleCandidate(candidate);
+    fixture.componentInstance.onConfirmResponsible({ userId: 'u2', name: 'João Pedro' });
 
     expect(storeFake.assignResponsible).not.toHaveBeenCalled();
-  });
-
-  it('desabilita os candidatos do modal enquanto uma atribuição de responsável está em andamento', async () => {
-    const candidate: UserSummary = {
-      id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-      roles: [], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null
-    };
-    storeFake.responsibleCandidates.set([candidate]);
-    storeFake.assigningResponsible.set(true);
-    const fixture = TestBed.createComponent(TicketMonitorComponent);
-    await fixture.whenStable();
-    fixture.componentInstance.responsibleSearchInput.set('joão');
-    await fixture.whenStable();
-
-    const candidateButton = fixture.nativeElement.querySelector('.list-group button') as HTMLButtonElement;
-    expect(candidateButton.disabled).toBeTrue();
   });
 });

@@ -17,6 +17,8 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjective, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { ConfirmDialogService, SessionService, ToastService, setRoleColor } from '../../shared';
 import { UserSummary } from '../../users';
+import { By } from '@angular/platform-browser';
+import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
@@ -203,7 +205,9 @@ describe('TicketDetailComponent', () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Meus Chamados /');
+    const crumbs = fixture.nativeElement.querySelector('nav[aria-label="Trilha"]') as HTMLElement;
+    expect(crumbs.textContent?.replace(/\s+/g, ' ').trim()).toBe('Meus Chamados');
+    expect(crumbs.querySelector('a')?.getAttribute('href')).toBe('/tickets');
     const backLink = fixture.nativeElement.querySelector('a.btn-outline-secondary') as HTMLAnchorElement;
     expect(backLink.getAttribute('href')).toBe('/tickets');
   });
@@ -217,7 +221,9 @@ describe('TicketDetailComponent', () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Administração / Monitorar Chamados /');
+    const crumbs = fixture.nativeElement.querySelector('nav[aria-label="Trilha"]') as HTMLElement;
+    expect(crumbs.textContent?.replace(/\s+/g, ' ').trim()).toBe('Administração Monitorar Chamados');
+    expect(crumbs.querySelector('a')?.getAttribute('href')).toBe('/tickets/monitorar');
     const backLink = fixture.nativeElement.querySelector('a.btn-outline-secondary') as HTMLAnchorElement;
     expect(backLink.getAttribute('href')).toBe('/tickets/monitorar');
   });
@@ -601,199 +607,54 @@ describe('TicketDetailComponent', () => {
       expect(findAssignButton(fixture)).toBeUndefined();
     });
 
-    it('reseta a busca, a seleção e o erro de mutação ao abrir o modal', async () => {
+    /** Diálogo de atribuição renderizado (só existe enquanto aberto). */
+    function assignDialog(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): TicketAssignDialogComponent | undefined {
+      return fixture.debugElement.query(By.directive(TicketAssignDialogComponent))?.componentInstance;
+    }
+
+    it('abre o diálogo pelo botão, sem herdar a busca nem o erro de uma abertura anterior', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
-      fixture.componentInstance.assigneeSearchInput.set('joão');
-      fixture.componentInstance.selectedAssigneeId.set('u2');
+      expect(assignDialog(fixture)).toBeUndefined();
 
       findAssignButton(fixture)!.click();
+      await fixture.whenStable();
 
-      expect(fixture.componentInstance.assigneeSearchInput()).toBe('');
-      expect(fixture.componentInstance.selectedAssigneeId()).toBeNull();
+      expect(assignDialog(fixture)).toBeDefined();
       expect(detailStoreFake.clearMutationError).toHaveBeenCalled();
       expect(detailStoreFake.clearAssigneeSearch).toHaveBeenCalled();
     });
 
-    it('busca com debounce de 300ms após parar de digitar', async () => {
+    it('passa ao diálogo o responsável atual, os candidatos e o erro da mutação, e liga a busca ao store', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'Maria Souza' });
+      detailStoreFake.assigneeCandidates.set([candidate]);
+      detailStoreFake.mutationError.set('O usuário não atende chamados e não pode ser o responsável.');
       const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.onOpenAssignModal();
       await fixture.whenStable();
 
-      fixture.componentInstance.assigneeSearchInput.set('joão');
-      await new Promise(resolve => setTimeout(resolve, 350));
+      const dialog = assignDialog(fixture)!;
+      expect(dialog.currentName()).toBe('Maria Souza');
+      expect(dialog.candidates()).toEqual([candidate]);
+      expect(fixture.nativeElement.textContent).toContain('O usuário não atende chamados e não pode ser o responsável.');
 
+      dialog.search.emit('joão');
       expect(detailStoreFake.searchAssignees).toHaveBeenCalledWith('joão');
     });
 
-    it('não dispara a busca antes dos 300ms', async () => {
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-
-      fixture.componentInstance.assigneeSearchInput.set('joão');
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      expect(detailStoreFake.searchAssignees).not.toHaveBeenCalled();
-      await new Promise(resolve => setTimeout(resolve, 300));
-    });
-
-    it('mostra os candidatos encontrados e permite selecionar um deles', async () => {
-      detailStoreFake.assigneeCandidates.set([candidate]);
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      fixture.componentInstance.assigneeSearchInput.set('joão');
-      await fixture.whenStable();
-
-      expect(fixture.nativeElement.textContent).toContain('João Pedro');
-
-      const candidateRow = Array.from(fixture.nativeElement.querySelectorAll('li') as NodeListOf<HTMLElement>)
-        .find(li => li.textContent?.includes('joao.pedro@empresa.com'));
-      candidateRow!.click();
-      await fixture.whenStable();
-
-      expect(fixture.componentInstance.selectedAssigneeId()).toBe('u2');
-      expect(candidateRow!.classList).toContain('is-selected');
-      expect(candidateRow!.getAttribute('aria-selected')).toBe('true');
-    });
-
-    it('usa a cor customizada da função quando escolhida (prévia local)', async () => {
-      setRoleColor('Atendente', '#ff3e1d');
-      detailStoreFake.assigneeCandidates.set([candidate]);
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      fixture.componentInstance.assigneeSearchInput.set('joão');
-      await fixture.whenStable();
-
-      const candidateRow = Array.from(fixture.nativeElement.querySelectorAll('li') as NodeListOf<HTMLElement>)
-        .find(li => li.textContent?.includes('joao.pedro@empresa.com'));
-      const badge = candidateRow!.querySelector('.badge') as HTMLElement;
-      expect(badge.classList).toContain('badge-role-custom');
-      expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
-    });
-
-    it('mostra no máximo 2 badges de função por candidato, agrupando o resto num badge "+N"', async () => {
-      const multiRoleCandidate: UserSummary = {
-        ...candidate,
-        roles: [{ name: 'Atendente' }, { name: 'Administrador' }, { name: 'Supervisor' }]
-      };
-      detailStoreFake.assigneeCandidates.set([multiRoleCandidate]);
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      fixture.componentInstance.assigneeSearchInput.set('joão');
-      await fixture.whenStable();
-
-      const text = fixture.nativeElement.textContent;
-      expect(text).toContain('Atendente');
-      expect(text).toContain('Administrador');
-      expect(text).not.toContain('Supervisor');
-      expect(text).toContain('+1');
-    });
-
-    it('desmarca o candidato ao clicar de novo nele', async () => {
-      detailStoreFake.assigneeCandidates.set([candidate]);
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-      fixture.componentInstance.onSelectAssignee('u2', 0);
-
-      fixture.componentInstance.onSelectAssignee('u2', 0);
-
-      expect(fixture.componentInstance.selectedAssigneeId()).toBeNull();
-    });
-
-    it('navega entre os candidatos com as setas e move o foco circulante', async () => {
-      const other: UserSummary = { ...candidate, id: 'u3', firstName: 'Ana', lastName: 'Lima', email: 'ana.lima@empresa.com' };
-      detailStoreFake.assigneeCandidates.set([candidate, other]);
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      fixture.componentInstance.assigneeSearchInput.set('a');
-      await fixture.whenStable();
-
-      fixture.componentInstance.onAssigneeListKeydown({ key: 'ArrowDown', preventDefault: () => {} } as KeyboardEvent, 2);
-      expect(fixture.componentInstance.focusedAssigneeIndex()).toBe(1);
-
-      fixture.componentInstance.onAssigneeListKeydown({ key: 'ArrowDown', preventDefault: () => {} } as KeyboardEvent, 2);
-      expect(fixture.componentInstance.focusedAssigneeIndex()).toBe(0);
-
-      fixture.componentInstance.onAssigneeListKeydown({ key: 'ArrowUp', preventDefault: () => {} } as KeyboardEvent, 2);
-      expect(fixture.componentInstance.focusedAssigneeIndex()).toBe(1);
-    });
-
-    it('mostra uma mensagem para digitar quando o campo de busca está vazio', async () => {
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-
-      expect(fixture.nativeElement.textContent).toContain('Digite para buscar um usuário ativo.');
-    });
-
-    it('mostra uma mensagem quando a busca não encontra ninguém', async () => {
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      fixture.componentInstance.assigneeSearchInput.set('inexistente');
-      await fixture.whenStable();
-
-      expect(fixture.nativeElement.textContent).toContain('Nenhum usuário encontrado.');
-    });
-
-    it('mostra o erro de busca (ex.: sem permissão users:read) em vez da lista', async () => {
-      detailStoreFake.assigneeSearchError.set('Você não tem permissão para buscar usuários.');
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-
-      expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para buscar usuários.');
-    });
-
-    it('não confirma a atribuição sem um candidato selecionado', async () => {
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-
-      fixture.componentInstance.onConfirmAssign();
-
-      expect(detailStoreFake.assignTicket).not.toHaveBeenCalled();
-    });
-
-    it('atribui o candidato selecionado e recarrega o histórico em caso de sucesso', async () => {
+    it('atribui o candidato confirmado, recarrega o histórico, avisa e fecha o diálogo', async () => {
       detailStoreFake.assignTicket.and.callFake((_id: string, _userId: string, onSuccess?: () => void) => onSuccess?.());
-      detailStoreFake.assigneeCandidates.set([candidate]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
+      fixture.componentInstance.onOpenAssignModal();
       await fixture.whenStable();
-      fixture.componentInstance.selectedAssigneeId.set('u2');
 
-      fixture.componentInstance.onConfirmAssign();
+      assignDialog(fixture)!.confirm.emit({ userId: 'u2', name: 'João Pedro' });
+      await fixture.whenStable();
 
       expect(detailStoreFake.assignTicket).toHaveBeenCalledWith('t1', 'u2', jasmine.any(Function));
       expect(historyStoreFake.reload).toHaveBeenCalled();
       expect(toastServiceFake.show).toHaveBeenCalledWith('João Pedro agora é o responsável.');
-    });
-
-    it('mostra a mensagem de erro da mutação quando a atribuição falhar', async () => {
-      detailStoreFake.mutationError.set('O usuário não atende chamados e não pode ser o responsável.');
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-
-      expect(fixture.nativeElement.textContent).toContain('O usuário não atende chamados e não pode ser o responsável.');
-    });
-
-    it('o botão de confirmação diz "Atribuir" numa primeira atribuição e "Reatribuir" ao trocar o responsável', async () => {
-      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
-      const fixtureSemResponsavel = TestBed.createComponent(TicketDetailComponent);
-      await fixtureSemResponsavel.whenStable();
-      expect(fixtureSemResponsavel.nativeElement.textContent).toContain('Atribuir');
-      expect(fixtureSemResponsavel.nativeElement.textContent).not.toContain('Reatribuir');
-
-      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'Maria Souza' });
-      const fixtureComResponsavel = TestBed.createComponent(TicketDetailComponent);
-      await fixtureComResponsavel.whenStable();
-      expect(fixtureComResponsavel.nativeElement.textContent).toContain('Reatribuir');
-    });
-
-    it('avisa que a atribuição substitui o responsável atual quando um candidato está selecionado', async () => {
-      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'Maria Souza' });
-      detailStoreFake.assigneeCandidates.set([candidate]);
-      const fixture = TestBed.createComponent(TicketDetailComponent);
-      await fixture.whenStable();
-      expect(fixture.nativeElement.textContent).not.toContain('Isso substitui');
-
-      fixture.componentInstance.onSelectAssignee('u2', 0);
-      await fixture.whenStable();
-
-      const text = fixture.nativeElement.textContent;
-      expect(text).toContain('Isso substitui');
-      expect(text).toContain('Maria Souza');
-      expect(text).toContain('João Pedro');
+      expect(assignDialog(fixture)).toBeUndefined();
     });
   });
 

@@ -1,125 +1,93 @@
-<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
-  <div>
-    <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Administração /</span> Monitorar Chamados</h4>
-    <p class="page-subtitle small mb-0">Todos os chamados do sistema, com prazos e situação de SLA.</p>
+<app-page-header title="Monitorar Chamados" subtitle="Todos os chamados do sistema, com prazos e situação de SLA."
+                 [crumbs]="[{ label: 'Administração' }]" />
+
+<app-ticket-monitor-guide />
+
+<!--
+  Escopo da tela: o Setor vale pros números de SLA e pra tabela. Fica acima dos números que
+  dependem dele (antes ficava escondido na barra de filtros, abaixo deles, com um parágrafo
+  explicando que "não muda com os outros filtros").
+-->
+<div class="monitor-scope d-flex align-items-end flex-wrap gap-3 mb-3">
+  <div class="monitor-scope-field">
+    <label class="form-label small mb-1" for="monitorSector">Setor</label>
+    <select id="monitorSector" class="form-select" [value]="store.filters().sectorId ?? ''"
+            aria-describedby="monitorSectorHint"
+            (change)="store.setSectorId($any($event.target).value || undefined)">
+      <option value="">Todos os setores</option>
+      @for (department of departmentsStore.departments(); track department.id) {
+        <optgroup [label]="department.name">
+          @for (sector of department.sectors; track sector.id) {
+            <option [value]="sector.id">{{ sector.name }}</option>
+          }
+        </optgroup>
+      }
+    </select>
   </div>
+  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">Vale pros números de SLA e pra tabela. Os números ignoram os outros filtros.</p>
 </div>
 
-<!-- Resumo de SLA -->
-<p class="text-muted small mb-2">
-  Resumo do setor selecionado, com todos os status e prioridades — não muda com os outros filtros da tabela abaixo.
-</p>
 @if (store.slaSummaryState().error) {
   <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.slaSummaryState().error }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.reloadSlaSummary()">Tentar novamente</button>
   </div>
 }
-<div class="row">
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === undefined"
-            (click)="onSlaCardClick(undefined)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">Ativos</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2">{{ store.slaSummary()?.activeCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Com o relógio do SLA correndo — toque pra ver todos</small>
-          </div>
-          <span class="badge bg-label-primary rounded p-2"><i class="bx bx-receipt fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
 
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.OnTime"
-            (click)="onSlaCardClick(TicketSlaStatus.OnTime)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">No Prazo</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-success">{{ store.slaSummary()?.onTimeCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Dentro do SLA — toque pra filtrar</small>
-          </div>
-          <span class="badge bg-label-success rounded p-2"><i class="bx bx-check-circle fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.AtRisk"
-            (click)="onSlaCardClick(TicketSlaStatus.AtRisk)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">Em Risco</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-warning">{{ store.slaSummary()?.atRiskCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Perto de vencer — toque pra filtrar</small>
-          </div>
-          <span class="badge bg-label-warning rounded p-2"><i class="bx bx-error-circle fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.Breached"
-            (click)="onSlaCardClick(TicketSlaStatus.Breached)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">Atrasados</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-danger">{{ store.slaSummary()?.breachedCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Já passaram do prazo — toque pra filtrar</small>
-          </div>
-          <span class="badge bg-label-danger rounded p-2"><i class="bx bx-error fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
+<!-- Resumo de SLA: cada card filtra a tabela pelo mesmo SLA que mostra (clicar no ativo volta pra "Ativos"). -->
+<div class="row g-3 mb-4">
+  @for (card of slaCards; track card.label) {
+    <div class="col-6 col-lg-3">
+      <app-stat-card [label]="card.label" [value]="slaCount(card.count)" [hint]="card.hint" [icon]="card.icon" [tone]="card.tone"
+                     [loading]="store.slaSummaryState().loading && !store.slaSummary()" [failed]="!!store.slaSummaryState().error && !store.slaSummary()"
+                     [pressed]="store.filters().slaStatus === card.slaStatus"
+                     [pressLabel]="'Filtrar a tabela: ' + card.label"
+                     (press)="onSlaCardClick(card.slaStatus)" />
+    </div>
+  }
 </div>
 
-<!-- Filtros -->
-<div class="card filters-card mb-3">
-  <div class="card-body p-3">
-    <div class="filters-label mb-3">
-      <i class="bx bx-filter-alt"></i>
-      Filtros
+<app-filter-bar (clear)="onClearFilters()">
+  <div class="col-12 col-md-5">
+    <label class="form-label small" for="monitorSearch">Buscar</label>
+    <div class="input-group">
+      <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+      <input id="monitorSearch" type="search" class="form-control" placeholder="Título"
+             [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
     </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <label class="form-label small" for="monitorStatus">Status</label>
+    <select id="monitorStatus" class="form-select" [value]="store.filters().status ?? ''"
+            (change)="store.setStatus($any($event.target).value ? +$any($event.target).value : undefined)">
+      <option value="">Todos</option>
+      @for (status of statusOptions; track status) {
+        <option [value]="status">{{ statusLabels[status] }}</option>
+      }
+    </select>
+  </div>
+  <div class="col-6 col-md-4">
+    <label class="form-label small" for="monitorSla">SLA</label>
+    <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
+            (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
+      <option value="">Todos</option>
+      <optgroup label="Em monitoramento">
+        @for (slaStatus of liveSlaStatusOptions; track slaStatus) {
+          <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
+        }
+      </optgroup>
+      <optgroup label="Já resolvidos">
+        @for (slaStatus of resolvedSlaStatusOptions; track slaStatus) {
+          <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
+        }
+      </optgroup>
+    </select>
+  </div>
+
+  <!-- Filtros de uso menos frequente: recolhidos por padrão; o botão mostra quantos estão aplicados. -->
+  <div id="monitorMoreFilters" class="col-12" [hidden]="!moreFiltersOpen()">
     <div class="row g-3 align-items-end">
-      <div class="col-12 col-md-3">
-        <label class="form-label small" for="monitorSearch">Buscar</label>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="monitorSearch" type="text" class="form-control" placeholder="Título"
-                 [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small" for="monitorStatus">Status</label>
-        <select id="monitorStatus" class="form-select" [value]="store.filters().status ?? ''"
-                (change)="store.setStatus($any($event.target).value ? +$any($event.target).value : undefined)">
-          <option value="">Todos</option>
-          @for (status of statusOptions; track status) {
-            <option [value]="status">{{ statusLabels[status] }}</option>
-          }
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorPriority">Prioridade</label>
         <select id="monitorPriority" class="form-select" [value]="store.filters().priority ?? ''"
                 (change)="store.setPriority($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -129,38 +97,7 @@
           }
         </select>
       </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small" for="monitorSector">Setor</label>
-        <select id="monitorSector" class="form-select" [value]="store.filters().sectorId ?? ''"
-                (change)="store.setSectorId($any($event.target).value || undefined)">
-          <option value="">Todos</option>
-          @for (department of departmentsStore.departments(); track department.id) {
-            <optgroup [label]="department.name">
-              @for (sector of department.sectors; track sector.id) {
-                <option [value]="sector.id">{{ sector.name }}</option>
-              }
-            </optgroup>
-          }
-        </select>
-      </div>
-      <div class="col-6 col-md-1">
-        <label class="form-label small" for="monitorSla">SLA</label>
-        <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
-                (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
-          <option value="">Todos</option>
-          <optgroup label="Em monitoramento">
-            @for (slaStatus of liveSlaStatusOptions; track slaStatus) {
-              <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
-            }
-          </optgroup>
-          <optgroup label="Já resolvidos">
-            @for (slaStatus of resolvedSlaStatusOptions; track slaStatus) {
-              <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
-            }
-          </optgroup>
-        </select>
-      </div>
-      <div class="col-12 col-md-2">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorSort">Ordenar</label>
         <select id="monitorSort" class="form-select" [value]="store.filters().sort"
                 (change)="store.setSort(+$any($event.target).value)">
@@ -169,20 +106,23 @@
           }
         </select>
       </div>
-      <div class="col-12 d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="form-check form-switch mb-0">
+      <div class="col-12 col-md-6">
+        <div class="form-check form-switch mb-2">
           <input class="form-check-input" type="checkbox" role="switch" id="monitorUnassignedOnly"
                  [checked]="store.filters().unassignedOnly ?? false"
                  (change)="store.setUnassignedOnly($any($event.target).checked)" />
           <label class="form-check-label small" for="monitorUnassignedOnly">Só sem responsável</label>
         </div>
-        <button type="button" class="btn btn-link btn-clear-filters text-decoration-none px-0" (click)="onClearFilters()">
-          <i class="bx bx-x me-1"></i>Limpar filtros
-        </button>
       </div>
     </div>
   </div>
-</div>
+
+  <button filterExtras type="button" class="btn btn-link btn-more-filters text-decoration-none px-0"
+          aria-controls="monitorMoreFilters" [attr.aria-expanded]="moreFiltersOpen()" (click)="toggleMoreFilters()">
+    <i class="bx me-1" [class.bx-chevron-down]="!moreFiltersOpen()" [class.bx-chevron-up]="moreFiltersOpen()" aria-hidden="true"></i>
+    {{ moreFiltersOpen() ? 'Menos filtros' : 'Mais filtros' }}@if (secondaryFilterCount() > 0) { ({{ secondaryFilterCount() }}) }
+  </button>
+</app-filter-bar>
 
 @if (store.listState().error) {
   <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
@@ -200,7 +140,6 @@
 
 <div class="row g-3">
   <div class="col-12" [class.col-lg-8]="selectedTicket()">
-  <app-ticket-monitor-guide class="guide-rail" />
   <div class="card">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
@@ -220,12 +159,16 @@
       </thead>
       <tbody>
         @if (store.listState().loading && store.tickets().length === 0) {
-          <tr><td colspan="9" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando chamados…</span></span></td></tr>
+          <tr><td colspan="9"><app-loading-state label="Carregando chamados…" /></td></tr>
         } @else if (store.tickets().length === 0) {
           <tr>
-            <td colspan="9" class="text-center py-5 text-muted">
-              <i class="bx bx-receipt display-6 d-block mb-2 opacity-50"></i>
-              Nenhum chamado encontrado com esses filtros.
+            <td colspan="9">
+              <app-empty-state icon="bx-receipt" title="Nenhum chamado encontrado com esses filtros."
+                               hint="Tente outro termo de busca, setor ou status de SLA.">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">
+                  <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+                </button>
+              </app-empty-state>
             </td>
           </tr>
         } @else {
@@ -274,42 +217,35 @@
                 </span>
               </td>
               <td class="text-end table-stack-actions" (click)="$event.stopPropagation()">
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
-                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
-                          [attr.aria-label]="'Ações para o chamado ' + ticket.title">
-                    <i class="bx bx-dots-vertical-rounded"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    @if (canAssignToMe(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
-                                [attr.aria-label]="'Atribuir o chamado ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
-                          @if (store.assigningToMeIds().includes(ticket.id)) {
-                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                          } @else {
-                            <i class="bx bx-user-plus me-2"></i>
-                          }
-                          Atribuir a mim
-                        </button>
-                      </li>
-                    }
-                    @if (canAssignResponsible(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#monitorAssignResponsibleModal"
-                                [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo chamado ' : 'Atribuir responsável pelo chamado ') + ticket.title"
-                                (click)="onOpenAssignResponsibleModal(ticket.id)">
-                          <i class="bx bx-user-check me-2"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
-                        </button>
-                      </li>
-                    }
+                <app-row-actions [label]="'Ações para o chamado ' + ticket.title">
+                  @if (canAssignToMe(ticket)) {
                     <li>
-                      <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do chamado ' + ticket.title">
-                        <i class="bx bx-show me-2"></i>Ver detalhes
-                      </a>
+                      <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
+                              [attr.aria-label]="'Atribuir o chamado ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
+                        @if (store.assigningToMeIds().includes(ticket.id)) {
+                          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        } @else {
+                          <i class="bx bx-user-plus me-2"></i>
+                        }
+                        Atribuir a mim
+                      </button>
                     </li>
-                  </ul>
-                </div>
+                  }
+                  @if (canAssignResponsible(ticket)) {
+                    <li>
+                      <button type="button" class="dropdown-item"
+                              [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo chamado ' : 'Atribuir responsável pelo chamado ') + ticket.title"
+                              (click)="onOpenAssignResponsibleModal(ticket.id)">
+                        <i class="bx bx-user-check me-2"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
+                      </button>
+                    </li>
+                  }
+                  <li>
+                    <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do chamado ' + ticket.title">
+                      <i class="bx bx-show me-2"></i>Ver detalhes
+                    </a>
+                  </li>
+                </app-row-actions>
               </td>
             </tr>
           }
@@ -319,45 +255,9 @@
   </div>
 
   @if (store.total() > 0) {
-    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} chamados</span>
-
-      @if (store.totalPages() > 1) {
-        <nav class="pagination-group d-flex align-items-center gap-2" aria-label="Paginação">
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
-            Anterior
-          </button>
-
-          <!-- No celular os números de página não cabem numa linha: só "Página X de Y" entre Anterior/Próxima. -->
-          <span class="page-indicator small text-muted text-nowrap">Página {{ store.currentPage() }} de {{ store.totalPages() }}</span>
-
-          @for (pageNumber of pageNumbers(); track $index) {
-            @if (pageNumber === '…') {
-              <span class="page-ellipsis px-1 text-muted" aria-hidden="true">…</span>
-            } @else {
-              <button type="button" class="btn btn-sm btn-page btn-page-number" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
-                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
-                      (click)="store.goToPage(pageNumber)">
-                {{ pageNumber }}
-              </button>
-            }
-          }
-
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
-            Próxima
-          </button>
-        </nav>
-      }
-
-      <div class="d-flex align-items-center gap-2">
-        <label class="form-label small mb-0" for="monitorPageSize">Por página</label>
-        <select id="monitorPageSize" class="form-select form-select-sm w-auto" [value]="store.currentPageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
-          @for (size of pageSizeOptions; track size) {
-            <option [value]="size">{{ size }}</option>
-          }
-        </select>
-      </div>
-    </div>
+    <app-pagination [page]="store.currentPage()" [totalPages]="store.totalPages()" [total]="store.total()"
+                    [pageSize]="store.currentPageSize()" [pageSizeOptions]="pageSizeOptions" noun="chamados" [disabled]="store.listState().loading"
+                    (pageChange)="store.goToPage($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
   </div>
   </div>
@@ -366,55 +266,22 @@
     <!-- Abaixo de "lg", o painel vira um overlay de tela cheia (RF-04): a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
-      <app-ticket-monitor-info-panel [ticket]="ticket" (close)="closeInfoPanel()" />
+      <app-ticket-monitor-info-panel [ticket]="ticket" [modal]="isOverlayViewport()"
+                                     [canAssignToMe]="canAssignToMe(ticket)" [canAssignResponsible]="canAssignResponsible(ticket)"
+                                     [assigningToMe]="store.assigningToMeIds().includes(ticket.id)"
+                                     (close)="closeInfoPanel()" (assignToMeClick)="onAssignToMe(ticket.id)"
+                                     (assignResponsibleClick)="onOpenAssignResponsibleModal(ticket.id)" />
     </div>
   }
 </div>
 
-<!-- Só aparece em telas muito largas, no espaço livre à direita do container central (ver CSS). -->
-<app-ticket-monitor-insights class="insights-rail" />
 
-<!-- Modal de atribuição de responsável -->
-<div class="modal fade" id="monitorAssignResponsibleModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="monitorAssignResponsibleModalTitle">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="monitorAssignResponsibleModalTitle">Atribuir responsável</h5>
-        <button id="monitorAssignResponsibleModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <label class="form-label small" for="monitorResponsibleSearch">Buscar usuário</label>
-        <div class="input-group mb-3">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="monitorResponsibleSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
-                 [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
-        </div>
-
-        @if (store.responsibleSearchError()) {
-          <div class="alert alert-danger py-2 small mb-0" role="alert">{{ store.responsibleSearchError() }}</div>
-        } @else if (store.searchingResponsibleCandidates()) {
-          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
-        } @else if (responsibleSearchInput().trim().length === 0) {
-          <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
-        } @else if (store.responsibleCandidates().length === 0) {
-          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
-        } @else {
-          <ul class="list-group">
-            @for (candidate of store.responsibleCandidates(); track candidate.id) {
-              <li class="list-group-item p-0">
-                <button type="button" class="btn w-100 text-start p-2 rounded-0" [disabled]="store.assigningResponsible()" (click)="onSelectResponsibleCandidate(candidate)">
-                  <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
-                  <div class="small text-muted">{{ candidate.email }}</div>
-                </button>
-              </li>
-            }
-          </ul>
-        }
-
-        @if (store.mutationError()) {
-          <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">{{ store.mutationError() }}</div>
-        }
-      </div>
-    </div>
-  </div>
-</div>
+@if (assigningResponsibleTicket(); as assigning) {
+  <app-ticket-assign-dialog [ticketTitle]="assigning.title" [currentName]="assigning.assignedToName ?? null"
+                            [currentUserId]="assigning.assignedToUserId ?? null"
+                            [candidates]="store.responsibleCandidates()" [searching]="store.searchingResponsibleCandidates()"
+                            [searchError]="store.responsibleSearchError()"
+                            [saving]="store.assigningResponsible()" [error]="store.mutationError()"
+                            (search)="store.searchResponsibleCandidates($event)" (selectionChange)="store.clearMutationError()"
+                            (confirm)="onConfirmResponsible($event)" (closed)="assigningResponsibleTicketId.set(undefined)" />
+}

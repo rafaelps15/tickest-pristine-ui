@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { ProfileEditComponent } from './profile-edit.component';
+import { ToastService } from '../../shared';
 import { ProfileEditStore } from '../application/profile-edit.store';
 import { UserProfile } from '../entities/user-profile';
 
@@ -29,13 +30,15 @@ describe('ProfileEditComponent', () => {
   }
 
   let storeFake: ReturnType<typeof createStoreFake>;
+  let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
     storeFake = createStoreFake();
+    toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
       imports: [ProfileEditComponent],
-      providers: [provideZonelessChangeDetection(), provideRouter([])]
+      providers: [provideZonelessChangeDetection(), provideRouter([]), { provide: ToastService, useValue: toastServiceFake }]
     })
       .overrideProvider(ProfileEditStore, { useValue: storeFake })
       .compileComponents();
@@ -190,29 +193,28 @@ describe('ProfileEditComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.');
   });
 
-  it('esconde a confirmação de "perfil atualizado" assim que o usuário volta a editar o nome', async () => {
-    storeFake.saved.set(true);
+  it('avisa por toast quando o perfil é salvo, e limpa o estado de sucesso', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
-    const firstName = fixture.componentInstance.form.controls.firstName;
-    firstName.markAsDirty();
-    firstName.setValue('Outro nome');
+    storeFake.saved.set(true);
     await fixture.whenStable();
 
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Perfil atualizado.');
     expect(storeFake.clearSaved).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('.alert-success')).toBeNull();
   });
 
-  it('esconde a confirmação de "senha alterada" assim que o usuário volta a editar o formulário de senha', async () => {
-    storeFake.passwordChanged.set(true);
+  it('avisa por toast quando a senha é alterada, limpa o formulário de senha e o estado de sucesso', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
+    fixture.componentInstance.passwordForm.controls.currentPassword.setValue('Antiga123!');
 
-    const currentPassword = fixture.componentInstance.passwordForm.controls.currentPassword;
-    currentPassword.markAsDirty();
-    currentPassword.setValue('Nova123!');
+    storeFake.passwordChanged.set(true);
     await fixture.whenStable();
 
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Senha alterada.');
     expect(storeFake.clearPasswordChanged).toHaveBeenCalled();
+    expect(fixture.componentInstance.passwordForm.controls.currentPassword.value).toBe('');
   });
 });

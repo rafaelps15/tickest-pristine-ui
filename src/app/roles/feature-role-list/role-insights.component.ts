@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, computed } from '@angular/core';
+import { SummaryCardComponent } from '../../shared/ui/summary-card/summary-card.component';
 import { Role } from '../entities/role';
 
 /**
@@ -9,12 +10,17 @@ import { Role } from '../entities/role';
 @Component({
   selector: 'app-role-insights',
   templateUrl: './role-insights.component.html',
-  styleUrl: './role-insights.component.css',
+  imports: [SummaryCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoleInsightsComponent {
   /** Funções carregadas na tela. */
   readonly roles = input<Role[]>([]);
+
+  /** A lista ainda está carregando — o card mostra "—" em vez de números. */
+  readonly loading = input(false);
+  /** A lista falhou ao carregar — o card mostra "—" e o motivo em vez de números. */
+  readonly failed = input(false);
 
   /** Quantidade de funções sem nenhuma permissão atribuída — não dão acesso a nada administrativo. */
   readonly rolesWithoutPermissions = computed(() =>

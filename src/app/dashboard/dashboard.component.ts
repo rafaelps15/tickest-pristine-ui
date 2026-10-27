@@ -6,6 +6,9 @@ import { TicketSummaryStore, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_G
 import { SessionService, loadChart } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
+import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
+import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
+import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
 
 /**
  * Paleta categórica (5 slots, validada com scripts/validate_palette.js do skill dataviz — PASS em
@@ -45,7 +48,7 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink, DashboardGuideComponent, DashboardInsightsComponent],
+    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./dashboard.component.css']
@@ -57,7 +60,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /**
    * Configuração dos 3 cards de status clicáveis (Aberto/Andamento/Resolvido) — mesma estrutura
-   * visual pros três, só variando dado/cor/ícone/rótulo; o card "Total de Tickets" fica fora
+   * visual pros três, só variando dado/cor/ícone/rótulo; o card "Total de Chamados" fica fora
    * (estrutura diferente: legenda de breakdown em vez de dica de permissão, sem link). Extraído
    * de 3 blocos de HTML copiados no simplify de 2026-10-27.
    */
@@ -65,31 +68,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       status: TicketStatus.Open,
       label: 'Em Aberto',
-      colorClass: 'text-warning',
-      badgeClass: 'bg-label-warning',
+      tone: 'warning' as StatTone,
       icon: 'bx-error-circle',
       value: this.store.openCount(),
-      loadingLabel: 'tickets em aberto',
       ariaNoun: 'em aberto'
     },
     {
       status: TicketStatus.InProgress,
       label: 'Em Andamento',
-      colorClass: 'text-info',
-      badgeClass: 'bg-label-info',
+      tone: 'info' as StatTone,
       icon: 'bx-time-five',
       value: this.store.inProgressCount(),
-      loadingLabel: 'tickets em andamento',
       ariaNoun: 'em andamento'
     },
     {
       status: TicketStatus.Resolved,
       label: 'Resolvidos',
-      colorClass: 'text-success',
-      badgeClass: 'bg-label-success',
+      tone: 'success' as StatTone,
       icon: 'bx-check-double',
       value: this.store.resolvedCount(),
-      loadingLabel: 'tickets resolvidos',
       ariaNoun: 'resolvidos'
     }
   ]);
@@ -116,7 +113,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /**
    * Primeiro uso: os totais chegaram (sem carregar, sem erro) e a empresa não tem nenhum ticket —
-   * o gráfico vazio vira um convite com a próxima ação, em vez de só "nenhum ticket".
+   * o gráfico vazio vira um convite com a próxima ação, em vez de só "nenhum chamado".
    */
   protected readonly isFirstUse = computed(() =>
       !this.store.statusCountsLoading() && !this.store.statusCountsFailed() && this.store.total() === 0);
@@ -209,7 +206,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Legenda do card "Total de Tickets" explicando por que ele não soma com os 3 cards visíveis
+   * Legenda do card "Total de Chamados" explicando por que ele não soma com os 3 cards visíveis
    * (Aberto/Andamento/Resolvido) — o Total inclui Fechados e Cancelados, que não têm card próprio.
    * Null quando não há nada a explicar (nenhum fechado/cancelado ainda).
    */
@@ -271,7 +268,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       data: {
         labels,
         datasets: [{
-          label: 'Tickets criados',
+          label: 'Chamados criados',
           data: counts,
           backgroundColor: counts.map((_, i) => CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]),
           borderColor: surfaceColor,

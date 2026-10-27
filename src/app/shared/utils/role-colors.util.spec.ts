@@ -18,10 +18,10 @@ describe('role-colors.util', () => {
 
   it('guarda a cor de cada função separadamente', () => {
     setRoleColor('Agent', '#ff3e1d');
-    setRoleColor('Admin', '#71dd37');
+    setRoleColor('Admin', '#2e7d14');
 
     expect(getRoleColor('Agent')).toBe('#ff3e1d');
-    expect(getRoleColor('Admin')).toBe('#71dd37');
+    expect(getRoleColor('Admin')).toBe('#2e7d14');
   });
 
   it('remove a cor customizada de uma função, voltando a devolver null', () => {
@@ -42,6 +42,18 @@ describe('role-colors.util', () => {
     spyOn(Storage.prototype, 'setItem').and.throwError('bloqueado (ex.: modo privado)');
 
     expect(() => setRoleColor('Agent', '#ff3e1d')).not.toThrow();
+  });
+
+  it('ignora (devolve null) uma cor salva sem contraste suficiente, caindo no acento padrão', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ Agent: '#ffff99' }));
+
+    expect(getRoleColor('Agent')).toBeNull();
+  });
+
+  it('ignora (devolve null) um valor salvo que não é uma cor hex válida', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ Agent: 'red; background: url(x)' }));
+
+    expect(getRoleColor('Agent')).toBeNull();
   });
 
   it('rejeita branco por não ter contraste suficiente pro badge', () => {

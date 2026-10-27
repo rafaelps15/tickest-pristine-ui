@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener, untracked } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,12 +11,16 @@ import { RolesStore } from '../../roles';
 import {
     SessionService, ConfirmDialogService, ToastService,
     visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
-    getRoleColor, strongPasswordValidator
+    getRoleColor, strongPasswordValidator, injectSidePanelOverlay, isEscapeFromNestedLayer
 } from '../../shared';
-import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
+import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
-import { UserListInsightsComponent } from './user-list-insights.component';
 import { UserListGuideComponent } from './user-list-guide.component';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
+import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
+import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 
 const DEFAULT_STATUS: UserStatus = 'All';
 const DEFAULT_PAGE = 1;
@@ -24,6 +28,14 @@ const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const STATUS_OPTIONS: UserStatus[] = ['All', 'Active', 'Inactive'];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Se o back-end já obriga quem foi cadastrado a trocar a senha no primeiro acesso (liga o
+ * `MustChangePassword` no POST /users/register). Enquanto não liga, a frase "vai criar a própria
+ * senha" seria promessa falsa — fica escondida. Ligar junto com a mudança do back-end.
+ */
+const REGISTER_FORCES_PASSWORD_CHANGE = false;
+/** Quanto tempo a linha de quem acabou de ser criado fica destacada na tabela. */
+const NEW_USER_HIGHLIGHT_MS = 4000;
 
 /** Lê o status da query string só se bater com um dos valores aceitos; senão, o padrão ("Todos"). */
 function parseStatusParam(value: string | null): UserStatus {
@@ -61,12 +73,20 @@ const passwordMatchValidator: ValidatorFn = (control: AbstractControl): Validati
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
     selector: 'app-user-list',
-    imports: [ReactiveFormsModule, DatePipe, DropdownFixedPositionDirective, UserListInfoPanelComponent, UserListInsightsComponent, UserListGuideComponent],
+    imports: [ReactiveFormsModule, DatePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent],
     templateUrl: './user-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-list.component.css'
 })
 export class UserListComponent implements OnInit {
+    /** Diálogo aberto agora (renderizado com `@if`, via `<app-dialog>`), ou `null`. */
+    protected readonly openDialog = signal<'create' | 'edit' | 'roles' | null>(null);
+
+    /** Fecha o diálogo aberto (X, Esc, clique fora, "Cancelar" ou depois de salvar). */
+    closeDialog(): void {
+        this.openDialog.set(null);
+    }
+
     private readonly fb = inject(FormBuilder);
     protected readonly store = inject(UsersStore);
     protected readonly rolesStore = inject(RolesStore);
@@ -102,8 +122,33 @@ export class UserListComponent implements OnInit {
     /** Controla se os campos de senha do modal de criação são exibidos em texto claro. */
     showPasswords = signal(false);
 
+    /** Mensagem de período de cadastro inválido (data inicial depois da final); `null` quando o período é coerente. */
+    periodError = signal<string | null>(null);
+
     /** Texto digitado na busca, antes do debounce — ver o effect de busca no construtor. */
     searchInput = signal('');
+
+    /** Se o modal de criação mostra a frase de troca de senha no primeiro acesso — ver {@link REGISTER_FORCES_PASSWORD_CHANGE}. */
+    readonly registerForcesPasswordChange = REGISTER_FORCES_PASSWORD_CHANGE;
+
+    /** Funções marcadas no modal de criação (por nome) — as padrão (`isDefault`) já vêm marcadas ao abrir. */
+    createRoleNames = signal<Set<string>>(new Set());
+
+    /** Se o último envio do modal de criação foi "Criar e cadastrar outro" (mantém o modal aberto) em vez de "Criar". */
+    private createAnother = false;
+
+    /** Anúncio do modal de criação ao cadastrar e manter aberto ("Ana Costa criada.") — região `aria-live` dentro do modal. */
+    readonly createAnnouncement = signal('');
+
+    /** Usuário recém-criado, destacado por alguns segundos na tabela pra quem acabou de cadastrar encontrar a linha. */
+    readonly highlightedUserId = signal<string | null>(null);
+
+    /** Texto da região `aria-live` permanente do lote — vazia sem seleção; a região já existe antes, pra primeira marcação ser anunciada. */
+    readonly selectionAnnouncement = computed(() => {
+        const count = this.selectedUserIds().size;
+        if (count === 0) return '';
+        return count === 1 ? '1 usuário selecionado' : `${count} usuários selecionados`;
+    });
 
     /** Ids dos usuários marcados para ação em lote, na página atual. */
     selectedUserIds = signal<Set<string>>(new Set());
@@ -120,7 +165,10 @@ export class UserListComponent implements OnInit {
     /** Usuário selecionado, com os dados já carregados na tabela — `undefined` se o id não estiver (mais) na página/filtro atual. */
     infoPanelUser = computed(() => this.store.users().find(user => user.id === this.infoPanelUserId()));
 
-    readonly pageSizeOptions = [10, 20, 50, 100];
+    readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
+    /** Se a janela está abaixo de "lg", onde o painel "Informações do Usuário" vira um diálogo modal de tela cheia. */
+    readonly isOverlayViewport = injectSidePanelOverlay();
 
     /** Verifica se um campo do formulário de criação está inválido e já foi tocado. */
     isCreateFieldInvalid(fieldName: keyof typeof this.createForm.controls): boolean {
@@ -137,10 +185,7 @@ export class UserListComponent implements OnInit {
     constructor() {
         effect(() => {
             if (this.store.success()) {
-                const { firstName, lastName } = this.createForm.getRawValue();
-                this.createForm.reset({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
-                document.getElementById('userCreateModalCloseButton')?.click();
-                this.toastService.show(`"${firstName} ${lastName}" criado com sucesso.`);
+                untracked(() => this.onUserCreated());
             }
         });
 
@@ -231,9 +276,16 @@ export class UserListComponent implements OnInit {
         this.lastFocusedElement = null;
     }
 
-    /** Esc fecha o painel "Informações do Usuário", de qualquer lugar da tela — essencial no overlay de tela cheia, sem botão "fora" pra clicar. */
-    @HostListener('document:keydown.escape')
-    onEscapeKey(): void {
+    /**
+     * Esc fecha o painel "Informações do Usuário", de qualquer lugar da tela — essencial no overlay
+     * de tela cheia, sem botão "fora" pra clicar. Exceto quando o Esc nasce dentro de um modal
+     * (edição, funções, confirmação) ou de um menu "⋮": ali ele só fecha aquela camada, sem levar
+     * o painel junto.
+     */
+    @HostListener('document:keydown.escape', ['$event'])
+    onEscapeKey(event: Event): void {
+        if (isEscapeFromNestedLayer(event)) return;
+
         if (this.infoPanelUserId()) {
             this.closeInfoPanel();
         }
@@ -277,24 +329,86 @@ export class UserListComponent implements OnInit {
             current.get(key) === (value === null ? null : String(value)));
     }
 
-    onCreateSubmit(): void {
+    /** Prepara o modal de criação: limpa o estado anterior e pré-marca as funções padrão (`isDefault`). */
+    openCreateModal(): void {
+        this.openDialog.set('create');
+        this.store.resetState();
+        this.createAnnouncement.set('');
+        this.createRoleNames.set(new Set(this.rolesStore.roles().filter(role => role.isDefault).map(role => role.name)));
+    }
+
+    /** Indica se a função está marcada no modal de criação. */
+    isCreateRoleChecked(roleName: string): boolean {
+        return this.createRoleNames().has(roleName);
+    }
+
+    /** Marca ou desmarca uma função no modal de criação. */
+    toggleCreateRole(roleName: string, checked: boolean): void {
+        this.createRoleNames.update(current => {
+            const next = new Set(current);
+            if (checked) next.add(roleName); else next.delete(roleName);
+            return next;
+        });
+    }
+
+    /** Valida e envia o cadastro; `another` mantém o modal aberto pra cadastrar o próximo ("Criar e cadastrar outro"). */
+    onCreateSubmit(another = false): void {
         if (this.createForm.invalid) {
             this.createForm.markAllAsTouched();
             return;
         }
 
+        this.createAnother = another;
         const raw = this.createForm.getRawValue();
         this.store.createUser({
             firstName: raw.firstName!,
             lastName: raw.lastName!,
             email: raw.email!,
             password: raw.password!
-        });
+        }, Array.from(this.createRoleNames()));
+    }
+
+    /**
+     * Fecha o ciclo de um cadastro bem-sucedido: avisa (toast, ou alerta de sucesso parcial quando
+     * só as funções falharam), destaca a linha nova e, em "Criar e cadastrar outro", limpa o
+     * formulário mantendo as funções escolhidas — o próximo contratado costuma ter as mesmas — e
+     * devolve o foco ao Nome.
+     */
+    private onUserCreated(): void {
+        const { firstName, lastName } = this.createForm.getRawValue();
+        const name = `${firstName} ${lastName}`;
+
+        if (this.store.createRolesFailed()) {
+            this.toastService.show(`Cadastro de "${name}" concluído, mas sem as funções escolhidas. Use "Atribuir funções" no menu ⋮ da linha.`, 'info');
+        } else {
+            this.toastService.show(`Cadastro de "${name}" concluído.`);
+        }
+
+        this.highlightCreatedUser(this.store.createdUserId());
+        this.createForm.reset({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
+
+        if (this.createAnother) {
+            this.createAnnouncement.set(`Cadastro de ${name} concluído. Pronto para o próximo.`);
+            document.getElementById('userCreateFirstName')?.focus();
+        } else {
+            this.closeDialog();
+        }
+    }
+
+    /** Destaca a linha do usuário recém-criado por {@link NEW_USER_HIGHLIGHT_MS} — só aparece se ele estiver na página/filtro atual. */
+    private highlightCreatedUser(userId: string | null): void {
+        if (!userId) return;
+
+        this.highlightedUserId.set(userId);
+        setTimeout(() => {
+            if (this.highlightedUserId() === userId) this.highlightedUserId.set(null);
+        }, NEW_USER_HIGHLIGHT_MS);
     }
 
     /** Abre o modal de edição de cadastro pré-preenchendo nome/sobrenome do usuário selecionado. */
     openEditModal(user: UserSummary): void {
-        this.store.clearListMutationError();
+        this.openDialog.set('edit');
+        this.store.clearDialogErrors();
         this.selectedUserForEdit.set(user);
         this.editForm.reset({ firstName: user.firstName, lastName: user.lastName });
     }
@@ -313,7 +427,7 @@ export class UserListComponent implements OnInit {
         const trimmedFirstName = firstName!.trim();
         const trimmedLastName = lastName!.trim();
         this.store.updateProfile(user.id, { firstName: trimmedFirstName, lastName: trimmedLastName }, () => {
-            document.getElementById('userEditModalCloseButton')?.click();
+            this.closeDialog();
             this.toastService.show(`Cadastro de "${trimmedFirstName} ${trimmedLastName}" atualizado.`);
         });
     }
@@ -325,7 +439,8 @@ export class UserListComponent implements OnInit {
 
     /** Abre o modal de atribuição de roles pré-marcando as roles já atribuídas ao usuário selecionado. */
     openAssignRolesModal(user: UserSummary): void {
-        this.store.clearListMutationError();
+        this.openDialog.set('roles');
+        this.store.clearDialogErrors();
         this.selectedUser.set(user);
         this.selectedRoleNames.set(new Set(user.roles.map(role => role.name)));
     }
@@ -342,12 +457,53 @@ export class UserListComponent implements OnInit {
         });
     }
 
+    /** Nomes das funções de administrador do sistema (`isAdministrator`), pra proteger a própria conta de perder o acesso. */
+    private readonly adminRoleNames = computed(() =>
+        new Set(this.rolesStore.roles().filter(role => role.isAdministrator).map(role => role.name)));
+
+    /** O que o "Salvar" do modal de funções vai mudar em relação ao que o usuário tem hoje — mostrado ao vivo, em vez de um aviso genérico de "substitui tudo". */
+    readonly rolesDiff = computed(() => {
+        const user = this.selectedUser();
+        if (!user) return { added: [] as string[], removed: [] as string[] };
+
+        const current = new Set(user.roles.map(role => role.name));
+        const selected = this.selectedRoleNames();
+        const byName = (a: string, b: string) => a.localeCompare(b, 'pt-BR');
+        return {
+            added: [...selected].filter(name => !current.has(name)).sort(byName),
+            removed: [...current].filter(name => !selected.has(name)).sort(byName)
+        };
+    });
+
+    /**
+     * Se a seleção tiraria da própria conta logada todas as funções de administrador — o mesmo
+     * risco que já bloqueia a auto-desativação: o admin perderia o acesso a esta tela sem como
+     * desfazer pela interface. Achado do critique de 2026-10-27.
+     */
+    readonly removesOwnAdminAccess = computed(() => {
+        const user = this.selectedUser();
+        if (!user || !this.isCurrentUser(user)) return false;
+
+        const adminNames = this.adminRoleNames();
+        const hadAdmin = user.roles.some(role => adminNames.has(role.name));
+        const keepsAdmin = [...this.selectedRoleNames()].some(name => adminNames.has(name));
+        return hadAdmin && !keepsAdmin;
+    });
+
+    /** Se a seleção deixaria o usuário sem nenhuma função — permitido, mas avisado: ele entra e não consegue fazer nada. */
+    readonly leavesWithoutRoles = computed(() => this.selectedUser() !== null && this.selectedRoleNames().size === 0);
+
+    /** Indica se a função é de administrador do sistema, pra marcar no modal de atribuição. */
+    isAdminRole(roleName: string): boolean {
+        return this.adminRoleNames().has(roleName);
+    }
+
     onAssignRolesSubmit(): void {
         const user = this.selectedUser();
-        if (!user) return;
+        if (!user || this.removesOwnAdminAccess()) return;
 
         this.store.assignRoles(user.id, Array.from(this.selectedRoleNames()), () => {
-            document.getElementById('userRolesModalCloseButton')?.click();
+            this.closeDialog();
             this.toastService.show(`Funções de "${user.firstName} ${user.lastName}" atualizadas.`);
         });
     }
@@ -382,33 +538,42 @@ export class UserListComponent implements OnInit {
         return user.id === this.sessionService.userId();
     }
 
-    /** Confirma e desativa o usuário selecionado, bloqueando o login dele. */
+    /**
+     * Confirma e desativa o usuário selecionado, bloqueando o acesso. O toast de sucesso oferece
+     * "Desfazer" (reativa na hora) — desativar é reversível, e o atalho poupa achar a linha de novo.
+     * Textos sem gênero gramatical: o nome da pessoa não diz o gênero.
+     */
     onDeactivate(user: UserSummary): void {
+        const name = `${user.firstName} ${user.lastName}`;
         this.confirmDialogService.confirm({
-            title: `Desativar "${user.firstName} ${user.lastName}"?`,
-            message: 'O login dele será bloqueado imediatamente.',
+            title: `Desativar "${name}"?`,
+            message: `O acesso de ${name} ao Tickest é bloqueado na hora. Dá pra reativar depois.`,
             confirmLabel: 'Desativar',
             variant: 'danger'
         }).subscribe(confirmed => {
             if (confirmed) {
                 this.store.deactivate(user.id, () => {
-                    this.toastService.show(`"${user.firstName} ${user.lastName}" foi desativado.`);
+                    this.toastService.show(`Acesso de "${name}" desativado.`, 'success', {
+                        label: 'Desfazer',
+                        run: () => this.store.activate(user.id, () => this.toastService.show(`Acesso de "${name}" reativado.`))
+                    });
                 });
             }
         });
     }
 
-    /** Confirma e reativa o usuário selecionado, liberando o login dele de novo. */
+    /** Confirma e reativa o usuário selecionado, liberando o acesso de novo. */
     onActivate(user: UserSummary): void {
+        const name = `${user.firstName} ${user.lastName}`;
         this.confirmDialogService.confirm({
-            title: `Reativar "${user.firstName} ${user.lastName}"?`,
-            message: 'O login dele voltará a funcionar.',
+            title: `Reativar "${name}"?`,
+            message: `${name} volta a conseguir entrar no Tickest.`,
             confirmLabel: 'Reativar',
             variant: 'success'
         }).subscribe(confirmed => {
             if (confirmed) {
                 this.store.activate(user.id, () => {
-                    this.toastService.show(`"${user.firstName} ${user.lastName}" foi reativado.`);
+                    this.toastService.show(`Acesso de "${name}" reativado.`);
                 });
             }
         });
@@ -470,8 +635,8 @@ export class UserListComponent implements OnInit {
             .map(user => `${user.firstName} ${user.lastName}`);
         const label = userIds.length === 1 ? '1 usuário selecionado' : `${userIds.length} usuários selecionados`;
         const message = names.length <= 8
-            ? `${names.join(', ')}. O login deles será bloqueado imediatamente.`
-            : 'O login deles será bloqueado imediatamente.';
+            ? `${names.join(', ')}. O acesso dessas pessoas ao Tickest é bloqueado na hora.`
+            : 'O acesso dessas pessoas ao Tickest é bloqueado na hora.';
 
         this.confirmDialogService.confirm({
             title: `Desativar ${label}?`,
@@ -487,6 +652,9 @@ export class UserListComponent implements OnInit {
                     this.toastService.show(succeededCount === 1 ? '1 usuário desativado.' : `${succeededCount} usuários desativados.`);
                 } else if (succeededCount > 0) {
                     this.toastService.show(`${succeededCount} de ${succeededCount + failedCount} usuários desativados.`, 'info');
+                } else {
+                    // Antes, um lote que falhava inteiro não dizia nada aqui — só o alerta acima da lista.
+                    this.toastService.show('Nenhum usuário foi desativado. O motivo está acima da lista.', 'danger');
                 }
             });
         });
@@ -504,12 +672,27 @@ export class UserListComponent implements OnInit {
 
     /** Muda a data inicial do período de cadastro. */
     onCreatedFromChange(value: string): void {
-        this.store.setPeriod(value || undefined, this.store.filters().createdTo);
+        this.applyPeriod(value || undefined, this.store.filters().createdTo);
     }
 
     /** Muda a data final do período de cadastro. */
     onCreatedToChange(value: string): void {
-        this.store.setPeriod(this.store.filters().createdFrom, value || undefined);
+        this.applyPeriod(this.store.filters().createdFrom, value || undefined);
+    }
+
+    /**
+     * Aplica o período só se for coerente ("de" até "até"); invertido, mantém o último período
+     * válido e explica o problema abaixo dos campos — antes a tela só mostrava "Nenhum usuário
+     * encontrado", sem dizer por quê.
+     */
+    private applyPeriod(createdFrom: string | undefined, createdTo: string | undefined): void {
+        if (createdFrom && createdTo && createdFrom > createdTo) {
+            this.periodError.set('A data inicial precisa ser igual ou anterior à data final.');
+            return;
+        }
+
+        this.periodError.set(null);
+        this.store.setPeriod(createdFrom, createdTo);
     }
 
     /** Muda a quantidade de itens exibidos por página. */
@@ -520,43 +703,8 @@ export class UserListComponent implements OnInit {
     /** Limpa todos os filtros, incluindo o campo de busca local. */
     onClearFilters(): void {
         this.searchInput.set('');
+        this.periodError.set(null);
         this.store.clearFilters();
     }
 
-    /** Índice (1-based) do primeiro item exibido na página atual, para o texto "Exibindo X–Y de Z". */
-    rangeStart(): number {
-        return this.store.total() === 0 ? 0 : (this.store.currentPage() - 1) * this.store.pageSize() + 1;
-    }
-
-    /** Índice (1-based) do último item exibido na página atual, para o texto "Exibindo X–Y de Z". */
-    rangeEnd(): number {
-        return Math.min(this.store.currentPage() * this.store.pageSize(), this.store.total());
-    }
-
-    /**
-     * Janela de números de página pro rodapé: sempre mostra a primeira, a última e as vizinhas da
-     * atual, com "…" nos saltos — pra não listar 1 botão por página quando há muitas (ex.: 50 páginas).
-     */
-    pageNumbers(): (number | '…')[] {
-        const total = this.store.totalPages();
-        const current = this.store.currentPage();
-
-        if (total <= 7) {
-            return Array.from({ length: total }, (_, i) => i + 1);
-        }
-
-        const kept = new Set([1, total, current - 1, current, current + 1]);
-        const sorted = Array.from(kept).filter(page => page >= 1 && page <= total).sort((a, b) => a - b);
-
-        const result: (number | '…')[] = [];
-        let previous = 0;
-        for (const page of sorted) {
-            if (previous && page - previous > 1) {
-                result.push('…');
-            }
-            result.push(page);
-            previous = page;
-        }
-        return result;
-    }
 }

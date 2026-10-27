@@ -44,6 +44,59 @@ describe('TicketMonitorInfoPanelComponent', () => {
     return fixture;
   }
 
+  it('é uma região rotulada pelo título do chamado fora do modo modal, e vira diálogo modal no overlay', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const panel = fixture.nativeElement.querySelector('.info-panel') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('region');
+    expect(panel.hasAttribute('aria-modal')).toBeFalse();
+
+    fixture.componentRef.setInput('modal', true);
+    await fixture.whenStable();
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('no modo overlay, move o foco pro título ao abrir, mas não o rouba quando a lista recarrega o mesmo chamado', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const title = fixture.nativeElement.querySelector('#ticketInfoPanelTitle') as HTMLElement;
+    expect(document.activeElement).toBe(title);
+
+    const searchInput = document.createElement('input');
+    document.body.appendChild(searchInput);
+    searchInput.focus();
+    fixture.componentRef.setInput('ticket', { ...ticket });
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(searchInput);
+
+    searchInput.remove();
+    fixture.nativeElement.remove();
+  });
+
+  it('no modo modal, Tab no último controle volta pro primeiro e Shift+Tab no primeiro vai pro último', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const first = fixture.nativeElement.querySelector('button') as HTMLElement;
+    const last = fixture.nativeElement.querySelector('a[href]') as HTMLElement;
+
+    last.focus();
+    last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(last);
+
+    fixture.nativeElement.remove();
+  });
+
   it('renderiza os campos instantâneos recebidos por @Input, sem esperar nenhuma busca', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
@@ -127,5 +180,26 @@ describe('TicketMonitorInfoPanelComponent', () => {
 
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/tickets/t1?from=monitor');
+  });
+
+  it('mostra os atalhos de atribuição só quando a tela permite, e avisa a tela ao clicar', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).not.toContain('Atribuir a mim');
+
+    fixture.componentRef.setInput('canAssignToMe', true);
+    fixture.componentRef.setInput('canAssignResponsible', true);
+    await fixture.whenStable();
+
+    const assignToMe = jasmine.createSpy('assignToMe');
+    const assignResponsible = jasmine.createSpy('assignResponsible');
+    fixture.componentInstance.assignToMeClick.subscribe(assignToMe);
+    fixture.componentInstance.assignResponsibleClick.subscribe(assignResponsible);
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>);
+    buttons.find(button => button.textContent?.includes('Atribuir a mim'))!.click();
+    buttons.find(button => button.textContent?.includes('responsável'))!.click();
+
+    expect(assignToMe).toHaveBeenCalled();
+    expect(assignResponsible).toHaveBeenCalled();
   });
 });

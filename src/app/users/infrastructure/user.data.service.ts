@@ -60,7 +60,7 @@ export class UserDataService {
         return this.http.put<void>(`${this.apiUrl}/${userId}/deactivate`, {});
     }
 
-    /** Reativa um usuário, liberando o login dele de novo (PUT /users/{id}/activate). */
+    /** Reativa um usuário, liberando o acesso de novo (PUT /users/{id}/activate). */
     activate(userId: string): Observable<void> {
         return this.http.put<void>(`${this.apiUrl}/${userId}/activate`, {});
     }

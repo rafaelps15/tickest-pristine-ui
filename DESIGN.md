@@ -15,6 +15,7 @@ colors:
   surface: "#ffffff"
   page-bg: "#f5f5f9"
   border: "#e7e7ff"
+  input-border: "#d9dee3"
   text-primary-dark: "#e9ecef"
   text-secondary-dark: "#adb5bd"
   text-muted-dark: "#868e96"
@@ -142,7 +143,7 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 - **Grafite Texto** (`#2b2c40`): texto principal (claro).
 - **Ardósia Secundária** (`#5f6f82`): texto secundário/rótulos de formulário (claro).
   Escurecida em 2026-10-27 (era `#697a8d`: ~4,40:1 sobre branco, ~4,05:1 sobre o fundo de página)
-  — agora ~5,1:1 sobre branco e ~4,7:1 sobre `#f5f5f9`; achado do audit de Meus Tickets.
+  — agora ~5,1:1 sobre branco e ~4,7:1 sobre `#f5f5f9`; achado do audit de Meus Chamados.
 - **Névoa Terciária** (`#6b7684`): texto terciário/placeholder, cabeçalho de tabela (claro).
   Escurecido em 2026-10-08 (era `#a1acb8`, ~2,31:1) pra passar 4,5:1 WCAG AA — auditado no
   Dashboard.
@@ -162,7 +163,7 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 - **Vermelho Alerta** (`#ff3e1d`): ação destrutiva (excluir, desativar), prioridade "Urgente",
   SLA atrasado/perdido. Mesma ressalva de uso acima. Status "Cancelado" saiu do vermelho em
   2026-10-27: é um estado final, muitas vezes escolhido pelo próprio solicitante, e não um alerta —
-  usa o badge neutro, como "Fechado" (achado do critique de Meus Tickets).
+  usa o badge neutro, como "Fechado" (achado do critique de Meus Chamados).
 
 ### Semantic Text (texto de badge "soft" — contraste AA sobre o fundo pastel)
 A cor semântica "pura" acima, usada direto como texto sobre o próprio fundo pastel do badge,
@@ -182,7 +183,7 @@ mede entre 1,6:1 e 3,8:1 de contraste — falha WCAG AA (4,5:1). Auditado e corr
 elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor
 nova inventada para aquela tela.
 
-*Exceção deliberada:* o gráfico "Tickets criados" do Dashboard usa uma paleta categórica de 5 cores
+*Exceção deliberada:* o gráfico "Chamados criados" do Dashboard usa uma paleta categórica de 5 cores
 (azul, laranja, verde, âmbar, rosa — validada pra daltonismo) só como ritmo visual entre barras, a
 pedido do usuário em 2026-10-24. A cor ali não carrega significado; a exceção vale só pra esse
 gráfico, não abre precedente pra outras telas.
@@ -212,12 +213,14 @@ permissão de ter personalidade própria.
 ### Hierarchy
 - **Display** (700, 3rem, line-height 1): a wordmark "tickest" em login/registro. Único uso de
   Sora no sistema.
-- **Title** (700, 1.5rem/`h4`): título de cada tela (ex. "Gestão de Usuários", "Bom dia, {nome}!").
+- **Title** (700, 1.5rem/`h4`): título de cada tela (ex. "Usuários", "Bom dia, {nome}!").
   Semanticamente é o `h1` da tela (`<h1 class="h4">`); títulos de card são `<h2 class="h5">` — o
   nível do heading segue a estrutura, o tamanho vem da classe (sem pular de `h4` pra `h6`).
 - **Body** (400, 1rem): texto corrido, valores de tabela, conteúdo de formulário.
 - **Label** (600–700, 0.72–0.85rem, uppercase, tracking 0.06–0.08em): rótulos de formulário,
-  cabeçalho de tabela, cabeçalho de seção do menu lateral ("ADMINISTRAÇÃO").
+  cabeçalho de tabela, cabeçalho de seção do menu lateral ("ADMINISTRAÇÃO"), títulos de seção do
+  Guia da Tela e os rótulos da lista rótulo/valor do painel lateral (`.info-list dt`, 0.72rem —
+  com o valor ao lado no corpo, 1rem; nunca dois tamanhos quase iguais pra rótulo e valor).
 
 ### Named Rules
 **The Brand-Only Display Rule.** Sora nunca aparece fora da wordmark de login/registro — títulos
@@ -297,6 +300,10 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 - **Uso:** status de usuário/ticket, prioridade de ticket, papel/função atribuída. Uma célula com
   múltiplos badges (ex. funções de um usuário) mostra no máximo 2 e agrupa o resto num badge
   "+N" neutro com tooltip nativo — nunca deixa a linha da tabela esticar.
+- **Cor de função (prévia local):** o admin escolhe a cor de cada função na tela Funções
+  (`.badge-role-custom`, fundo `cor 15% + branco`, texto `cor 65% + preto`). Cor sem contraste AA
+  nesse par é recusada na escolha e na criação, e `getRoleColor` devolve `null` (índigo) pra qualquer
+  cor salva que não passe — nenhuma tela que mostra o badge revalida por conta própria.
 
 ### Cards / Containers
 - **Corner Style:** `rounded-md` (0.75rem); modais usam `rounded-lg` (1.25rem).
@@ -325,14 +332,17 @@ Quando uma linha de tabela tem mais de duas ações possíveis, elas vão num me
 acionado por um ícone de três pontos verticais — nunca uma fileira de botões texto+ícone lado a
 lado. Um único "⋮" por linha, com a classe global `.btn-row-actions`: discreto (sem borda) até
 hover/foco/aberto, quando ganha só um realce índigo leve. O título da linha é o link pro detalhe
-(sem botão "Ver detalhes" separado). Dropdowns dentro de um container com scroll
+(sem botão "Ver detalhes" separado) — exceto onde o título abre o painel lateral em vez do
+detalhe (Monitorar Chamados): ali "Ver detalhes" fica no "⋮", e é o único item de um chamado já
+encerrado. Dropdowns dentro de um container com scroll
 (`.table-responsive`) usam posicionamento `fixed` do Popper, não o `absolute` padrão do Bootstrap,
-pra não ficarem cortados pelo scroll.
+pra não ficarem cortados pelo scroll. Implementação: `<app-row-actions [label] [busy] [rowKey]>`
+(`shared/ui/row-actions`) com os `<li>` projetados — nunca montar o dropdown à mão.
 
 ### Tabelas no celular (`.table-stack`)
 Utilitário global: abaixo de `md`, cada linha vira um card; cada célula com `data-label` vira um
 par rótulo/valor; a célula `.table-stack-actions` (o "⋮") vai pro canto superior direito do card.
-Usado em Meus Tickets e Monitorar Tickets. Texto que não quebra linha (`text-truncate`) dentro do
+Usado em Meus Chamados e Monitorar Chamados. Texto que não quebra linha (`text-truncate`) dentro do
 card precisa de `width: 0; min-width: 100%`, senão alarga a página inteira.
 
 ### Icon Tile (`.icon-tile`)
@@ -357,14 +367,113 @@ O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
   `prefers-reduced-motion`).
 - Sem nenhum alerta, o vazio é dito com clareza: "Fila em dia", com check na cor de sucesso.
 
+### Seleção em lote e linha da tabela
+- **Abrir o painel pela linha:** o clique na linha inteira é só atalho de mouse. O alvo de teclado
+  e leitor de tela é um `<button>` no título/nome da linha, com `aria-expanded` e o texto visível
+  como nome acessível (sem `aria-label` que repita o estado). Nunca `role="button"` no `<tr>`: apaga
+  a semântica de linha de tabela e aninha o checkbox e o "⋮" dentro de outro botão.
+- **Badge "+N" na tabela:** não é controle (nada de `tabindex` em `<span>`): o "+N" é
+  `aria-hidden` e os nomes ocultos vão num `.visually-hidden`; a lista completa fica no painel.
+- **Checkbox de seleção em lote:** dentro de um `<label class="select-hit">` que preenche a célula
+  com 44×44px (`.col-select` sem padding) — tocar em qualquer ponto da célula marca, sem abrir o
+  painel da linha.
+- **Item inativo** (usuário desativado): nunca `opacity` na linha — derruba e-mail, data e badge
+  abaixo de AA. O estado é dito pelo badge; a linha só recua o nome pra `text-secondary`.
+
+### Painel lateral "Informações do X" (`appSidePanel`)
+Consulta rápida do item selecionado na tabela (Usuários, Monitorar Chamados), sem sair da tela.
+- **Layout:** de `lg` pra cima, coluna `col-lg-4` ao lado da tabela, `sticky` (`.info-panel`).
+  Abaixo de `lg`, overlay de tela cheia (`.info-panel-col`) sobre um fundo preto a 50%
+  (`.info-panel-backdrop`, o mesmo do `.modal-backdrop`), z-index entre o layout (1045) e os toasts
+  (1080). Estilos globais em `styles.css`.
+- **Acessibilidade** (diretiva `shared/ui/directives/side-panel.directive.ts`): `role="region"` no
+  desktop, `role="dialog"` + `aria-modal` no overlay (`injectSidePanelOverlay()`). Só no overlay: Tab
+  preso dentro do painel e foco no título (`data-side-panel-title`, `tabindex="-1"`) ao abrir e a
+  cada troca de item — chaveado pelo **id**, nunca pelo objeto, que a lista recria a cada recarga.
+  No desktop o foco fica na linha que abriu (o painel vem depois da tabela no DOM).
+- **Fechar:** botão X, clique no fundo, ou Esc de qualquer lugar — exceto Esc nascido dentro de um
+  modal ou de um "⋮" (`isEscapeFromNestedLayer`), que só fecha aquela camada. Ao fechar, o foco
+  volta pro botão que abriu.
+- **Conteúdo:** título do item, badges de estado, lista rótulo/valor (`.info-list`) e os atalhos
+  que a linha já oferece — o painel nunca tem ação que a tela não tenha. Listas que a tabela agrupa
+  em "+N" aparecem inteiras aqui.
+
+### Esqueleto da tela
+Toda tela autenticada segue a mesma ordem, de cima pra baixo: **Cabeçalho → Guia → Resumo →
+alerta de ação → Filtros → barra de lote → Conteúdo** (tabela, cards, formulário), com o painel
+lateral "Informações do X" ao lado do conteúdo quando houver.
+- **Cabeçalho (`<app-page-header>`, `shared/ui/page-header`):** `title`, `subtitle` e `crumbs`;
+  ações da tela projetadas com `pageActions` (à direita, quebrando pra baixo no celular). Gera o
+  único `<h1 class="h4">` da tela; a trilha (`Administração`, `Início / Meus Chamados`) fica num
+  `<nav aria-label="Trilha">` acima, fora do `h1`, com link nos níveis que têm tela própria. Nunca
+  montar cabeçalho à mão, nem `h4` cru, nem `pt-3`/`py-3` no título.
+- **Telas de entrada** (login, registro, primeiro acesso) não usam o cabeçalho — o título do card é
+  o `<h1 class="h4">` da página.
+
+### Guia da Tela e Resumo
+- **Guia da Tela (`<app-screen-guide storageKey="…">` + `<app-guide-section title="…">`,
+  `shared/ui/screen-guide`):** card recolhível logo abaixo do cabeçalho, **aberto por padrão** em
+  todas as telas, com a preferência lembrada no navegador. Borda fina e sem sombra (`.guide-card`):
+  apoio, mais discreto que o conteúdo. Seções com título `h2` em versalete. O componente do domínio
+  (`*-guide.component`) só escreve o texto. Explica legenda e comportamento da tela — nunca repete
+  o que a interface já diz.
+- **Sempre no fluxo:** Guia e Resumo ficam no topo da tela, na largura do conteúdo, em qualquer
+  resolução e navegador. Nunca `position: fixed` nas margens do `container-xxl`: o antigo modo
+  "trilha lateral" (≥1900px, ~130–170px de largura) dependia do viewport real — zoom, escala do
+  Windows, barra lateral do Edge, barra de rolagem dentro de `100vw` — e cortava o texto no Edge
+  enquanto o Chrome caía no fluxo normal. Removido em 2026-10-27.
+- **Resumo (`<app-summary-card [loading] [failed]>`, `shared/ui/summary-card`):** números calculados
+  da lista da tela, em `.insights-section`/`.insights-stat` (passo Title, 1.5rem). Enquanto a lista
+  carrega ou quando falhou, o card mostra "—" e o motivo por contrato — nunca `0`, nunca uma
+  afirmação ("todas têm permissão") sobre uma lista que não chegou.
+
+### Cards de estatística (`<app-stat-card>`, `shared/ui/stat-card`)
+Rótulo, número (`div.stat-value`, nunca heading), legenda e ícone em `.icon-tile` no tom semântico.
+Carregando: spinner no lugar do número; falhou: "—". Interação sempre no card inteiro: `[pressed]`
+vira um botão `aria-pressed` que filtra a própria tela (Monitorar), ou um `<a class="stretched-link">`
+projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve o dado.
+
+### Filtros e paginação
+- **Filtros (`<app-filter-bar (clear)>`, `shared/ui/filter-bar`):** card discreto (`.filters-card`)
+  com o rótulo "Filtros", os campos numa `row g-3` (cada um traz a sua `col-*`) e um rodapé com os
+  extras (`filterExtras`, ex.: um switch) à esquerda e "Limpar filtros" à direita. No máximo 3–4
+  campos visíveis; os de uso raro vão numa linha "Mais filtros (n)" recolhida (Monitorar).
+- **Escopo da tela:** um filtro que muda *também* os números do topo (o Setor do Monitorar) fica
+  acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta.
+- **Paginação (`<app-pagination>`, `shared/ui/pagination`):** rodapé do card da tabela — "Exibindo
+  X–Y de N {itens}", Anterior/números/Próxima (no celular só "Página X de Y") e "Por página".
+
 ### Estados de dado (carregando, erro, vazio, primeiro uso)
-- **Carregando:** spinner com texto pra leitor de tela, no lugar do valor.
+- **Carregando:** spinner com texto pra leitor de tela, no lugar do valor. Uma lista ou bloco
+  inteiro usa `<app-loading-state label="Carregando usuários…">` (spinner + texto visível,
+  `role="status"`) — nunca um spinner mudo.
 - **Erro:** nunca vira dado. Um número que falhou mostra "—" (com "indisponível" pro leitor de
   tela), nunca o `0` de fallback; um gráfico que falhou mostra o erro com "Tentar novamente",
   nunca o vazio "nenhum ticket".
-- **Vazio:** diz o que está vazio e, se houver, a próxima ação.
+- **Vazio:** diz o que está vazio e, se houver, a próxima ação (`.empty-state`: ícone
+  `display-6` em `.empty-state-icon` — cinza neutro, nunca `opacity` —, uma frase em negrito, uma
+  linha de orientação e o botão). Filtro sem resultado oferece "Limpar filtros"; lista ainda vazia
+  oferece criar o primeiro item. Implementação: `<app-empty-state icon title hint>` com a ação
+  projetada (`shared/ui/data-state`).
+- **Filtro incoerente** (ex. período com início depois do fim): não é aplicado; o último filtro
+  válido continua valendo e a mensagem aparece embaixo dos campos (`.is-invalid` + `aria-invalid`).
+- **Erro de ação dentro de um modal:** aparece dentro do próprio modal — o alerta do topo da página
+  fica coberto pelo fundo do modal e ninguém vê.
 - **Primeiro uso** (empresa sem nenhum ticket): o vazio vira convite com a próxima ação real —
   cadastrar departamentos/setores pra quem administra, abrir o primeiro ticket pros demais.
+
+### Diálogos (`<app-dialog>`, `shared/ui/dialog`)
+Todo modal de formulário/escolha é um `<app-dialog title subtitle [busy] (closed)>` mostrado com
+`@if` pela tela — nunca `data-bs-toggle="modal"` + "clicar no X escondido" pra fechar. O componente
+cuida de fundo escurecido, `role="dialog"`/`aria-modal`, foco inicial (`data-dialog-focus` ou o
+primeiro controle), Tab preso, Esc/clique fora (travados enquanto `busy`), rolagem da página
+travada e foco devolvido a quem abriu. Formulário: `<form dialogContent>` envolvendo `.modal-body`
+e `.modal-footer`. Cancelar fica à esquerda do primário no rodapé.
+
+### Atribuir responsável (`<app-ticket-assign-dialog>`, `tickets/ui`)
+Igual no detalhe e no Monitorar: busca com debounce, candidatos como listbox navegável por setas,
+marca um e só atribui no botão "Atribuir"/"Reatribuir" — com o aviso "Isso substitui X por Y"
+quando já há responsável. Nunca atribuir no primeiro clique.
 
 ### Confirm Dialog
 Toda confirmação de ação sensível (excluir, desativar, reativar) usa o modal de confirmação
@@ -380,6 +489,15 @@ confirmação abria (corrigido em 2026-10-27).
 **The Transform-Not-Padding Rule.** Microinterações de deslocamento (hover de item de menu, por
 exemplo) animam `transform`, nunca `padding`/`margin` — a primeira é compositada pelo navegador, a
 segunda força recálculo de layout a cada quadro.
+
+### Linguagem da interface
+- **"Chamado"**, nunca "ticket", em todo texto visível (títulos, botões, legendas, avisos, leitor de
+  tela). "Ticket" fica só no código e nas rotas.
+- **"Início"** é o nome da tela inicial — no menu, nas trilhas e nos "Voltar".
+- **Título da tela = item do menu** ("Usuários", não "Gestão de Usuários").
+- **Botões de criar** em caixa de título: "Novo Chamado", "Novo Usuário", "Nova Função", "Novo Departamento".
+- **Formulário:** Cancelar à esquerda do primário, alinhados à direita no rodapé; erro de envio logo
+  acima do botão de enviar (login, criar conta e primeiro acesso iguais).
 
 ## Do's and Don'ts
 
@@ -399,6 +517,10 @@ segunda força recálculo de layout a cada quadro.
   `prefers-reduced-motion` (o realce do alerta de SLA que vence é o modelo).
 - **Do** dar a todo controle só de ícone um `<button>` com `aria-label` e 44px (`.btn-icon`) — nada
   de `<a href="javascript:void(0)">`.
+- **Do** usar o painel lateral com a diretiva `appSidePanel` e os estilos globais `.info-panel*` em
+  qualquer nova tela de lista com consulta rápida — ver **Painel lateral**.
+- **Do** dar 44×44px de alvo a todo controle tocável, inclusive checkbox de tabela (`.select-hit`)
+  e o botão de mostrar senha.
 
 ### Don't:
 - **Don't** usar gradiente em texto — é decoração sem função; use peso ou tamanho para ênfase.
@@ -411,5 +533,9 @@ segunda força recálculo de layout a cada quadro.
   não criar um novo.
 - **Don't** prometer "ao vivo"/tempo real numa tela que não se atualiza sozinha.
 - **Don't** forçar `text-transform: uppercase` em badges — o rótulo já vem escrito como deve ser lido.
+- **Don't** usar `opacity` pra dizer "inativo" ou "decorativo" em linha, ícone ou texto que precisa
+  ser lido — derruba o contraste abaixo de AA; use cor de token (`text-secondary`, `text-muted`).
+- **Don't** publicar trilha/painel "Em breve" sem dado real numa tela nova — só onde já foi decidido
+  manter como prévia (Monitorar Chamados).
 - **Don't** fazer coreografia de carregamento (números contando, entradas em sequência) em tela de
   operação — quem abre o Dashboard quer o número, não a animação.
