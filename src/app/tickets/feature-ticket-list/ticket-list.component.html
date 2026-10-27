@@ -21,7 +21,7 @@
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
+    <table class="table table-hover align-middle mb-0 table-stack">
       <thead>
         <tr>
           <th scope="col">Título</th>
@@ -49,10 +49,10 @@
                 <a [routerLink]="['/tickets', ticket.id]" class="ticket-title fw-semibold">{{ ticket.title }}</a>
                 <div class="ticket-summary text-muted small text-truncate" [title]="ticket.description">{{ ticket.description }}</div>
               </td>
-              <td class="text-nowrap small">{{ ticket.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
-              <td><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
-              <td class="text-end">
+              <td class="text-nowrap small" data-label="Abertura">{{ ticket.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
+              <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
+              <td class="text-end table-stack-actions">
                 <div class="dropdown">
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition

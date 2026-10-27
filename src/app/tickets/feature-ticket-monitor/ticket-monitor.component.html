@@ -203,7 +203,7 @@
   <app-ticket-monitor-guide class="guide-rail" />
   <div class="card">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
+    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
       <caption class="visually-hidden">Tickets do sistema, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
@@ -260,17 +260,17 @@
                   <span class="text-muted fst-italic">Não atribuído</span>
                 }
               </td>
-              <td class="small">{{ ticket.sectorName }}</td>
-              <td><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
-              <td><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
-              <td><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
-              <td class="text-nowrap small" [class.text-danger]="isOverdue(ticket)">
+              <td class="small" data-label="Setor">{{ ticket.sectorName }}</td>
+              <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
+              <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
+              <td data-label="SLA"><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
+              <td class="text-nowrap small" data-label="Prazo" [class.text-danger]="isOverdue(ticket)">
                 @if (isOverdue(ticket)) {
                   <i class="bx bx-error-circle me-1" aria-hidden="true"></i>
                 }
                 {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
               </td>
-              <td class="text-end" (click)="$event.stopPropagation()">
+              <td class="text-end table-stack-actions" (click)="$event.stopPropagation()">
                 <div class="dropdown">
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition

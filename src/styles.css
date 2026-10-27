@@ -268,6 +268,73 @@ body {
   min-height: 2.75rem;
 }
 
+/*
+ * Tabela que vira lista de cards abaixo de "md": cada linha é um bloco, cada célula com
+ * `data-label` vira um par rótulo/valor, a célula `.table-stack-actions` (menu "⋮") vai pro canto
+ * superior direito do card. Evita rolar a tabela pro lado no celular. Usado em Meus Tickets e
+ * Monitorar Tickets.
+ */
+@media (max-width: 767.98px) {
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-stack tr {
+    position: relative;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+  }
+
+  .table-stack tr:last-child {
+    border-bottom: 0;
+  }
+
+  .table-stack td {
+    padding: 0.2rem 0;
+    border: 0;
+    text-align: start !important;
+  }
+
+  .table-stack td:first-child {
+    padding-right: 3.25rem;
+  }
+
+  .table-stack td[data-label] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    color: var(--tk-text-muted);
+    font-size: 0.875rem;
+  }
+
+  .table-stack td.table-stack-actions {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    padding: 0;
+  }
+}
+
 /* Modais: mesma linguagem visual dos cards, com mais elevação por ficarem por cima */
 .modal-content {
   border: none;

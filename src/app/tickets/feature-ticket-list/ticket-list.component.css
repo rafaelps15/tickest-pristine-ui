@@ -22,3 +22,16 @@
 .ticket-summary {
   max-width: 24rem;
 }
+
+/*
+ * No celular (tabela em cards, ver `.table-stack` em styles.css) o resumo ocupa a largura do card:
+ * `width: 0` tira o texto sem quebra do cálculo de largura mínima (senão ele alargava a página
+ * inteira) e `min-width: 100%` o devolve à largura disponível.
+ */
+@media (max-width: 767.98px) {
+  .ticket-summary {
+    width: 0;
+    min-width: 100%;
+    max-width: none;
+  }
+}
