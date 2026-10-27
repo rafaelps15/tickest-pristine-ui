@@ -21,6 +21,13 @@ export const DepartmentsStore = signalStore(
     mutationError: null as string | null,
     /** Em voo uma criação/atualização/exclusão de departamento ou setor — evita duplo submit. */
     mutating: false,
+    /** Id do departamento ou setor sendo excluído agora (um por vez — evita o clique duplo), ou `null`. */
+    deletingId: null as string | null,
+    /**
+     * Falha da última exclusão, com o id do departamento ou setor: a tela mostra no card dele, perto de
+     * onde a ação partiu, em vez do alerta da página.
+     */
+    deleteError: null as { targetId: string; message: string } | null,
     /** Candidatos a responsável encontrados na busca do formulário de departamento. */
     responsibleCandidates: [] as UserSummary[],
     searchingResponsible: false,
@@ -133,15 +140,27 @@ export const DepartmentsStore = signalStore(
       patchState(store, { responsibleCandidates: [], responsibleSearchError: null });
     },
 
-    /** Exclui um departamento e recarrega a listagem em caso de sucesso (DELETE /departments/{id}). */
-    delete(departmentId: string): void {
-      store._departmentDataService.delete(departmentId).subscribe({
+    /**
+     * Exclui um departamento e recarrega a listagem em caso de sucesso (DELETE /departments/{id}). Ignora
+     * o pedido se já há uma exclusão em voo; a falha vai pra {@link deleteError}, com o id do departamento,
+     * e avisa o `onError` (a tela devolve o foco pro card).
+     */
+    delete(departmentId: string, onSuccess?: () => void, onError?: () => void): void {
+      if (store.deletingId()) return;
+      patchState(store, { deletingId: departmentId, deleteError: null });
+
+      store._departmentDataService.delete(departmentId).pipe(
+        finalize(() => patchState(store, { deletingId: null }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
           store._listResource.reload();
+          onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir departamento') });
+          patchState(store, {
+            deleteError: { targetId: departmentId, message: extractErrorMessage(err, {}, 'Não foi possível excluir o departamento.') }
+          });
+          onError?.();
         }
       });
     },
@@ -180,15 +199,26 @@ export const DepartmentsStore = signalStore(
       });
     },
 
-    /** Exclui um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}). */
-    deleteSector(sectorId: string): void {
-      store._sectorDataService.delete(sectorId).subscribe({
+    /**
+     * Exclui um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}). Mesma
+     * guarda e mesmo destino de erro de {@link delete}, com o id do setor.
+     */
+    deleteSector(sectorId: string, onSuccess?: () => void, onError?: () => void): void {
+      if (store.deletingId()) return;
+      patchState(store, { deletingId: sectorId, deleteError: null });
+
+      store._sectorDataService.delete(sectorId).pipe(
+        finalize(() => patchState(store, { deletingId: null }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
           store._listResource.reload();
+          onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir setor') });
+          patchState(store, {
+            deleteError: { targetId: sectorId, message: extractErrorMessage(err, {}, 'Não foi possível excluir o setor.') }
+          });
+          onError?.();
         }
       });
     },
@@ -196,6 +226,11 @@ export const DepartmentsStore = signalStore(
     /** Limpa o erro da última mutação (ex.: ao abrir um formulário novo). */
     clearMutationError(): void {
       patchState(store, { mutationError: null });
+    },
+
+    /** Fecha o aviso de falha da última exclusão. */
+    clearDeleteError(): void {
+      patchState(store, { deleteError: null });
     }
   }))
 );

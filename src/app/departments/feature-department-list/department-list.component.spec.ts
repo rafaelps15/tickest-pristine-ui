@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { DepartmentListComponent } from './department-list.component';
 import { DepartmentsStore } from '../application/departments.store';
 import { Department, DepartmentDetail } from '../entities/department';
-import { ConfirmDialogService, SessionService } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { UserSummary } from '../../users';
 
 describe('DepartmentListComponent', () => {
@@ -38,6 +38,9 @@ describe('DepartmentListComponent', () => {
       listState: signal({ data: [informationTechnology, commercial], loading: false, error: null as string | null }),
       mutationError: signal<string | null>(null),
       mutating: signal(false),
+      deletingId: signal<string | null>(null),
+      deleteError: signal<{ targetId: string; message: string } | null>(null),
+      clearDeleteError: jasmine.createSpy('clearDeleteError'),
       responsibleCandidates: signal<UserSummary[]>([]),
       searchingResponsible: signal(false),
       responsibleSearchError: signal<string | null>(null),
@@ -360,16 +363,73 @@ describe('DepartmentListComponent', () => {
 
     const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0];
     expect(options.message).toContain('Os 2 setores dele também serão excluídos.');
-    expect(storeFake.delete).toHaveBeenCalledWith('dep-1');
+    expect(options.message).toContain('Se algum setor tiver chamados em andamento, a exclusão é recusada.');
+    expect(options.confirmLabel).toBe('Excluir departamento e 2 setores');
+    expect(storeFake.delete).toHaveBeenCalledWith('dep-1', jasmine.any(Function), jasmine.any(Function));
   });
 
-  it('exclui o setor confirmado', async () => {
+  it('o botão de excluir departamento sem setores não fala em setores', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDelete({ ...informationTechnology, sectors: [] });
+
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].confirmLabel).toBe('Excluir departamento');
+  });
+
+  it('confirma a exclusão do departamento com toast quando dá certo', async () => {
+    storeFake.delete.and.callFake((_id: string, onSuccess: () => void) => onSuccess());
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDelete(informationTechnology);
+
+    expect(toast.show).toHaveBeenCalledWith('Departamento "TI" excluído.');
+  });
+
+  it('exclui o setor confirmado, com toast', async () => {
+    storeFake.deleteSector.and.callFake((_id: string, onSuccess: () => void) => onSuccess());
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.onDeleteSector(informationTechnology, informationTechnology.sectors[1]);
 
-    expect(storeFake.deleteSector).toHaveBeenCalledWith('sec-2');
+    expect(storeFake.deleteSector).toHaveBeenCalledWith('sec-2', jasmine.any(Function), jasmine.any(Function));
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].confirmLabel).toBe('Excluir setor');
+    expect(toast.show).toHaveBeenCalledWith('Setor "Infraestrutura" excluído de TI.');
+  });
+
+  it('mostra a falha da exclusão no card do departamento dono do setor, e fecha no X', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    storeFake.deleteError.set({ targetId: 'sec-2', message: 'O setor tem chamados em aberto ou em andamento.' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const cards = fixture.nativeElement.querySelectorAll('.card') as NodeListOf<HTMLElement>;
+    const itCard = [...cards].find(c => c.querySelector('h2')?.textContent?.includes('TI'))!;
+    const otherCard = [...cards].find(c => c.querySelector('h2') && !c.querySelector('h2')!.textContent!.includes('TI'))!;
+    expect(itCard.querySelector('.alert-danger')?.textContent).toContain('O setor tem chamados em aberto ou em andamento.');
+    expect(otherCard.querySelector('.alert-danger')).toBeNull();
+    // Não vai mais pro alerta solto no topo da página.
+    expect(fixture.nativeElement.querySelector(':scope > .alert-danger')).toBeNull();
+
+    (itCard.querySelector('.alert-danger .btn-close') as HTMLButtonElement).click();
+    expect(storeFake.clearDeleteError).toHaveBeenCalled();
+  });
+
+  it('marca o card como ocupado e o "⋮" com spinner durante a exclusão', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    storeFake.deletingId.set('dep-1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const busyCard = fixture.nativeElement.querySelector('.card[aria-busy="true"]') as HTMLElement;
+    expect(busyCard.querySelector('h2')?.textContent).toContain('TI');
+    expect(busyCard.querySelector('[data-row-actions="dep-1"] .spinner-border')).not.toBeNull();
   });
 
   it('não exclui o setor quando a confirmação é cancelada', async () => {

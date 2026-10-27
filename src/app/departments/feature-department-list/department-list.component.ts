@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, computed, signal } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, computed, signal, viewChild, afterNextRender, Injector } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
@@ -39,6 +39,10 @@ export class DepartmentListComponent implements OnInit {
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly sessionService = inject(SessionService);
     private readonly toastService = inject(ToastService);
+    private readonly injector = inject(Injector);
+
+    /** Cabeçalho da página — recebe o foco depois que o card excluído some. */
+    private readonly pageHeader = viewChild(PageHeaderComponent);
 
     /** Se o usuário logado pode criar, editar e excluir departamentos. */
     readonly canManageDepartments = computed(() => this.sessionService.hasPermission('departments:manage'));
@@ -236,7 +240,11 @@ export class DepartmentListComponent implements OnInit {
         }
     }
 
-    /** Confirma e exclui o departamento selecionado, avisando que os setores dele saem junto. */
+    /**
+     * Confirma e exclui o departamento selecionado. O botão diz o tamanho do estrago (os setores saem
+     * junto) e a mensagem antecipa a recusa do back quando há chamados em andamento (RN-10). No sucesso,
+     * toast e foco no título (o card some); na falha, foco de volta no "⋮" do card, onde o erro aparece.
+     */
     onDelete(department: Department): void {
         const sectorCount = department.sectors.length;
         const sectorsNotice = sectorCount === 0
@@ -247,12 +255,42 @@ export class DepartmentListComponent implements OnInit {
 
         this.confirmDialogService.confirm({
             title: `Excluir o departamento "${department.name}"?`,
-            message: `Ele deixa de aparecer na abertura de chamados.${sectorsNotice} Essa ação não pode ser desfeita.`,
-            confirmLabel: 'Excluir',
+            message: `Ele deixa de aparecer na abertura de chamados.${sectorsNotice} Se algum setor tiver chamados em andamento, a exclusão é recusada. Essa ação não pode ser desfeita.`,
+            confirmLabel: sectorCount === 0
+                ? 'Excluir departamento'
+                : `Excluir departamento e ${sectorCount === 1 ? '1 setor' : `${sectorCount} setores`}`,
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (confirmed) this.store.delete(department.id);
+            if (!confirmed) {
+                this.focusRowActions(department.id);
+                return;
+            }
+            this.store.delete(department.id, () => {
+                this.toastService.show(`Departamento "${department.name}" excluído.`);
+                this.pageHeader()?.focus();
+            }, () => this.focusRowActions(department.id));
         });
+    }
+
+    /** Devolve o foco ao botão "⋮" do departamento ou setor (o modal de confirmação o tirou dali). */
+    private focusRowActions(rowKey: string): void {
+        afterNextRender(() => {
+            document.querySelector<HTMLElement>(`[data-row-actions="${rowKey}"]`)?.focus();
+        }, { injector: this.injector });
+    }
+
+    /** Se há uma exclusão em voo neste departamento ou num setor dele (o card fica `aria-busy`). */
+    isDeletingIn(department: Department): boolean {
+        const deletingId = this.store.deletingId();
+        return !!deletingId && (deletingId === department.id || department.sectors.some(sector => sector.id === deletingId));
+    }
+
+    /** Falha da última exclusão a mostrar no card deste departamento (dele ou de um setor dele), ou `null`. */
+    deleteErrorFor(department: Department): string | null {
+        const error = this.store.deleteError();
+        if (!error) return null;
+        const belongsHere = error.targetId === department.id || department.sectors.some(sector => sector.id === error.targetId);
+        return belongsHere ? error.message : null;
     }
 
     /** Prepara o modal de setor para criar um setor dentro do departamento informado. */
@@ -298,15 +336,25 @@ export class DepartmentListComponent implements OnInit {
         }
     }
 
-    /** Confirma e exclui o setor selecionado. */
+    /**
+     * Confirma e exclui o setor selecionado. No sucesso, toast e foco no "⋮" do departamento (a linha do
+     * setor some); na falha, foco de volta no "⋮" do setor, com o erro no card.
+     */
     onDeleteSector(department: Department, sector: DepartmentSector): void {
         this.confirmDialogService.confirm({
             title: `Excluir o setor "${sector.name}"?`,
-            message: `Ele deixa de aparecer em ${department.name} na abertura de chamados. Essa ação não pode ser desfeita.`,
-            confirmLabel: 'Excluir',
+            message: `Ele deixa de aparecer em ${department.name} na abertura de chamados. Se ele tiver chamados em andamento, a exclusão é recusada. Essa ação não pode ser desfeita.`,
+            confirmLabel: 'Excluir setor',
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (confirmed) this.store.deleteSector(sector.id);
+            if (!confirmed) {
+                this.focusRowActions(sector.id);
+                return;
+            }
+            this.store.deleteSector(sector.id, () => {
+                this.toastService.show(`Setor "${sector.name}" excluído de ${department.name}.`);
+                this.focusRowActions(department.id);
+            }, () => this.focusRowActions(sector.id));
         });
     }
 }

@@ -149,16 +149,20 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('expõe a mensagem da API quando o setor tem chamados em aberto', () => {
+  it('põe a falha da exclusão do setor no deleteError, com o id dele, sem sujar o erro da página', () => {
     const conflict = new HttpErrorResponse({
       status: 409,
       error: { detail: 'O setor tem chamados em aberto ou em andamento.' }
     });
     sectorDataService.delete.and.returnValue(throwError(() => conflict));
+    const onSuccess = jasmine.createSpy('onSuccess');
 
-    store.deleteSector('sec-1');
+    store.deleteSector('sec-1', onSuccess);
 
-    expect(store.mutationError()).toBe('O setor tem chamados em aberto ou em andamento.');
+    expect(store.deleteError()).toEqual({ targetId: 'sec-1', message: 'O setor tem chamados em aberto ou em andamento.' });
+    expect(store.mutationError()).toBeNull();
+    expect(store.deletingId()).toBeNull();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it('usa a mensagem padrão quando a API não devolve detalhe', () => {
@@ -166,7 +170,50 @@ describe('DepartmentsStore', () => {
 
     store.deleteSector('sec-1');
 
-    expect(store.mutationError()).toBe('Erro ao excluir setor');
+    expect(store.deleteError()?.message).toBe('Não foi possível excluir o setor.');
+  });
+
+  it('exclui o departamento, chama o onSuccess e libera o deletingId', () => {
+    const pending = new Subject<void>();
+    departmentDataService.delete.and.returnValue(pending.asObservable());
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.delete('dep-1', onSuccess);
+    expect(store.deletingId()).toBe('dep-1');
+
+    pending.next();
+    pending.complete();
+
+    expect(departmentDataService.delete).toHaveBeenCalledWith('dep-1');
+    expect(onSuccess).toHaveBeenCalled();
+    expect(store.deletingId()).toBeNull();
+  });
+
+  it('ignora uma segunda exclusão enquanto a primeira está em voo (clique duplo)', () => {
+    departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
+    sectorDataService.delete.and.returnValue(of(undefined));
+
+    store.delete('dep-1');
+    store.delete('dep-1');
+    store.deleteSector('sec-1');
+
+    expect(departmentDataService.delete).toHaveBeenCalledTimes(1);
+    expect(sectorDataService.delete).not.toHaveBeenCalled();
+  });
+
+  it('põe a falha da exclusão do departamento no deleteError e limpa ao tentar de novo ou fechar', () => {
+    departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Tem chamados.' } })));
+
+    store.delete('dep-1');
+    expect(store.deleteError()).toEqual({ targetId: 'dep-1', message: 'Tem chamados.' });
+
+    departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
+    store.delete('dep-1');
+    expect(store.deleteError()).toBeNull();
+
+    departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    store.clearDeleteError();
+    expect(store.deleteError()).toBeNull();
   });
 
   it('busca o detalhe de um departamento e devolve pro callback', async () => {
@@ -242,8 +289,9 @@ describe('DepartmentsStore', () => {
   });
 
   it('limpa o erro de mutação', () => {
-    sectorDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Conflito' } })));
-    store.deleteSector('sec-1');
+    sectorDataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Conflito' } })));
+    store.updateSector('sec-1', { name: 'Suporte' });
+    expect(store.mutationError()).toBe('Conflito');
 
     store.clearMutationError();
 

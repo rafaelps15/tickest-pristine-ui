@@ -62,7 +62,7 @@
   <div class="row g-4">
     @for (department of filteredDepartments(); track department.id) {
       <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0">
+        <div class="card shadow-sm border-0" [attr.aria-busy]="isDeletingIn(department) ? 'true' : null">
           <div class="card-header d-flex align-items-start justify-content-between gap-3">
             <div>
               <h2 class="h5 mb-1 fw-bold">
@@ -77,7 +77,8 @@
               }
             </div>
             @if (canManageDepartments()) {
-              <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name">
+              <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name"
+                               [busy]="store.deletingId() === department.id" [rowKey]="department.id">
                 <li>
                   <button type="button" class="dropdown-item" (click)="openEditModal(department)">
                     <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar departamento
@@ -92,6 +93,14 @@
             }
           </div>
 
+          <!-- A falha de excluir este departamento ou um setor dele aparece aqui, perto de onde a ação partiu. -->
+          @if (deleteErrorFor(department); as deleteError) {
+            <div class="alert alert-danger border-0 rounded-0 mb-0 py-2 small d-flex align-items-start justify-content-between gap-2" role="alert">
+              <span>{{ deleteError }}</span>
+              <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearDeleteError()"></button>
+            </div>
+          }
+
           <ul class="list-group list-group-flush">
             @for (sector of department.sectors; track sector.id) {
               <li class="list-group-item d-flex align-items-center justify-content-between gap-3">
@@ -102,7 +111,8 @@
                   }
                 </div>
                 @if (canManageSectors()) {
-                  <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name">
+                  <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name"
+                                   [busy]="store.deletingId() === sector.id" [rowKey]="sector.id">
                     <li>
                       <button type="button" class="dropdown-item" (click)="openEditSectorModal(department, sector)">
                         <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar setor
