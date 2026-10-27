@@ -5,9 +5,6 @@
   <div class="card-body p-4 p-lg-5">
     <div class="max-w-700 mx-auto">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        @if (store.state().error) {
-          <div class="alert alert-danger border-0 shadow-sm mb-4">{{ store.state().error }}</div>
-        }
 
         <div class="row g-4">
           <div class="col-12">
@@ -90,6 +87,11 @@
             </select>
           </div>
         </div>
+
+        <!-- Erro de envio logo acima do botão, onde o olho está ao clicar (DESIGN.md, Linguagem da interface). -->
+        @if (store.state().error) {
+          <div class="alert alert-danger border-0 shadow-sm mt-4 mb-0" role="alert">{{ store.state().error }}</div>
+        }
 
         <div class="mt-5 d-flex justify-content-end flex-wrap gap-2">
           <a routerLink="/tickets" class="btn btn-outline-secondary">Cancelar</a>

@@ -107,7 +107,16 @@
         <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.createError() }}</div>
       }
       <label class="form-label" for="roleName">Nome</label>
-      <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor" />
+      <input id="roleName" type="text" class="form-control" formControlName="name" placeholder="Ex: Supervisor"
+             [class.is-invalid]="createForm.controls.name.invalid && createForm.controls.name.touched"
+             [attr.aria-invalid]="createForm.controls.name.invalid && createForm.controls.name.touched"
+             aria-describedby="roleName-hint" />
+      @if (createForm.controls.name.touched && createForm.controls.name.errors?.['required']) {
+        <div class="invalid-feedback d-block">Dê um nome à função.</div>
+      } @else if (createForm.controls.name.errors?.['maxlength']) {
+        <div class="invalid-feedback d-block">O nome deve ter no máximo 100 caracteres.</div>
+      }
+      <div id="roleName-hint" class="form-text">Obrigatório, até 100 caracteres.</div>
 
       <label class="form-label mt-3" for="roleCreateColor">Cor</label>
       <div class="d-flex align-items-center gap-2">
@@ -121,7 +130,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
-      <button type="submit" class="btn btn-primary" [disabled]="createForm.invalid">Criar</button>
+      <button type="submit" class="btn btn-primary">Criar</button>
     </div>
   </form>
 </app-dialog>

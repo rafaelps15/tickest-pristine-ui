@@ -301,4 +301,18 @@ describe('RoleListComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Remover cor');
   });
+
+  it('na Nova Função, "Criar" fica habilitado e um envio vazio diz o que falta', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+
+    const submit = fixture.nativeElement.querySelector('#roleCreateModal button[type="submit"]') as HTMLButtonElement;
+    expect(submit.disabled).toBeFalse();
+    submit.click();
+    await fixture.whenStable();
+
+    expect(storeFake.create).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#roleCreateModal').textContent).toContain('Dê um nome à função.');
+  });
 });

@@ -532,7 +532,7 @@ describe('TicketMonitorComponent', () => {
     expect(liveOptions).toEqual(['No prazo', 'Em risco', 'Atrasado']);
 
     const resolvedOptions = Array.from(groups[1].querySelectorAll('option') as NodeListOf<HTMLOptionElement>).map(o => o.textContent?.trim());
-    expect(resolvedOptions).toEqual(['Cumprido', 'Violado', 'Sem SLA']);
+    expect(resolvedOptions).toEqual(['Cumprido', 'Resolvido com atraso', 'Sem SLA']);
   });
 
   it('mostra o estado vazio quando não há chamados', async () => {

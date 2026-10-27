@@ -6,6 +6,9 @@ const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]
 /** Contador pra gerar ids únicos do título (o `aria-labelledby` do diálogo aponta pra ele). */
 let nextDialogId = 0;
 
+/** Diálogos abertos, do mais antigo pro do topo — só o do topo responde ao Esc (ex.: a confirmação de descarte sobre a edição). */
+const openDialogs: DialogComponent[] = [];
+
 /**
  * Diálogo modal único do sistema, renderizado pelo Angular (a tela o mostra com `@if`) — aposenta o
  * `data-bs-toggle="modal"` + "clicar no X escondido" pra fechar. Cuida do que cada modal repetia:
@@ -80,6 +83,7 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
 
   /** Trava a rolagem da página por trás e põe o foco no primeiro controle (ou no marcado com `data-dialog-focus`). */
   ngAfterViewInit(): void {
+    openDialogs.push(this);
     this.document.body.classList.add('modal-open');
     const box = this.box().nativeElement;
     const preferred = box.querySelector<HTMLElement>('[data-dialog-focus]');
@@ -90,7 +94,8 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
 
   /** Devolve a rolagem da página e o foco a quem abriu o diálogo, se ele ainda existir. */
   ngOnDestroy(): void {
-    this.document.body.classList.remove('modal-open');
+    openDialogs.splice(openDialogs.indexOf(this), 1);
+    if (openDialogs.length === 0) this.document.body.classList.remove('modal-open');
     if (this.previousFocus?.isConnected) this.previousFocus.focus();
   }
 
@@ -99,9 +104,10 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
     if (!this.busy()) this.closed.emit();
   }
 
-  /** Esc fecha — exceto se nasceu dentro de um menu "⋮" aberto dentro do diálogo. */
+  /** Esc fecha só o diálogo do topo — e não quando nasceu dentro de um menu "⋮" aberto nele. */
   @HostListener('document:keydown.escape', ['$event'])
   onEscape(event: Event): void {
+    if (openDialogs[openDialogs.length - 1] !== this) return;
     if ((event.target as Element | null)?.closest?.('.dropdown-menu.show')) return;
     this.requestClose();
   }

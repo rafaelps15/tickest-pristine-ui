@@ -415,8 +415,8 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
 
 ### Guia da Tela e Resumo
 - **Guia da Tela (`<app-screen-guide storageKey="…">` + `<app-guide-section title="…">`,
-  `shared/ui/screen-guide`):** card recolhível logo abaixo do cabeçalho, **aberto por padrão** em
-  todas as telas, com a preferência lembrada no navegador. Borda fina e sem sombra (`.guide-card`):
+  `shared/ui/screen-guide`):** card recolhível logo abaixo do cabeçalho, **aberto só na primeira
+  visita** a cada tela (depois começa fechado), com a escolha do usuário lembrada no navegador. Borda fina e sem sombra (`.guide-card`):
   apoio, mais discreto que o conteúdo. Seções com título `h2` em versalete. O componente do domínio
   (`*-guide.component`) só escreve o texto. Explica legenda e comportamento da tela — nunca repete
   o que a interface já diz.
@@ -519,6 +519,9 @@ segunda força recálculo de layout a cada quadro.
   é bloqueado", não "o login dele"; "Seu acesso está pronto", não "você foi convidado(a)".
 - **"Chamado"**, nunca "ticket", em todo texto visível (títulos, botões, legendas, avisos, leitor de
   tela). "Ticket" fica só no código e nas rotas.
+- **SLA com um termo por situação:** "No prazo", "Em risco", **"Atrasado"** (passou do prazo e ainda
+  está aberto — inclusive por objetivo) e **"Resolvido com atraso"** (encerrado depois do prazo).
+  Nunca "vencido" nem "violado".
 - **"Início"** é o nome da tela inicial — no menu, nas trilhas e nos "Voltar".
 - **Título da tela = item do menu** ("Usuários", não "Gestão de Usuários").
 - **Botões de criar** em caixa de título: "Novo Chamado", "Novo Usuário", "Nova Função", "Novo Departamento".

@@ -452,6 +452,19 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Não encontramos esse chamado');
   });
 
+  it('não mostra SLA, mensagens, anexos nem histórico quando o chamado não existe — só o aviso e o caminho de volta', async () => {
+    detailStoreFake.ticket.set(undefined);
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).not.toContain('Mensagens');
+    expect(text).not.toContain('Anexar arquivo');
+    expect(text).not.toContain('Histórico');
+    const back = fixture.nativeElement.querySelector('.alert a') as HTMLAnchorElement;
+    expect(back.getAttribute('href')).toBe('/tickets');
+  });
+
   it('recarrega o chamado ao clicar em "Tentar novamente" quando falhar, mas não mostra o botão quando é só "não encontrado"', async () => {
     detailStoreFake.ticket.set(undefined);
     detailStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este chamado.' });
@@ -663,6 +676,17 @@ describe('TicketDetailComponent', () => {
       return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
         .find(b => b.textContent?.includes(text));
     }
+
+    it('com o chamado Resolvido, só "Fechar chamado" é primário — "Reabrir" fica secundário', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const buttons = Array.from(fixture.nativeElement.querySelectorAll('.ticket-actions button') as NodeListOf<HTMLButtonElement>);
+      const primaries = buttons.filter(b => b.classList.contains('btn-primary')).map(b => b.textContent?.trim());
+      expect(primaries).toEqual(['Fechar chamado']);
+      expect(buttons.find(b => b.textContent?.includes('Reabrir'))?.classList).toContain('btn-outline-primary');
+    });
 
     it('mostra os próximos status válidos pra um chamado Aberto', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
@@ -1037,7 +1061,7 @@ describe('TicketDetailComponent', () => {
       const statesAndBadges: [TicketSlaObjectiveState, string, string][] = [
         [TicketSlaObjectiveState.Running, 'Em andamento', 'bg-label-success'],
         [TicketSlaObjectiveState.AtRisk, 'Em risco', 'bg-label-warning'],
-        [TicketSlaObjectiveState.Breached, 'Violado', 'bg-label-danger'],
+        [TicketSlaObjectiveState.Breached, 'Atrasado', 'bg-label-danger'],
         [TicketSlaObjectiveState.Met, 'Cumprido', 'bg-label-success'],
         [TicketSlaObjectiveState.Missed, 'Perdido', 'bg-label-danger'],
         [TicketSlaObjectiveState.Stopped, 'Parado', 'bg-label-secondary'],

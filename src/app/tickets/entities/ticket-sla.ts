@@ -25,7 +25,7 @@ export enum TicketSlaObjectiveState {
 export const TICKET_SLA_OBJECTIVE_STATE_LABELS: Record<TicketSlaObjectiveState, string> = {
   [TicketSlaObjectiveState.Running]: 'Em andamento',
   [TicketSlaObjectiveState.AtRisk]: 'Em risco',
-  [TicketSlaObjectiveState.Breached]: 'Violado',
+  [TicketSlaObjectiveState.Breached]: 'Atrasado',
   [TicketSlaObjectiveState.Met]: 'Cumprido',
   [TicketSlaObjectiveState.Missed]: 'Perdido',
   [TicketSlaObjectiveState.Stopped]: 'Parado',

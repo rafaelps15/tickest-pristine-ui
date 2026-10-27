@@ -217,4 +217,17 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.clearPasswordChanged).toHaveBeenCalled();
     expect(fixture.componentInstance.passwordForm.controls.currentPassword.value).toBe('');
   });
+
+  it('oferece "Tentar novamente" quando o perfil falha ao carregar', async () => {
+    storeFake.loadError.set('Erro ao carregar o perfil.');
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+    storeFake.loadCurrentUser.calls.reset();
+
+    const retry = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Tentar novamente'));
+    retry!.click();
+
+    expect(storeFake.loadCurrentUser).toHaveBeenCalled();
+  });
 });

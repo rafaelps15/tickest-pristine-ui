@@ -37,19 +37,19 @@
         <span class="badge bg-label-success rounded-circle icon-tile" aria-hidden="true"><i class="bx bx-check fs-4"></i></span>
         <div>
           <p class="fw-semibold mb-0">Fila em dia</p>
-          <p class="text-muted small mb-0">Nenhum chamado com SLA vencido ou em risco agora.</p>
+          <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco agora.</p>
         </div>
       </div>
     } @else {
       <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
       <div class="sla-totals mb-3">
         <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
-           [attr.aria-label]="shownBreachedCount() + ' chamados com SLA vencido — ver na fila'">
+           [attr.aria-label]="shownBreachedCount() + ' chamados atrasados — ver na fila'">
           <span class="stat-value fs-3 text-danger">{{ shownBreachedCount() }}</span>
-          <span class="small">{{ shownBreachedCount() === 1 ? 'vencido' : 'vencidos' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
+          <span class="small">{{ shownBreachedCount() === 1 ? 'atrasado' : 'atrasados' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
         </a>
         <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
-           [attr.aria-label]="shownAtRiskCount() + ' chamados com SLA em risco — ver na fila'">
+           [attr.aria-label]="shownAtRiskCount() + ' chamados em risco — ver na fila'">
           <span class="stat-value fs-3 text-warning">{{ shownAtRiskCount() }}</span>
           <span class="small">em risco <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
         </a>
@@ -63,7 +63,7 @@
               <span class="d-flex align-items-start justify-content-between gap-2">
                 <span class="critical-ticket-title">{{ item.ticket.title }}</span>
                 @if (item.overdue) {
-                  <span class="badge bg-label-danger flex-shrink-0">Vencido</span>
+                  <span class="badge bg-label-danger flex-shrink-0">Atrasado</span>
                 } @else {
                   <span class="badge bg-label-warning flex-shrink-0">Em risco</span>
                 }
@@ -73,7 +73,7 @@
                 {{ item.ticket.sectorName }} ·
                 <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">{{ item.relative }}</time>
               </span>
-              <!-- Quem atende: vencido sem dono e vencido em atendimento pedem ações opostas. -->
+              <!-- Quem atende: atrasado sem dono e atrasado em atendimento pedem ações opostas. -->
               @if (item.ticket.assignedToName; as assignee) {
                 <span class="d-block small text-muted">Com {{ assignee }}</span>
               } @else {

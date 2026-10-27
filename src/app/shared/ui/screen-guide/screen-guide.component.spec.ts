@@ -61,6 +61,25 @@ describe('ScreenGuideComponent', () => {
     expect(toggle(fixture).getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('abre só na primeira visita: a próxima começa fechada, sem o usuário precisar fechar', async () => {
+    const first = TestBed.createComponent(HostComponent);
+    await first.whenStable();
+    expect(body(first).hidden).toBeFalse();
+    first.destroy();
+
+    const second = TestBed.createComponent(HostComponent);
+    await second.whenStable();
+    expect(body(second).hidden).toBeTrue();
+  });
+
+  it('respeita a escolha de deixar aberto nas visitas seguintes', async () => {
+    localStorage.setItem(STORAGE_KEY, 'true');
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+
+    expect(body(fixture).hidden).toBeFalse();
+  });
+
   it('respeita defaultOpen=false quando não há preferência salva', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.defaultOpen.set(false);

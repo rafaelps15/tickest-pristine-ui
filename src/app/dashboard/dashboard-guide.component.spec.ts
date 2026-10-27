@@ -28,7 +28,7 @@ describe('DashboardGuideComponent', () => {
     expect(text).toContain('Dia, Semana ou Mês');
   });
 
-  it('explica "em risco" e "vencido" só pra quem vê os Alertas de SLA', async () => {
+  it('explica "em risco" e "atrasado" só pra quem vê os Alertas de SLA', async () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Alertas de SLA');
@@ -38,7 +38,7 @@ describe('DashboardGuideComponent', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Alertas de SLA');
     expect(text).toContain('Em risco:');
-    expect(text).toContain('Vencido:');
+    expect(text).toContain('Atrasado:');
   });
 
   it('lembra a preferência aberto/fechado na chave própria da tela', async () => {

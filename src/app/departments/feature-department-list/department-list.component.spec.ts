@@ -331,8 +331,17 @@ describe('DepartmentListComponent', () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('button[data-bs-target="#departmentModal"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[aria-label="Excluir o departamento TI"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.page-actions button')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Ações para o departamento TI"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Adicionar setor');
+  });
+
+  it('agrupa editar/excluir de cada departamento e setor num "⋮", sem lixeiras vermelhas soltas', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.card .btn-outline-danger')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Ações para o departamento TI"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Excluir departamento');
   });
 });

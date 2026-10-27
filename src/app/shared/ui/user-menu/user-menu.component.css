@@ -26,7 +26,7 @@
   background-color: rgba(var(--tk-primary-rgb), 0.12);
   color: var(--tk-primary-darker);
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   transition: box-shadow 200ms ease;
 }
 

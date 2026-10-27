@@ -48,14 +48,14 @@ describe('DashboardInsightsComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar os alertas de SLA');
-    expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado com SLA vencido ou em risco agora.');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado atrasado ou em risco agora.');
   });
 
   it('mostra a mensagem de vazio quando não há chamados em risco de SLA', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado com SLA vencido ou em risco agora.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado atrasado ou em risco agora.');
     expect(fixture.nativeElement.textContent).toContain('Fila em dia');
   });
 
@@ -81,7 +81,7 @@ describe('DashboardInsightsComponent', () => {
     expect(unassigned.querySelector('.critical-ticket-unassigned')?.textContent?.trim()).toBe('Sem responsável');
   });
 
-  it('marca cada chamado como "Vencido" ou "Em risco" com texto, não só com cor', async () => {
+  it('marca cada chamado como "Atrasado" ou "Em risco" com texto, não só com cor', async () => {
     const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [
@@ -92,10 +92,10 @@ describe('DashboardInsightsComponent', () => {
 
     const badges = Array.from(fixture.nativeElement.querySelectorAll('.critical-ticket-link .badge') as NodeListOf<HTMLElement>)
       .map(b => b.textContent?.trim());
-    expect(badges).toEqual(['Vencido', 'Em risco']);
+    expect(badges).toEqual(['Atrasado', 'Em risco']);
   });
 
-  it('mostra os totais de vencidos e em risco da empresa, cada um levando à fila filtrada por esse SLA', async () => {
+  it('mostra os totais de atrasados e em risco da empresa, cada um levando à fila filtrada por esse SLA', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [{ ...ticket, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() }]);
     fixture.componentRef.setInput('breachedCount', 7);
@@ -104,7 +104,7 @@ describe('DashboardInsightsComponent', () => {
 
     const [breached, atRisk] = Array.from(fixture.nativeElement.querySelectorAll('.sla-total') as NodeListOf<HTMLAnchorElement>);
     expect(breached.textContent).toContain('7');
-    expect(breached.textContent).toContain('vencidos');
+    expect(breached.textContent).toContain('atrasados');
     expect(breached.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.Breached}`);
     expect(atRisk.textContent).toContain('1');
     expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
@@ -192,7 +192,7 @@ describe('DashboardInsightsComponent', () => {
       expect(fixture.nativeElement.querySelector('time').textContent.trim()).toBe('vence em 1h 14min');
     });
 
-    it('vira "Vencido" sozinho ao cruzar o prazo, e anuncia a virada ao leitor de tela', async () => {
+    it('vira "Atrasado" sozinho ao cruzar o prazo, e anuncia a virada ao leitor de tela', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [dueIn(20_000)]);
       fixture.componentRef.setInput('breachedCount', 7);
@@ -211,8 +211,8 @@ describe('DashboardInsightsComponent', () => {
       jasmine.clock().tick(30_000);
       fixture.detectChanges();
 
-      expect(badge()).toBe('Vencido');
-      expect(live()).toBe('O chamado "Chamado urgente" venceu o prazo de SLA.');
+      expect(badge()).toBe('Atrasado');
+      expect(live()).toBe('O chamado "Chamado urgente" está atrasado.');
       // Realce breve na linha que acabou de vencer, que some depois de 1,6s.
       const link = () => fixture.nativeElement.querySelector('.critical-ticket-link') as HTMLElement;
       expect(link().classList).toContain('just-crossed');

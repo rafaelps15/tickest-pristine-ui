@@ -42,7 +42,10 @@
             </button>
           }
           @if (canReopenTicket(t.status)) {
-            <button #reopenButton type="button" class="btn btn-sm btn-primary" [disabled]="detailStore.reopening()" (click)="onReopen()">
+            <!-- Resolvido ainda tem "Fechar" como próxima etapa: aí Reabrir é secundário (um primário por vez). -->
+            <button #reopenButton type="button" class="btn btn-sm"
+                    [class.btn-primary]="nextStatusOptions(t.status).length === 0"
+                    [class.btn-outline-primary]="nextStatusOptions(t.status).length > 0" [disabled]="detailStore.reopening()" (click)="onReopen()">
               @if (detailStore.reopening()) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
@@ -112,304 +115,312 @@
     </div>
   </div>
 } @else {
-  <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
+  <!-- Falha de carga é erro (vermelho, com retry); chamado inexistente é aviso, com o caminho de volta. -->
+  <div class="alert border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-3" role="alert"
+       [class.alert-danger]="detailStore.state().error" [class.alert-warning]="!detailStore.state().error">
     <span>{{ detailStore.state().error ?? 'Não encontramos esse chamado — ele pode ter sido removido.' }}</span>
     @if (detailStore.state().error) {
       <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="detailStore.loadTicket(ticketId)">Tentar novamente</button>
+    } @else {
+      <a [routerLink]="backLink" class="btn btn-sm btn-outline-secondary flex-shrink-0">Voltar à lista</a>
     }
   </div>
 }
 
-@if (detailStore.sla(); as slaBlock) {
-  <div class="card shadow-sm border-0 mb-3">
-    <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <h2 class="h5 mb-0 fw-bold">SLA</h2>
-      <div class="d-flex align-items-center gap-2">
-        <span class="text-muted small">{{ slaBlock.plan.policyName }} · {{ slaBlock.plan.calendarName }}</span>
-        @if (slaBlock.plan.isLegacy) {
-          <span class="badge bg-label-secondary">Legado (horas corridas)</span>
-        }
+<!-- SLA, conversa, anexos e histórico só existem com o chamado carregado — sem isso, "não encontrado"
+     ainda oferecia escrever mensagem e anexar arquivo num chamado que não existe. -->
+@if (ticket()) {
+  @if (detailStore.sla(); as slaBlock) {
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h2 class="h5 mb-0 fw-bold">SLA</h2>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small">{{ slaBlock.plan.policyName }} · {{ slaBlock.plan.calendarName }}</span>
+          @if (slaBlock.plan.isLegacy) {
+            <span class="badge bg-label-secondary">Legado (horas corridas)</span>
+          }
+        </div>
       </div>
-    </div>
-    <div class="card-body p-4">
-      @if (detailStore.slaError()) {
-        <div class="alert alert-danger border-0 shadow-sm py-2 small mb-3" role="alert">{{ detailStore.slaError() }}</div>
-      }
-
-      <div class="row g-4">
-        @for (objective of currentCycleObjectives(slaBlock); track objective.metric) {
-          <div class="col-12 col-md-6">
-            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-              <span class="fw-semibold small">{{ slaMetricLabels[objective.metric] }}</span>
-              <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
-            </div>
-            @if (objective.state === TicketSlaObjectiveState.NotApplicable) {
-              <p class="text-muted small mb-0">Sem meta de primeira resposta.</p>
-            } @else {
-              @if (objective.dueAtUtc) {
-                <p class="small mb-1" [ngClass]="objectiveUrgencyClass(objective)">
-                  Prazo: {{ objective.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
-                  @if (objectiveRelativeLabel(objective, slaBlock.serverNowUtc); as relative) {
-                    <span class="fw-semibold">— {{ relative }}</span>
-                  }
-                </p>
-              }
-              @if (objective.consumedMinutes !== null && objective.remainingMinutes !== null) {
-                <p class="text-muted small mb-1">{{ formatBusinessMinutes(objective.remainingMinutes) }} úteis restantes · {{ formatBusinessMinutes(objective.consumedMinutes) }} consumidos</p>
-              }
-              @if (objective.completedAtUtc) {
-                <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
-              } @else if (objective.stoppedAtUtc) {
-                <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
-              }
-            }
-          </div>
+      <div class="card-body p-4">
+        @if (detailStore.slaError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mb-3" role="alert">{{ detailStore.slaError() }}</div>
         }
-      </div>
 
-      @if (previousCycleObjectives(slaBlock).length > 0) {
-        <button type="button" class="btn btn-sm btn-link text-decoration-none ps-0 mt-3" [attr.aria-expanded]="olderCyclesOpen()" aria-controls="slaOlderCycles" (click)="toggleOlderCycles()">
-          <i class="bx fs-5 me-1" [class.bx-chevron-up]="olderCyclesOpen()" [class.bx-chevron-down]="!olderCyclesOpen()" aria-hidden="true"></i>
-          Ciclos anteriores
-        </button>
-
-        @if (olderCyclesOpen()) {
-          <div id="slaOlderCycles" class="mt-2">
-            @for (objective of previousCycleObjectives(slaBlock); track objective.metric + '-' + objective.cycle) {
-              <div class="sla-older-cycle">
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
-                  <span class="small">{{ slaMetricLabels[objective.metric] }} — Ciclo {{ objective.cycle }}</span>
-                  <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
-                </div>
+        <div class="row g-4">
+          @for (objective of currentCycleObjectives(slaBlock); track objective.metric) {
+            <div class="col-12 col-md-6">
+              <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <span class="fw-semibold small">{{ slaMetricLabels[objective.metric] }}</span>
+                <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
+              </div>
+              @if (objective.state === TicketSlaObjectiveState.NotApplicable) {
+                <p class="text-muted small mb-0">Sem meta de primeira resposta.</p>
+              } @else {
+                @if (objective.dueAtUtc) {
+                  <p class="small mb-1" [ngClass]="objectiveUrgencyClass(objective)">
+                    Prazo: {{ objective.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                    @if (objectiveRelativeLabel(objective, slaBlock.serverNowUtc); as relative) {
+                      <span class="fw-semibold">— {{ relative }}</span>
+                    }
+                  </p>
+                }
+                @if (objective.consumedMinutes !== null && objective.remainingMinutes !== null) {
+                  <p class="text-muted small mb-1">{{ formatBusinessMinutes(objective.remainingMinutes) }} úteis restantes · {{ formatBusinessMinutes(objective.consumedMinutes) }} consumidos</p>
+                }
                 @if (objective.completedAtUtc) {
                   <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
                 } @else if (objective.stoppedAtUtc) {
                   <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
                 }
-              </div>
+              }
+            </div>
+          }
+        </div>
+
+        @if (previousCycleObjectives(slaBlock).length > 0) {
+          <button type="button" class="btn btn-sm btn-link text-decoration-none ps-0 mt-3" [attr.aria-expanded]="olderCyclesOpen()" aria-controls="slaOlderCycles" (click)="toggleOlderCycles()">
+            <i class="bx fs-5 me-1" [class.bx-chevron-up]="olderCyclesOpen()" [class.bx-chevron-down]="!olderCyclesOpen()" aria-hidden="true"></i>
+            Ciclos anteriores
+          </button>
+
+          @if (olderCyclesOpen()) {
+            <div id="slaOlderCycles" class="mt-2">
+              @for (objective of previousCycleObjectives(slaBlock); track objective.metric + '-' + objective.cycle) {
+                <div class="sla-older-cycle">
+                  <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                    <span class="small">{{ slaMetricLabels[objective.metric] }} — Ciclo {{ objective.cycle }}</span>
+                    <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
+                  </div>
+                  @if (objective.completedAtUtc) {
+                    <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                  } @else if (objective.stoppedAtUtc) {
+                    <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-header py-3">
+      <h2 class="h5 mb-0 fw-bold">Mensagens</h2>
+    </div>
+
+    <div class="card-body p-4">
+      @if (messagesStore.postError()) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ messagesStore.postError() }}</div>
+      }
+      <div class="mb-4">
+        <label class="form-label small" for="ticketNewMessage">Nova mensagem</label>
+        <textarea id="ticketNewMessage" class="form-control" rows="3" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
+                  [value]="newMessageContent()" (input)="newMessageContent.set($any($event.target).value)"></textarea>
+        <div class="d-flex align-items-center justify-content-between mt-2">
+          <span class="text-muted small">{{ newMessageContent().length }}/{{ TICKET_MESSAGE_MAX_LENGTH }}</span>
+          <button type="button" class="btn btn-sm btn-primary" [disabled]="!newMessageContent().trim() || messagesStore.posting()" (click)="onSendMessage()">
+            @if (messagesStore.posting()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             }
+            Enviar
+          </button>
+        </div>
+      </div>
+
+      @if (messagesStore.listState().error) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+          <span>{{ messagesStore.listState().error }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="messagesStore.loadForTicket(ticketId)">Tentar novamente</button>
+        </div>
+      }
+
+      @if (messagesStore.listState().loading) {
+        <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando mensagens…</span></span></div>
+      } @else if (messagesStore.messages().length === 0) {
+        <p class="text-muted small mb-0">Nenhuma mensagem ainda.</p>
+      } @else if (ticket(); as t) {
+        @if (messagesStore.mutationError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ messagesStore.mutationError() }}</div>
+        }
+        <ul class="list-group list-group-flush">
+          @for (message of messagesStore.messages(); track message.id) {
+            <li class="list-group-item px-0">
+              @if (editingMessageId() === message.id) {
+                <textarea class="form-control mb-2" rows="3" aria-label="Editar mensagem" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
+                          [value]="editMessageContent()" (input)="editMessageContent.set($any($event.target).value)"></textarea>
+                <div class="d-flex justify-content-end gap-2">
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onCancelEdit()">Cancelar</button>
+                  <button type="button" class="btn btn-sm btn-primary" [disabled]="!editMessageContent().trim() || messagesStore.savingEdit()" (click)="onSaveEdit(message.id)">
+                    @if (messagesStore.savingEdit()) {
+                      <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                    }
+                    Salvar
+                  </button>
+                </div>
+              } @else {
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                  <span class="fw-semibold small">
+                    {{ messageAuthorName(message, t) }}
+                    <span class="text-muted fw-normal">— {{ message.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                    @if (message.editedAtUtc) {
+                      <span class="text-muted fw-normal">(editada)</span>
+                    }
+                  </span>
+                  <div class="d-flex gap-1 flex-shrink-0">
+                    @if (canEditMessage(message)) {
+                      <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Editar mensagem'" (click)="onStartEdit(message)">
+                        <i class="bx bx-edit" aria-hidden="true"></i>
+                      </button>
+                    }
+                    @if (canDeleteMessage(message)) {
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="messagesStore.deletingMessageId() === message.id"
+                              [attr.aria-label]="'Excluir mensagem'" (click)="onDeleteMessage(message.id)">
+                        @if (messagesStore.deletingMessageId() === message.id) {
+                          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        } @else {
+                          <i class="bx bx-trash" aria-hidden="true"></i>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+                <p class="mb-0 text-break">{{ message.content }}</p>
+              }
+            </li>
+          }
+        </ul>
+
+        @if (messagesStore.hasMore()) {
+          <div class="text-center mt-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="messagesStore.loadingMore()" (click)="messagesStore.loadMore()">
+              @if (messagesStore.loadingMore()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Carregar mais mensagens
+            </button>
+          </div>
+        }
+        @if (messagesStore.loadMoreError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ messagesStore.loadMoreError() }}</div>
+        }
+      }
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-header py-3 d-flex align-items-center justify-content-between">
+      <h2 class="h5 mb-0 fw-bold">Anexos</h2>
+      <button type="button" class="btn btn-sm btn-outline-primary mb-0" [disabled]="store.uploading()" (click)="openFilePicker()">
+        @if (store.uploading()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        } @else {
+          <i class="bx bx-upload me-1" aria-hidden="true"></i>
+        }
+        Anexar arquivo
+      </button>
+      <input #fileInput type="file" class="d-none" [disabled]="store.uploading()" (change)="onFileSelected($event)" />
+    </div>
+
+    <div class="card-body p-4">
+      <!-- Um alerta só pros erros de arquivo (validação, envio, download), pra não empilhar três caixas vermelhas. -->
+      @let attachmentActionError = fileValidationError() ?? store.uploadError() ?? store.downloadError();
+      @if (attachmentActionError) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ attachmentActionError }}</div>
+      }
+      @if (store.listState().error) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+          <span>{{ store.listState().error }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForTicket(ticketId)">Tentar novamente</button>
+        </div>
+      }
+
+      @if (store.listState().loading) {
+        <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando anexos…</span></span></div>
+      } @else if (store.attachments().length === 0) {
+        <p class="text-muted small mb-0">Nenhum anexo enviado ainda.</p>
+      } @else {
+        <ul class="list-group list-group-flush">
+          @for (attachment of store.attachments(); track attachment.id) {
+            <li class="list-group-item d-flex align-items-center justify-content-between px-0">
+              <div class="d-flex align-items-center gap-2 attachment-info">
+                <i class="bx bx-file fs-4 text-muted flex-shrink-0" aria-hidden="true"></i>
+                <div class="text-break">
+                  <div class="fw-semibold">{{ attachment.fileName }}</div>
+                  <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+                </div>
+              </div>
+              <div class="d-flex gap-1 flex-shrink-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="store.download(attachment)">
+                  <i class="bx bx-download" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="store.deleting()" [attr.aria-label]="'Excluir ' + attachment.fileName" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
+                  <i class="bx bx-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+
+        @if (store.hasMore()) {
+          <div class="text-center mt-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.loadingMore()" (click)="store.loadMore()">
+              @if (store.loadingMore()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Carregar mais anexos
+            </button>
           </div>
         }
       }
     </div>
   </div>
-}
 
-<div class="card shadow-sm border-0 mb-3">
-  <div class="card-header py-3">
-    <h2 class="h5 mb-0 fw-bold">Mensagens</h2>
-  </div>
-
-  <div class="card-body p-4">
-    @if (messagesStore.postError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ messagesStore.postError() }}</div>
-    }
-    <div class="mb-4">
-      <label class="form-label small" for="ticketNewMessage">Nova mensagem</label>
-      <textarea id="ticketNewMessage" class="form-control" rows="3" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
-                [value]="newMessageContent()" (input)="newMessageContent.set($any($event.target).value)"></textarea>
-      <div class="d-flex align-items-center justify-content-between mt-2">
-        <span class="text-muted small">{{ newMessageContent().length }}/{{ TICKET_MESSAGE_MAX_LENGTH }}</span>
-        <button type="button" class="btn btn-sm btn-primary" [disabled]="!newMessageContent().trim() || messagesStore.posting()" (click)="onSendMessage()">
-          @if (messagesStore.posting()) {
-            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-          }
-          Enviar
-        </button>
-      </div>
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-header py-3">
+      <h2 class="h5 mb-0 fw-bold">Histórico</h2>
     </div>
 
-    @if (messagesStore.listState().error) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
-        <span>{{ messagesStore.listState().error }}</span>
-        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="messagesStore.loadForTicket(ticketId)">Tentar novamente</button>
-      </div>
-    }
-
-    @if (messagesStore.listState().loading) {
-      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando mensagens…</span></span></div>
-    } @else if (messagesStore.messages().length === 0) {
-      <p class="text-muted small mb-0">Nenhuma mensagem ainda.</p>
-    } @else if (ticket(); as t) {
-      @if (messagesStore.mutationError()) {
-        <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ messagesStore.mutationError() }}</div>
-      }
-      <ul class="list-group list-group-flush">
-        @for (message of messagesStore.messages(); track message.id) {
-          <li class="list-group-item px-0">
-            @if (editingMessageId() === message.id) {
-              <textarea class="form-control mb-2" rows="3" aria-label="Editar mensagem" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
-                        [value]="editMessageContent()" (input)="editMessageContent.set($any($event.target).value)"></textarea>
-              <div class="d-flex justify-content-end gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onCancelEdit()">Cancelar</button>
-                <button type="button" class="btn btn-sm btn-primary" [disabled]="!editMessageContent().trim() || messagesStore.savingEdit()" (click)="onSaveEdit(message.id)">
-                  @if (messagesStore.savingEdit()) {
-                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                  }
-                  Salvar
-                </button>
-              </div>
-            } @else {
-              <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
-                <span class="fw-semibold small">
-                  {{ messageAuthorName(message, t) }}
-                  <span class="text-muted fw-normal">— {{ message.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
-                  @if (message.editedAtUtc) {
-                    <span class="text-muted fw-normal">(editada)</span>
-                  }
-                </span>
-                <div class="d-flex gap-1 flex-shrink-0">
-                  @if (canEditMessage(message)) {
-                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Editar mensagem'" (click)="onStartEdit(message)">
-                      <i class="bx bx-edit" aria-hidden="true"></i>
-                    </button>
-                  }
-                  @if (canDeleteMessage(message)) {
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="messagesStore.deletingMessageId() === message.id"
-                            [attr.aria-label]="'Excluir mensagem'" (click)="onDeleteMessage(message.id)">
-                      @if (messagesStore.deletingMessageId() === message.id) {
-                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                      } @else {
-                        <i class="bx bx-trash" aria-hidden="true"></i>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-              <p class="mb-0 text-break">{{ message.content }}</p>
-            }
-          </li>
-        }
-      </ul>
-
-      @if (messagesStore.hasMore()) {
-        <div class="text-center mt-3">
-          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="messagesStore.loadingMore()" (click)="messagesStore.loadMore()">
-            @if (messagesStore.loadingMore()) {
-              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            }
-            Carregar mais mensagens
-          </button>
+    <div class="card-body p-4">
+      @if (historyStore.state().error) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+          <span>{{ historyStore.state().error }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="historyStore.loadForTicket(ticketId)">Tentar novamente</button>
         </div>
       }
-      @if (messagesStore.loadMoreError()) {
-        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ messagesStore.loadMoreError() }}</div>
-      }
-    }
-  </div>
-</div>
 
-<div class="card shadow-sm border-0">
-  <div class="card-header py-3 d-flex align-items-center justify-content-between">
-    <h2 class="h5 mb-0 fw-bold">Anexos</h2>
-    <button type="button" class="btn btn-sm btn-outline-primary mb-0" [disabled]="store.uploading()" (click)="openFilePicker()">
-      @if (store.uploading()) {
-        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      @if (historyStore.state().loading) {
+        <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando histórico…</span></span></div>
+      } @else if (historyStore.entries().length === 0) {
+        <p class="text-muted small mb-0">Nenhum evento registrado ainda.</p>
       } @else {
-        <i class="bx bx-upload me-1" aria-hidden="true"></i>
-      }
-      Anexar arquivo
-    </button>
-    <input #fileInput type="file" class="d-none" [disabled]="store.uploading()" (change)="onFileSelected($event)" />
-  </div>
+        <ul class="list-group list-group-flush">
+          @for (entry of historyStore.entries(); track entry.id) {
+            <li class="list-group-item px-0">
+              <div>{{ entry.description }}</div>
+              <div class="text-muted small">{{ entry.occurredAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+            </li>
+          }
+        </ul>
 
-  <div class="card-body p-4">
-    <!-- Um alerta só pros erros de arquivo (validação, envio, download), pra não empilhar três caixas vermelhas. -->
-    @let attachmentActionError = fileValidationError() ?? store.uploadError() ?? store.downloadError();
-    @if (attachmentActionError) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ attachmentActionError }}</div>
-    }
-    @if (store.listState().error) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
-        <span>{{ store.listState().error }}</span>
-        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForTicket(ticketId)">Tentar novamente</button>
-      </div>
-    }
-
-    @if (store.listState().loading) {
-      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando anexos…</span></span></div>
-    } @else if (store.attachments().length === 0) {
-      <p class="text-muted small mb-0">Nenhum anexo enviado ainda.</p>
-    } @else {
-      <ul class="list-group list-group-flush">
-        @for (attachment of store.attachments(); track attachment.id) {
-          <li class="list-group-item d-flex align-items-center justify-content-between px-0">
-            <div class="d-flex align-items-center gap-2 attachment-info">
-              <i class="bx bx-file fs-4 text-muted flex-shrink-0" aria-hidden="true"></i>
-              <div class="text-break">
-                <div class="fw-semibold">{{ attachment.fileName }}</div>
-                <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
-              </div>
-            </div>
-            <div class="d-flex gap-1 flex-shrink-0">
-              <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="store.download(attachment)">
-                <i class="bx bx-download" aria-hidden="true"></i>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="store.deleting()" [attr.aria-label]="'Excluir ' + attachment.fileName" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
-                <i class="bx bx-trash" aria-hidden="true"></i>
-              </button>
-            </div>
-          </li>
+        @if (historyStore.hasMore()) {
+          <div class="text-center mt-3">
+            <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="historyStore.loadingMore()" (click)="historyStore.loadMore()">
+              @if (historyStore.loadingMore()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Carregar mais eventos
+            </button>
+          </div>
         }
-      </ul>
-
-      @if (store.hasMore()) {
-        <div class="text-center mt-3">
-          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.loadingMore()" (click)="store.loadMore()">
-            @if (store.loadingMore()) {
-              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            }
-            Carregar mais anexos
-          </button>
-        </div>
-      }
-    }
-  </div>
-</div>
-
-<div class="card shadow-sm border-0 mt-3">
-  <div class="card-header py-3">
-    <h2 class="h5 mb-0 fw-bold">Histórico</h2>
-  </div>
-
-  <div class="card-body p-4">
-    @if (historyStore.state().error) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
-        <span>{{ historyStore.state().error }}</span>
-        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="historyStore.loadForTicket(ticketId)">Tentar novamente</button>
-      </div>
-    }
-
-    @if (historyStore.state().loading) {
-      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando histórico…</span></span></div>
-    } @else if (historyStore.entries().length === 0) {
-      <p class="text-muted small mb-0">Nenhum evento registrado ainda.</p>
-    } @else {
-      <ul class="list-group list-group-flush">
-        @for (entry of historyStore.entries(); track entry.id) {
-          <li class="list-group-item px-0">
-            <div>{{ entry.description }}</div>
-            <div class="text-muted small">{{ entry.occurredAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
-          </li>
+        @if (historyStore.loadMoreError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ historyStore.loadMoreError() }}</div>
         }
-      </ul>
-
-      @if (historyStore.hasMore()) {
-        <div class="text-center mt-3">
-          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="historyStore.loadingMore()" (click)="historyStore.loadMore()">
-            @if (historyStore.loadingMore()) {
-              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            }
-            Carregar mais eventos
-          </button>
-        </div>
       }
-      @if (historyStore.loadMoreError()) {
-        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ historyStore.loadMoreError() }}</div>
-      }
-    }
+    </div>
   </div>
-</div>
+}
 
 @if (assignDialogOpen()) {
   <app-ticket-assign-dialog [ticketTitle]="ticket()?.title ?? ''" [currentName]="ticket()?.assignedToName ?? null"

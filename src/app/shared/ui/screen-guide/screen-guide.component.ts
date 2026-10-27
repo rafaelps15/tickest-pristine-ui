@@ -1,12 +1,14 @@
 import { Component, ChangeDetectionStrategy, OnInit, input, signal } from '@angular/core';
-import { readPersistedToggle, writePersistedToggle } from '../../utils/persisted-toggle.util';
+import { hasPersistedToggle, readPersistedToggle, writePersistedToggle } from '../../utils/persisted-toggle.util';
 
 /** Contador pra gerar ids únicos do corpo de cada Guia montado (o `aria-controls` do botão aponta pra ele). */
 let nextGuideId = 0;
 
 /**
  * "Guia da Tela": card recolhível logo abaixo do cabeçalho de uma tela, com a preferência
- * aberto/fechado lembrada no navegador por `storageKey`. O conteúdo (seções
+ * aberto/fechado lembrada no navegador por `storageKey`. Abre sozinho só na primeira visita à
+ * tela; dali em diante começa fechado, a não ser que o usuário o deixe aberto (crítica de
+ * 2026-10-27: aberto sempre empurrava o conteúdo pra baixo em toda visita repetida). O conteúdo (seções
  * `<app-guide-section>`, parágrafos soltos) é projetado — cada domínio só escreve o texto.
  *
  * O corpo fica sempre no DOM, só escondido, pro `aria-controls` do botão apontar pra um elemento
@@ -35,7 +37,7 @@ let nextGuideId = 0;
 export class ScreenGuideComponent implements OnInit {
   /** Chave do localStorage onde a preferência aberto/fechado desta tela fica salva. */
   readonly storageKey = input.required<string>();
-  /** Estado inicial quando não há preferência salva — aberto em todas as telas (decisão de 2026-10-27). */
+  /** Estado na primeira visita (sem preferência salva) — aberto, pra quem chega ver a explicação. */
   readonly defaultOpen = input(true);
 
   /** Id do corpo do Guia, referenciado pelo `aria-controls` do botão. */
@@ -44,9 +46,18 @@ export class ScreenGuideComponent implements OnInit {
   /** Se o Guia está aberto; restaurado do localStorage assim que os inputs chegam. */
   protected readonly open = signal(true);
 
-  /** Restaura a preferência salva — só aqui os inputs `storageKey`/`defaultOpen` já têm valor. */
+  /**
+   * Restaura a preferência salva — só aqui os inputs `storageKey`/`defaultOpen` já têm valor. Na
+   * primeira visita usa `defaultOpen` e já grava "fechado" pra próxima, que começa recolhida.
+   */
   ngOnInit(): void {
-    this.open.set(readPersistedToggle(this.storageKey(), this.defaultOpen()));
+    const key = this.storageKey();
+    if (hasPersistedToggle(key)) {
+      this.open.set(readPersistedToggle(key, this.defaultOpen()));
+      return;
+    }
+    this.open.set(this.defaultOpen());
+    writePersistedToggle(key, false);
   }
 
   /** Alterna o Guia e salva a preferência, sem quebrar a tela se a escrita falhar. */

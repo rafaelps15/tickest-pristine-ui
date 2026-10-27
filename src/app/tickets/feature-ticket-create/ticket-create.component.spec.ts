@@ -245,4 +245,16 @@ describe('TicketCreateComponent', () => {
 
     expect(fixture.nativeElement.textContent).not.toContain('Escolha um departamento primeiro.');
   });
+
+  it('mostra o erro de envio logo acima do botão de enviar, como alerta', async () => {
+    ticketsStoreFake.state.set({ error: 'O setor escolhido não atende mais chamados.' });
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+    const submit = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(alert.textContent).toContain('O setor escolhido não atende mais chamados.');
+    expect(alert.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(alert.nextElementSibling).toBe(submit.parentElement);
+  });
 });

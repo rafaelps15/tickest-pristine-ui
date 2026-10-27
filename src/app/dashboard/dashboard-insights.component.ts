@@ -128,7 +128,7 @@ export class DashboardInsightsComponent {
     effect(() => {
       for (const { ticket, overdue } of this.items()) {
         if (overdue && this.seenOverdue.get(ticket.id) === false) {
-          this.announcement.set(`O chamado "${ticket.title}" venceu o prazo de SLA.`);
+          this.announcement.set(`O chamado "${ticket.title}" está atrasado.`);
           this.highlightCrossed(ticket.id);
         }
         this.seenOverdue.set(ticket.id, overdue);

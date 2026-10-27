@@ -11,6 +11,7 @@ import { DepartmentInsightsComponent } from './department-insights.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 
 /**
@@ -19,7 +20,7 @@ import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
  */
 @Component({
     selector: 'app-department-list',
-    imports: [ReactiveFormsModule, PageHeaderComponent, DepartmentGuideComponent, DepartmentInsightsComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent],
+    imports: [ReactiveFormsModule, PageHeaderComponent, DepartmentGuideComponent, DepartmentInsightsComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, RowActionsComponent],
     templateUrl: './department-list.component.html',
     styleUrl: './department-list.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush

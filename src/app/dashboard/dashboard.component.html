@@ -62,42 +62,46 @@
                               (refresh)="store.reloadCritical()" />
     }
 
-    <div class="card">
-      <div class="card-header py-3">
-        <h2 class="h5 card-title m-0 fw-bold">Ações Rápidas</h2>
-      </div>
-      <!-- Só atalhos, como linhas discretas: a ação primária (Novo Chamado) fica no cabeçalho da tela,
-           no mesmo lugar das outras telas. Os ícones coloridos ficam (pedido do usuário em 2026-10-24). -->
-      <div class="card-body">
-        <ul class="list-unstyled mb-0 quick-links">
-          @if (!isAdministrative()) {
-            <li>
-              <a class="quick-link" routerLink="/tickets">
-                <span class="badge bg-label-info rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-receipt fs-5"></i></span>
-                <span>
-                  <span class="d-block fw-semibold">Meus Chamados</span>
-                  <span class="d-block small text-muted">Acompanhar minhas solicitações</span>
-                </span>
-                <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
-              </a>
-            </li>
-          }
+    <!-- Sem nenhum atalho pra este papel (admin sem tickets:manage), o card não aparece vazio. -->
+    @if (!isAdministrative() || sessionService.hasPermission('tickets:manage')) {
+      <div class="card">
+        <div class="card-header py-3">
+          <h2 class="h5 card-title m-0 fw-bold">Ações Rápidas</h2>
+        </div>
+        <!-- Só atalhos, como linhas discretas: a ação primária (Novo Chamado) fica no cabeçalho da tela,
+             no mesmo lugar das outras telas. Os ícones coloridos ficam (pedido do usuário em 2026-10-24). -->
+        <div class="card-body">
+          <ul class="list-unstyled mb-0 quick-links">
+            @if (!isAdministrative()) {
+              <li>
+                <a class="quick-link" routerLink="/tickets">
+                  <span class="badge bg-label-info rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-receipt fs-5"></i></span>
+                  <span>
+                    <span class="d-block fw-semibold">Meus Chamados</span>
+                    <span class="d-block small text-muted">Acompanhar minhas solicitações</span>
+                  </span>
+                  <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+              </li>
+            }
 
-          @if (isAdministrative() || sessionService.hasPermission('tickets:manage')) {
-            <li>
-              <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
-                <span class="badge bg-label-warning rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-user-x fs-5"></i></span>
-                <span>
-                  <span class="d-block fw-semibold">Chamados sem responsável</span>
-                  <span class="d-block small text-muted">Fila sem atendente definido</span>
-                </span>
-                <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
-              </a>
-            </li>
-          }
-        </ul>
+            <!-- Só com tickets:manage: a rota do Monitorar exige essa permissão, e o guard devolveria aqui sem aviso. -->
+            @if (sessionService.hasPermission('tickets:manage')) {
+              <li>
+                <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
+                  <span class="badge bg-label-warning rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-user-x fs-5"></i></span>
+                  <span>
+                    <span class="d-block fw-semibold">Chamados sem responsável</span>
+                    <span class="d-block small text-muted">Fila sem atendente definido</span>
+                  </span>
+                  <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+              </li>
+            }
+          </ul>
+        </div>
       </div>
-    </div>
+    }
   </div>
 
   <div class="col-12 col-lg-8 mb-4 order-lg-1">

@@ -346,8 +346,8 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Chamados sem responsável');
   });
 
-  it('troca Novo Ticket/Meus Tickets por "Tickets sem responsável" pra quem tem papel administrativo (users:read, roles:manage, departments:manage ou sectors:manage)', async () => {
-    hasPermission.and.callFake((code: string) => code === 'users:read');
+  it('troca Novo Chamado/Meus Chamados por "Chamados sem responsável" pra quem é administrativo e gerencia a fila', async () => {
+    hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
@@ -355,6 +355,15 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Chamados sem responsável');
     expect(text).not.toContain('Novo Chamado');
     expect(text).not.toContain('Meus Chamados');
+  });
+
+  it('não mostra o atalho pro Monitorar (nem o card vazio) pra administrativo sem tickets:manage, que a rota recusaria', async () => {
+    hasPermission.and.callFake((code: string) => code === 'users:read');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('a[href^="/tickets/monitorar"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Ações Rápidas');
   });
 
   it('mantém Ações Rápidas restrito a atalhos contextuais ao dashboard, não a um menu de administração duplicado', async () => {

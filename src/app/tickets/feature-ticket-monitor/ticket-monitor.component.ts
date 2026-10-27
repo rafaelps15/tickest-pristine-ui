@@ -177,7 +177,7 @@ export class TicketMonitorComponent implements OnInit {
      * Estados "em monitoramento" (chamado ainda ativo, relógio do SLA correndo) — os mesmos que os
      * 4 cards de resumo reconhecem e destacam via `aria-pressed`. Separado dos estados "já
      * resolvidos" abaixo num `<optgroup>` próprio: antes, o dropdown oferecia os 6 valores do enum
-     * juntos e escolher um estado pós-resolução (Cumprido/Violado/Sem SLA) deixava os 4 cards sem
+     * juntos e escolher um estado pós-resolução (Cumprido/Resolvido com atraso/Sem SLA) deixava os 4 cards sem
      * nenhum destaque, um filtro aplicado sem feedback visual em nenhum lugar (achado no critique
      * de 2026-10-24). Agrupar deixa explícito que são duas perguntas diferentes, sem remover a
      * capacidade de filtrar por desfecho histórico de SLA.

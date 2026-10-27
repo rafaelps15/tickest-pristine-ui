@@ -20,6 +20,15 @@ export function readPersistedToggle(storageKey: string, defaultValue: boolean): 
   }
 }
 
+/** Se já existe uma preferência salva nessa chave (`false` também quando a leitura falha). */
+export function hasPersistedToggle(storageKey: string): boolean {
+  try {
+    return localStorage.getItem(storageKey) !== null;
+  } catch {
+    return false;
+  }
+}
+
 /** Salva o valor booleano; não quebra a tela se a escrita falhar (ex.: modo privado). */
 export function writePersistedToggle(storageKey: string, value: boolean): void {
   try {

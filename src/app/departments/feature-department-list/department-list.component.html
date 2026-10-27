@@ -77,14 +77,18 @@
               }
             </div>
             @if (canManageDepartments()) {
-              <div class="d-flex flex-shrink-0">
-                <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" (click)="openEditModal(department)" [attr.aria-label]="'Editar o departamento ' + department.name">
-                  <i class="bx bx-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" (click)="onDelete(department)" [attr.aria-label]="'Excluir o departamento ' + department.name">
-                  <i class="bx bx-trash"></i>
-                </button>
-              </div>
+              <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name">
+                <li>
+                  <button type="button" class="dropdown-item" (click)="openEditModal(department)">
+                    <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar departamento
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="dropdown-item text-danger" (click)="onDelete(department)">
+                    <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir departamento
+                  </button>
+                </li>
+              </app-row-actions>
             }
           </div>
 
@@ -98,14 +102,18 @@
                   }
                 </div>
                 @if (canManageSectors()) {
-                  <div class="d-flex flex-shrink-0">
-                    <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" (click)="openEditSectorModal(department, sector)" [attr.aria-label]="'Editar o setor ' + sector.name">
-                      <i class="bx bx-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" (click)="onDeleteSector(department, sector)" [attr.aria-label]="'Excluir o setor ' + sector.name">
-                      <i class="bx bx-trash"></i>
-                    </button>
-                  </div>
+                  <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name">
+                    <li>
+                      <button type="button" class="dropdown-item" (click)="openEditSectorModal(department, sector)">
+                        <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar setor
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" class="dropdown-item text-danger" (click)="onDeleteSector(department, sector)">
+                        <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir setor
+                      </button>
+                    </li>
+                  </app-row-actions>
                 }
               </li>
             } @empty {

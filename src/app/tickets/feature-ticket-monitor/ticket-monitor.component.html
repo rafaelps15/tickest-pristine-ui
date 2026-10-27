@@ -28,7 +28,7 @@
 </div>
 
 @if (store.slaSummaryState().error) {
-  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.slaSummaryState().error }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.reloadSlaSummary()">Tentar novamente</button>
   </div>
@@ -125,14 +125,14 @@
 </app-filter-bar>
 
 @if (store.listState().error) {
-  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.listState().error }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
   </div>
 }
 
 @if (store.mutationError()) {
-  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.mutationError() }}</span>
     <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar" (click)="store.clearMutationError()"></button>
   </div>

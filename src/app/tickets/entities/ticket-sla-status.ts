@@ -14,7 +14,7 @@ export const TICKET_SLA_STATUS_LABELS: Record<TicketSlaStatus, string> = {
   [TicketSlaStatus.AtRisk]: 'Em risco',
   [TicketSlaStatus.Breached]: 'Atrasado',
   [TicketSlaStatus.Met]: 'Cumprido',
-  [TicketSlaStatus.Missed]: 'Violado',
+  [TicketSlaStatus.Missed]: 'Resolvido com atraso',
   [TicketSlaStatus.NotApplicable]: 'Sem SLA'
 };
 
