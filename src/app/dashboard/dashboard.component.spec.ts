@@ -153,6 +153,41 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Nenhum ticket aberto neste período ainda.');
   });
 
+  describe('primeiro uso (empresa sem nenhum ticket)', () => {
+    beforeEach(() => {
+      ticketsStoreFake.total.set(0);
+      ticketsStoreFake.volume.set([]);
+    });
+
+    it('convida quem pode abrir chamados a abrir o primeiro ticket, em vez do gráfico vazio', async () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+
+      const chart = fixture.nativeElement.querySelector('.chart-container') as HTMLElement;
+      expect(chart.textContent).toContain('A empresa ainda não tem nenhum ticket.');
+      expect(chart.querySelector('a')?.getAttribute('href')).toBe('/tickets/novo');
+      expect(chart.textContent).not.toContain('Nenhum ticket aberto neste período');
+    });
+
+    it('leva quem administra a estrutura a cadastrar departamentos e setores primeiro', async () => {
+      hasPermission.and.callFake((code: string) => code === 'departments:manage');
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+
+      const cta = fixture.nativeElement.querySelector('.chart-container a') as HTMLAnchorElement;
+      expect(cta.textContent?.trim()).toBe('Cadastrar departamentos e setores');
+      expect(cta.getAttribute('href')).toBe('/departamentos');
+    });
+
+    it('não mostra o convite enquanto os totais carregam ou quando falharam (0 ali não é "empresa nova")', async () => {
+      ticketsStoreFake.statusCountsFailed.set(true);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).not.toContain('A empresa ainda não tem nenhum ticket.');
+    });
+  });
+
   it('linka os cards de status para a fila de monitoramento, já filtrada pelo mesmo status, com a permissão tickets:manage', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);

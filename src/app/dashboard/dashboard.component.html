@@ -21,7 +21,7 @@
 
 <!-- Cards de Estatísticas -->
 <div class="row">
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
+  <div class="col-6 col-lg-3 mb-4">
     <div class="card card-stats h-100">
       <div class="card-body">
         <div class="d-flex align-items-start justify-content-between">
@@ -43,7 +43,7 @@
               <small class="text-muted">Tickets da empresa</small>
             }
           </div>
-          <span class="badge bg-label-primary rounded p-2 flex-shrink-0">
+          <span class="badge bg-label-primary rounded p-2 flex-shrink-0 kpi-icon" aria-hidden="true">
             <i class="bx bx-receipt fs-3"></i>
           </span>
         </div>
@@ -52,7 +52,7 @@
   </div>
 
   @for (card of statusCards(); track card.status) {
-    <div class="col-12 col-sm-6 col-lg-3 mb-4">
+    <div class="col-6 col-lg-3 mb-4">
       <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
         <div class="card-body">
           <div class="d-flex align-items-start justify-content-between">
@@ -73,7 +73,7 @@
                 <small class="text-muted">{{ card.waitingLabel }}</small>
               }
             </div>
-            <span class="badge {{ card.badgeClass }} rounded p-2 flex-shrink-0">
+            <span class="badge {{ card.badgeClass }} rounded p-2 flex-shrink-0 kpi-icon" aria-hidden="true">
               <i class="bx {{ card.icon }} fs-3"></i>
             </span>
           </div>
@@ -179,7 +179,7 @@
         </div>
       </div>
       <div class="card-body">
-        <div class="chart-container" style="position: relative; height: 380px;" [class.d-none]="showTable()">
+        <div class="chart-container" [class.d-none]="showTable()">
           @if (store.volumeLoading()) {
             <div class="d-flex align-items-center justify-content-center h-100">
               <span class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span>
@@ -190,6 +190,21 @@
               <i class="bx bx-error-circle display-6 d-block mb-2 text-danger" aria-hidden="true"></i>
               <p class="mb-3">Não foi possível carregar o volume de tickets.</p>
               <button type="button" class="btn btn-sm btn-outline-danger" (click)="store.load()">Tentar novamente</button>
+            </div>
+          } @else if (isFirstUse()) {
+            <!-- Empresa sem nenhum ticket ainda: em vez de um gráfico vazio, a próxima ação de quem chegou. -->
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3">
+              <span class="badge bg-label-primary rounded-circle p-3 mb-3 first-use-icon" aria-hidden="true">
+                <i class="bx bx-receipt fs-2"></i>
+              </span>
+              <p class="fw-semibold mb-1">A empresa ainda não tem nenhum ticket.</p>
+              @if (canSetUpStructure()) {
+                <p class="text-muted small mb-3">Os tickets são abertos para um setor. Comece cadastrando os departamentos e setores que atendem chamados.</p>
+                <a class="btn btn-primary" routerLink="/departamentos">Cadastrar departamentos e setores</a>
+              } @else {
+                <p class="text-muted small mb-3">Quando alguém abrir o primeiro chamado, o volume aparece aqui.</p>
+                <a class="btn btn-primary" routerLink="/tickets/novo">Abrir o primeiro ticket</a>
+              }
             </div>
           } @else if (store.volume().length === 0) {
             <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted text-center">

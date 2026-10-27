@@ -98,6 +98,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.sessionService.hasPermission('departments:manage') ||
       this.sessionService.hasPermission('sectors:manage'));
 
+  /**
+   * Primeiro uso: os totais chegaram (sem carregar, sem erro) e a empresa não tem nenhum ticket —
+   * o gráfico vazio vira um convite com a próxima ação, em vez de só "nenhum ticket".
+   */
+  protected readonly isFirstUse = computed(() =>
+      !this.store.statusCountsLoading() && !this.store.statusCountsFailed() && this.store.total() === 0);
+
+  /** Quem pode cadastrar a estrutura (departamentos/setores) — no primeiro uso, é o passo que vem antes de qualquer ticket. */
+  protected readonly canSetUpStructure = computed(() =>
+      this.sessionService.hasPermission('departments:manage') || this.sessionService.hasPermission('sectors:manage'));
+
   /** Query de view como signal (Angular 17.3+) — substitui @ViewChild, sem `!` nem ngAfterViewInit. */
   private readonly volumeChartCanvas = viewChild<ElementRef<HTMLCanvasElement>>('volumeChart');
 
