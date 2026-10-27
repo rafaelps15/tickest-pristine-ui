@@ -39,7 +39,7 @@
           <div class="col-12">
             <label class="form-label" for="ticketDescription">Descrição</label>
             <textarea id="ticketDescription" class="form-control" rows="4" formControlName="description" placeholder="Descreva o problema em detalhes"
-                      [class.is-invalid]="isFieldInvalid('description')" [attr.aria-describedby]="isFieldInvalid('description') ? 'ticketDescriptionError' : null"></textarea>
+                      [class.is-invalid]="isFieldInvalid('description')" [attr.aria-describedby]="isFieldInvalid('description') ? 'ticketDescriptionError ticketDescriptionHint' : 'ticketDescriptionHint'"></textarea>
             @if (isFieldInvalid('description')) {
               <div id="ticketDescriptionError" class="invalid-feedback">
                 @if (form.controls.description.errors?.['required']) {
@@ -51,6 +51,7 @@
                 }
               </div>
             }
+            <div id="ticketDescriptionHint" class="form-text text-end">{{ form.controls.description.value?.length ?? 0 }}/500</div>
           </div>
 
           <div class="col-12 col-md-4">

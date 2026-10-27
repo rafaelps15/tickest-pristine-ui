@@ -321,14 +321,10 @@
   </div>
 
   <div class="card-body p-4">
-    @if (fileValidationError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ fileValidationError() }}</div>
-    }
-    @if (store.uploadError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ store.uploadError() }}</div>
-    }
-    @if (store.downloadError()) {
-      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ store.downloadError() }}</div>
+    <!-- Um alerta só pros erros de arquivo (validação, envio, download), pra não empilhar três caixas vermelhas. -->
+    @let attachmentActionError = fileValidationError() ?? store.uploadError() ?? store.downloadError();
+    @if (attachmentActionError) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ attachmentActionError }}</div>
     }
     @if (store.listState().error) {
       <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">

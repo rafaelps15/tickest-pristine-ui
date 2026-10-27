@@ -209,6 +209,21 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Selecione o departamento.');
   });
 
+  it('mostra quantos dos 500 caracteres da descrição já foram usados', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    const hint = () => (fixture.nativeElement.querySelector('#ticketDescriptionHint') as HTMLElement).textContent?.trim();
+    expect(hint()).toBe('0/500');
+
+    const textarea = fixture.nativeElement.querySelector('#ticketDescription') as HTMLTextAreaElement;
+    textarea.value = 'Impressora parada';
+    textarea.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    expect(hint()).toBe('17/500');
+  });
+
   it('desabilita e mostra um spinner no botão de envio enquanto o ticket está sendo criado', async () => {
     ticketsStoreFake.creating.set(true);
     const fixture = TestBed.createComponent(TicketCreateComponent);
