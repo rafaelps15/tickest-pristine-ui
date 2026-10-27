@@ -78,11 +78,6 @@
   pointer-events: none;
 }
 
-/* O título só recebe foco por código (ticket excluído), como ponto de retorno — não é um controle. */
-#ticketListTitle:focus {
-  outline: none;
-}
-
 /*
  * Estado vazio de primeiro uso: bloco centralizado na tabela, com a lista de passos alinhada à
  * esquerda (centralizar texto de várias linhas atrapalha a leitura).
