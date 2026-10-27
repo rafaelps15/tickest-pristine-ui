@@ -70,7 +70,7 @@
           @for (item of items(); track item.ticket.id) {
             <li class="critical-ticket-item">
               <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
-              <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
+              <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link flex-grow-1" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
                 <span class="d-flex align-items-start justify-content-between gap-2">
                   <span class="critical-ticket-title">{{ item.ticket.title }}</span>
                   @if (item.overdue) {
@@ -91,6 +91,13 @@
                   <span class="d-block small fw-semibold critical-ticket-unassigned">Sem responsável</span>
                 }
               </a>
+              <!-- Dar um dono ali mesmo, sem abrir o chamado — fora do link (interativo dentro de link é inválido). -->
+              @if (!item.ticket.assignedToName) {
+                <button type="button" class="btn btn-sm btn-outline-primary critical-ticket-assign"
+                        [attr.aria-label]="'Atribuir responsável ao chamado ' + item.ticket.title" (click)="assign.emit(item.ticket)">
+                  Atribuir
+                </button>
+              }
             </li>
           }
         </ul>

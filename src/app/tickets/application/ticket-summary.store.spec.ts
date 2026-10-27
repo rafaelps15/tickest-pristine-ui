@@ -11,11 +11,13 @@ import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { SessionService } from '../../shared';
+import { UserDataService, UserSummary } from '../../users';
 
 describe('TicketSummaryStore', () => {
   let store: InstanceType<typeof TicketSummaryStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
   let sessionService: jasmine.SpyObj<SessionService>;
+  let userDataService: jasmine.SpyObj<UserDataService>;
 
   const statusCounts: TicketStatusCounts = {
     totalCount: 10, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 0
@@ -41,7 +43,7 @@ describe('TicketSummaryStore', () => {
   }
 
   beforeEach(async () => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll', 'getSlaSummary']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll', 'getSlaSummary', 'assignTicket']);
     // Servidor 2 minutos à frente do navegador — o prazo relativo do card deve seguir o servidor.
     dataService.getSlaSummary.and.callFake(() => of({
       activeCount: 0, onTimeCount: 0, atRiskCount: 0, breachedCount: 0,
@@ -57,6 +59,8 @@ describe('TicketSummaryStore', () => {
       ? { items: [breachedTicket], page: 1, pageSize: 5, totalCount: 7, totalPages: 2, hasPreviousPage: false, hasNextPage: true }
       : { items: [criticalTicket], page: 1, pageSize: 5, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
 
+    userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
+
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
 
@@ -65,7 +69,8 @@ describe('TicketSummaryStore', () => {
         provideZonelessChangeDetection(),
         TicketSummaryStore,
         { provide: TicketDataService, useValue: dataService },
-        { provide: SessionService, useValue: sessionService }
+        { provide: SessionService, useValue: sessionService },
+        { provide: UserDataService, useValue: userDataService }
       ]
     });
     store = await createStore();
@@ -230,6 +235,69 @@ describe('TicketSummaryStore', () => {
     expect(store.clockOffsetMs()).toBe(0);
   });
 
+  describe('atribuir responsável a um alerta de SLA', () => {
+    const candidate = { id: 'u9', firstName: 'Ana', lastName: 'Lima', email: 'ana@empresa.com' } as UserSummary;
+
+    it('busca candidatos ativos pelo texto digitado e expõe a lista', async () => {
+      userDataService.getAll.and.returnValue(of({ items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
+
+      store.searchAssignees('  ana ');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'ana', page: 1, pageSize: 8 });
+      expect(store.assigneeCandidates()).toEqual([candidate]);
+      expect(store.searchingAssignees()).toBeFalse();
+    });
+
+    it('não busca com texto vazio e limpa a lista', () => {
+      store.searchAssignees('   ');
+
+      expect(userDataService.getAll).not.toHaveBeenCalled();
+      expect(store.assigneeCandidates()).toEqual([]);
+    });
+
+    it('expõe mensagem de erro própria quando a busca é negada (403)', async () => {
+      userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.searchAssignees('ana');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.assigneeSearchError()).toBe('Você não tem permissão para buscar usuários.');
+      expect(store.assigneeCandidates()).toEqual([]);
+    });
+
+    it('atribui, recarrega só os alertas e chama onSuccess', async () => {
+      dataService.assignTicket.and.returnValue(of(undefined));
+      dataService.getAll.calls.reset();
+      dataService.getStatusCounts.calls.reset();
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      store.assignResponsible('t1', 'u9', onSuccess);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.assignTicket).toHaveBeenCalledWith('t1', 'u9');
+      expect(dataService.getAll).toHaveBeenCalledTimes(2); // vencidos + em risco
+      expect(dataService.getStatusCounts).not.toHaveBeenCalled();
+      expect(onSuccess).toHaveBeenCalled();
+      expect(store.assigning()).toBeFalse();
+    });
+
+    it('mantém o erro de atribuição (409) pro diálogo, sem chamar onSuccess', async () => {
+      dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      store.assignResponsible('t1', 'u9', onSuccess);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.assignError()).toContain('o chamado pode já ter outro responsável');
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(store.assigning()).toBeFalse();
+
+      store.clearAssignError();
+      expect(store.assignError()).toBeNull();
+    });
+  });
+
   describe('sem a permissão tickets:manage', () => {
     beforeEach(async () => {
       sessionService.hasPermission.and.returnValue(false);
@@ -242,7 +310,8 @@ describe('TicketSummaryStore', () => {
           provideZonelessChangeDetection(),
           TicketSummaryStore,
           { provide: TicketDataService, useValue: dataService },
-          { provide: SessionService, useValue: sessionService }
+          { provide: SessionService, useValue: sessionService },
+        { provide: UserDataService, useValue: userDataService }
         ]
       });
       store = await createStore();

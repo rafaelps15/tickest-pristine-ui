@@ -77,6 +77,8 @@ export class DashboardInsightsComponent {
 
   /** Pede pra recarregar só os alertas ("Atualizar", "Tentar novamente" ou volta pra aba depois de um tempo). */
   readonly refresh = output<void>();
+  /** Pede pra atribuir um responsável ao chamado de um alerta sem dono — quem usa abre o diálogo de atribuição. */
+  readonly assign = output<TicketMonitorItem>();
 
   /** Enum exposto ao template, pra montar o filtro da fila nos totais. */
   protected readonly TicketSlaStatus = TicketSlaStatus;

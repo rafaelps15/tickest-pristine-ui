@@ -81,6 +81,23 @@ describe('DashboardInsightsComponent', () => {
     expect(unassigned.querySelector('.critical-ticket-unassigned')?.textContent?.trim()).toBe('Sem responsável');
   });
 
+  it('oferece "Atribuir" só nos alertas sem responsável, fora do link, e emite o chamado', async () => {
+    const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [ticket, orphan]);
+    const assign = jasmine.createSpy('assign');
+    fixture.componentInstance.assign.subscribe(assign);
+    await fixture.whenStable();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.critical-ticket-assign') as NodeListOf<HTMLButtonElement>;
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].closest('a')).toBeNull(); // nada interativo dentro do link da linha
+    expect(buttons[0].getAttribute('aria-label')).toBe('Atribuir responsável ao chamado Sem dono');
+
+    buttons[0].click();
+    expect(assign).toHaveBeenCalledWith(orphan);
+  });
+
   it('marca cada chamado como "Atrasado" ou "Em risco" com texto, não só com cor', async () => {
     const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
     const fixture = TestBed.createComponent(DashboardInsightsComponent);

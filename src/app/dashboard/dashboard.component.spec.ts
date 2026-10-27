@@ -3,7 +3,7 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { DashboardComponent, greetingForHour } from './dashboard.component';
 import { MyTicketsSummaryStore, TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
-import { SessionService } from '../shared';
+import { SessionService, ToastService } from '../shared';
 
 describe('DashboardComponent', () => {
   /** Cria um store de resumo falso com signals reais, para o template reagir como no store verdadeiro. */
@@ -34,6 +34,15 @@ describe('DashboardComponent', () => {
       criticalTicketsLoadedAtMs: signal<number | null>(null),
       criticalTicketsRefreshing: signal(false),
       reloadCritical: jasmine.createSpy('reloadCritical'),
+      assigneeCandidates: signal([]),
+      searchingAssignees: signal(false),
+      assigneeSearchError: signal<string | null>(null),
+      assigning: signal(false),
+      assignError: signal<string | null>(null),
+      searchAssignees: jasmine.createSpy('searchAssignees'),
+      resetAssignment: jasmine.createSpy('resetAssignment'),
+      clearAssignError: jasmine.createSpy('clearAssignError'),
+      assignResponsible: jasmine.createSpy('assignResponsible'),
       criticalTicketsLoading: signal(false),
       criticalTicketsError: signal<string | null>(null)
     };
@@ -49,6 +58,7 @@ describe('DashboardComponent', () => {
     failed: ReturnType<typeof signal<boolean>>; reload: jasmine.Spy;
   };
   let currentUser: ReturnType<typeof signal<CurrentUserFake>>;
+  let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
@@ -58,6 +68,7 @@ describe('DashboardComponent', () => {
       loading: signal(false), failed: signal(false), reload: jasmine.createSpy('reload')
     };
     currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Colaborador' }] });
+    toastServiceFake = { show: jasmine.createSpy('show') };
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -66,7 +77,8 @@ describe('DashboardComponent', () => {
         provideRouter([]),
         { provide: TicketSummaryStore, useValue: ticketsStoreFake },
         { provide: MyTicketsSummaryStore, useValue: myTicketsFake },
-        { provide: SessionService, useValue: { hasPermission, currentUser } }
+        { provide: SessionService, useValue: { hasPermission, currentUser } },
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -427,6 +439,57 @@ describe('DashboardComponent', () => {
 
     expect(ticketsStoreFake.reloadCritical).toHaveBeenCalledTimes(1);
     expect(ticketsStoreFake.load).not.toHaveBeenCalled();
+  });
+
+  describe('"Atribuir" nos Alertas de SLA', () => {
+    const unassigned = {
+      id: 't7', title: 'VPN caindo', sectorName: 'Infra', assignedToUserId: null, assignedToName: null,
+      dueAtUtc: new Date(Date.now() + 3_600_000).toISOString(), slaStatus: 2
+    } as unknown as TicketMonitorItem;
+
+    /** Abre o Dashboard como quem atende a fila, com um alerta sem responsável, e clica em "Atribuir". */
+    async function openAssignDialog() {
+      hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+      ticketsStoreFake.criticalTickets.set([unassigned]);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+      (fixture.nativeElement.querySelector('button[aria-label="Atribuir responsável ao chamado VPN caindo"]') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    it('abre o diálogo de atribuição com a busca limpa', async () => {
+      const fixture = await openAssignDialog();
+
+      expect(ticketsStoreFake.resetAssignment).toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).not.toBeNull();
+    });
+
+    it('ao confirmar, atribui pelo store e, no sucesso, avisa e fecha o diálogo', async () => {
+      const fixture = await openAssignDialog();
+      const dialog = fixture.debugElement.query(debug => debug.name === 'app-ticket-assign-dialog');
+
+      dialog.componentInstance.confirm.emit({ userId: 'u9', name: 'Ana Lima' });
+      expect(ticketsStoreFake.assignResponsible).toHaveBeenCalledWith('t7', 'u9', jasmine.any(Function));
+
+      ticketsStoreFake.assignResponsible.calls.mostRecent().args[2]();
+      await fixture.whenStable();
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Ana Lima agora é o responsável.');
+      expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).toBeNull();
+    });
+
+    it('fechar sem atribuir limpa a busca e não chama o store', async () => {
+      const fixture = await openAssignDialog();
+      const dialog = fixture.debugElement.query(debug => debug.name === 'app-ticket-assign-dialog');
+      ticketsStoreFake.resetAssignment.calls.reset();
+
+      dialog.componentInstance.closed.emit();
+      await fixture.whenStable();
+
+      expect(ticketsStoreFake.assignResponsible).not.toHaveBeenCalled();
+      expect(ticketsStoreFake.resetAssignment).toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).toBeNull();
+    });
   });
 
   describe('seus chamados', () => {

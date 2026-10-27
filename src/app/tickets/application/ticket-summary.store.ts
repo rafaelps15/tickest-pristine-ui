@@ -2,12 +2,13 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { forkJoin, map } from 'rxjs';
+import { finalize, forkJoin, map } from 'rxjs';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, SessionService } from '../../shared';
+import { UserDataService, UserSummary } from '../../users';
 
 /**
  * Valor do recurso, ou `undefined` sem valor — inclusive em erro. Ler `.value()` direto num
@@ -34,11 +35,22 @@ const BREACHED_RESERVED_SLOTS = 3;
 export const TicketSummaryStore = signalStore(
   { providedIn: 'root' },
   withState({
-    groupBy: 'Day' as TicketVolumeGrouping
+    groupBy: 'Day' as TicketVolumeGrouping,
+    /** Candidatos a responsável do diálogo "Atribuir" dos Alertas de SLA. */
+    assigneeCandidates: [] as UserSummary[],
+    /** Buscando candidatos a responsável. */
+    searchingAssignees: false,
+    /** Erro da busca de candidatos a responsável. */
+    assigneeSearchError: null as string | null,
+    /** Atribuindo o responsável escolhido (trava o botão de confirmar contra clique duplo). */
+    assigning: false,
+    /** Erro da última tentativa de atribuir — mostrado dentro do diálogo, que continua aberto. */
+    assignError: null as string | null
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
-    _sessionService: inject(SessionService)
+    _sessionService: inject(SessionService),
+    _userDataService: inject(UserDataService)
   })),
   withProps((store) => ({
     _statusCountsResource: rxResource({
@@ -166,6 +178,69 @@ export const TicketSummaryStore = signalStore(
      */
     reloadCritical(): void {
       store._criticalTicketsResource.reload();
+    },
+
+    /**
+     * Busca usuários ativos candidatos a responsável (GET /users), pro diálogo "Atribuir" dos
+     * Alertas de SLA — mesmo padrão do Monitor (`TicketMonitorStore.searchResponsibleCandidates`) e
+     * do detalhe; cada tela com sua cópia por ora (duplicação já registrada nos critiques).
+     */
+    searchAssignees(search: string): void {
+      const trimmed = search.trim();
+      if (!trimmed) {
+        patchState(store, { assigneeCandidates: [], searchingAssignees: false, assigneeSearchError: null });
+        return;
+      }
+
+      patchState(store, { searchingAssignees: true, assigneeSearchError: null });
+
+      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
+        finalize(() => patchState(store, { searchingAssignees: false }))
+      ).subscribe({
+        next: (page) => patchState(store, { assigneeCandidates: page.items }),
+        error: (err: HttpErrorResponse) => patchState(store, {
+          assigneeCandidates: [],
+          assigneeSearchError: extractErrorMessage(err, {
+            403: 'Você não tem permissão para buscar usuários.'
+          }, 'Erro ao buscar usuários.')
+        })
+      });
+    },
+
+    /** Limpa a busca e o erro do diálogo "Atribuir" — ao abrir ou fechar. */
+    resetAssignment(): void {
+      patchState(store, { assigneeCandidates: [], assigneeSearchError: null, assignError: null });
+    },
+
+    /** Limpa só o erro de atribuição — quando a pessoa escolhe outro candidato depois de uma falha. */
+    clearAssignError(): void {
+      patchState(store, { assignError: null });
+    },
+
+    /**
+     * Atribui o responsável escolhido a um chamado dos Alertas de SLA (PUT /tickets/{id}/assignee) e,
+     * no sucesso, recarrega só os alertas — a linha passa de "Sem responsável" pra "Com {nome}".
+     */
+    assignResponsible(ticketId: string, userId: string, onSuccess?: () => void): void {
+      patchState(store, { assignError: null, assigning: true });
+
+      store._ticketDataService.assignTicket(ticketId, userId).pipe(
+        finalize(() => patchState(store, { assigning: false }))
+      ).subscribe({
+        next: () => {
+          store._criticalTicketsResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          patchState(store, {
+            assignError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para atribuir o responsável deste chamado.',
+              404: 'Chamado ou usuário não encontrado.',
+              409: 'Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.'
+            }, 'Erro ao atribuir o responsável.')
+          });
+        }
+      });
     },
 
     /** Muda o agrupamento do gráfico de volume (dia/semana/mês). */

@@ -85,8 +85,20 @@
   line-height: 1.2;
 }
 
+.critical-ticket-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .critical-ticket-item + .critical-ticket-item {
   border-top: 1px solid var(--tk-border);
+}
+
+/* "Atribuir" ao lado da linha (fora do link): alvo de 44px, não encolhe quando o título é longo. */
+.critical-ticket-assign {
+  flex-shrink: 0;
+  min-height: 2.75rem;
 }
 
 /*

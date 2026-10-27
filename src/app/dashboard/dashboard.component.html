@@ -60,7 +60,7 @@
                           [clockOffsetMs]="store.clockOffsetMs()"
                           [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
                           [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
-                          (refresh)="store.reloadCritical()" />
+                          (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
 }
 
 <!-- Cards de Estatísticas -->
@@ -256,3 +256,14 @@
     </div>
   </div>
 </div>
+
+<!-- "Atribuir" dos Alertas de SLA: o mesmo diálogo do detalhe e do Monitorar, ligado ao store do Dashboard. -->
+@if (assigningTicket(); as assigning) {
+  <app-ticket-assign-dialog [ticketTitle]="assigning.title" [currentName]="assigning.assignedToName ?? null"
+                            [currentUserId]="assigning.assignedToUserId ?? null"
+                            [candidates]="store.assigneeCandidates()" [searching]="store.searchingAssignees()"
+                            [searchError]="store.assigneeSearchError()"
+                            [saving]="store.assigning()" [error]="store.assignError()"
+                            (search)="store.searchAssignees($event)" (selectionChange)="store.clearAssignError()"
+                            (confirm)="onConfirmAssign($event)" (closed)="onAssignClosed()" />
+}

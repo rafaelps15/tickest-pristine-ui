@@ -2,13 +2,16 @@ import { Component, inject, Injector, OnInit, OnDestroy, ElementRef, PLATFORM_ID
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
-import { SessionService, loadChart } from '../shared';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketMonitorItem, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
+import { SessionService, ToastService, loadChart } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
 import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
+// O shell pode ligar peças de um domínio direto (como faz com as telas feature-*): o diálogo depende de
+// UserSummary (domínio users), por isso mora em tickets/ui e não em shared/ui.
+import { TicketAssignDialogComponent } from '../tickets/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 /**
  * Paleta categórica (5 slots, validada com scripts/validate_palette.js do skill dataviz — PASS em
@@ -48,7 +51,7 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent],
+    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent, TicketAssignDialogComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./dashboard.component.css']
@@ -59,6 +62,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Resumo dos chamados que o próprio usuário abriu (bloco "Seus chamados"). */
   protected readonly myTickets = inject(MyTicketsSummaryStore);
   protected readonly sessionService = inject(SessionService);
+  private readonly toastService = inject(ToastService);
+
+  /** Chamado do alerta de SLA que está recebendo um responsável (diálogo "Atribuir" aberto), ou null. */
+  protected readonly assigningTicket = signal<TicketMonitorItem | null>(null);
 
   /**
    * Configuração dos 3 cards de status clicáveis (Aberto/Andamento/Resolvido) — mesma estrutura
@@ -211,6 +218,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.showTable()) {
       afterNextRender(() => this.volumeTable()?.nativeElement.focus(), { injector: this.injector });
     }
+  }
+
+  /** Abre o diálogo "Atribuir" pro chamado de um alerta de SLA sem responsável, com a busca limpa. */
+  onAssign(ticket: TicketMonitorItem): void {
+    this.store.resetAssignment();
+    this.assigningTicket.set(ticket);
+  }
+
+  /** Confirma o responsável escolhido: atribui, avisa e fecha o diálogo (os alertas recarregam no store). */
+  onConfirmAssign(choice: { userId: string; name: string }): void {
+    const ticket = this.assigningTicket();
+    if (!ticket) return;
+
+    this.store.assignResponsible(ticket.id, choice.userId, () => {
+      this.toastService.show(`${choice.name} agora é o responsável.`);
+      this.assigningTicket.set(null);
+    });
+  }
+
+  /** Fecha o diálogo "Atribuir" sem atribuir, limpando busca e erro pra próxima vez. */
+  onAssignClosed(): void {
+    this.assigningTicket.set(null);
+    this.store.resetAssignment();
   }
 
   /** Muda o agrupamento do gráfico de volume (dia/semana/mês). */
