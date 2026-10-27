@@ -16,14 +16,17 @@ describe('DepartmentGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explica a relação entre departamento e setor, e como a busca funciona', async () => {
+  it('explica o que a tela não diz sozinha: filtros do Resumo, busca, regra de exclusão e responsável', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Departamento e setor');
+    expect(text).toContain('também filtram a lista');
     expect(text).toContain('Busca');
+    expect(text).toContain('com chamados em andamento não pode ser excluído');
     expect(text).toContain('Responsável');
+    // A relação departamento × setor já está no subtítulo e no card: o Guia não repete.
+    expect(text).not.toContain('Departamento e setor');
   });
 
   it('lembra a preferência aberto/fechado na chave própria da tela', async () => {

@@ -32,3 +32,8 @@
 .department-meta .badge {
   font-size: 0.75rem;
 }
+
+/* "Adicionar setor" é a ação mais repetida da tela: alvo de toque de 44px, como o "⋮". */
+.btn-add-sector {
+  min-height: 2.75rem;
+}

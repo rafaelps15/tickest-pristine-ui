@@ -157,7 +157,7 @@
 
         @if (canManageSectors()) {
           <div class="card-footer bg-transparent border-0 pt-0">
-            <button type="button" class="btn btn-sm btn-outline-primary" (click)="openCreateSectorModal(department)">
+            <button type="button" class="btn btn-sm btn-outline-primary btn-add-sector" (click)="openCreateSectorModal(department)">
               <i class="bx bx-plus me-1" aria-hidden="true"></i> Adicionar setor
             </button>
           </div>
@@ -229,7 +229,7 @@
         }
 
         <div class="input-group mb-2">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
+          <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
           <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
                  [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
         </div>
@@ -239,9 +239,11 @@
         } @else if (store.searchingResponsible()) {
           <div class="text-center py-2"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Buscando usuários…</span></div>
         } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
-          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+          <p class="text-muted small mb-0" role="status">Nenhum usuário encontrado.</p>
         } @else if (store.responsibleCandidates().length > 0) {
-          <ul class="list-group">
+          <!-- A contagem é anunciada; os nomes ficam pra navegação por Tab. -->
+          <p class="visually-hidden" role="status">{{ store.responsibleCandidates().length }} {{ store.responsibleCandidates().length === 1 ? 'usuário encontrado' : 'usuários encontrados' }}.</p>
+          <ul class="list-group" aria-label="Usuários encontrados">
             @for (candidate of store.responsibleCandidates(); track candidate.id) {
               <li class="list-group-item p-0">
                 <button type="button" class="btn w-100 text-start p-2 rounded-0" (click)="onSelectResponsible(candidate)">
@@ -262,9 +264,9 @@
       <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
       <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || !responsibleKnown()">
         @if (store.mutating()) {
-          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
         }
-        Salvar
+        {{ store.mutating() ? 'Salvando…' : 'Salvar' }}
       </button>
     </div>
   </form>
@@ -307,9 +309,9 @@
       <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
       <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
         @if (store.mutating()) {
-          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
         }
-        Salvar
+        {{ store.mutating() ? 'Salvando…' : 'Salvar' }}
       </button>
     </div>
   </form>

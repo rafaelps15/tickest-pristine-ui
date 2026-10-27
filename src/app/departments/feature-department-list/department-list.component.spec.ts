@@ -137,6 +137,32 @@ describe('DepartmentListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('section.card').length).toBe(2);
   });
 
+  it('o "Salvar" diz "Salvando…" durante a mutação, com o spinner só decorativo', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    storeFake.mutating.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.textContent?.trim()).toBe('Salvando…');
+    expect(button.querySelector('.spinner-border')!.getAttribute('aria-hidden')).toBe('true');
+    expect(button.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('anuncia quantos candidatos a responsável a busca encontrou', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    storeFake.responsibleCandidates.set([candidate]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const status = fixture.nativeElement.querySelector('#departmentModal .visually-hidden[role="status"]') as HTMLElement;
+    expect(status.textContent?.trim()).toBe('1 usuário encontrado.');
+  });
+
   it('filtra pelos departamentos sem responsável', async () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
