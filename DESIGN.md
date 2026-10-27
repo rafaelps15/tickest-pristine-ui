@@ -180,6 +180,15 @@ mede entre 1,6:1 e 3,8:1 de contraste — falha WCAG AA (4,5:1). Auditado e corr
 elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor
 nova inventada para aquela tela.
 
+*Exceção deliberada:* o gráfico "Tickets criados" do Dashboard usa uma paleta categórica de 5 cores
+(azul, laranja, verde, âmbar, rosa — validada pra daltonismo) só como ritmo visual entre barras, a
+pedido do usuário em 2026-10-24. A cor ali não carrega significado; a exceção vale só pra esse
+gráfico, não abre precedente pra outras telas.
+
+**The RGB Token Rule.** Fundo ou realce translúcido de marca/alerta usa os tokens em RGB —
+`rgba(var(--tk-primary-rgb), α)` e `rgba(var(--tk-danger-rgb), α)` — nunca o valor literal
+(`rgba(105, 108, 255, …)`). Consolidado em 2026-10-27.
+
 **The Badge Pair Rule.** Toda cor semântica (success/warning/info/danger) existe em dois pares:
 um "soft" (fundo pastel claro + texto na variante escurecida do matiz, ver **Semantic Text**
 acima — não a cor semântica pura, que falha contraste sobre o próprio fundo pastel) para o modo
@@ -201,8 +210,9 @@ permissão de ter personalidade própria.
 ### Hierarchy
 - **Display** (700, 3rem, line-height 1): a wordmark "tickest" em login/registro. Único uso de
   Sora no sistema.
-- **Title** (700, 1.5rem/`h4`): título de cada tela (ex. "Gestão de Usuários", "Seja bem-vindo(a),
-  {nome}!").
+- **Title** (700, 1.5rem/`h4`): título de cada tela (ex. "Gestão de Usuários", "Bom dia, {nome}!").
+  Semanticamente é o `h1` da tela (`<h1 class="h4">`); títulos de card são `<h2 class="h5">` — o
+  nível do heading segue a estrutura, o tamanho vem da classe (sem pular de `h4` pra `h6`).
 - **Body** (400, 1rem): texto corrido, valores de tabela, conteúdo de formulário.
 - **Label** (600–700, 0.72–0.85rem, uppercase, tracking 0.06–0.08em): rótulos de formulário,
   cabeçalho de tabela, cabeçalho de seção do menu lateral ("ADMINISTRAÇÃO").
@@ -227,6 +237,12 @@ deslizando com `transform: translateX`), com um overlay escurecido atrás.
 O ritmo de espaçamento segue a escala padrão do Bootstrap (múltiplos de 0.25rem via utilitários
 `p-*`/`g-*`/`gap-*`/`m-*`) — não há escala de espaçamento customizada. Cards de filtro/listagem
 usam `p-3`; corpo de card de conteúdo usa `p-4`; grupos de campo usam `g-3`.
+
+**Celular:** tabelas com várias colunas viram uma lista de cards abaixo de `md` (ver
+`.table-stack` em Components) em vez de rolar pro lado. Quando a ordem visual muda entre desktop e
+celular, a ordem do DOM segue a do celular (leitura e Tab iguais ao que se vê) e só o desktop
+reordena com `order-lg-*`. No Dashboard: o que pede ação (Alertas de SLA, Ações Rápidas) vem antes
+do volume histórico.
 
 ## Elevation & Depth
 
@@ -305,15 +321,55 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 ### Row Actions (menu "⋮")
 Quando uma linha de tabela tem mais de duas ações possíveis, elas vão num menu dropdown
 acionado por um ícone de três pontos verticais — nunca uma fileira de botões texto+ícone lado a
-lado. O botão do menu é discreto (sem borda) até hover/foco. Dropdowns dentro de um container com
-scroll (`.table-responsive`) usam posicionamento `fixed` do Popper, não o `absolute` padrão do
-Bootstrap, pra não ficarem cortados pelo scroll.
+lado. Um único "⋮" por linha, com a classe global `.btn-row-actions`: discreto (sem borda) até
+hover/foco/aberto, quando ganha só um realce índigo leve. O título da linha é o link pro detalhe
+(sem botão "Ver detalhes" separado). Dropdowns dentro de um container com scroll
+(`.table-responsive`) usam posicionamento `fixed` do Popper, não o `absolute` padrão do Bootstrap,
+pra não ficarem cortados pelo scroll.
+
+### Tabelas no celular (`.table-stack`)
+Utilitário global: abaixo de `md`, cada linha vira um card; cada célula com `data-label` vira um
+par rótulo/valor; a célula `.table-stack-actions` (o "⋮") vai pro canto superior direito do card.
+Usado em Meus Tickets e Monitorar Tickets. Texto que não quebra linha (`text-truncate`) dentro do
+card precisa de `width: 0; min-width: 100%`, senão alarga a página inteira.
+
+### Icon Tile (`.icon-tile`)
+Ícone centralizado num quadrado/círculo de fundo suave — sempre junto de `.badge.bg-label-*` e
+`.rounded`/`.rounded-circle`, com `aria-hidden` (é decoração do rótulo ao lado). Tamanhos:
+`-sm` 2.25rem (linhas de lista), padrão 2.5rem, `-lg` 3rem (KPIs), `-xl` 4rem (estado vazio/primeiro
+uso).
+
+### Alertas de SLA (assinatura do produto)
+O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
+- Lista vencidos **e** em risco, do prazo mais antigo pro mais novo (o vencido há mais tempo
+  primeiro); os totais da empresa ficam no topo, com o mesmo número grande dos KPIs, cada um
+  levando à fila de Monitorar já filtrada.
+- Cada item tem etiqueta "Vencido"/"Em risco" em texto **e** cor, e o prazo relativo vivo ("vence
+  em 2h 14min" / "venceu há 35 min"), recalculado a cada 30s com a aba visível e ancorado na hora
+  do servidor (`serverNowUtc`), nunca no relógio da máquina.
+- Quando um item vence com a tela aberta: vira "Vencido", os totais acompanham, um `aria-live`
+  anuncia só a virada e a linha recebe um realce vermelho único de 1,6s (sem animação com
+  `prefers-reduced-motion`).
+- Sem nenhum alerta, o vazio é dito com clareza: "Fila em dia", com check na cor de sucesso.
+
+### Estados de dado (carregando, erro, vazio, primeiro uso)
+- **Carregando:** spinner com texto pra leitor de tela, no lugar do valor.
+- **Erro:** nunca vira dado. Um número que falhou mostra "—" (com "indisponível" pro leitor de
+  tela), nunca o `0` de fallback; um gráfico que falhou mostra o erro com "Tentar novamente",
+  nunca o vazio "nenhum ticket".
+- **Vazio:** diz o que está vazio e, se houver, a próxima ação.
+- **Primeiro uso** (empresa sem nenhum ticket): o vazio vira convite com a próxima ação real —
+  cadastrar departamentos/setores pra quem administra, abrir o primeiro ticket pros demais.
 
 ### Confirm Dialog
 Toda confirmação de ação sensível (excluir, desativar, reativar) usa o modal de confirmação
 global do sistema — nunca o `confirm()` nativo do navegador, que quebra a identidade visual. O
 botão de confirmação muda de cor conforme a gravidade: vermelho para destrutivo, verde para
-restaurativo, índigo para neutro.
+restaurativo, índigo para neutro. Quando a ação confirmada começa com "Cancelar" (ex. "Cancelar
+ticket"), o botão de desistir se chama "Voltar", não "Cancelar". Implementação: a instância do
+`bootstrap.Modal` é criada no momento de abrir, ligada ao elemento atual — criada no nascimento
+do componente, ela ficava presa a um elemento que a hidratação do SSR descartava e nenhuma
+confirmação abria (corrigido em 2026-10-27).
 
 ### Named Rules
 **The Transform-Not-Padding Rule.** Microinterações de deslocamento (hover de item de menu, por
@@ -333,6 +389,11 @@ segunda força recálculo de layout a cada quadro.
 - **Do** usar `transform` para microinterações de deslocamento, nunca `padding`/`margin`.
 - **Do** manter login/registro sempre no tema claro, independente da preferência do sistema
   operacional do usuário.
+- **Do** mostrar "—" e uma mensagem de erro quando um dado não carregou — ver **Estados de dado**.
+- **Do** usar movimento só pra explicar uma mudança de estado, sempre com um caminho
+  `prefers-reduced-motion` (o realce do alerta de SLA que vence é o modelo).
+- **Do** dar a todo controle só de ícone um `<button>` com `aria-label` e 44px (`.btn-icon`) — nada
+  de `<a href="javascript:void(0)">`.
 
 ### Don't:
 - **Don't** usar gradiente em texto — é decoração sem função; use peso ou tamanho para ênfase.
@@ -343,3 +404,7 @@ segunda força recálculo de layout a cada quadro.
 - **Don't** inventar uma nova cor de acento para uma tela específica — toda necessidade de cor não
   resolvida por índigo ou pelas quatro cores semânticas é um sinal pra reusar um token existente,
   não criar um novo.
+- **Don't** prometer "ao vivo"/tempo real numa tela que não se atualiza sozinha.
+- **Don't** forçar `text-transform: uppercase` em badges — o rótulo já vem escrito como deve ser lido.
+- **Don't** fazer coreografia de carregamento (números contando, entradas em sequência) em tela de
+  operação — quem abre o Dashboard quer o número, não a animação.

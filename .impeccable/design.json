@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-03T00:00:00Z",
+  "generatedAt": "2026-10-27T18:00:00Z",
   "title": "Design System: Tickest",
   "extensions": {
     "colorMeta": {
@@ -8,7 +8,16 @@
         "role": "primary",
         "displayName": "Índigo Confiança",
         "canonical": "#696cff",
-        "tonalRamp": ["#1a1b66", "#2b2d8a", "#3d3fab", "#4f51c7", "#696cff", "#8a8cff", "#b3b5ff", "#e7e7ff"]
+        "tonalRamp": [
+          "#1a1b66",
+          "#2b2d8a",
+          "#3d3fab",
+          "#4f51c7",
+          "#696cff",
+          "#8a8cff",
+          "#b3b5ff",
+          "#e7e7ff"
+        ]
       },
       "primary-dark": {
         "role": "primary",
@@ -44,40 +53,141 @@
         "role": "neutral",
         "displayName": "Grafite Texto",
         "canonical": "#2b2c40",
-        "tonalRamp": ["#15151f", "#2b2c40", "#44455c", "#697a8d", "#a1acb8", "#c8ced5", "#e9ecef", "#f5f5f9"]
+        "tonalRamp": [
+          "#15151f",
+          "#2b2c40",
+          "#44455c",
+          "#697a8d",
+          "#a1acb8",
+          "#c8ced5",
+          "#e9ecef",
+          "#f5f5f9"
+        ]
       },
-      "text-secondary": { "role": "neutral", "displayName": "Ardósia Secundária", "canonical": "#697a8d" },
-      "text-muted": { "role": "neutral", "displayName": "Névoa Terciária", "canonical": "#a1acb8" },
-      "surface": { "role": "neutral", "displayName": "Branco Superfície", "canonical": "#ffffff" },
-      "page-bg": { "role": "neutral", "displayName": "Lavanda Nebulosa", "canonical": "#f5f5f9" },
-      "border": { "role": "neutral", "displayName": "Contorno Lavanda", "canonical": "#e7e7ff" },
-      "text-primary-dark": { "role": "neutral", "displayName": "Gelo Escuro", "canonical": "#e9ecef" },
-      "text-secondary-dark": { "role": "neutral", "displayName": "Cinza Médio", "canonical": "#adb5bd" },
-      "text-muted-dark": { "role": "neutral", "displayName": "Grafite Esmaecido", "canonical": "#868e96" },
-      "surface-dark": { "role": "neutral", "displayName": "Carvão Superfície", "canonical": "#212529" },
-      "page-bg-dark": { "role": "neutral", "displayName": "Breu de Página", "canonical": "#1a1d20" },
-      "border-dark": { "role": "neutral", "displayName": "Contorno Carvão", "canonical": "#3a3f44" }
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Ardósia Secundária",
+        "canonical": "#5f6f82"
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Névoa Terciária",
+        "canonical": "#a1acb8"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Branco Superfície",
+        "canonical": "#ffffff"
+      },
+      "page-bg": {
+        "role": "neutral",
+        "displayName": "Lavanda Nebulosa",
+        "canonical": "#f5f5f9"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Contorno Lavanda",
+        "canonical": "#e7e7ff"
+      },
+      "text-primary-dark": {
+        "role": "neutral",
+        "displayName": "Gelo Escuro",
+        "canonical": "#e9ecef"
+      },
+      "text-secondary-dark": {
+        "role": "neutral",
+        "displayName": "Cinza Médio",
+        "canonical": "#adb5bd"
+      },
+      "text-muted-dark": {
+        "role": "neutral",
+        "displayName": "Grafite Esmaecido",
+        "canonical": "#868e96"
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Carvão Superfície",
+        "canonical": "#212529"
+      },
+      "page-bg-dark": {
+        "role": "neutral",
+        "displayName": "Breu de Página",
+        "canonical": "#1a1d20"
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Contorno Carvão",
+        "canonical": "#3a3f44"
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display (Sora)", "purpose": "Wordmark 'tickest' em login/registro — único uso da fonte de marca." },
-      "body": { "displayName": "Corpo (Public Sans)", "purpose": "Todo o resto da interface: títulos de tela, tabelas, formulários, texto corrido." },
-      "label": { "displayName": "Rótulo (Public Sans, tracked)", "purpose": "Rótulos de formulário, cabeçalho de tabela, cabeçalho de seção do menu." }
+      "display": {
+        "displayName": "Display (Sora)",
+        "purpose": "Wordmark 'tickest' em login/registro — único uso da fonte de marca."
+      },
+      "body": {
+        "displayName": "Corpo (Public Sans)",
+        "purpose": "Todo o resto da interface: títulos de tela, tabelas, formulários, texto corrido."
+      },
+      "label": {
+        "displayName": "Rótulo (Public Sans, tracked)",
+        "purpose": "Rótulos de formulário, cabeçalho de tabela, cabeçalho de seção do menu."
+      }
     },
     "shadows": [
-      { "name": "shadow-sm", "value": "0 0.125rem 0.375rem rgba(105, 108, 255, 0.08)", "purpose": "Cards e inputs em repouso (claro)." },
-      { "name": "shadow-sm-dark", "value": "0 0.125rem 0.375rem rgba(0, 0, 0, 0.3)", "purpose": "Cards e inputs em repouso (escuro)." },
-      { "name": "shadow-md", "value": "0 0.375rem 1.25rem rgba(105, 108, 255, 0.12)", "purpose": "Navbar flutuante, destaque médio (claro)." },
-      { "name": "shadow-md-dark", "value": "0 0.375rem 1.25rem rgba(0, 0, 0, 0.4)", "purpose": "Navbar flutuante, destaque médio (escuro)." },
-      { "name": "shadow-lg", "value": "0 1rem 3rem rgba(105, 108, 255, 0.18)", "purpose": "Modais — camada mais alta da interface (claro)." },
-      { "name": "shadow-lg-dark", "value": "0 1rem 3rem rgba(0, 0, 0, 0.55)", "purpose": "Modais (escuro)." },
-      { "name": "shadow-auth-card", "value": "0 20px 60px rgba(0, 0, 0, 0.2)", "purpose": "Card de login/registro — elevação dramática exclusiva da entrada, não dark-aware." }
+      {
+        "name": "shadow-sm",
+        "value": "0 0.125rem 0.375rem rgba(105, 108, 255, 0.08)",
+        "purpose": "Cards e inputs em repouso (claro)."
+      },
+      {
+        "name": "shadow-sm-dark",
+        "value": "0 0.125rem 0.375rem rgba(0, 0, 0, 0.3)",
+        "purpose": "Cards e inputs em repouso (escuro)."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 0.375rem 1.25rem rgba(105, 108, 255, 0.12)",
+        "purpose": "Navbar flutuante, destaque médio (claro)."
+      },
+      {
+        "name": "shadow-md-dark",
+        "value": "0 0.375rem 1.25rem rgba(0, 0, 0, 0.4)",
+        "purpose": "Navbar flutuante, destaque médio (escuro)."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0 1rem 3rem rgba(105, 108, 255, 0.18)",
+        "purpose": "Modais — camada mais alta da interface (claro)."
+      },
+      {
+        "name": "shadow-lg-dark",
+        "value": "0 1rem 3rem rgba(0, 0, 0, 0.55)",
+        "purpose": "Modais (escuro)."
+      },
+      {
+        "name": "shadow-auth-card",
+        "value": "0 20px 60px rgba(0, 0, 0, 0.2)",
+        "purpose": "Card de login/registro — elevação dramática exclusiva da entrada, não dark-aware."
+      }
     ],
     "motion": [
-      { "name": "ease-standard", "value": "200ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Transição padrão do sistema (cor, sombra, transform)." },
-      { "name": "fade-in-route", "value": "tk-fade-in 250ms ease-out", "purpose": "Entrada suave de cada rota: opacidade 0→1 + translateY 4px→0." }
+      {
+        "name": "ease-standard",
+        "value": "200ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Transição padrão do sistema (cor, sombra, transform)."
+      },
+      {
+        "name": "fade-in-route",
+        "value": "tk-fade-in 250ms ease-out",
+        "purpose": "Entrada suave de cada rota: opacidade 0→1 + translateY 4px→0."
+      }
     ],
     "breakpoints": [
-      { "name": "sidebar-collapse", "value": "1199px" }
+      {
+        "name": "sidebar-collapse",
+        "value": "1199px"
+      }
     ]
   },
   "components": [
@@ -124,9 +234,26 @@
     {
       "name": "Row Actions Menu",
       "kind": "custom",
-      "description": "Menu de ações por linha de tabela (ícone de três pontos) — substitui fileiras de botões.",
-      "html": "<div class=\"ds-row-actions\"><button class=\"ds-row-actions-toggle\" aria-label=\"Ações\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"currentColor\"><circle cx=\"12\" cy=\"5\" r=\"1.6\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\"/><circle cx=\"12\" cy=\"19\" r=\"1.6\"/></svg></button></div>",
-      "css": ".ds-row-actions-toggle { width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #697a8d; cursor: pointer; transition: border-color 200ms, color 200ms; } .ds-row-actions-toggle:hover, .ds-row-actions-toggle:focus-visible { border-color: #e7e7ff; color: #2b2c40; outline: none; }"
+      "refersTo": "btn-row-actions",
+      "description": "Um único botão ⋮ por linha (.btn-row-actions): sem borda até hover/foco/aberto, só realce índigo leve; o título da linha é o link pro detalhe.",
+      "html": "<button class=\"ds-row-actions\" aria-label=\"Ações para o ticket Impressora parada\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/><circle cx=\"12\" cy=\"19\" r=\"2\"/></svg></button>",
+      "css": ".ds-row-actions { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--tk-text-secondary, #5f6f82); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; } .ds-row-actions:hover, .ds-row-actions:focus-visible { border-color: var(--tk-border, #e7e7ff); background: rgba(105, 108, 255, 0.08); color: var(--tk-text-primary, #2b2c40); } .ds-row-actions:focus-visible { outline: 2px solid #696cff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Icon Tile",
+      "kind": "custom",
+      "refersTo": "icon-tile",
+      "description": "Ícone centralizado num quadrado/círculo de fundo suave (badge bg-label-*), decorativo ao lado de um rótulo. Tamanhos -sm/-lg/-xl.",
+      "html": "<span class=\"ds-icon-tile\" aria-hidden=\"true\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 6 9 17l-5-5\"/></svg></span>",
+      "css": ".ds-icon-tile { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: #e8fadf; color: #2e7d14; flex-shrink: 0; }"
+    },
+    {
+      "name": "SLA Alert Item",
+      "kind": "custom",
+      "refersTo": "critical-ticket-link",
+      "description": "Item dos Alertas de SLA: linha inteira clicável (44px), etiqueta Vencido/Em risco em texto e cor, prazo relativo vivo ancorado na hora do servidor.",
+      "html": "<a class=\"ds-sla-item\" href=\"#\"><span class=\"ds-sla-row\"><span class=\"ds-sla-title\">Servidor de arquivos fora do ar</span><span class=\"ds-sla-badge\">Vencido</span></span><span class=\"ds-sla-meta\">Helpdesk · <time>venceu há 3h 1min</time></span></a>",
+      "css": ".ds-sla-item { display: block; min-height: 2.75rem; padding: 0.5rem; border-radius: 0.5rem; color: #2b2c40; text-decoration: none; transition: background-color 150ms ease; } .ds-sla-item:hover, .ds-sla-item:focus-visible { background: rgba(105, 108, 255, 0.06); } .ds-sla-item:hover .ds-sla-title { color: #696cff; text-decoration: underline; } .ds-sla-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; } .ds-sla-title { font-weight: 500; } .ds-sla-badge { background: #ffe5e5; color: #991b1b; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 600; } .ds-sla-meta { display: block; font-size: 0.875rem; color: #991b1b; }"
     }
   ],
   "narrative": {
@@ -141,11 +268,36 @@
       "Português (pt-BR) em toda a interface, incluindo mensagens de erro e rótulos de formulário"
     ],
     "rules": [
-      { "name": "The One Accent Rule", "body": "O Índigo Confiança é a única cor não-semântica do sistema. Se um elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor nova inventada para aquela tela.", "section": "colors" },
-      { "name": "The Badge Pair Rule", "body": "Toda cor semântica existe em dois pares: um 'soft' para o modo claro, um 'soft dark' para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro.", "section": "colors" },
-      { "name": "The Brand-Only Display Rule", "body": "Sora nunca aparece fora da wordmark de login/registro — títulos de tela usam Public Sans em peso 700.", "section": "typography" },
-      { "name": "The Tinted-Light, Neutral-Dark Rule", "body": "Sombra no modo claro é tintada da marca; no modo escuro é preto neutro. Nunca o inverso.", "section": "elevation" },
-      { "name": "The Transform-Not-Padding Rule", "body": "Microinterações de deslocamento animam transform, nunca padding/margin.", "section": "components" }
+      {
+        "name": "The One Accent Rule",
+        "body": "O Índigo Confiança é a única cor não-semântica do sistema. Se um elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor nova inventada para aquela tela.",
+        "section": "colors"
+      },
+      {
+        "name": "The Badge Pair Rule",
+        "body": "Toda cor semântica existe em dois pares: um 'soft' para o modo claro, um 'soft dark' para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro.",
+        "section": "colors"
+      },
+      {
+        "name": "The Brand-Only Display Rule",
+        "body": "Sora nunca aparece fora da wordmark de login/registro — títulos de tela usam Public Sans em peso 700.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tinted-Light, Neutral-Dark Rule",
+        "body": "Sombra no modo claro é tintada da marca; no modo escuro é preto neutro. Nunca o inverso.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Transform-Not-Padding Rule",
+        "body": "Microinterações de deslocamento animam transform, nunca padding/margin.",
+        "section": "components"
+      },
+      {
+        "name": "The RGB Token Rule",
+        "body": "Fundo ou realce translúcido de marca/alerta usa rgba(var(--tk-primary-rgb), α) e rgba(var(--tk-danger-rgb), α), nunca o valor literal.",
+        "section": "colors"
+      }
     ],
     "dos": [
       "Do reservar o Índigo Confiança para ação primária e estado ativo",
@@ -153,13 +305,19 @@
       "Do declarar a camada de grid base (col-12/col-6) antes de col-md-*/col-lg-* em qualquer linha de formulário ou card",
       "Do agrupar mais de duas ações de linha de tabela num menu \"⋮\" em vez de botões lado a lado",
       "Do usar transform para microinterações de deslocamento, nunca padding/margin",
-      "Do manter login/registro sempre no tema claro, independente da preferência do sistema operacional"
+      "Do manter login/registro sempre no tema claro, independente da preferência do sistema operacional",
+      "Do mostrar \"—\" e uma mensagem de erro quando um dado não carregou — nunca o 0 de fallback nem o vazio \"nenhum ticket\".",
+      "Do usar movimento só pra explicar uma mudança de estado, sempre com caminho prefers-reduced-motion.",
+      "Do dar a todo controle só de ícone um <button> com aria-label e 44px."
     ],
     "donts": [
       "Don't usar gradiente em texto — use peso ou tamanho para ênfase",
       "Don't usar o confirm()/alert() nativo do navegador para qualquer confirmação — sempre o modal de confirmação do sistema",
       "Don't aplicar sombra tintada de índigo no modo escuro, nem sombra preta pura no modo claro",
-      "Don't inventar uma nova cor de acento para uma tela específica"
+      "Don't inventar uma nova cor de acento para uma tela específica",
+      "Don't prometer \"ao vivo\" numa tela que não se atualiza sozinha.",
+      "Don't forçar text-transform: uppercase em badges.",
+      "Don't fazer coreografia de carregamento (números contando, entradas em sequência) em tela de operação."
     ]
   }
 }
