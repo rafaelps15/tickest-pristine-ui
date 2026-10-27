@@ -303,6 +303,20 @@ export class TicketDetailComponent implements OnInit {
         return diffMs < 0 ? `Atrasado há ${duration}` : `Vence em ${duration}`;
     }
 
+    /**
+     * Formata minutos úteis de SLA como "45 min", "10h" ou "1h 30min" — só horas e minutos, sem
+     * converter pra dias (um dia útil não tem 24h, e o expediente depende do calendário do plano).
+     */
+    protected formatBusinessMinutes(totalMinutes: number): string {
+        if (totalMinutes < 60) {
+            return `${totalMinutes} min`;
+        }
+
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
+    }
+
     /** Formata uma duração em milissegundos como "N minuto(s)"/"N hora(s)"/"N dia(s)", em pt-BR. */
     private formatDuration(ms: number): string {
         const minutes = Math.round(ms / 60_000);
@@ -422,6 +436,8 @@ export class TicketDetailComponent implements OnInit {
                 title: 'Cancelar este chamado?',
                 message: 'O Solicitante é avisado de que o chamado não vai ser atendido. Pode ser reaberto depois, se necessário.',
                 confirmLabel: 'Cancelar chamado',
+                // "Cancelar" ao lado de "Cancelar chamado" deixava ambíguo qual botão desiste da ação.
+                cancelLabel: 'Voltar',
                 variant: 'danger'
             }).subscribe(confirmed => {
                 if (confirmed) this.submitStatusChange(newStatus, currentDescription);

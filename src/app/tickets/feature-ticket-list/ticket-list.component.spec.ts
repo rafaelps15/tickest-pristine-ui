@@ -302,6 +302,8 @@ describe('TicketListComponent', () => {
 
     fixture.componentInstance.onCancelTicket(openTicket);
 
+    // "Voltar" em vez de "Cancelar" ao lado de "Cancelar ticket", pra não ficar ambíguo.
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ confirmLabel: 'Cancelar ticket', cancelLabel: 'Voltar' }));
     expect(storeFake.update).toHaveBeenCalledWith('t1', { description: openTicket.description, status: TicketStatus.Canceled }, jasmine.any(Function));
 
     storeFake.update.calls.mostRecent().args[2]();

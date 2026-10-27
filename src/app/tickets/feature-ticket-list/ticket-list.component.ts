@@ -129,6 +129,8 @@ export class TicketListComponent implements OnInit {
             title: `Cancelar o ticket "${ticket.title}"?`,
             message: 'O chamado passa para o status Cancelado e some da fila de atendimento — diferente de excluir, o histórico continua disponível e dá pra reabrir depois.',
             confirmLabel: 'Cancelar ticket',
+            // "Cancelar" ao lado de "Cancelar ticket" deixava ambíguo qual botão desiste da ação.
+            cancelLabel: 'Voltar',
             variant: 'danger'
         }).subscribe(confirmed => {
             if (!confirmed) return;

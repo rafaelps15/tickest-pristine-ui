@@ -1035,6 +1035,23 @@ describe('TicketDetailComponent', () => {
   });
 
   describe('painel de SLA', () => {
+    it('mostra o tempo útil em horas e minutos, não em minutos crus', async () => {
+      detailStoreFake.sla.set({
+        ...sla,
+        objectives: [
+          makeObjective({ metric: TicketSlaMetric.FirstResponse, consumedMinutes: 0, remainingMinutes: 120 }),
+          makeObjective({ metric: TicketSlaMetric.Resolution, consumedMinutes: 45, remainingMinutes: 555 })
+        ]
+      });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('2h úteis restantes · 0 min consumidos');
+      expect(text).toContain('9h 15min úteis restantes · 45 min consumidos');
+      expect(text).not.toContain('555');
+    });
+
     it('não repete a linha "Prazo" no resumo quando o painel de SLA está presente', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1071,8 +1088,8 @@ describe('TicketDetailComponent', () => {
       expect(text).toContain('Primeira resposta');
       expect(text).toContain('Resolução');
       expect(text).toContain('Padrão · Expediente');
-      expect(text).toContain('30 min consumidos / 30 min restantes (úteis)');
-      expect(text).toContain('30 min consumidos / 450 min restantes (úteis)');
+      expect(text).toContain('30 min úteis restantes · 30 min consumidos');
+      expect(text).toContain('7h 30min úteis restantes · 30 min consumidos');
     });
 
     it('mostra o selo "Legado (horas corridas)" e "Sem meta de primeira resposta" num chamado legado', async () => {

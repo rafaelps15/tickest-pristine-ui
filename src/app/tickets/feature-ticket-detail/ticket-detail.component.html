@@ -162,7 +162,7 @@
                 </p>
               }
               @if (objective.consumedMinutes !== null && objective.remainingMinutes !== null) {
-                <p class="text-muted small mb-1">{{ objective.consumedMinutes }} min consumidos / {{ objective.remainingMinutes }} min restantes (úteis)</p>
+                <p class="text-muted small mb-1">{{ formatBusinessMinutes(objective.remainingMinutes) }} úteis restantes · {{ formatBusinessMinutes(objective.consumedMinutes) }} consumidos</p>
               }
               @if (objective.completedAtUtc) {
                 <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
