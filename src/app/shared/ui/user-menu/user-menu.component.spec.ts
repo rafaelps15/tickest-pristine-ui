@@ -30,6 +30,15 @@ describe('UserMenuComponent', () => {
     }).compileComponents();
   });
 
+  it('dá ao avatar que abre o menu um papel de botão e um nome que diz a ação', async () => {
+    const fixture = TestBed.createComponent(UserMenuComponent);
+    await fixture.whenStable();
+
+    const toggle = fixture.nativeElement.querySelector('[data-bs-toggle="dropdown"]') as HTMLElement;
+    expect(toggle.getAttribute('role')).toBe('button');
+    expect(toggle.getAttribute('aria-label')).toBe('Menu do usuário');
+  });
+
   it('mostra o e-mail do usuário logado no dropdown', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
