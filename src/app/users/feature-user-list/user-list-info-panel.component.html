@@ -9,7 +9,9 @@
     </div>
 
     <div class="mb-3">
-      @if (user().isActive) {
+      @if (user().isActive && user().pendingActivation) {
+        <span class="badge bg-label-warning"><span class="status-dot" aria-hidden="true"></span>Convite pendente</span>
+      } @else if (user().isActive) {
         <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
       } @else {
         <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
@@ -36,6 +38,17 @@
       <dt>Cadastrado em</dt>
       <dd>{{ user().createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
 
+      @if (user().pendingActivation) {
+        <dt>Convite</dt>
+        <dd>
+          @if (user().invitationExpiresAtUtc) {
+            Vale até {{ user().invitationExpiresAtUtc | date:'dd/MM/yyyy HH:mm' }}
+          } @else {
+            Expirado, sem link válido
+          }
+        </dd>
+      }
+
       @if (user().deactivatedAtUtc) {
         <dt>Desativado em</dt>
         <dd>{{ user().deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
@@ -49,6 +62,16 @@
       <button type="button" class="btn btn-sm btn-outline-primary" (click)="assignRolesClick.emit()">
         <i class="bx bx-shield-quarter me-1"></i>Atribuir funções
       </button>
+      @if (user().pendingActivation && user().isActive) {
+        <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="resendingInvitation()" (click)="resendInvitationClick.emit()">
+          @if (resendingInvitation()) {
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          } @else {
+            <i class="bx bx-envelope me-1" aria-hidden="true"></i>
+          }
+          Reenviar convite
+        </button>
+      }
       @if (canToggleActive()) {
         @if (!user().isActive) {
           <button type="button" class="btn btn-sm btn-outline-success" [disabled]="activating()" (click)="toggleActiveClick.emit()">

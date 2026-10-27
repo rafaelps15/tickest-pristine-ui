@@ -165,7 +165,17 @@
                 }
               </td>
               <td data-label="Status">
-                @if (user.isActive) {
+                @if (user.isActive && user.pendingActivation) {
+                  <!-- Ativo mas sem senha: ainda não abriu o convite. Âmbar = esperando alguém, como "Aberto" nos chamados. -->
+                  <span class="badge bg-label-warning"><span class="status-dot" aria-hidden="true"></span>Convite pendente</span>
+                  <div class="invitation-expiry small text-muted">
+                    @if (user.invitationExpiresAtUtc) {
+                      Vale até {{ user.invitationExpiresAtUtc | date:'dd/MM HH:mm' }}
+                    } @else {
+                      Convite expirado
+                    }
+                  </div>
+                } @else if (user.isActive) {
                   <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
                 } @else {
                   <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
@@ -189,6 +199,13 @@
                       <i class="bx bx-shield-quarter me-2"></i>Atribuir funções
                     </button>
                   </li>
+                  @if (canResendInvitation(user)) {
+                    <li>
+                      <button type="button" class="dropdown-item" [disabled]="store.resendingInvitationIds().includes(user.id)" (click)="onResendInvitation(user)">
+                        <i class="bx bx-envelope me-2"></i>Reenviar convite
+                      </button>
+                    </li>
+                  }
                   @if (!isCurrentUser(user)) {
                     <li><hr class="dropdown-divider" /></li>
                     <li>
@@ -227,6 +244,8 @@
       <app-user-list-info-panel [user]="user" [modal]="isOverlayViewport()" [canToggleActive]="!isCurrentUser(user)"
                                  [deactivating]="store.deactivatingIds().includes(user.id)"
                                  [activating]="store.activatingIds().includes(user.id)"
+                                 [resendingInvitation]="store.resendingInvitationIds().includes(user.id)"
+                                 (resendInvitationClick)="onPanelResendInvitation()"
                                  (close)="closeInfoPanel()"
                                  (editClick)="onPanelEdit()"
                                  (assignRolesClick)="onPanelAssignRoles()"
@@ -279,9 +298,9 @@
         </div>
         <div class="col-12">
           <label class="form-label" for="userCreateEmail">E-mail</label>
-          <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="email"
+          <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="off"
                  [class.is-invalid]="isCreateFieldInvalid('email')"
-                 [attr.aria-describedby]="isCreateFieldInvalid('email') ? 'userCreateEmail-error' : null" />
+                 [attr.aria-describedby]="isCreateFieldInvalid('email') ? 'userCreateInvitationHint userCreateEmail-error' : 'userCreateInvitationHint'" />
           @if (isCreateFieldInvalid('email')) {
             <div class="invalid-feedback" id="userCreateEmail-error">
               @if (createForm.controls.email.errors?.['required']) {
@@ -292,54 +311,12 @@
             </div>
           }
         </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label" for="userCreatePassword">Senha provisória</label>
-          <div class="input-group">
-            <input id="userCreatePassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="new-password"
-                   [class.is-invalid]="isCreateFieldInvalid('password')"
-                   [attr.aria-describedby]="isCreateFieldInvalid('password') ? 'userCreatePassword-hint userCreatePassword-error' : 'userCreatePassword-hint'" />
-            <button type="button" class="input-group-text btn-password-toggle" (click)="togglePasswordsVisibility()"
-                    [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
-              <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
-            </button>
-            @if (isCreateFieldInvalid('password')) {
-              <div class="invalid-feedback" id="userCreatePassword-error">
-                @if (createForm.controls.password.errors?.['required']) {
-                  Informe a senha.
-                } @else if (createForm.controls.password.errors?.['minlength']) {
-                  A senha deve ter no mínimo 6 caracteres.
-                } @else if (createForm.controls.password.errors?.['uppercase']) {
-                  A senha deve conter pelo menos uma letra maiúscula.
-                } @else if (createForm.controls.password.errors?.['specialChar']) {
-                  A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
-                }
-              </div>
-            }
-          </div>
-          <!-- Regras antes de digitar (antes só apareciam depois do erro). -->
-          <div class="form-text" id="userCreatePassword-hint">
-            Mínimo de 6 caracteres, com uma letra maiúscula e um caractere especial (ex.: #, $, %).
-            @if (registerForcesPasswordChange) {
-              No primeiro acesso, a pessoa vai criar a própria senha.
-            }
-          </div>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label" for="userCreateConfirmPassword">Confirmar Senha</label>
-          <div class="input-group">
-            <input id="userCreateConfirmPassword" [type]="showPasswords() ? 'text' : 'password'" class="form-control" formControlName="confirmPassword" autocomplete="new-password"
-                   [class.is-invalid]="isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')"
-                   [attr.aria-describedby]="(isCreateFieldInvalid('confirmPassword') || createForm.hasError('passwordMismatch')) ? 'userCreateConfirmPassword-error' : null" />
-            <button type="button" class="input-group-text btn-password-toggle" (click)="togglePasswordsVisibility()"
-                    [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
-              <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
-            </button>
-            @if (createForm.hasError('passwordMismatch') && createForm.controls.confirmPassword.touched) {
-              <div class="invalid-feedback" id="userCreateConfirmPassword-error">As senhas não coincidem.</div>
-            } @else if (isCreateFieldInvalid('confirmPassword')) {
-              <div class="invalid-feedback" id="userCreateConfirmPassword-error">Confirme a senha.</div>
-            }
-          </div>
+        <div class="col-12">
+          <!-- Spec 008 do back-end: ninguém define senha por outra pessoa. O convite chega no e-mail acima. -->
+          <p class="form-text mb-0" id="userCreateInvitationHint">
+            <i class="bx bx-envelope me-1" aria-hidden="true"></i>
+            Um convite vai para esse e-mail. A pessoa abre o link, cria a própria senha e já pode entrar. O link vale 72 horas.
+          </p>
         </div>
       </div>
       <fieldset class="mt-4">
@@ -371,13 +348,13 @@
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
       <button type="button" class="btn btn-outline-primary" [disabled]="store.loading()" (click)="onCreateSubmit(true)">
-        Criar e cadastrar outro
+        Convidar e cadastrar outro
       </button>
       <button type="submit" class="btn btn-primary" [disabled]="store.loading()">
         @if (store.loading()) {
           <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
         }
-        Criar
+        Enviar convite
       </button>
     </div>
   </form>

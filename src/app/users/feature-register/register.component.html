@@ -1,6 +1,6 @@
 <div class="text-center mb-4">
   <h1 class="h4 mb-2 fw-bold">Criar conta</h1>
-  <p class="text-muted">Preencha seus dados — a conta fica ativa na hora.</p>
+  <p class="text-muted">Preencha seus dados. Um convite chega no e-mail informado para você criar a sua senha.</p>
 </div>
 
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3" novalidate>
@@ -8,7 +8,7 @@
   @if (store.success()) {
     <div class="alert alert-success py-3 d-flex align-items-center mb-4" role="alert">
       <i class="bx bx-check-circle me-2 fs-5"></i>
-      <div class="small fw-bold">Cadastro realizado. A conta já está ativa — você pode fazer login quando quiser.</div>
+      <div class="small fw-bold">Cadastro feito. Abra o convite que chegou no seu e-mail para criar a senha. O link vale 72 horas.</div>
     </div>
   }
 
@@ -65,63 +65,6 @@
       }
     </div>
 
-    <div class="col-12 col-md-6">
-      <label class="form-label" for="registerPassword">Senha de Acesso</label>
-      <div class="input-group input-group-merge">
-        <input
-          [type]="showPasswords() ? 'text' : 'password'"
-          id="registerPassword"
-          class="form-control"
-          formControlName="password"
-          placeholder="••••••••"
-          autocomplete="new-password"
-          [class.is-invalid]="isFieldInvalid('password')"
-          [attr.aria-describedby]="isFieldInvalid('password') ? 'password-error' : null"
-        />
-        <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
-                [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
-          <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
-        </button>
-        @if (isFieldInvalid('password')) {
-          <div class="invalid-feedback" id="password-error">
-            @if (form.controls.password.errors?.['required']) {
-              Informe a senha.
-            } @else if (form.controls.password.errors?.['minlength']) {
-              A senha deve ter no mínimo 6 caracteres.
-            } @else if (form.controls.password.errors?.['uppercase']) {
-              A senha deve conter pelo menos uma letra maiúscula.
-            } @else if (form.controls.password.errors?.['specialChar']) {
-              A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
-            }
-          </div>
-        }
-      </div>
-    </div>
-
-    <div class="col-12 col-md-6">
-      <label class="form-label" for="registerConfirmPassword">Confirmar Senha</label>
-      <div class="input-group input-group-merge">
-        <input
-          [type]="showPasswords() ? 'text' : 'password'"
-          id="registerConfirmPassword"
-          class="form-control"
-          formControlName="confirmPassword"
-          placeholder="••••••••"
-          autocomplete="new-password"
-          [class.is-invalid]="isFieldInvalid('confirmPassword') || (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched)"
-          [attr.aria-describedby]="(isFieldInvalid('confirmPassword') || (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched)) ? 'confirmPassword-error' : null"
-        />
-        <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
-                [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
-          <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
-        </button>
-        @if (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched) {
-          <div class="invalid-feedback" id="confirmPassword-error">As senhas não coincidem.</div>
-        } @else if (isFieldInvalid('confirmPassword')) {
-          <div class="invalid-feedback" id="confirmPassword-error">Confirme a senha.</div>
-        }
-      </div>
-    </div>
   </div>
 
   @if (store.error()) {

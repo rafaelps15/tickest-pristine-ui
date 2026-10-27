@@ -10,7 +10,7 @@ describe('UserListInfoPanelComponent', () => {
   const activeUser: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva',
     roles: [{ name: 'Agent' }],
-    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   beforeEach(async () => {
@@ -146,6 +146,31 @@ describe('UserListInfoPanelComponent', () => {
     expect(text).not.toContain('+1');
   });
 
+  it('mostra "Convite pendente", a validade do convite e o botão "Reenviar convite" pra quem não ativou a conta', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: '2026-11-01T15:00:00Z' });
+    await fixture.whenStable();
+    const emitted = jasmine.createSpy('resend');
+    fixture.componentInstance.resendInvitationClick.subscribe(emitted);
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Convite pendente');
+    expect(text).toContain('Vale até 01/11/2026');
+    const resend = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Reenviar convite'))!;
+    resend.click();
+
+    expect(emitted).toHaveBeenCalled();
+  });
+
+  it('não oferece reenviar convite pra quem já ativou a conta', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Reenviar convite');
+    expect(fixture.nativeElement.textContent).not.toContain('Convite pendente');
+  });
+
   it('diz "Nenhuma função" quando o usuário não tem função', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('user', { ...activeUser, roles: [] });
@@ -169,7 +194,7 @@ describe('UserListInfoPanelComponent', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Desativado em');
 
-    fixture.componentRef.setInput('user', { ...activeUser, isActive: false, deactivatedAtUtc: '2026-02-01T12:00:00Z' });
+    fixture.componentRef.setInput('user', { ...activeUser, isActive: false, deactivatedAtUtc: '2026-02-01T12:00:00Z', pendingActivation: false, invitationExpiresAtUtc: null });
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Desativado em');
   });

@@ -33,7 +33,9 @@ export const UsersStore = signalStore(
     updatingProfile: false,
     assigningRoles: false,
     deactivatingIds: [] as string[],
-    activatingIds: [] as string[]
+    activatingIds: [] as string[],
+    /** Usuários com reenvio de convite em andamento. */
+    resendingInvitationIds: [] as string[]
   }),
   withProps(() => ({
     _userDataService: inject(UserDataService),
@@ -84,7 +86,34 @@ export const UsersStore = signalStore(
   })),
   withMethods((store) => ({
     /**
-     * Registra um novo usuário (POST /users/register, único caminho de criação do back-end) e, se
+     * Reenvia o convite de ativação (o anterior deixa de valer). Falha vai pro erro da listagem:
+     * a ação parte da linha ou do painel, fora de modal.
+     */
+    resendInvitation(userId: string, onSuccess?: () => void): void {
+      patchState(store, { listMutationError: null, resendingInvitationIds: [...store.resendingInvitationIds(), userId] });
+
+      store._userDataService.resendInvitation(userId).pipe(
+        finalize(() => patchState(store, { resendingInvitationIds: store.resendingInvitationIds().filter(id => id !== userId) }))
+      ).subscribe({
+        next: () => {
+          store._listResource.reload();
+          onSuccess?.();
+        },
+        error: (err: HttpErrorResponse) => {
+          // 409 traz o motivo do back-end (limite de 5 em 24h, conta já ativada, usuário desativado) já em português.
+          patchState(store, {
+            listMutationError: extractErrorMessage(err, {
+              403: 'Você não tem permissão para enviar convites.',
+              404: 'Usuário não encontrado — a lista pode estar desatualizada.'
+            }, 'Não foi possível reenviar o convite.')
+          });
+        }
+      });
+    },
+
+    /**
+     * Registra um novo usuário sem senha (POST /users/register): o back-end envia o convite por
+     * e-mail e a própria pessoa define a senha (spec 008). Se
      * vierem funções, já as atribui com o id devolvido (PUT /users/{id}/roles) — o cadastro não
      * aceita funções direto. Se só a atribuição falhar, o usuário continua criado: é sucesso com
      * {@link createRolesFailed}, pra tela avisar como concluir em vez de sugerir criar de novo

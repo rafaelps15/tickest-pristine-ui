@@ -34,24 +34,22 @@ describe('RegisterComponent', () => {
     fixture.componentInstance.form.setValue({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Senha@123',
-      confirmPassword: 'Senha@123'
+      email: 'ana@empresa.com'
     });
   }
 
-  it('renderiza os cinco campos do formulário', async () => {
+  it('renderiza nome, sobrenome e e-mail, sem campo de senha (a senha vem pelo convite)', async () => {
     const fixture = TestBed.createComponent(RegisterComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('#registerFirstName')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#registerLastName')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('#registerEmail')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#registerPassword')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('#registerConfirmPassword')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('input[type="password"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('convite');
   });
 
-  it('chama store.createUser() com os dados do formulário (sem confirmPassword) quando válido', async () => {
+  it('chama store.createUser() com nome, sobrenome e e-mail, sem senha', async () => {
     const fixture = TestBed.createComponent(RegisterComponent);
     await fixture.whenStable();
     fillValidForm(fixture);
@@ -61,8 +59,7 @@ describe('RegisterComponent', () => {
     expect(storeFake.createUser).toHaveBeenCalledWith({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Senha@123'
+      email: 'ana@empresa.com'
     });
   });
 
@@ -80,8 +77,6 @@ describe('RegisterComponent', () => {
     expect(text).toContain('O nome é obrigatório.');
     expect(text).toContain('O sobrenome é obrigatório.');
     expect(text).toContain('O e-mail é obrigatório.');
-    expect(text).toContain('Informe a senha.');
-    expect(text).toContain('Confirme a senha.');
   });
 
   it('mostra "nome é obrigatório" quando o campo está vazio e tocado', async () => {
@@ -110,19 +105,6 @@ describe('RegisterComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('O nome deve ter no mínimo 2 caracteres.');
   });
 
-  it('mostra "As senhas não coincidem" quando os campos de senha divergem', async () => {
-    const fixture = TestBed.createComponent(RegisterComponent);
-    await fixture.whenStable();
-    const form = fixture.componentInstance.form;
-
-    form.controls.password.setValue('Senha@123');
-    form.controls.confirmPassword.setValue('Outra@456');
-    form.controls.confirmPassword.markAsTouched();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).toContain('As senhas não coincidem.');
-  });
-
   it('mostra a mensagem de erro do store quando presente', async () => {
     storeFake.error.set('Este e-mail já está cadastrado.');
     const fixture = TestBed.createComponent(RegisterComponent);
@@ -136,24 +118,7 @@ describe('RegisterComponent', () => {
     const fixture = TestBed.createComponent(RegisterComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Cadastro realizado.');
-  });
-
-  it('alterna a visibilidade dos dois campos de senha juntos', async () => {
-    const fixture = TestBed.createComponent(RegisterComponent);
-    await fixture.whenStable();
-
-    const password = fixture.nativeElement.querySelector('#registerPassword') as HTMLInputElement;
-    const confirmPassword = fixture.nativeElement.querySelector('#registerConfirmPassword') as HTMLInputElement;
-
-    expect(password.type).toBe('password');
-    expect(confirmPassword.type).toBe('password');
-
-    fixture.componentInstance.togglePasswordsVisibility();
-    fixture.detectChanges();
-
-    expect(password.type).toBe('text');
-    expect(confirmPassword.type).toBe('text');
+    expect(fixture.nativeElement.textContent).toContain('Abra o convite que chegou no seu e-mail');
   });
 
   it('o botão de envio não fica desabilitado por formulário inválido, só durante o carregamento', async () => {

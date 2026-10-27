@@ -22,7 +22,7 @@ describe('DepartmentsStore', () => {
 
   const candidate: UserSummary = {
     id: 'u-1', email: 'carlos@empresa.com', firstName: 'Carlos', lastName: 'Souza',
-    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   function pageOf(items: UserSummary[]): PagedResponse<UserSummary> {

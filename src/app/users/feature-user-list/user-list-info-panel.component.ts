@@ -28,11 +28,15 @@ export class UserListInfoPanelComponent {
   readonly canToggleActive = input(true);
   readonly deactivating = input(false);
   readonly activating = input(false);
+  /** Reenvio de convite em andamento para este usuário. */
+  readonly resendingInvitation = input(false);
 
   readonly close = output<void>();
   readonly editClick = output<void>();
   readonly assignRolesClick = output<void>();
   readonly toggleActiveClick = output<void>();
+  /** Pedido de reenvio do convite de ativação (conta ainda não ativada). */
+  readonly resendInvitationClick = output<void>();
 
   /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
   roleColor(roleName: string): string | null {

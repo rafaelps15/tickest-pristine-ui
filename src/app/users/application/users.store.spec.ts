@@ -20,11 +20,11 @@ function buildPage(items: UserSummary[], page = 1, pageSize = 20, totalCount = i
 describe('UsersStore', () => {
   const user: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva', roles: [],
-    isActive: true, createdAtUtc: '2026-01-01T00:00:00Z', deactivatedAtUtc: null
+    isActive: true, createdAtUtc: '2026-01-01T00:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
   const user2: UserSummary = {
     id: 'u2', email: 'joao@empresa.com', firstName: 'João', lastName: 'Santos', roles: [],
-    isActive: true, createdAtUtc: '2026-01-02T00:00:00Z', deactivatedAtUtc: null
+    isActive: true, createdAtUtc: '2026-01-02T00:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   let store: InstanceType<typeof UsersStore>;
@@ -32,7 +32,7 @@ describe('UsersStore', () => {
   let authDataService: jasmine.SpyObj<AuthDataService>;
 
   beforeEach(() => {
-    userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'updateProfile', 'assignRoles', 'deactivate', 'activate']);
+    userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'updateProfile', 'assignRoles', 'deactivate', 'activate', 'resendInvitation']);
     authDataService = jasmine.createSpyObj('AuthDataService', ['register']);
     userDataService.getAll.and.returnValue(of(buildPage([user])));
 
@@ -180,7 +180,7 @@ describe('UsersStore', () => {
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' });
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(authDataService.register).toHaveBeenCalled();
@@ -191,7 +191,7 @@ describe('UsersStore', () => {
   it('expõe a mensagem de erro quando a criação falhar com e-mail duplicado', async () => {
     authDataService.register.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
 
-    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' });
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.success()).toBeFalse();
@@ -201,7 +201,7 @@ describe('UsersStore', () => {
   it('expõe mensagem própria quando a criação falhar por falta de permissão (401/403)', async () => {
     authDataService.register.and.returnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
 
-    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' });
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.error()).toBe('Você não tem permissão para solicitar este cadastro.');
@@ -231,7 +231,7 @@ describe('UsersStore', () => {
     authDataService.register.and.returnValue(of('new-id'));
     userDataService.assignRoles.and.returnValue(of(undefined));
 
-    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' }, ['Agent']);
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' }, ['Agent']);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.assignRoles).toHaveBeenCalledWith('new-id', ['Agent']);
@@ -243,7 +243,7 @@ describe('UsersStore', () => {
   it('não chama a atribuição de funções quando nenhuma foi escolhida', async () => {
     authDataService.register.and.returnValue(of('new-id'));
 
-    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' });
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.assignRoles).not.toHaveBeenCalled();
@@ -254,7 +254,7 @@ describe('UsersStore', () => {
     authDataService.register.and.returnValue(of('new-id'));
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!' }, ['Agent']);
+    store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' }, ['Agent']);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.success()).toBeTrue();
@@ -262,6 +262,31 @@ describe('UsersStore', () => {
     expect(store.createdUserId()).toBe('new-id');
     expect(store.error()).toBeNull();
     expect(store.loading()).toBeFalse();
+  });
+
+  it('reenvia o convite, recarrega a listagem e libera o indicador de andamento', async () => {
+    userDataService.resendInvitation.and.returnValue(of(undefined));
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.resendInvitation('u1', onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.resendInvitation).toHaveBeenCalledWith('u1');
+    expect(onSuccess).toHaveBeenCalled();
+    expect(store.resendingInvitationIds()).toEqual([]);
+  });
+
+  it('mostra o motivo do back-end quando o reenvio é recusado (ex.: limite de convites em 24h)', async () => {
+    userDataService.resendInvitation.and.returnValue(throwError(() => new HttpErrorResponse({
+      status: 409,
+      error: { title: 'Users.InvitationLimitReached', detail: 'Este usuário já recebeu 5 convites nas últimas 24 horas. Tente de novo mais tarde.' }
+    })));
+
+    store.resendInvitation('u1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.listState().error).toBe('Este usuário já recebeu 5 convites nas últimas 24 horas. Tente de novo mais tarde.');
+    expect(store.resendingInvitationIds()).toEqual([]);
   });
 
   it('expõe a falha de atualização de cadastro no erro do modal, sem poluir o erro da listagem', async () => {

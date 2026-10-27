@@ -16,12 +16,12 @@ describe('UserListComponent', () => {
   const activeUser: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva',
     roles: [{ name: 'Agent' }],
-    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
   const inactiveUser: UserSummary = {
     id: 'u2', email: 'joao@empresa.com', firstName: 'João', lastName: 'Santos',
     roles: [],
-    isActive: false, createdAtUtc: '2026-01-02T12:00:00Z', deactivatedAtUtc: '2026-02-01T12:00:00Z'
+    isActive: false, createdAtUtc: '2026-01-02T12:00:00Z', deactivatedAtUtc: '2026-02-01T12:00:00Z', pendingActivation: false, invitationExpiresAtUtc: null
   };
   const role: Role = { name: 'Agent', permissionCodes: [], isDefault: false, isAdministrator: false };
   const defaultFilters: UserFilters = { status: 'All', page: 1, pageSize: 20 };
@@ -40,6 +40,8 @@ describe('UserListComponent', () => {
       assigningRoles: signal(false),
       deactivatingIds: signal<string[]>([]),
       activatingIds: signal<string[]>([]),
+      resendingInvitationIds: signal<string[]>([]),
+      resendInvitation: jasmine.createSpy('resendInvitation'),
       success: signal(false),
       error: signal<string | null>(null),
       createdUserId: signal<string | null>(null),
@@ -814,23 +816,6 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.resetState).toHaveBeenCalled();
   });
 
-  it('alterna os campos de senha do modal de criação entre oculto e texto claro juntos', async () => {
-    const fixture = TestBed.createComponent(UserListComponent);
-    fixture.componentInstance.openCreateModal();
-    await fixture.whenStable();
-
-    const password = fixture.nativeElement.querySelector('input[formcontrolname="password"]') as HTMLInputElement;
-    const confirmPassword = fixture.nativeElement.querySelector('input[formcontrolname="confirmPassword"]') as HTMLInputElement;
-    expect(password.type).toBe('password');
-    expect(confirmPassword.type).toBe('password');
-
-    fixture.componentInstance.togglePasswordsVisibility();
-    await fixture.whenStable();
-
-    expect(password.type).toBe('text');
-    expect(confirmPassword.type).toBe('text');
-  });
-
   it('pré-marca as roles já atribuídas ao abrir o modal de atribuição', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
@@ -870,17 +855,14 @@ describe('UserListComponent', () => {
     fixture.componentInstance.createForm.setValue({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Password123!',
-      confirmPassword: 'Password123!'
+      email: 'ana@empresa.com'
     });
     fixture.componentInstance.onCreateSubmit();
 
     expect(usersStoreFake.createUser).toHaveBeenCalledWith({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Password123!'
+      email: 'ana@empresa.com'
     }, []);
   });
 
@@ -895,22 +877,11 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.toggleCreateRole('Agent', true);
     fixture.componentInstance.createForm.setValue({
-      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!', confirmPassword: 'Password123!'
+      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com'
     });
     fixture.componentInstance.onCreateSubmit();
 
     expect(usersStoreFake.createUser).toHaveBeenCalledWith(jasmine.any(Object), ['Requester', 'Agent']);
-  });
-
-  it('mostra as regras de senha antes de digitar, ligadas ao campo de senha provisória', async () => {
-    const fixture = TestBed.createComponent(UserListComponent);
-    fixture.componentInstance.openCreateModal();
-    await fixture.whenStable();
-
-    const hint = fixture.nativeElement.querySelector('#userCreatePassword-hint') as HTMLElement;
-    expect(hint.textContent).toContain('Mínimo de 6 caracteres');
-    expect(fixture.nativeElement.querySelector('#userCreatePassword').getAttribute('aria-describedby')).toContain('userCreatePassword-hint');
-    expect(fixture.nativeElement.querySelector('label[for="userCreatePassword"]').textContent).toContain('Senha provisória');
   });
 
   it('"Criar e cadastrar outro" mantém o modal aberto, limpa o formulário, mantém as funções e devolve o foco ao Nome', async () => {
@@ -922,7 +893,7 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
     fixture.componentInstance.toggleCreateRole('Agent', true);
     fixture.componentInstance.createForm.setValue({
-      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!', confirmPassword: 'Password123!'
+      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com'
     });
     fixture.componentInstance.onCreateSubmit(true);
     usersStoreFake.createdUserId.set('new-id');
@@ -933,7 +904,7 @@ describe('UserListComponent', () => {
     expect(fixture.componentInstance.createForm.getRawValue().email).toBe('');
     expect(fixture.componentInstance.isCreateRoleChecked('Agent')).toBeTrue();
     expect(document.activeElement?.id).toBe('userCreateFirstName');
-    expect(fixture.componentInstance.createAnnouncement()).toContain('Cadastro de Ana Costa concluído');
+    expect(fixture.componentInstance.createAnnouncement()).toContain('Convite enviado para Ana Costa');
 
     fixture.nativeElement.remove();
   });
@@ -947,7 +918,7 @@ describe('UserListComponent', () => {
     jasmine.clock().install();
     try {
       fixture.componentInstance.createForm.setValue({
-        firstName: 'Maria', lastName: 'Silva', email: 'maria@empresa.com', password: 'Password123!', confirmPassword: 'Password123!'
+        firstName: 'Maria', lastName: 'Silva', email: 'maria@empresa.com'
       });
       fixture.componentInstance.onCreateSubmit();
       usersStoreFake.createdUserId.set('u1');
@@ -972,29 +943,13 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     fixture.componentInstance.createForm.setValue({
-      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com', password: 'Password123!', confirmPassword: 'Password123!'
+      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com'
     });
     usersStoreFake.createRolesFailed.set(true);
     usersStoreFake.success.set(true);
     await fixture.whenStable();
 
     expect(toastServiceFake.show).toHaveBeenCalledWith(jasmine.stringContaining('sem as funções escolhidas'), 'info');
-  });
-
-  it('não envia a criação quando a senha for fraca (sem maiúscula/caractere especial)', async () => {
-    const fixture = TestBed.createComponent(UserListComponent);
-    await fixture.whenStable();
-
-    fixture.componentInstance.createForm.setValue({
-      firstName: 'Ana',
-      lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'semmaiuscula1',
-      confirmPassword: 'semmaiuscula1'
-    });
-    fixture.componentInstance.onCreateSubmit();
-
-    expect(usersStoreFake.createUser).not.toHaveBeenCalled();
   });
 
   it('o botão "Criar" não fica desabilitado por formulário inválido, só durante o carregamento', async () => {
@@ -1041,14 +996,12 @@ describe('UserListComponent', () => {
     fixture.componentInstance.createForm.setValue({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Password123!',
-      confirmPassword: 'Password123!'
+      email: 'ana@empresa.com'
     });
     usersStoreFake.success.set(true);
     await fixture.whenStable();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Cadastro de "Ana Costa" concluído.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Convite enviado para ana@empresa.com.');
   });
 
   it('mostra um toast de sucesso ao editar o cadastro de um usuário', async () => {
@@ -1117,6 +1070,66 @@ describe('UserListComponent', () => {
     (usersStoreFake.deactivateMany.calls.mostRecent().args[1] as (ok: number, failed: number) => void)(0, 1);
 
     expect(toastServiceFake.show).toHaveBeenCalledWith('Nenhum usuário foi desativado. O motivo está acima da lista.', 'danger');
+  });
+
+  it('mostra "Convite pendente" com a validade, e "Convite expirado" quando não há link válido', async () => {
+    usersStoreFake.users.set([
+      { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: '2026-11-01T15:00:00Z' },
+      { ...activeUser, id: 'u7', email: 'bia@empresa.com', firstName: 'Bia', pendingActivation: true, invitationExpiresAtUtc: null }
+    ]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr.user-row') as NodeListOf<HTMLTableRowElement>;
+    expect(rows[0].textContent).toContain('Convite pendente');
+    expect(rows[0].textContent).toContain('Vale até 01/11');
+    expect(rows[1].textContent).toContain('Convite expirado');
+  });
+
+  it('oferece "Reenviar convite" no ⋮ só pra quem ainda não ativou a conta, e chama o store', async () => {
+    const pending: UserSummary = { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null };
+    usersStoreFake.users.set([pending, inactiveUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr.user-row') as NodeListOf<HTMLTableRowElement>;
+    const resend = Array.from(rows[0].querySelectorAll('.dropdown-item') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Reenviar convite'));
+    expect(resend).toBeTruthy();
+    expect(rows[1].textContent).not.toContain('Reenviar convite');
+
+    resend!.click();
+    expect(usersStoreFake.resendInvitation).toHaveBeenCalledWith('u1', jasmine.any(Function));
+    (usersStoreFake.resendInvitation.calls.mostRecent().args[1] as () => void)();
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Novo convite enviado para maria@empresa.com. O anterior deixou de valer.');
+  });
+
+  it('ao reativar quem nunca ativou a conta, avisa que falta reenviar o convite e oferece o reenvio no toast', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const pendingInactive: UserSummary = { ...inactiveUser, pendingActivation: true, invitationExpiresAtUtc: null };
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onActivate(pendingInactive);
+    (usersStoreFake.activate.calls.mostRecent().args[1] as () => void)();
+    const [message, variant, action] = toastServiceFake.show.calls.mostRecent().args as [string, string, { label: string; run: () => void }];
+
+    expect(message).toContain('Falta reenviar o convite');
+    expect(variant).toBe('info');
+    expect(action.label).toBe('Reenviar convite');
+    action.run();
+    expect(usersStoreFake.resendInvitation).toHaveBeenCalledWith('u2', jasmine.any(Function));
+  });
+
+  it('o modal de criação não pede senha e explica o convite por e-mail', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#userCreateModal') as HTMLElement;
+    expect(modal.querySelector('input[type="password"]')).toBeNull();
+    expect(modal.querySelector('#userCreateInvitationHint')?.textContent).toContain('Um convite vai para esse e-mail');
+    expect(modal.querySelector('#userCreateEmail')?.getAttribute('aria-describedby')).toContain('userCreateInvitationHint');
   });
 
   it('mostra um toast de sucesso ao desativar', async () => {

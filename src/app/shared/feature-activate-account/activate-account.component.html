@@ -1,0 +1,105 @@
+@if (store.activated()) {
+  <div class="text-center" role="status">
+    <i class="bx bx-check-circle text-success display-5 d-block mb-3" aria-hidden="true"></i>
+    <h1 class="h4 mb-2 fw-bold">Conta ativada</h1>
+    <p class="text-muted mb-4">Sua senha foi criada. Agora é só entrar com seu e-mail e a senha nova.</p>
+    <a routerLink="/login" class="btn btn-primary btn-lg w-100 py-3 fw-bold">Entrar</a>
+  </div>
+} @else if (store.invalidLink()) {
+  <div class="text-center" role="alert">
+    <i class="bx bx-link-alt text-muted display-5 d-block mb-3" aria-hidden="true"></i>
+    <h1 class="h4 mb-2 fw-bold">Link inválido ou expirado</h1>
+    <p class="text-muted mb-1">O convite vale 72 horas e só pode ser usado uma vez.</p>
+    <p class="text-muted mb-4">Peça a um administrador do Tickest para reenviar o convite. O novo chega no mesmo e-mail.</p>
+    <a routerLink="/login" class="btn btn-outline-secondary w-100">Ir para o login</a>
+  </div>
+} @else {
+  <div class="text-center mb-4">
+    <h1 class="h4 mb-2 fw-bold">Crie sua senha</h1>
+    <p class="text-muted mb-0">Seu acesso ao Tickest está pronto. Falta só definir a senha que você vai usar para entrar.</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3" novalidate>
+
+    <div class="mb-4">
+      <label class="form-label" for="newPassword">Senha</label>
+      <div class="input-group input-group-merge">
+        <input
+          [type]="showPasswords() ? 'text' : 'password'"
+          id="newPassword"
+          class="form-control form-control-lg"
+          formControlName="newPassword"
+          autocomplete="new-password"
+          autofocus
+          [class.is-invalid]="isFieldInvalid('newPassword')"
+          [attr.aria-describedby]="isFieldInvalid('newPassword') ? 'newPassword-requirements newPassword-error' : 'newPassword-requirements'"
+        />
+        <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+                [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+          <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="form-text" id="newPassword-requirements">Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.</div>
+      @if (isFieldInvalid('newPassword')) {
+        <div class="form-text text-danger" id="newPassword-error">
+          @if (form.controls.newPassword.errors?.['required']) {
+            <div>Crie uma senha.</div>
+          }
+          @if (form.controls.newPassword.errors?.['minlength']) {
+            <div>A senha deve ter no mínimo 6 caracteres.</div>
+          }
+          @if (form.controls.newPassword.errors?.['uppercase']) {
+            <div>A senha deve conter pelo menos uma letra maiúscula.</div>
+          }
+          @if (form.controls.newPassword.errors?.['specialChar']) {
+            <div>A senha deve conter pelo menos um caractere especial (ex.: #, $, %).</div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label" for="confirmPassword">Confirmar senha</label>
+      <div class="input-group input-group-merge">
+        <input
+          [type]="showPasswords() ? 'text' : 'password'"
+          id="confirmPassword"
+          class="form-control form-control-lg"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+          [class.is-invalid]="isFieldInvalid('confirmPassword') || (form.errors?.['mismatch'] && form.controls.confirmPassword.touched)"
+          [attr.aria-describedby]="isFieldInvalid('confirmPassword') || (form.errors?.['mismatch'] && form.controls.confirmPassword.touched) ? 'confirmPassword-error' : null"
+        />
+        <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+                [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+          <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()" aria-hidden="true"></i>
+        </button>
+      </div>
+      @if (isFieldInvalid('confirmPassword')) {
+        <div class="form-text text-danger" id="confirmPassword-error">Repita a senha para confirmar.</div>
+      } @else if (form.errors?.['mismatch'] && form.controls.confirmPassword.touched) {
+        <div class="form-text text-danger" id="confirmPassword-error">As senhas não coincidem.</div>
+      }
+    </div>
+
+    @if (store.error()) {
+      <div class="alert alert-danger py-3 d-flex align-items-center mb-4" role="alert">
+        <i class="bx bx-error-circle me-2 fs-5" aria-hidden="true"></i>
+        <div class="small fw-bold">{{ store.error() }}</div>
+      </div>
+    }
+
+    <button class="btn btn-primary btn-lg w-100 py-3 fw-bold" type="submit" [disabled]="store.loading()">
+      @if (store.loading()) {
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+        Ativando…
+      } @else {
+        Ativar conta
+      }
+    </button>
+  </form>
+
+  <p class="text-center mt-4 mb-0">
+    <a routerLink="/login" class="fw-bold text-primary text-decoration-none">Já tenho senha, ir para o login</a>
+  </p>
+}

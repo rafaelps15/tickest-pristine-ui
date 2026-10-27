@@ -60,6 +60,11 @@ export class UserDataService {
         return this.http.put<void>(`${this.apiUrl}/${userId}/deactivate`, {});
     }
 
+    /** Reemite o convite de ativação de quem ainda não ativou a conta, revogando o anterior e enviando novo e-mail (POST /users/{id}/invitation). */
+    resendInvitation(userId: string): Observable<void> {
+        return this.http.post<void>(`${this.apiUrl}/${userId}/invitation`, {});
+    }
+
     /** Reativa um usuário, liberando o acesso de novo (PUT /users/{id}/activate). */
     activate(userId: string): Observable<void> {
         return this.http.put<void>(`${this.apiUrl}/${userId}/activate`, {});

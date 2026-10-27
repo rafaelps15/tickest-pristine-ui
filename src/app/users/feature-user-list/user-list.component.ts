@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, e
 import { DatePipe } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { UsersStore } from '../application/users.store';
 import { UserSummary, UserRoleSummary } from '../entities/user-summary';
@@ -11,7 +11,7 @@ import { RolesStore } from '../../roles';
 import {
     SessionService, ConfirmDialogService, ToastService,
     visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
-    getRoleColor, strongPasswordValidator, injectSidePanelOverlay, isEscapeFromNestedLayer
+    getRoleColor, injectSidePanelOverlay, isEscapeFromNestedLayer
 } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
@@ -28,12 +28,6 @@ const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const STATUS_OPTIONS: UserStatus[] = ['All', 'Active', 'Inactive'];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-/**
- * Se o back-end já obriga quem foi cadastrado a trocar a senha no primeiro acesso (liga o
- * `MustChangePassword` no POST /users/register). Enquanto não liga, a frase "vai criar a própria
- * senha" seria promessa falsa — fica escondida. Ligar junto com a mudança do back-end.
- */
-const REGISTER_FORCES_PASSWORD_CHANGE = false;
 /** Quanto tempo a linha de quem acabou de ser criado fica destacada na tabela. */
 const NEW_USER_HIGHLIGHT_MS = 4000;
 
@@ -61,14 +55,6 @@ function parsePageSizeParam(value: string | null): number {
     return PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
 }
 
-/** Validador customizado para confirmar se as senhas coincidem. */
-const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
-    const password = control.get('password');
-    const confirmPassword = control.get('confirmPassword');
-    return password && confirmPassword && password.value !== confirmPassword.value
-        ? { passwordMismatch: true }
-        : null;
-};
 
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
@@ -99,10 +85,8 @@ export class UserListComponent implements OnInit {
     createForm = this.fb.group({
         firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
         lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-        email: ['', [Validators.required, Validators.email]],
-        password: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
-        confirmPassword: ['', [Validators.required]]
-    }, { validators: passwordMatchValidator });
+        email: ['', [Validators.required, Validators.email]]
+    });
 
     /** Formulário de edição de nome/sobrenome do usuário selecionado. */
     editForm = this.fb.group({
@@ -119,17 +103,11 @@ export class UserListComponent implements OnInit {
     /** Roles marcadas no modal de atribuição (por nome). */
     selectedRoleNames = signal<Set<string>>(new Set());
 
-    /** Controla se os campos de senha do modal de criação são exibidos em texto claro. */
-    showPasswords = signal(false);
-
     /** Mensagem de período de cadastro inválido (data inicial depois da final); `null` quando o período é coerente. */
     periodError = signal<string | null>(null);
 
     /** Texto digitado na busca, antes do debounce — ver o effect de busca no construtor. */
     searchInput = signal('');
-
-    /** Se o modal de criação mostra a frase de troca de senha no primeiro acesso — ver {@link REGISTER_FORCES_PASSWORD_CHANGE}. */
-    readonly registerForcesPasswordChange = REGISTER_FORCES_PASSWORD_CHANGE;
 
     /** Funções marcadas no modal de criação (por nome) — as padrão (`isDefault`) já vêm marcadas ao abrir. */
     createRoleNames = signal<Set<string>>(new Set());
@@ -363,8 +341,7 @@ export class UserListComponent implements OnInit {
         this.store.createUser({
             firstName: raw.firstName!,
             lastName: raw.lastName!,
-            email: raw.email!,
-            password: raw.password!
+            email: raw.email!
         }, Array.from(this.createRoleNames()));
     }
 
@@ -375,20 +352,20 @@ export class UserListComponent implements OnInit {
      * devolve o foco ao Nome.
      */
     private onUserCreated(): void {
-        const { firstName, lastName } = this.createForm.getRawValue();
+        const { firstName, lastName, email } = this.createForm.getRawValue();
         const name = `${firstName} ${lastName}`;
 
         if (this.store.createRolesFailed()) {
-            this.toastService.show(`Cadastro de "${name}" concluído, mas sem as funções escolhidas. Use "Atribuir funções" no menu ⋮ da linha.`, 'info');
+            this.toastService.show(`Convite enviado para ${email}, mas sem as funções escolhidas. Use "Atribuir funções" no menu ⋮ da linha.`, 'info');
         } else {
-            this.toastService.show(`Cadastro de "${name}" concluído.`);
+            this.toastService.show(`Convite enviado para ${email}.`);
         }
 
         this.highlightCreatedUser(this.store.createdUserId());
-        this.createForm.reset({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' });
+        this.createForm.reset({ firstName: '', lastName: '', email: '' });
 
         if (this.createAnother) {
-            this.createAnnouncement.set(`Cadastro de ${name} concluído. Pronto para o próximo.`);
+            this.createAnnouncement.set(`Convite enviado para ${name}. Pronto para o próximo.`);
             document.getElementById('userCreateFirstName')?.focus();
         } else {
             this.closeDialog();
@@ -430,11 +407,6 @@ export class UserListComponent implements OnInit {
             this.closeDialog();
             this.toastService.show(`Cadastro de "${trimmedFirstName} ${trimmedLastName}" atualizado.`);
         });
-    }
-
-    /** Alterna a exibição em texto claro dos campos de senha do modal de criação. */
-    togglePasswordsVisibility(): void {
-        this.showPasswords.update(visible => !visible);
     }
 
     /** Abre o modal de atribuição de roles pré-marcando as roles já atribuídas ao usuário selecionado. */
@@ -573,10 +545,36 @@ export class UserListComponent implements OnInit {
         }).subscribe(confirmed => {
             if (confirmed) {
                 this.store.activate(user.id, () => {
-                    this.toastService.show(`Acesso de "${name}" reativado.`);
+                    // Reativar quem nunca ativou a conta não traz o convite de volta (spec 008, REQ-10): oferece o reenvio na hora.
+                    if (user.pendingActivation) {
+                        this.toastService.show(`Acesso de "${name}" reativado. Falta reenviar o convite para a conta ser ativada.`, 'info', {
+                            label: 'Reenviar convite',
+                            run: () => this.onResendInvitation(user)
+                        });
+                    } else {
+                        this.toastService.show(`Acesso de "${name}" reativado.`);
+                    }
                 });
             }
         });
+    }
+
+    /** Indica se dá pra reenviar o convite: conta ainda não ativada e usuário ativo (o back-end recusa desativado). */
+    canResendInvitation(user: UserSummary): boolean {
+        return user.pendingActivation && user.isActive;
+    }
+
+    /** Reenvia o convite de ativação; o anterior deixa de valer. */
+    onResendInvitation(user: UserSummary): void {
+        this.store.resendInvitation(user.id, () => {
+            this.toastService.show(`Novo convite enviado para ${user.email}. O anterior deixou de valer.`);
+        });
+    }
+
+    /** Atalho do painel: reenvia o convite do usuário selecionado no painel. */
+    onPanelResendInvitation(): void {
+        const user = this.infoPanelUser();
+        if (user) this.onResendInvitation(user);
     }
 
     /** Indica se o usuário pode ser marcado para ação em lote: ativo e diferente da própria conta logada. */

@@ -22,6 +22,12 @@ export const routes: Routes = [
           .then(m => m.FirstAccessComponent)
       },
       {
+        // Link do convite por e-mail (spec 008 do back-end; caminho combinado na config Invitations:ActivationUrl).
+        path: 'ativar-conta',
+        loadComponent: () => import('../../shared/feature-activate-account/activate-account.component')
+          .then(m => m.ActivateAccountComponent)
+      },
+      {
         path: 'register',
         loadComponent: () => import('../../users/feature-register/register.component')
           .then(m => m.RegisterComponent)
