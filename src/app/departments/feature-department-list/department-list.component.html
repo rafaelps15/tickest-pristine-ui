@@ -182,6 +182,12 @@
             <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             <span role="status">Carregando responsável atual…</span>
           </div>
+        } @else if (currentResponsibleError(); as responsibleError) {
+          <!-- Sem saber o responsável atual, salvar o apagaria: o erro fica aqui, com a saída ao lado. -->
+          <div class="alert alert-warning border-0 py-2 small d-flex flex-wrap align-items-center gap-2" role="alert">
+            <span>{{ responsibleError }} Tente de novo ou escolha um responsável abaixo para poder salvar.</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="loadCurrentResponsible(editingDepartment()!)">Tentar de novo</button>
+          </div>
         } @else if (selectedResponsibleName(); as currentName) {
           <p class="small mb-2">
             Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
@@ -223,7 +229,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
-      <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || loadingCurrentResponsible()">
+      <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || !responsibleKnown()">
         @if (store.mutating()) {
           <span class="spinner-border spinner-border-sm me-1" role="status"></span>
         }

@@ -133,7 +133,7 @@ describe('DepartmentListComponent', () => {
     fixture.componentInstance.openEditModal(withResponsible);
 
     expect(fixture.componentInstance.selectedResponsibleName()).toBe('Carlos Souza');
-    expect(storeFake.getDepartmentDetail).toHaveBeenCalledWith('dep-1', jasmine.any(Function));
+    expect(storeFake.getDepartmentDetail).toHaveBeenCalledWith('dep-1', jasmine.any(Function), jasmine.any(Function));
     expect(fixture.componentInstance.selectedResponsibleId()).toBe('u-1');
     expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
   });
@@ -193,6 +193,71 @@ describe('DepartmentListComponent', () => {
 
     const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
     expect(button.disabled).toBeTrue();
+  });
+
+  it('quando o responsável atual não carrega, encerra o loading e mostra o erro no modal com "Tentar de novo"', async () => {
+    storeFake.getDepartmentDetail.and.callFake((_id: string, _onLoaded: unknown, onError: (m: string) => void) =>
+      onError('Não foi possível carregar o responsável atual.'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#departmentModal') as HTMLElement;
+    expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
+    expect(modal.textContent).toContain('Não foi possível carregar o responsável atual.');
+    expect(modal.querySelector('.spinner-border')).toBeNull();
+    // Salvar sem saber o responsável o apagaria (o PUT grava o que for enviado).
+    expect((modal.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBeTrue();
+
+    const retry = [...modal.querySelectorAll('button')].find(b => b.textContent?.includes('Tentar de novo'))!;
+    retry.click();
+    expect(storeFake.getDepartmentDetail).toHaveBeenCalledTimes(2);
+  });
+
+  it('libera o "Salvar" depois da falha quando o admin escolhe outro responsável, e envia esse', async () => {
+    storeFake.getDepartmentDetail.and.callFake((_id: string, _onLoaded: unknown, onError: (m: string) => void) => onError('falhou'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.componentInstance.onSelectResponsible(candidate);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeFalse();
+    expect(fixture.componentInstance.currentResponsibleError()).toBeNull();
+
+    fixture.componentInstance.onSubmit();
+    expect(storeFake.update).toHaveBeenCalledWith('dep-1', jasmine.objectContaining({ responsibleUserId: 'u-1' }), jasmine.any(Function));
+  });
+
+  it('não salva enquanto o responsável atual é desconhecido, mesmo chamando o submit direto', async () => {
+    storeFake.getDepartmentDetail.and.callFake(() => {});
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.componentInstance.onSubmit();
+
+    expect(storeFake.update).not.toHaveBeenCalled();
+  });
+
+  it('a escolha do admin feita enquanto carregava vale mais que o responsável que chega depois', async () => {
+    let resolve!: (detail: DepartmentDetail) => void;
+    storeFake.getDepartmentDetail.and.callFake((_id: string, onLoaded: (d: DepartmentDetail) => void) => { resolve = onLoaded; });
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.componentInstance.onSelectResponsible(candidate);
+    resolve({ id: 'dep-1', name: 'TI', description: '', responsibleUserId: 'u-outro' });
+
+    expect(fixture.componentInstance.selectedResponsibleId()).toBe('u-1');
+    expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
   });
 
   it('o botão "Salvar" do modal de departamento fica desabilitado durante a mutação, não por formulário inválido', async () => {

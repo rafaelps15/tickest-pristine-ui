@@ -91,13 +91,18 @@ export const DepartmentsStore = signalStore(
     /**
      * Busca o detalhe de um departamento, incluindo o id do responsável (GET /departments/{id}) —
      * a listagem só traz o nome dele. Usado ao abrir o modal de edição, pra saber quem já está
-     * selecionado antes do admin trocar.
+     * selecionado antes do admin trocar. A falha vai pro `onError` (o modal mostra ali mesmo), não pro
+     * erro de mutação — senão apareceria também no alerta da página, atrás do modal. A mensagem é
+     * sempre a do modal (a da API, tipo "Falha no servidor", não diz o que ficou faltando), exceto sem
+     * conexão.
      */
-    getDepartmentDetail(departmentId: string, onLoaded: (detail: DepartmentDetail) => void): void {
+    getDepartmentDetail(departmentId: string, onLoaded: (detail: DepartmentDetail) => void, onError?: (message: string) => void): void {
       store._departmentDataService.getById(departmentId).subscribe({
         next: onLoaded,
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao carregar o departamento') });
+          onError?.(err.status === 0
+            ? extractErrorMessage(err)
+            : 'Não foi possível carregar o responsável atual.');
         }
       });
     },

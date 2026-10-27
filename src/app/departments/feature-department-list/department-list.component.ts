@@ -70,6 +70,15 @@ export class DepartmentListComponent implements OnInit {
     /** Enquanto busca o id do responsável atual (GET /departments/{id}) ao abrir o modal de edição. */
     loadingCurrentResponsible = signal(false);
 
+    /** Falha ao buscar o responsável atual no modal de edição (mostrada ali, com "Tentar de novo"), ou `null`. */
+    currentResponsibleError = signal<string | null>(null);
+
+    /**
+     * Se já se sabe quem é o responsável a gravar. Na edição, só depois de carregar o atual ou de o admin
+     * escolher/remover um — o PUT grava o que for enviado, então salvar sem saber apagaria o responsável.
+     */
+    responsibleKnown = signal(true);
+
     /** Departamentos que batem com a busca — por nome do departamento ou de algum dos seus setores. */
     readonly filteredDepartments = computed(() => {
         const query = this.searchInput().trim().toLowerCase();
@@ -131,6 +140,8 @@ export class DepartmentListComponent implements OnInit {
         this.selectedResponsibleId.set(null);
         this.selectedResponsibleName.set(null);
         this.loadingCurrentResponsible.set(false);
+        this.currentResponsibleError.set(null);
+        this.responsibleKnown.set(true);
     }
 
     /**
@@ -147,20 +158,42 @@ export class DepartmentListComponent implements OnInit {
         this.responsibleSearchInput.set('');
         this.selectedResponsibleId.set(null);
         this.selectedResponsibleName.set(department.responsibleUserName);
+        this.responsibleKnown.set(false);
+        this.loadCurrentResponsible(department);
+    }
 
+    /**
+     * Busca o id do responsável atual do departamento em edição (GET /departments/{id}). Também é o
+     * "Tentar de novo" do modal quando a busca falha.
+     */
+    loadCurrentResponsible(department: Department): void {
         this.loadingCurrentResponsible.set(true);
-        this.store.getDepartmentDetail(department.id, detail => {
-            // Ignora a resposta se o admin já trocou de departamento no modal antes dela chegar
-            // (ex.: abriu "editar" em A e, antes de carregar, abriu "editar" em B).
-            if (this.editingDepartment()?.id !== department.id) return;
+        this.currentResponsibleError.set(null);
 
-            this.selectedResponsibleId.set(detail.responsibleUserId);
+        // Nos dois callbacks, ignora a resposta se o admin já trocou de departamento no modal antes dela
+        // chegar (ex.: abriu "editar" em A e, antes de carregar, abriu "editar" em B).
+        const stillEditing = () => this.editingDepartment()?.id === department.id;
+
+        this.store.getDepartmentDetail(department.id, detail => {
+            if (!stillEditing()) return;
+
             this.loadingCurrentResponsible.set(false);
+            // O admin pode ter escolhido outro responsável enquanto carregava: a escolha dele vale.
+            if (this.responsibleKnown()) return;
+            this.selectedResponsibleId.set(detail.responsibleUserId);
+            this.responsibleKnown.set(true);
+        }, message => {
+            if (!stillEditing()) return;
+
+            this.loadingCurrentResponsible.set(false);
+            this.currentResponsibleError.set(message);
         });
     }
 
     /** Seleciona um candidato da busca como responsável do departamento, no formulário. */
     onSelectResponsible(candidate: UserSummary): void {
+        this.responsibleKnown.set(true);
+        this.currentResponsibleError.set(null);
         this.selectedResponsibleId.set(candidate.id);
         this.selectedResponsibleName.set(`${candidate.firstName} ${candidate.lastName}`);
         this.responsibleSearchInput.set('');
@@ -169,6 +202,8 @@ export class DepartmentListComponent implements OnInit {
 
     /** Remove o responsável selecionado no formulário de departamento (volta a "sem responsável"). */
     onClearResponsible(): void {
+        this.responsibleKnown.set(true);
+        this.currentResponsibleError.set(null);
         this.selectedResponsibleId.set(null);
         this.selectedResponsibleName.set(null);
     }
@@ -179,6 +214,7 @@ export class DepartmentListComponent implements OnInit {
             this.form.markAllAsTouched();
             return;
         }
+        if (!this.responsibleKnown()) return;
 
         const raw = this.form.getRawValue();
         const data = {

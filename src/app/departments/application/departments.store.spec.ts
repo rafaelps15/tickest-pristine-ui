@@ -180,14 +180,26 @@ describe('DepartmentsStore', () => {
     expect(onLoaded).toHaveBeenCalledWith(detail);
   });
 
-  it('expõe a mensagem de erro quando buscar o detalhe do departamento falhar, sem chamar o callback', () => {
-    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+  it('entrega a falha do detalhe pro onError, sem chamar o onLoaded nem sujar o erro da página', () => {
+    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const onLoaded = jasmine.createSpy('onLoaded');
+    const onError = jasmine.createSpy('onError');
 
-    store.getDepartmentDetail('dep-1', onLoaded);
+    store.getDepartmentDetail('dep-1', onLoaded, onError);
 
-    expect(store.mutationError()).toBe('Erro ao carregar o departamento');
+    expect(onError).toHaveBeenCalledWith('Não foi possível carregar o responsável atual.');
     expect(onLoaded).not.toHaveBeenCalled();
+    expect(store.mutationError()).toBeNull();
+    expect(store.listState().error).toBeNull();
+  });
+
+  it('avisa no onError quando não há conexão com o servidor', () => {
+    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    const onError = jasmine.createSpy('onError');
+
+    store.getDepartmentDetail('dep-1', () => {}, onError);
+
+    expect(onError).toHaveBeenCalledWith('Não foi possível conectar ao servidor. Verifique sua conexão.');
   });
 
   it('busca candidatos a responsável por nome/e-mail', async () => {
