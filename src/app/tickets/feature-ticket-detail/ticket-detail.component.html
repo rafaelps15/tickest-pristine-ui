@@ -2,8 +2,7 @@
   <div class="col-12">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
       <div class="text-break">
-        <h4 class="fw-bold mb-1"><span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Ticket' }}</h4>
-        <p class="page-subtitle small mb-0">Detalhes, SLA, mensagens, anexos e histórico do chamado.</p>
+        <h4 class="fw-bold mb-0"><span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Ticket' }}</h4>
       </div>
       <a [routerLink]="backLink" class="btn btn-outline-secondary btn-sm">
         <i class="bx bx-arrow-back me-1"></i> Voltar
@@ -101,13 +100,17 @@
           <dd class="col-12 col-sm-9">{{ t.resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
         }
 
-        <dt class="col-12 col-sm-3 text-muted fw-normal">Prazo</dt>
-        <dd class="col-12 col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
-          {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
-          @if (dueRelativeLabel(t); as relative) {
-            <span class="fw-semibold">— {{ relative }}</span>
-          }
-        </dd>
+        <!-- Só sem o painel de SLA: com ele, o prazo vigente (que muda a cada reabertura) já está lá —
+             este `dueAtUtc` é sempre o do primeiro ciclo. -->
+        @if (!detailStore.sla()) {
+          <dt class="col-12 col-sm-3 text-muted fw-normal">Prazo</dt>
+          <dd class="col-12 col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
+            {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+            @if (dueRelativeLabel(t); as relative) {
+              <span class="fw-semibold">— {{ relative }}</span>
+            }
+          </dd>
+        }
       </dl>
 
       @if (detailStore.mutationError()) {
@@ -151,7 +154,7 @@
               <p class="text-muted small mb-0">Sem meta de primeira resposta.</p>
             } @else {
               @if (objective.dueAtUtc) {
-                <p class="text-muted small mb-1">
+                <p class="small mb-1" [ngClass]="objectiveUrgencyClass(objective)">
                   Prazo: {{ objective.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
                   @if (objectiveRelativeLabel(objective, slaBlock.serverNowUtc); as relative) {
                     <span class="fw-semibold">— {{ relative }}</span>

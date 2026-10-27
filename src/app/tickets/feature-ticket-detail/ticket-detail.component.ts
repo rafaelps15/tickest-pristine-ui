@@ -76,6 +76,24 @@ export class TicketDetailComponent implements OnInit {
     }
 
     /**
+     * Cor da linha de prazo de um objetivo do ciclo vigente: vermelho se estourou, âmbar se está em
+     * risco, cinza no resto — o mesmo destaque que a linha "Prazo" do resumo dava antes de ficar só
+     * como fallback (o painel de SLA é a fonte do prazo vigente).
+     */
+    protected objectiveUrgencyClass(objective: TicketSlaObjective): string {
+        if (objective.completedAtUtc || objective.stoppedAtUtc) {
+            return 'text-muted';
+        }
+        if (objective.state === TicketSlaObjectiveState.Breached) {
+            return 'text-danger';
+        }
+        if (objective.state === TicketSlaObjectiveState.AtRisk) {
+            return 'text-warning';
+        }
+        return 'text-muted';
+    }
+
+    /**
      * Urgência relativa pt-BR do prazo de um objetivo de SLA ("Vence em 40 minutos"/"Atrasado há 3
      * horas"), a partir da hora do servidor (nunca do relógio do navegador — os minutos são úteis e
      * só o back-end sabe quando o expediente/calendário conta ou não). Null sem prazo (ex.: sem

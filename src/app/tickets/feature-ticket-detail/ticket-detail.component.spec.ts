@@ -236,6 +236,7 @@ describe('TicketDetailComponent', () => {
   it('mostra a urgência relativa do prazo e destaca em vermelho quando o SLA está violado', async () => {
     const overdueBy3Hours = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
     detailStoreFake.ticket.set({ ...ticket, dueAtUtc: overdueBy3Hours, slaStatus: TicketSlaStatus.Breached, resolvedAtUtc: null });
+    detailStoreFake.sla.set(null); // linha "Prazo" do resumo só aparece sem o painel de SLA
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -247,6 +248,7 @@ describe('TicketDetailComponent', () => {
   it('mostra "vence em" e destaca em amarelo quando o SLA está em risco, sem destaque quando está no prazo', async () => {
     const dueIn40Minutes = new Date(Date.now() + 40 * 60 * 1000).toISOString();
     detailStoreFake.ticket.set({ ...ticket, dueAtUtc: dueIn40Minutes, slaStatus: TicketSlaStatus.AtRisk, resolvedAtUtc: null });
+    detailStoreFake.sla.set(null);
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -257,6 +259,7 @@ describe('TicketDetailComponent', () => {
 
   it('não mostra urgência de prazo pra um chamado já resolvido', async () => {
     detailStoreFake.ticket.set({ ...ticket, resolvedAtUtc: '2026-01-02T10:00:00Z', slaStatus: TicketSlaStatus.Met });
+    detailStoreFake.sla.set(null);
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -1032,6 +1035,34 @@ describe('TicketDetailComponent', () => {
   });
 
   describe('painel de SLA', () => {
+    it('não repete a linha "Prazo" no resumo quando o painel de SLA está presente', async () => {
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const summaryLabels = Array.from(fixture.nativeElement.querySelectorAll('dl.max-w-700 dt') as NodeListOf<HTMLElement>)
+        .map(dt => dt.textContent?.trim());
+      expect(summaryLabels).not.toContain('Prazo');
+      expect(fixture.nativeElement.textContent).toContain('Prazo:');
+    });
+
+    it('destaca o prazo do objetivo em vermelho quando estourou e em âmbar quando está em risco', async () => {
+      detailStoreFake.sla.set({
+        ...sla,
+        objectives: [
+          makeObjective({ metric: TicketSlaMetric.FirstResponse, state: TicketSlaObjectiveState.Breached }),
+          makeObjective({ metric: TicketSlaMetric.Resolution, state: TicketSlaObjectiveState.AtRisk })
+        ]
+      });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const prazoLines = Array.from(fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLElement>)
+        .filter(p => p.textContent?.trim().startsWith('Prazo:'));
+      expect(prazoLines.length).toBe(2);
+      expect(prazoLines[0].classList).toContain('text-danger');
+      expect(prazoLines[1].classList).toContain('text-warning');
+    });
+
     it('mostra os dois cartões (Primeira resposta e Resolução) de um chamado novo', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
