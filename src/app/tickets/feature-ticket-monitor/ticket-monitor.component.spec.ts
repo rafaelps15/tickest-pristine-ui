@@ -261,16 +261,16 @@ describe('TicketMonitorComponent', () => {
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
     const selectButton = row.querySelector('.ticket-select') as HTMLButtonElement;
-    expect(selectButton.getAttribute('aria-pressed')).toBe('false');
+    expect(selectButton.getAttribute('aria-expanded')).toBe('false');
 
     row.click();
     await fixture.whenStable();
-    expect(selectButton.getAttribute('aria-pressed')).toBe('true');
+    expect(selectButton.getAttribute('aria-expanded')).toBe('true');
     expect(row.classList).toContain('table-active');
 
     row.click();
     await fixture.whenStable();
-    expect(selectButton.getAttribute('aria-pressed')).toBe('false');
+    expect(selectButton.getAttribute('aria-expanded')).toBe('false');
     expect(row.classList).not.toContain('table-active');
   });
 
@@ -283,9 +283,19 @@ describe('TicketMonitorComponent', () => {
     selectButton.click();
     await fixture.whenStable();
 
-    expect(selectButton.getAttribute('aria-pressed')).toBe('true');
+    expect(selectButton.getAttribute('aria-expanded')).toBe('true');
     expect(row.hasAttribute('role')).toBeFalse();
     expect(row.hasAttribute('tabindex')).toBeFalse();
+  });
+
+  it('dá ao botão do título o texto visível como nome acessível, sem rótulo que repita o estado (WCAG 2.5.3)', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const selectButton = fixture.nativeElement.querySelector('tbody tr.ticket-row .ticket-select') as HTMLButtonElement;
+    expect(selectButton.hasAttribute('aria-label')).toBeFalse();
+    expect(selectButton.hasAttribute('aria-pressed')).toBeFalse();
+    expect(selectButton.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('não alterna a seleção da linha ao clicar no botão de ação "Atribuir a mim"', async () => {
@@ -297,7 +307,7 @@ describe('TicketMonitorComponent', () => {
     assignButton.click();
     await fixture.whenStable();
 
-    expect(row.querySelector('.ticket-select')!.getAttribute('aria-pressed')).toBe('false');
+    expect(row.querySelector('.ticket-select')!.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('mostra o painel "Informações do Chamado" ao selecionar um chamado, e repassa a seleção pro TicketQuickInfoStore', async () => {

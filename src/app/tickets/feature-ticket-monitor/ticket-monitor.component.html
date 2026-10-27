@@ -177,9 +177,9 @@
                  (uma linha com role="button" escondia as colunas e o "⋮" de dentro dela). -->
             <tr class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id" (click)="selectTicket(ticket.id, selectButton)">
               <td>
+                <!-- Nome acessível = título visível (WCAG 2.5.3); o painel aberto/fechado vem do aria-expanded — mesmo padrão de Usuários (DESIGN.md). -->
                 <button #selectButton type="button" class="ticket-select fw-semibold text-start text-break"
-                        [attr.aria-pressed]="selectedTicketId() === ticket.id"
-                        [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do chamado ' : 'Ver informações do chamado ') + ticket.title"
+                        [attr.aria-expanded]="selectedTicketId() === ticket.id"
                         (click)="selectTicket(ticket.id, selectButton); $event.stopPropagation()">
                   {{ ticket.title }}
                 </button>
