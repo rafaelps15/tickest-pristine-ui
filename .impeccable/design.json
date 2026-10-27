@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T20:06:39Z",
+  "generatedAt": "2026-10-27T20:40:00Z",
   "title": "Design System: Tickest",
   "extensions": {
     "colorMeta": {
@@ -299,6 +299,14 @@
       "description": "Diálogo único (<app-dialog>), mostrado com @if: título + contexto, corpo rolável, rodapé com Cancelar à esquerda do primário. Foco inicial, Tab preso, Esc e clique fora travados enquanto salva.",
       "html": "<div class=\"ds-dialog\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-dialog-title\"><div class=\"ds-dialog-header\"><div><h2 id=\"ds-dialog-title\" class=\"ds-dialog-title\">Atribuir responsável</h2><p class=\"ds-dialog-subtitle\">Impressora parada no 3º andar</p></div><button class=\"ds-dialog-close\" type=\"button\" aria-label=\"Fechar\">×</button></div><div class=\"ds-dialog-body\">Isso substitui <strong>Maria Souza</strong> por <strong>João Pedro</strong> como responsável.</div><div class=\"ds-dialog-footer\"><button class=\"ds-btn-secondary\" type=\"button\">Cancelar</button><button class=\"ds-btn-primary\" type=\"button\">Reatribuir</button></div></div>",
       "css": ".ds-dialog { max-width: 30rem; background: #fff; border-radius: 0.75rem; box-shadow: 0 0.5rem 2rem rgba(105,108,255,0.18); font-family: 'Public Sans', system-ui, sans-serif; } .ds-dialog-header { display: flex; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(105,108,255,0.08); } .ds-dialog-title { font-size: 1.125rem; font-weight: 700; color: #2b2c40; margin: 0; } .ds-dialog-subtitle { font-size: 0.875rem; color: #6b7684; margin: 0; } .ds-dialog-close { border: none; background: transparent; font-size: 1.25rem; cursor: pointer; color: #6b7684; } .ds-dialog-close:focus-visible { outline: 2px solid #696cff; } .ds-dialog-body { padding: 1.5rem; color: #2b2c40; } .ds-dialog-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.5rem; border-top: 1px solid rgba(105,108,255,0.08); } .ds-btn-secondary { border: 1px solid #8592a3; color: #8592a3; background: transparent; border-radius: 0.5rem; padding: 0.5rem 1.25rem; cursor: pointer; } .ds-btn-primary { border: none; background: #696cff; color: #fff; border-radius: 0.5rem; padding: 0.5rem 1.25rem; cursor: pointer; } .ds-btn-primary:hover { background: #5f61e6; }"
+    },
+    {
+      "name": "Toast with Action",
+      "kind": "custom",
+      "refersTo": "toast-action",
+      "description": "Toast de confirmação com uma ação na hora (\"Desfazer\", \"Reenviar convite\"): fica 8s em vez de 4s, pra dar tempo de alcançar o botão. Preferido a uma confirmação quando a ação é reversível.",
+      "html": "<div class=\"ds-toast\" role=\"status\" aria-live=\"polite\"><span class=\"ds-toast-body\">Acesso de \"Maria Silva\" desativado.</span><button class=\"ds-toast-action\">Desfazer</button><button class=\"ds-toast-close\" aria-label=\"Fechar\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg></button></div>",
+      "css": ".ds-toast { display: inline-flex; align-items: center; gap: 0.5rem; max-width: 26rem; padding: 0.5rem 0.5rem 0.5rem 1rem; border-radius: 0.5rem; background: #2e7d14; color: #ffffff; font-family: 'Public Sans', system-ui, sans-serif; font-size: 0.875rem; box-shadow: 0 0.375rem 1.25rem rgba(105, 108, 255, 0.12); } .ds-toast-body { flex: 1; } .ds-toast-action { min-height: 2.25rem; padding: 0.25rem 0.75rem; border: 0; border-radius: 0.5rem; background: #f8f9fa; color: #2b2c40; font-weight: 600; cursor: pointer; } .ds-toast-close { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #ffffff; cursor: pointer; }"
     }
   ],
   "narrative": {

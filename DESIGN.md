@@ -304,6 +304,9 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
   (`.badge-role-custom`, fundo `cor 15% + branco`, texto `cor 65% + preto`). Cor sem contraste AA
   nesse par é recusada na escolha e na criação, e `getRoleColor` devolve `null` (índigo) pra qualquer
   cor salva que não passe — nenhuma tela que mostra o badge revalida por conta própria.
+- **Convite pendente** (conta cadastrada, ainda sem senha): `bg-label-warning` — âmbar é "esperando
+  alguém", o mesmo raciocínio do "Aberto" nos chamados. Abaixo do badge, uma linha pequena diz a
+  validade do convite ("Vale até 01/11 15:00") ou "Convite expirado".
 
 ### Cards / Containers
 - **Corner Style:** `rounded-md` (0.75rem); modais usam `rounded-lg` (1.25rem).
@@ -485,12 +488,35 @@ ticket"), o botão de desistir se chama "Voltar", não "Cancelar". Implementaç�
 do componente, ela ficava presa a um elemento que a hidratação do SSR descartava e nenhuma
 confirmação abria (corrigido em 2026-10-27).
 
+### Toasts (`ToastService`, `shared/ui/toast-container`)
+- Confirmam uma ação feita fora de modal, no canto inferior direito, e somem sozinhos em 4s.
+- **Toast com ação** (`show(mensagem, variante, { label, run })`): pra desfazer ou completar a ação
+  na hora — "Desfazer" depois de desativar, "Reenviar convite" depois de reativar quem nunca ativou
+  a conta. Fica 8s (o dobro), pra dar tempo de ler e alcançar o botão.
+- **Prefira "Desfazer" a confirmar** quando a ação é reversível e segura; confirmação fica pro que
+  é destrutivo (desativar ainda confirma, porque bloqueia o acesso de alguém na hora).
+
+### Convite e ativação de conta
+Ninguém define a senha de outra pessoa (spec 008 do back-end):
+- **Cadastro** (modal "Novo Usuário" e `/register`): só nome, sobrenome, e-mail e funções. O modal
+  diz que um convite vai pro e-mail, com validade de 72 horas. Botões "Enviar convite" e "Convidar
+  e cadastrar outro"; o toast confirma "Convite enviado para {e-mail}".
+- **Ativação** (`/ativar-conta`, pública, visual do login): o token vem no fragmento `#token=` e
+  sai da barra de endereço assim que é lido. A pessoa cria a senha (regras visíveis antes de
+  digitar). Três estados: formulário, "Conta ativada" com o botão "Entrar" (a ativação não abre
+  sessão) e "Link inválido ou expirado", que troca o formulário pela orientação de pedir outro
+  convite — a API não diz se expirou, foi usado ou revogado, e a tela também não.
+- **Reenviar convite:** no ⋮ da linha e no painel, só pra conta pendente e ativa. Recusa do
+  back-end (limite de 5 em 24 horas) aparece acima da lista, com o motivo dele.
+
 ### Named Rules
 **The Transform-Not-Padding Rule.** Microinterações de deslocamento (hover de item de menu, por
 exemplo) animam `transform`, nunca `padding`/`margin` — a primeira é compositada pelo navegador, a
 segunda força recálculo de layout a cada quadro.
 
 ### Linguagem da interface
+- **Sem gênero gramatical presumido:** o nome não diz o gênero da pessoa. "O acesso de Maria Silva
+  é bloqueado", não "o login dele"; "Seu acesso está pronto", não "você foi convidado(a)".
 - **"Chamado"**, nunca "ticket", em todo texto visível (títulos, botões, legendas, avisos, leitor de
   tela). "Ticket" fica só no código e nas rotas.
 - **"Início"** é o nome da tela inicial — no menu, nas trilhas e nos "Voltar".
