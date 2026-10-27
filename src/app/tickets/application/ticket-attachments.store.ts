@@ -5,7 +5,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, of } from 'rxjs';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
-import { CursorPage, extractErrorMessage } from '../../shared';
+import { CursorPage, extractErrorMessage, valueOf } from '../../shared';
 
 /** Página vazia, usada antes de um ticket ser definido. */
 const EMPTY_PAGE: CursorPage<TicketAttachment> = { items: [], nextCursorDate: null, nextCursorId: null, hasNextPage: false };
@@ -43,9 +43,9 @@ export const TicketAttachmentsStore = signalStore(
   })),
   withComputed((store) => ({
     /** Anexos já carregados do ticket atual, do mais novo para o mais antigo (ordem aplicada pelo back-end). */
-    attachments: computed(() => [...(store._listResource.value()?.items ?? []), ...store.olderAttachments()]),
+    attachments: computed(() => [...(valueOf(store._listResource)?.items ?? []), ...store.olderAttachments()]),
     /** Página de onde sai o cursor da próxima: a última carregada por "carregar mais" ou, antes disso, a primeira. */
-    currentPage: computed(() => store.lastPage() ?? store._listResource.value()),
+    currentPage: computed(() => store.lastPage() ?? valueOf(store._listResource)),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {

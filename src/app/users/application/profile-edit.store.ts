@@ -5,7 +5,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, of } from 'rxjs';
 import { ChangePasswordRequest, UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { extractErrorMessage, SessionService, CurrentUserService } from '../../shared';
+import { extractErrorMessage, SessionService, CurrentUserService, valueOf } from '../../shared';
 
 /** Store da edição de perfil: carrega o perfil de um usuário e salva nome/sobrenome. */
 export const ProfileEditStore = signalStore(
@@ -34,7 +34,7 @@ export const ProfileEditStore = signalStore(
   })),
   withComputed((store) => ({
     /** Perfil em edição, carregado pelo resource de leitura. */
-    profile: computed(() => store._profileResource.value()),
+    profile: computed(() => valueOf(store._profileResource)),
     /** Indica se o perfil está sendo carregado. */
     loading: computed(() => store._profileResource.isLoading()),
     /** Mensagem de erro do carregamento do perfil, se houver. */

@@ -7,7 +7,7 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSla } from '../entities/ticket-sla';
 import { UserDataService, UserSummary } from '../../users';
-import { extractErrorMessage } from '../../shared';
+import { extractErrorMessage, valueOf } from '../../shared';
 
 /**
  * Store do detalhe de um ticket, carregado pelo id (GET /tickets/{id}), e das mutações feitas a
@@ -50,9 +50,9 @@ export const TicketDetailStore = signalStore(
   })),
   withComputed((store) => ({
     /** Detalhe do ticket atual, ou indefinido enquanto carrega ou quando houve erro. */
-    ticket: computed(() => store._detailResource.value()),
+    ticket: computed(() => valueOf(store._detailResource)),
     /** Bloco de SLA vigente: o mais recente buscado por `refreshSla()`, ou o que já vem no detalhe. */
-    sla: computed(() => store._slaOverride() ?? store._detailResource.value()?.sla ?? null),
+    sla: computed(() => store._slaOverride() ?? valueOf(store._detailResource)?.sla ?? null),
     /** Estado do carregamento do detalhe: carregando e erro (com mensagens próprias para 404 e 403). */
     state: computed(() => {
       const resourceError = store._detailResource.error() as HttpErrorResponse | undefined;

@@ -7,7 +7,7 @@ import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { AuthDataService, CreateUserData, extractErrorMessage } from '../../shared';
+import { AuthDataService, CreateUserData, extractErrorMessage, valueOf } from '../../shared';
 
 /** Filtros e paginação padrão: todos os status, primeira página, 20 itens por página. */
 const DEFAULT_FILTERS: UserFilters = { status: 'All', page: 1, pageSize: 20 };
@@ -60,7 +60,7 @@ export const UsersStore = signalStore(
   })),
   withComputed((store) => ({
     /** Página atual devolvida pela API (itens + dados de paginação). */
-    usersPage: computed(() => store._listResource.value()),
+    usersPage: computed(() => valueOf(store._listResource)),
     /**
      * Se a última carga da lista falhou — distinto de um erro de ação (desativar, reativar…), que
      * também aparece em {@link listState}: só a falha de carga se resolve recarregando.

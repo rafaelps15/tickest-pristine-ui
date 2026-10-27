@@ -112,11 +112,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly showMyTickets = computed(() =>
       this.sessionService.hasPermission('tickets:view-own') && !this.sessionService.hasPermission('tickets:manage'));
 
-  /** Os 3 cards de "Seus chamados", com as contagens do próprio usuário. */
+  /**
+   * Os 3 cards de "Seus chamados", com as contagens do próprio usuário. Cada um abre Meus Chamados
+   * no grupo correspondente: "Em aberto" (Aberto + Em Andamento) é o padrão da tela; "Resolvidos"
+   * abre "Encerrados" (`?status=finished`), que também inclui fechados e cancelados.
+   */
   protected readonly myTicketCards = computed(() => [
-    { label: 'Em aberto', icon: 'bx-error-circle', tone: 'warning' as StatTone, value: this.myTickets.openCount(), ariaNoun: 'chamados seus em aberto' },
-    { label: 'Em andamento', icon: 'bx-time-five', tone: 'info' as StatTone, value: this.myTickets.inProgressCount(), ariaNoun: 'chamados seus em andamento' },
-    { label: 'Resolvidos', icon: 'bx-check-double', tone: 'success' as StatTone, value: this.myTickets.resolvedCount(), ariaNoun: 'chamados seus resolvidos' }
+    { label: 'Em aberto', icon: 'bx-error-circle', tone: 'warning' as StatTone, value: this.myTickets.openCount(), ariaNoun: 'chamados seus em aberto', queryParams: {} },
+    { label: 'Em andamento', icon: 'bx-time-five', tone: 'info' as StatTone, value: this.myTickets.inProgressCount(), ariaNoun: 'chamados seus em andamento', queryParams: {} },
+    { label: 'Resolvidos', icon: 'bx-check-double', tone: 'success' as StatTone, value: this.myTickets.resolvedCount(), ariaNoun: 'chamados seus resolvidos', queryParams: { status: 'finished' } }
   ]);
 
   protected readonly isAdministrative = computed(() =>

@@ -25,6 +25,7 @@ describe('RoleListComponent', () => {
       createError: signal<string | null>(null),
       assignPermissionsError: signal<string | null>(null),
       assigningPermissions: signal(false),
+      creating: signal(false),
       permissions: signal<Permission[]>(permissions),
       permissionGroups: signal([{ title: 'Chamados', permissions: [permissions[0]] }, { title: 'Usuários', permissions: [permissions[1]] }]),
       permissionName: jasmine.createSpy('permissionName').and.callFake(

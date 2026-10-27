@@ -15,7 +15,7 @@
     <!-- Recarregar só resolve falha de carga; erro de uma ação (desativar etc.) não some recarregando. -->
     @if (store.listLoadFailed()) {
       <button type="button" class="btn btn-sm btn-outline-danger" (click)="store.loadAll()">
-        <i class="bx bx-refresh me-1"></i>Recarregar lista
+        <i class="bx bx-refresh me-1"></i>Tentar novamente
       </button>
     }
   </div>
@@ -257,7 +257,7 @@
 </div>
 
 @if (openDialog() === 'create') {
-<app-dialog id="userCreateModal" title="Novo Usuário" (closed)="closeDialog()">
+<app-dialog id="userCreateModal" title="Novo Usuário" [busy]="store.loading()" (closed)="closeDialog()">
   <form dialogContent [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
     <div class="modal-body">
       @if (store.error()) {
@@ -364,7 +364,7 @@
 }
 
 @if (openDialog() === 'edit') {
-<app-dialog id="userEditModal" title="Editar cadastro" [subtitle]="selectedUserForEdit() ? selectedUserForEdit()!.firstName + ' ' + selectedUserForEdit()!.lastName : null" (closed)="closeDialog()">
+<app-dialog id="userEditModal" title="Editar cadastro" [subtitle]="selectedUserForEdit() ? selectedUserForEdit()!.firstName + ' ' + selectedUserForEdit()!.lastName : null" [busy]="store.updatingProfile()" (closed)="closeDialog()">
   <form dialogContent [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
     <div class="modal-body">
       @if (store.profileError()) {
@@ -421,7 +421,7 @@
 }
 
 @if (openDialog() === 'roles') {
-<app-dialog id="userRolesModal" title="Atribuir funções" [subtitle]="selectedUser() ? selectedUser()!.firstName + ' ' + selectedUser()!.lastName : null" size="lg" (closed)="closeDialog()">
+<app-dialog id="userRolesModal" title="Atribuir funções" [subtitle]="selectedUser() ? selectedUser()!.firstName + ' ' + selectedUser()!.lastName : null" size="lg" [busy]="store.assigningRoles()" (closed)="closeDialog()">
   <div dialogContent class="dialog-content">
     <div class="modal-body">
       @if (store.rolesError()) {

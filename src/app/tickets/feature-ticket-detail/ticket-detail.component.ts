@@ -24,6 +24,7 @@ import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-r
 import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAttachment } from '../entities/ticket-attachment';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
@@ -131,7 +132,7 @@ export class TicketDetailComponent implements OnInit {
     /** Trilha do cabeçalho — a tela de onde o usuário veio (Monitorar ou Meus Chamados). */
     protected readonly crumbs: PageCrumb[] = this.cameFromMonitor
         ? [{ label: 'Administração' }, { label: 'Monitorar Chamados', link: '/tickets/monitorar' }]
-        : [{ label: 'Meus Chamados', link: '/tickets' }];
+        : [{ label: 'Início', link: '/dashboard' }, { label: 'Meus Chamados', link: '/tickets' }];
 
     /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
     protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';
@@ -193,6 +194,11 @@ export class TicketDetailComponent implements OnInit {
     /** Só quem escreveu a mensagem pode editá-la. */
     protected canEditMessage(message: TicketMessage): boolean {
         return message.authorUserId === this.sessionService.userId();
+    }
+
+    /** Quem enviou o anexo, ou quem administra chamados, pode excluí-lo (mesma regra do back-end). */
+    protected canDeleteAttachment(attachment: TicketAttachment): boolean {
+        return attachment.uploadedByUserId === this.sessionService.userId() || this.sessionService.hasPermission('tickets:manage');
     }
 
     /** Quem escreveu a mensagem, ou quem administra chamados, pode excluí-la. */

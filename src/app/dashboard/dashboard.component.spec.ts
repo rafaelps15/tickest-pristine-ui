@@ -502,7 +502,8 @@ describe('DashboardComponent', () => {
       expect(section.querySelector('h2')?.textContent).toContain('Seus chamados');
       const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
       expect(values).toEqual(['2', '1', '5']);
-      expect(section.querySelector('a.stretched-link')?.getAttribute('href')).toBe('/tickets');
+      const links = Array.from(section.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
+      expect(links).toEqual(['/tickets', '/tickets', '/tickets?status=finished']);
       expect(fixture.nativeElement.textContent).toContain('Toda a empresa');
     });
 

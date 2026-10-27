@@ -42,7 +42,7 @@
     <div class="mb-3">
       <div class="info-list-title mb-1">Descrição</div>
       @if (quickInfoStore.state().loading) {
-        <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando descrição…</span></span>
+        <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando descrição…</span>
       } @else if (quickInfoStore.state().error) {
         <p class="text-danger small mb-0">{{ quickInfoStore.state().error }}</p>
       } @else {

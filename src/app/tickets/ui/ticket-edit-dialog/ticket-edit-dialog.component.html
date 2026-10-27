@@ -1,4 +1,4 @@
-<app-dialog title="Editar descrição" [subtitle]="ticket().title" closeLabel="Fechar edição" (closed)="onDialogClose()">
+<app-dialog title="Editar descrição" [subtitle]="ticket().title" closeLabel="Fechar edição" [busy]="saving()" (closed)="onDialogClose()">
   <form dialogContent [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="modal-body">
       @if (error()) {

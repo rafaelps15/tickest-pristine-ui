@@ -29,7 +29,7 @@
 
       @if (loading()) {
         <div class="d-flex justify-content-center py-2">
-          <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando alertas de SLA…</span></span>
+          <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando alertas de SLA…</span>
         </div>
       } @else if (error(); as errorMessage) {
         <div class="d-flex flex-column align-items-start gap-2" role="alert">

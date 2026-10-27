@@ -22,7 +22,7 @@
       @if (searchError()) {
         <div class="alert alert-danger border-0 py-2 small mb-0" role="alert">{{ searchError() }}</div>
       } @else if (searching()) {
-        <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
+        <div class="text-center py-3"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Buscando usuários…</span></div>
       } @else if (searchText().trim().length === 0) {
         <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
       } @else if (candidates().length === 0) {

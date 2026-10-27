@@ -9,7 +9,7 @@ import { TicketPriority } from '../entities/ticket-priority';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage } from '../../shared';
+import { extractErrorMessage, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
 
 /** Filtros e paginação padrão: todos os status/prioridade/SLA, mais recentes primeiro, 20 por página. */
@@ -55,9 +55,9 @@ export const TicketMonitorStore = signalStore(
   })),
   withComputed((store) => ({
     /** Página atual devolvida pela API (itens + dados de paginação). */
-    ticketsPage: computed(() => store._listResource.value()),
+    ticketsPage: computed(() => valueOf(store._listResource)),
     /** Tickets da página atual. */
-    tickets: computed(() => store._listResource.value()?.items ?? []),
+    tickets: computed(() => valueOf(store._listResource)?.items ?? []),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
@@ -68,7 +68,7 @@ export const TicketMonitorStore = signalStore(
       };
     }),
     /** Resumo de SLA dos chamados ativos, respeitando o filtro de setor atual. */
-    slaSummary: computed(() => store._slaSummaryResource.value()),
+    slaSummary: computed(() => valueOf(store._slaSummaryResource)),
     /** Estado agregado do resumo de SLA (carregamento e erro) — os 4 cards do topo mostram "—" sem nenhum aviso se isso não for tratado. */
     slaSummaryState: computed(() => {
       const resourceError = store._slaSummaryResource.error() as HttpErrorResponse | undefined;

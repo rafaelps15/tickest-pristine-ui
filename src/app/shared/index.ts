@@ -18,3 +18,4 @@ export * from './utils/role-badges.util';
 export * from './utils/role-colors.util';
 export * from './utils/persisted-toggle.util';
 export * from './utils/side-panel.util';
+export * from './utils/resource-value.util';

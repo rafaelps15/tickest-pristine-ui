@@ -150,7 +150,7 @@
         }
 
         @if (messagesStore.listState().loading) {
-          <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando mensagens…</span></span></div>
+          <div class="text-center py-4"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando mensagens…</span></div>
         } @else if (messagesStore.messages().length === 0) {
           <p class="text-muted small mb-0">Nenhuma mensagem ainda.</p>
         } @else if (ticket(); as t) {
@@ -250,7 +250,7 @@
         }
 
         @if (store.listState().loading) {
-          <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando anexos…</span></span></div>
+          <div class="text-center py-4"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando anexos…</span></div>
         } @else if (store.attachments().length === 0) {
           <p class="text-muted small mb-0">Nenhum anexo enviado ainda.</p>
         } @else {
@@ -268,9 +268,11 @@
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="store.download(attachment)">
                     <i class="bx bx-download" aria-hidden="true"></i>
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="store.deleting()" [attr.aria-label]="'Excluir ' + attachment.fileName" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
-                    <i class="bx bx-trash" aria-hidden="true"></i>
-                  </button>
+                  @if (canDeleteAttachment(attachment)) {
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="store.deleting()" [attr.aria-label]="'Excluir ' + attachment.fileName" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
+                      <i class="bx bx-trash" aria-hidden="true"></i>
+                    </button>
+                  }
                 </div>
               </li>
             }
@@ -309,7 +311,7 @@
 
           <div class="row g-4">
             @for (objective of currentCycleObjectives(slaBlock); track objective.metric) {
-              <div class="col-12 col-md-6">
+              <div class="col-12">
                 <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                   <span class="fw-semibold small">{{ slaMetricLabels[objective.metric] }}</span>
                   <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
@@ -380,7 +382,7 @@
         }
 
         @if (historyStore.state().loading) {
-          <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando histórico…</span></span></div>
+          <div class="text-center py-4"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando histórico…</span></div>
         } @else if (historyStore.entries().length === 0) {
           <p class="text-muted small mb-0">Nenhum evento registrado ainda.</p>
         } @else {

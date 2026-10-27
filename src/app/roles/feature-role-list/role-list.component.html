@@ -101,7 +101,7 @@
 </div>
 
 @if (openDialog() === 'create') {
-<app-dialog id="roleCreateModal" title="Nova Função" (closed)="closeDialog()">
+<app-dialog id="roleCreateModal" title="Nova Função" [busy]="store.creating()" (closed)="closeDialog()">
   <form dialogContent [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
     <div class="modal-body">
       @if (store.createError()) {
@@ -130,8 +130,13 @@
       }
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
-      <button type="submit" class="btn btn-primary">Criar</button>
+      <button type="button" class="btn btn-outline-secondary" [disabled]="store.creating()" (click)="closeDialog()">Cancelar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="store.creating()">
+        @if (store.creating()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        Criar
+      </button>
     </div>
   </form>
 </app-dialog>

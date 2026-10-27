@@ -1520,4 +1520,13 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.setPeriod).toHaveBeenCalledWith('2026-01-05', '2026-01-10');
     expect(fixture.nativeElement.querySelector('#userPeriod-error')).toBeNull();
   });
+
+  it('trava o fechamento do diálogo de edição enquanto salva (o X fica desabilitado)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openEditModal(activeUser);
+    usersStoreFake.updatingProfile.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement.querySelector('#userEditModal .btn-close') as HTMLButtonElement).disabled).toBeTrue();
+  });
 });

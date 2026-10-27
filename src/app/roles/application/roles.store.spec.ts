@@ -156,4 +156,17 @@ describe('RolesStore', () => {
 
     expect(store.assignPermissionsError()).toBeNull();
   });
+
+  it('marca "criando" durante a criação e solta no fim, com sucesso ou erro', async () => {
+    const response = new Subject<string>();
+    roleDataService.create.and.returnValue(response.asObservable());
+
+    store.create('Supervisor');
+    expect(store.creating()).toBeTrue();
+
+    response.next('new-id');
+    response.complete();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.creating()).toBeFalse();
+  });
 });

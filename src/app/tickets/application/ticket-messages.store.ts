@@ -5,7 +5,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, of } from 'rxjs';
 import { TicketMessage } from '../entities/ticket-message';
 import { TicketMessageDataService } from '../infrastructure/ticket-message.data.service';
-import { CursorPage, extractErrorMessage } from '../../shared';
+import { CursorPage, extractErrorMessage, valueOf } from '../../shared';
 
 /** Página vazia, usada antes de um ticket ser definido. */
 const EMPTY_PAGE: CursorPage<TicketMessage> = { items: [], nextCursorDate: null, nextCursorId: null, hasNextPage: false };
@@ -47,9 +47,9 @@ export const TicketMessagesStore = signalStore(
   })),
   withComputed((store) => ({
     /** Mensagens já carregadas do ticket atual, da mais recente para a mais antiga (ordem aplicada pelo back-end). */
-    messages: computed(() => [...(store._listResource.value()?.items ?? []), ...store.olderMessages()]),
+    messages: computed(() => [...(valueOf(store._listResource)?.items ?? []), ...store.olderMessages()]),
     /** Página de onde sai o cursor da próxima: a última carregada por "carregar mais" ou, antes disso, a primeira. */
-    currentPage: computed(() => store.lastPage() ?? store._listResource.value()),
+    currentPage: computed(() => store.lastPage() ?? valueOf(store._listResource)),
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {

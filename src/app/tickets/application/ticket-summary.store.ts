@@ -7,18 +7,8 @@ import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage, SessionService } from '../../shared';
+import { extractErrorMessage, SessionService, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
-
-/**
- * Valor do recurso, ou `undefined` sem valor — inclusive em erro. Ler `.value()` direto num
- * `resource()` em estado de erro lança exceção (Angular 20+), e os derivados abaixo são lidos pelo
- * template sempre, mesmo quando ele está mostrando o erro: sem isso, a falha da API quebrava a tela
- * em vez de mostrar "—" / "Tentar novamente".
- */
-function valueOf<T>(resource: { hasValue(): boolean; value(): T }): T | undefined {
-  return resource.hasValue() ? resource.value() : undefined;
-}
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
 const CRITICAL_TICKETS_LIMIT = 5;

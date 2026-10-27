@@ -206,8 +206,8 @@ describe('TicketDetailComponent', () => {
     await fixture.whenStable();
 
     const crumbs = fixture.nativeElement.querySelector('nav[aria-label="Trilha"]') as HTMLElement;
-    expect(crumbs.textContent?.replace(/\s+/g, ' ').trim()).toBe('Meus Chamados');
-    expect(crumbs.querySelector('a')?.getAttribute('href')).toBe('/tickets');
+    expect(Array.from(crumbs.querySelectorAll('li')).map(li => li.textContent?.trim())).toEqual(['Início', 'Meus Chamados']);
+    expect(crumbs.querySelectorAll('a')[1]?.getAttribute('href')).toBe('/tickets');
     const backLink = fixture.nativeElement.querySelector('a.btn-outline-secondary') as HTMLAnchorElement;
     expect(backLink.getAttribute('href')).toBe('/tickets');
   });
@@ -1357,5 +1357,17 @@ describe('TicketDetailComponent', () => {
 
       expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o histórico');
     });
+  });
+
+  it('só mostra "Excluir" do anexo pra quem enviou o arquivo ou administra chamados (mesma regra do back)', async () => {
+    sessionServiceFake.hasPermission.and.returnValue(false);
+    sessionServiceFake.userId.set('outra-pessoa');
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[aria-label="Excluir foto.png"]')).toBeNull();
+
+    sessionServiceFake.userId.set('u1');
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[aria-label="Excluir foto.png"]')).not.toBeNull();
   });
 });

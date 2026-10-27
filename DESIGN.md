@@ -112,14 +112,14 @@ por decorar; cada elemento visual existe pra apoiar uma decisão ou uma ação.
 
 O sistema sustenta dois modos — claro e escuro — espelhando a escala de cinza nativa do Bootstrap
 5.3 no escuro, pra não haver costura entre os tokens do Tickest e os componentes nativos (card,
-modal, dropdown, tabela). As telas de entrada (login/registro) são a única exceção: mantêm um
+modal, dropdown, tabela). As telas de entrada (login/ativação) são a única exceção: mantêm um
 tratamento de marca fixo e mais "premium" (vidro/blur sobre gradiente), sempre claro,
 independente da preferência do sistema operacional — a porta de entrada carrega a identidade da
 marca; a área de trabalho, depois do login, responde à preferência de quem está usando.
 
 **Key Characteristics:**
 - Admin limpo com um único acento de cor usado com disciplina, nunca decorativo
-- Suporte real a claro/escuro na área autenticada; login/registro fixos no visual de marca
+- Suporte real a claro/escuro na área autenticada; login/ativação fixos no visual de marca
 - Elevação suave e ambiente (sombra tintada de índigo no claro, preta no escuro) — nunca bordas pesadas
 - Cantos generosamente arredondados; badges e avatares em pílula/círculo completo
 - Tom profissional e confiável, com um toque de acolhimento (saudação por nome no dashboard)
@@ -137,7 +137,7 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 - **Índigo Confiança Escuro** (`#5f61e6`): ponta escura do gradiente do botão primário e seu
   estado de hover.
 - **Índigo Profundo** (`#3a3ca3`): acento mais escuro, usado só na wordmark da marca
-  ("tickest") no cabeçalho de login/registro.
+  ("tickest") no cabeçalho de login/ativação.
 
 ### Neutral
 - **Grafite Texto** (`#2b2c40`): texto principal (claro).
@@ -201,7 +201,7 @@ claro) para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro
 ## Typography
 
 **Display Font:** Sora (com fallback `sans-serif`) — só na wordmark "tickest" do cabeçalho de
-login/registro.
+login/ativação.
 **Body Font:** Public Sans (com fallback `system-ui, -apple-system, "Segoe UI", sans-serif`) —
 todo o resto da interface, de parágrafos a títulos de tela.
 
@@ -211,7 +211,7 @@ login), com peso 700, minúsculo e rastreamento apertado (-2px) — a única vez
 permissão de ter personalidade própria.
 
 ### Hierarchy
-- **Display** (700, 3rem, line-height 1): a wordmark "tickest" em login/registro. Único uso de
+- **Display** (700, 3rem, line-height 1): a wordmark "tickest" em login/ativação. Único uso de
   Sora no sistema.
 - **Title** (700, 1.5rem/`h4`): título de cada tela (ex. "Usuários", "Bom dia, {nome}!").
   Semanticamente é o `h1` da tela (`<h1 class="h4">`); títulos de card são `<h2 class="h5">` — o
@@ -223,7 +223,7 @@ permissão de ter personalidade própria.
   com o valor ao lado no corpo, 1rem; nunca dois tamanhos quase iguais pra rótulo e valor).
 
 ### Named Rules
-**The Brand-Only Display Rule.** Sora nunca aparece fora da wordmark de login/registro — títulos
+**The Brand-Only Display Rule.** Sora nunca aparece fora da wordmark de login/ativação — títulos
 de tela, mesmo os mais importantes, usam Public Sans em peso 700. A fonte de marca é reservada
 para o momento de marca, não para hierarquia geral.
 
@@ -264,7 +264,7 @@ puro em opacidade maior, porque uma sombra colorida sobre fundo já escuro não 
 - **lg** (`0 1rem 3rem rgba(105,108,255,.18)` / escuro `rgba(0,0,0,.55)`): modais — a camada mais
   alta da interface.
 
-Login/registro têm sua própria camada de elevação, mais dramática e fixa (não dark-aware): o card
+Login e ativação de conta têm sua própria camada de elevação, mais dramática e fixa (não dark-aware): o card
 de autenticação usa `0 20px 60px rgba(0,0,0,.2)` com `backdrop-filter: blur(10px)` sobre um fundo
 em gradiente — o único lugar do sistema com vidro de verdade, reservado pro momento de entrada.
 
@@ -323,6 +323,7 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 - **Error:** classe `.is-invalid` do Bootstrap + mensagem abaixo do campo, nunca só cor.
 
 ### Navigation
+- **Ícones do menu:** glifo de 1.25rem (`.menu-icon`) — tamanho de ícone, não um passo da escala de texto.
 - **Sidebar:** 260px fixos, fundo `surface`, itens agrupados sob cabeçalhos em maiúsculas
   rastreadas (ex. "ADMINISTRAÇÃO", visível só com a permissão correspondente). Item ativo ganha
   fundo em gradiente suave da marca + barra vertical de 3px à esquerda + texto em índigo. Hover
@@ -359,16 +360,16 @@ O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
 - Fica numa **faixa de largura total entre o cabeçalho e os KPIs** (pra quem atende a fila), não
   numa coluna lateral: no desktop, resumo (totais + definição de "em risco") à esquerda e lista à
   direita; com a fila em dia, vira uma linha compacta — o tamanho da faixa é a mensagem.
-- Lista vencidos **e** em risco em 5 vagas: até 3 vencidos (o vencido há mais tempo primeiro) e até
-  2 em risco (o que vence primeiro), e a sobra de um grupo vai pro outro — só por prazo, muitos
-  vencidos escondiam os em risco, os únicos que ainda dá pra salvar. Os totais da empresa ficam no
+- Lista atrasados **e** em risco em 5 vagas: até 3 atrasados (o atrasado há mais tempo primeiro) e
+  até 2 em risco (o que vence primeiro), e a sobra de um grupo vai pro outro — só por prazo, muitos
+  atrasados escondiam os em risco, os únicos que ainda dá pra salvar. Os totais da empresa ficam no
   topo, com o mesmo número grande dos KPIs, cada um levando à fila de Monitorar já filtrada.
 - O card mostra "Atualizado às HH:mm" e tem um botão "Atualizar" que recarrega só os alertas; ao
   voltar pra aba com uma lista de mais de 5 minutos, recarrega sozinho (não é polling).
-- Cada item tem etiqueta "Vencido"/"Em risco" em texto **e** cor, e o prazo relativo vivo ("vence
+- Cada item tem etiqueta "Atrasado"/"Em risco" em texto **e** cor, e o prazo relativo vivo ("vence
   em 2h 14min" / "venceu há 35 min"), recalculado a cada 30s com a aba visível e ancorado na hora
   do servidor (`serverNowUtc`), nunca no relógio da máquina.
-- Quando um item vence com a tela aberta: vira "Vencido", os totais acompanham, um `aria-live`
+- Quando um item vence com a tela aberta: vira "Atrasado", os totais acompanham, um `aria-live`
   anuncia só a virada e a linha recebe um realce vermelho único de 1,6s (sem animação com
   `prefers-reduced-motion`).
 - Sem nenhum alerta, o vazio é dito com clareza: "Fila em dia", com check na cor de sucesso.
@@ -413,7 +414,7 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
   único `<h1 class="h4">` da tela; a trilha (`Administração`, `Início / Meus Chamados`) fica num
   `<nav aria-label="Trilha">` acima, fora do `h1`, com link nos níveis que têm tela própria. Nunca
   montar cabeçalho à mão, nem `h4` cru, nem `pt-3`/`py-3` no título.
-- **Telas de entrada** (login, registro, primeiro acesso) não usam o cabeçalho — o título do card é
+- **Telas de entrada** (login, ativação de conta, primeiro acesso) não usam o cabeçalho — o título do card é
   o `<h1 class="h4">` da página.
 
 ### Guia da Tela e Resumo
@@ -490,7 +491,8 @@ Todo modal de formulário/escolha é um `<app-dialog title subtitle [busy] (clos
 cuida de fundo escurecido, `role="dialog"`/`aria-modal`, foco inicial (`data-dialog-focus` ou o
 primeiro controle), Tab preso, Esc/clique fora (travados enquanto `busy`), rolagem da página
 travada e foco devolvido a quem abriu. Formulário: `<form dialogContent>` envolvendo `.modal-body`
-e `.modal-footer`. Cancelar fica à esquerda do primário no rodapé.
+e `.modal-footer`. Todo diálogo que envia algo passa `[busy]` com o estado de envio — X, Esc e
+clique fora não fecham no meio do salvamento. Cancelar fica à esquerda do primário no rodapé.
 
 ### Atribuir responsável (`<app-ticket-assign-dialog>`, `tickets/ui`)
 Igual no detalhe e no Monitorar: busca com debounce, candidatos como listbox navegável por setas,
@@ -510,10 +512,10 @@ Toda confirmação de ação sensível (excluir, desativar, reativar) usa o moda
 global do sistema — nunca o `confirm()` nativo do navegador, que quebra a identidade visual. O
 botão de confirmação muda de cor conforme a gravidade: vermelho para destrutivo, verde para
 restaurativo, índigo para neutro. Quando a ação confirmada começa com "Cancelar" (ex. "Cancelar
-ticket"), o botão de desistir se chama "Voltar", não "Cancelar". Implementação: a instância do
-`bootstrap.Modal` é criada no momento de abrir, ligada ao elemento atual — criada no nascimento
-do componente, ela ficava presa a um elemento que a hidratação do SSR descartava e nenhuma
-confirmação abria (corrigido em 2026-10-27).
+chamado"), o botão de desistir se chama "Voltar", não "Cancelar". Implementação: o mesmo
+`<app-dialog>` de todos os modais, mostrado com `@if` enquanto o `ConfirmDialogService` tem um pedido
+(foco inicial no lado seguro, Esc/clique fora resolvem como "não"); montado depois do
+`router-outlet`, fica por cima de um diálogo da tela, e só ele responde ao Esc enquanto aberto.
 
 ### Toasts (`ToastService`, `shared/ui/toast-container`)
 - Confirmam uma ação feita fora de modal, no canto inferior direito, e somem sozinhos em 4s.
@@ -569,7 +571,7 @@ segunda força recálculo de layout a cada quadro.
   qualquer linha de formulário ou card.
 - **Do** agrupar mais de duas ações de linha de tabela num menu "⋮" em vez de botões lado a lado.
 - **Do** usar `transform` para microinterações de deslocamento, nunca `padding`/`margin`.
-- **Do** manter login/registro sempre no tema claro, independente da preferência do sistema
+- **Do** manter login/ativação sempre no tema claro, independente da preferência do sistema
   operacional do usuário.
 - **Do** mostrar "—" e uma mensagem de erro quando um dado não carregou — ver **Estados de dado**.
 - **Do** usar movimento só pra explicar uma mudança de estado, sempre com um caminho
