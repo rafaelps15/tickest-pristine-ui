@@ -397,4 +397,16 @@ describe('DashboardComponent', () => {
     expect(insights).toBeTruthy();
     expect(insights.textContent).toContain('Chamado urgente');
   });
+
+  it('atualiza só os alertas de SLA (reloadCritical) ao pedir "Atualizar" no card, sem recarregar o resto', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+    ticketsStoreFake.load.calls.reset();
+
+    (fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement).click();
+
+    expect(ticketsStoreFake.reloadCritical).toHaveBeenCalledTimes(1);
+    expect(ticketsStoreFake.load).not.toHaveBeenCalled();
+  });
 });
