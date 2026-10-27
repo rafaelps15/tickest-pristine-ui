@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, ElementRef, Injector, afterNextRender, viewChild } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, ElementRef, Injector, afterNextRender, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
@@ -6,6 +6,7 @@ import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { ConfirmDialogService, ToastService } from '../../shared';
+import { DepartmentsStore } from '../../departments';
 import { DropdownFixedPositionDirective } from '../../shared/ui/directives/dropdown-fixed-position.directive';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
@@ -22,6 +23,7 @@ export class TicketListComponent implements OnInit {
     protected readonly store = inject(TicketsStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
+    private readonly departmentsStore = inject(DepartmentsStore);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly injector = inject(Injector);
 
@@ -32,6 +34,17 @@ export class TicketListComponent implements OnInit {
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
     readonly priorityLabels = TICKET_PRIORITY_LABELS;
     readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
+
+    /**
+     * Departamentos que atendem tickets (os que têm setor), em lista por extenso ("TI, RH e
+     * Financeiro") — mostrados no estado vazio de primeiro uso. Vazio enquanto carrega ou se falhar.
+     */
+    readonly attendingDepartments = computed(() => {
+        const names = this.departmentsStore.departments()
+            .filter(department => department.sectors.length > 0)
+            .map(department => department.name);
+        return names.length > 0 ? new Intl.ListFormat('pt-BR', { type: 'conjunction' }).format(names) : '';
+    });
 
     /** Opções de itens por página no rodapé da listagem. */
     readonly pageSizeOptions = [10, 20, 50];

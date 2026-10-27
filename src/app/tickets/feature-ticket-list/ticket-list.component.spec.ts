@@ -8,6 +8,7 @@ import { Ticket } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { ConfirmDialogService, ToastService } from '../../shared';
+import { DepartmentsStore } from '../../departments';
 
 describe('TicketListComponent', () => {
   const openTicket: Ticket = {
@@ -47,11 +48,13 @@ describe('TicketListComponent', () => {
   let storeFake: ReturnType<typeof createStoreFake>;
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
   let toastServiceFake: { show: jasmine.Spy };
+  let departmentsStoreFake: { departments: ReturnType<typeof signal<{ name: string; sectors: unknown[] }[]>> };
 
   beforeEach(async () => {
     storeFake = createStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
     toastServiceFake = { show: jasmine.createSpy('show') };
+    departmentsStoreFake = { departments: signal<{ name: string; sectors: unknown[] }[]>([]) };
 
     await TestBed.configureTestingModule({
       imports: [TicketListComponent],
@@ -60,7 +63,8 @@ describe('TicketListComponent', () => {
         provideRouter([]),
         { provide: TicketsStore, useValue: storeFake },
         { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
-        { provide: ToastService, useValue: toastServiceFake }
+        { provide: ToastService, useValue: toastServiceFake },
+        { provide: DepartmentsStore, useValue: departmentsStoreFake }
       ]
     }).compileComponents();
   });
@@ -96,7 +100,23 @@ describe('TicketListComponent', () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Você ainda não abriu nenhum ticket.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum ticket aberto ainda');
+    const cta = fixture.nativeElement.querySelector('.first-use a.btn-primary') as HTMLAnchorElement;
+    expect(cta.getAttribute('href')).toBe('/tickets/novo');
+  });
+
+  it('lista no estado vazio só os departamentos que têm setor para atender', async () => {
+    storeFake.tickets.set([]);
+    departmentsStoreFake.departments.set([
+      { name: 'TI', sectors: [{}] },
+      { name: 'RH', sectors: [{}] },
+      { name: 'Jurídico', sectors: [] },
+      { name: 'Financeiro', sectors: [{}] }
+    ]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Atendem tickets: TI, RH e Financeiro.');
   });
 
   it('mostra a mensagem de erro de carregamento do store', async () => {

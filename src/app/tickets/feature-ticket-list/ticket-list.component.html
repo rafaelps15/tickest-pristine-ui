@@ -45,11 +45,28 @@
         @if (store.state().loading && store.tickets().length === 0) {
           <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
         } @else if (store.tickets().length === 0) {
+          <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro ticket. -->
           <tr>
-            <td colspan="5" class="text-center py-5 text-muted">
-              <i class="bx bx-receipt display-6 d-block mb-2 opacity-50" aria-hidden="true"></i>
-              Você ainda não abriu nenhum ticket.
-              <a routerLink="/tickets/novo" class="d-block small mt-2">Abrir o primeiro ticket</a>
+            <td colspan="5" class="first-use py-5">
+              <div class="first-use-body">
+                <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
+                <h5 class="fw-bold mb-2">Nenhum ticket aberto ainda</h5>
+                <p class="first-use-lead mb-3">
+                  Precisa de algo de outro departamento? Abra um ticket em vez de mandar e-mail ou WhatsApp:
+                  o pedido chega ao setor certo e você acompanha tudo por aqui.
+                </p>
+                <ol class="first-use-steps small mb-3">
+                  <li>Descreva o que precisa e escolha o setor que vai atender.</li>
+                  <li>O setor assume o ticket e o status muda aqui, nesta lista.</li>
+                  <li>A conversa fica dentro do ticket, com prazo de atendimento.</li>
+                </ol>
+                @if (attendingDepartments()) {
+                  <p class="first-use-departments small mb-4">Atendem tickets: {{ attendingDepartments() }}.</p>
+                }
+                <a routerLink="/tickets/novo" class="btn btn-primary">
+                  <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro ticket
+                </a>
+              </div>
             </td>
           </tr>
         } @else {

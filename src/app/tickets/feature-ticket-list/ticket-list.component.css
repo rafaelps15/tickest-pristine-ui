@@ -82,3 +82,47 @@
 #ticketListTitle:focus {
   outline: none;
 }
+
+/*
+ * Estado vazio de primeiro uso: bloco centralizado na tabela, com a lista de passos alinhada à
+ * esquerda (centralizar texto de várias linhas atrapalha a leitura).
+ */
+.first-use-body {
+  max-width: 34rem;
+  margin: 0 auto;
+  text-align: center;
+  white-space: normal;
+}
+
+.first-use-icon {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--tk-primary);
+}
+
+.first-use-lead {
+  color: var(--tk-text-secondary);
+}
+
+.first-use-steps {
+  display: inline-block;
+  margin: 0;
+  padding-left: 1.25rem;
+  text-align: left;
+  color: var(--tk-text-primary);
+}
+
+.first-use-steps li + li {
+  margin-top: 0.35rem;
+}
+
+.first-use-departments {
+  color: var(--tk-text-muted);
+}
+
+/* No celular a 1ª célula reserva espaço à direita pro "⋮"; a linha do estado vazio não tem "⋮". */
+@media (max-width: 767.98px) {
+  .table-stack td.first-use {
+    padding: 2rem 1rem;
+  }
+}
