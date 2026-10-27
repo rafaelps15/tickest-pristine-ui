@@ -19,6 +19,8 @@ describe('DashboardGuideComponent', () => {
   it('explica o que cada card de estatística e o gráfico representam', async () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
+    (fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement).click();
+    await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Total de Tickets');
@@ -28,15 +30,15 @@ describe('DashboardGuideComponent', () => {
     expect(text).toContain('dia, semana ou mês');
   });
 
-  it('começa aberto quando não há preferência salva', async () => {
+  it('começa fechado quando não há preferência salva (tela mais visitada do sistema)', async () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('button[aria-expanded="true"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[aria-expanded="false"]')).toBeTruthy();
   });
 
-  it('fecha e abre ao clicar no cabeçalho, e persiste a preferência', async () => {
+  it('abre e fecha ao clicar no cabeçalho, e persiste a preferência', async () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
@@ -44,33 +46,33 @@ describe('DashboardGuideComponent', () => {
     toggleButton.click();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
-    expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
+    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
+    expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
 
     toggleButton.click();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
+    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
   });
 
-  it('restaura o painel fechado quando a preferência salva é "false"', async () => {
-    localStorage.setItem(STORAGE_KEY, 'false');
+  it('restaura o painel aberto quando a preferência salva é "true"', async () => {
+    localStorage.setItem(STORAGE_KEY, 'true');
 
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
   });
 
-  it('começa aberto mesmo que a leitura do localStorage falhe', async () => {
+  it('começa fechado mesmo que a leitura do localStorage falhe', async () => {
     spyOn(Storage.prototype, 'getItem').and.throwError('bloqueado (ex.: modo privado)');
 
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
   });
 
   it('não quebra ao alternar quando a escrita no localStorage falha', async () => {
@@ -82,6 +84,6 @@ describe('DashboardGuideComponent', () => {
     expect(() => toggleButton.click()).not.toThrow();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
   });
 });

@@ -1,17 +1,8 @@
-import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { createPersistedToggle, writePersistedToggle } from '../shared';
 
 /** Chave usada para lembrar se o Guia da Tela ficou aberto ou fechado, entre sessões. */
 const GUIDE_OPEN_STORAGE_KEY = 'tickest.dashboardGuide.open';
-
-/** Lê a preferência salva de aberto/fechado; `true` (aberto) se não houver nada salvo ou a leitura falhar. */
-function readStoredOpenPreference(): boolean {
-  try {
-    const saved = localStorage.getItem(GUIDE_OPEN_STORAGE_KEY);
-    return saved === null ? true : saved === 'true';
-  } catch {
-    return true;
-  }
-}
 
 /**
  * Painel "Guia da Tela" do Dashboard: explica o que cada card de estatística representa e como
@@ -24,18 +15,17 @@ function readStoredOpenPreference(): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardGuideComponent {
-  /** Se o painel está aberto — restaurado do localStorage, sem quebrar a tela se a leitura falhar. */
-  protected readonly open = signal(readStoredOpenPreference());
+  /**
+   * Se o painel está aberto — restaurado do localStorage, `false` (fechado) se não houver nada
+   * salvo: o Dashboard é a tela mais visitada do sistema, então o painel explicativo não deveria
+   * empurrar os cards reais pra baixo em toda visita repetida (achado no critique de 2026-10-24).
+   */
+  protected readonly open = createPersistedToggle(GUIDE_OPEN_STORAGE_KEY, false);
 
   /** Alterna o painel e salva a preferência, sem quebrar a tela se a escrita falhar. */
   protected toggle(): void {
     const next = !this.open();
     this.open.set(next);
-
-    try {
-      localStorage.setItem(GUIDE_OPEN_STORAGE_KEY, String(next));
-    } catch {
-      // Preferência não persiste nesta sessão (ex.: modo privado); a tela continua funcionando.
-    }
+    writePersistedToggle(GUIDE_OPEN_STORAGE_KEY, next);
   }
 }

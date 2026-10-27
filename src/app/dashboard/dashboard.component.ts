@@ -7,13 +7,6 @@ import { SessionService, loadChart } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 
-// Mesmos valores de --tk-surface/--tk-text-secondary (claro/escuro) do styles.css — repetidos
-// aqui como literais porque o Chart.js não lê CSS custom properties, só string/hex direto.
-const CHART_SURFACE_LIGHT = '#ffffff';
-const CHART_SURFACE_DARK = '#212529';
-const CHART_TEXT_LIGHT = '#697a8d';
-const CHART_TEXT_DARK = '#adb5bd';
-
 /**
  * Paleta categórica (5 slots, validada com scripts/validate_palette.js do skill dataviz — PASS em
  * todos os checks de banda de luminosidade, piso de croma e separação CVD) — pedido explícito do
@@ -47,8 +40,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly store = inject(TicketSummaryStore);
   protected readonly sessionService = inject(SessionService);
 
-  /** Exposto pro template linkar os cards de status pra fila de monitoramento, filtrada pelo mesmo status. */
-  protected readonly TicketStatus = TicketStatus;
+  /**
+   * Configuração dos 3 cards de status clicáveis (Aberto/Andamento/Resolvido) — mesma estrutura
+   * visual pros três, só variando dado/cor/ícone/rótulo; o card "Total de Tickets" fica fora
+   * (estrutura diferente: legenda de breakdown em vez de dica de permissão, sem link). Extraído
+   * de 3 blocos de HTML copiados no simplify de 2026-10-27.
+   */
+  protected readonly statusCards = computed(() => [
+    {
+      status: TicketStatus.Open,
+      label: 'Em Aberto',
+      colorClass: 'text-warning',
+      badgeClass: 'bg-label-warning',
+      icon: 'bx-error-circle',
+      value: this.store.openCount(),
+      waitingLabel: 'Aguardando atendimento',
+      loadingLabel: 'tickets em aberto',
+      ariaNoun: 'em aberto'
+    },
+    {
+      status: TicketStatus.InProgress,
+      label: 'Em Andamento',
+      colorClass: 'text-info',
+      badgeClass: 'bg-label-info',
+      icon: 'bx-time-five',
+      value: this.store.inProgressCount(),
+      waitingLabel: 'Em atendimento',
+      loadingLabel: 'tickets em andamento',
+      ariaNoun: 'em andamento'
+    },
+    {
+      status: TicketStatus.Resolved,
+      label: 'Resolvidos',
+      colorClass: 'text-success',
+      badgeClass: 'bg-label-success',
+      icon: 'bx-check-double',
+      value: this.store.resolvedCount(),
+      waitingLabel: 'Finalizados',
+      loadingLabel: 'tickets resolvidos',
+      ariaNoun: 'resolvidos'
+    }
+  ]);
 
   /**
    * Indica papel administrativo (hoje só Administrador — Atendente tem `tickets:manage`, mas
@@ -84,8 +116,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly groupByLabels = TICKET_VOLUME_GROUPING_LABELS;
 
   /** Rótulos formatados do período atual (um por ponto do volume), para o eixo do gráfico e a tabela acessível. */
-  protected readonly periodLabels = computed(() =>
-      this.store.volume().map(point => this.formatPeriodLabel(point.periodStart, this.store.groupBy())));
+  protected readonly periodLabels = computed(() => {
+      const groupBy = this.store.groupBy();
+      return this.store.volume().map(point => this.formatPeriodLabel(point.periodStart, groupBy));
+  });
 
   constructor() {
     // Redesenha o gráfico sempre que o volume ou o agrupamento mudarem, ou o canvas for montado (@defer).
@@ -166,9 +200,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (token !== this.renderToken) return;
 
     const ctx = canvasRef.nativeElement.getContext('2d');
-    const isDarkTheme = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-    const surfaceColor = isDarkTheme ? CHART_SURFACE_DARK : CHART_SURFACE_LIGHT;
-    const textColor = isDarkTheme ? CHART_TEXT_DARK : CHART_TEXT_LIGHT;
+    // Lê o valor computado de verdade de --tk-surface/--tk-text-secondary em vez de duplicar o
+    // hex como literal: o Chart.js não lê custom properties no config, mas o navegador já resolveu
+    // a cascata (claro/escuro) pra esse elemento — ler daqui acompanha o token automaticamente se
+    // ele mudar de valor no CSS, sem precisar lembrar de atualizar uma cópia aqui (achado no
+    // simplify de 2026-10-27).
+    const rootStyle = getComputedStyle(document.documentElement);
+    const surfaceColor = rootStyle.getPropertyValue('--tk-surface').trim();
+    const textColor = rootStyle.getPropertyValue('--tk-text-secondary').trim();
 
     this.chart?.destroy();
 

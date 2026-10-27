@@ -66,13 +66,34 @@
     font-weight: 500;
 }
 
+/*
+ * Alvo de toque mínimo (44x44px) pros controles compactos do cabeçalho do gráfico (agrupar por
+ * dia/semana/mês, "Ver como tabela") — `.btn-group-sm`/`.btn-sm` do Bootstrap rendem ~30px de
+ * altura, abaixo do recomendado pra dedo. Só aumenta em `pointer: coarse` (toque): no mouse/
+ * trackpad o tamanho compacto original continua correto. Achado no audit de 2026-10-26.
+ */
+@media (pointer: coarse) {
+  .card-header .btn-group-sm > .btn,
+  .card-header .btn-sm {
+    min-height: 44px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
 .chart-container {
     width: 100%;
     margin-top: 1rem;
 }
 
-h3 {
+/*
+ * Número do card de estatística — não é um h3 (não é título de seção; os títulos reais da tela
+ * são h5, ex. "Tickets Abertos por Período"). Achado no audit de 2026-10-26: usar h3 aqui invertia
+ * a hierarquia de heading (nível maior num dado, antes de títulos de seção com nível menor).
+ */
+.stat-value {
     font-weight: 600;
+    line-height: 1.2;
 }
 
 .badge {

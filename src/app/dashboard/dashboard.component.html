@@ -12,9 +12,9 @@
 
 <app-dashboard-guide class="guide-rail" />
 
-@if (store.state().error) {
+@if (store.summaryError()) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
-    <span>{{ store.state().error }}</span>
+    <span>{{ store.summaryError() }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
   </div>
 }
@@ -31,7 +31,7 @@
               @if (store.statusCountsLoading()) {
                 <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando total de tickets…</span></span>
               } @else {
-                <h3 class="mb-0 me-2">{{ store.total() }}</h3>
+                <div class="mb-0 me-2 fs-3 stat-value">{{ store.total() }}</div>
               }
             </div>
             @if (totalBreakdownLabel(store.closedCount(), store.canceledCount()); as breakdown) {
@@ -48,98 +48,38 @@
     </div>
   </div>
 
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div class="content-left">
-            <span class="text-muted">Em Aberto</span>
-            <div class="d-flex align-items-end mt-2">
-              @if (store.statusCountsLoading()) {
-                <span class="spinner-border spinner-border-sm text-warning" role="status"><span class="visually-hidden">Carregando tickets em aberto…</span></span>
+  @for (card of statusCards(); track card.status) {
+    <div class="col-12 col-sm-6 col-lg-3 mb-4">
+      <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between">
+            <div class="content-left">
+              <span class="text-muted">{{ card.label }}</span>
+              <div class="d-flex align-items-end mt-2">
+                @if (store.statusCountsLoading()) {
+                  <span class="spinner-border spinner-border-sm {{ card.colorClass }}" role="status"><span class="visually-hidden">Carregando {{ card.loadingLabel }}…</span></span>
+                } @else {
+                  <div class="mb-0 me-2 fs-3 stat-value {{ card.colorClass }}">{{ card.value }}</div>
+                }
+              </div>
+              @if (sessionService.hasPermission('tickets:manage')) {
+                <small class="text-muted">{{ card.waitingLabel }} — toque para ver na fila</small>
               } @else {
-                <h3 class="mb-0 me-2 text-warning">{{ store.openCount() }}</h3>
+                <small class="text-muted">{{ card.waitingLabel }}</small>
               }
             </div>
-            @if (sessionService.hasPermission('tickets:manage')) {
-              <small class="text-muted">Aguardando atendimento — toque para ver na fila</small>
-            } @else {
-              <small class="text-muted">Aguardando atendimento</small>
-            }
+            <span class="badge {{ card.badgeClass }} rounded p-2 flex-shrink-0">
+              <i class="bx {{ card.icon }} fs-3"></i>
+            </span>
           </div>
-          <span class="badge bg-label-warning rounded p-2 flex-shrink-0">
-            <i class="bx bx-error-circle fs-3"></i>
-          </span>
         </div>
+        @if (sessionService.hasPermission('tickets:manage')) {
+          <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: card.status }"
+             [attr.aria-label]="'Ver ' + card.value + ' tickets ' + card.ariaNoun + ' na fila de monitoramento'"></a>
+        }
       </div>
-      @if (sessionService.hasPermission('tickets:manage')) {
-        <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.Open }"
-           [attr.aria-label]="'Ver ' + store.openCount() + ' tickets em aberto na fila de monitoramento'"></a>
-      }
     </div>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div class="content-left">
-            <span class="text-muted">Em Andamento</span>
-            <div class="d-flex align-items-end mt-2">
-              @if (store.statusCountsLoading()) {
-                <span class="spinner-border spinner-border-sm text-info" role="status"><span class="visually-hidden">Carregando tickets em andamento…</span></span>
-              } @else {
-                <h3 class="mb-0 me-2 text-info">{{ store.inProgressCount() }}</h3>
-              }
-            </div>
-            @if (sessionService.hasPermission('tickets:manage')) {
-              <small class="text-muted">Em atendimento — toque para ver na fila</small>
-            } @else {
-              <small class="text-muted">Em atendimento</small>
-            }
-          </div>
-          <span class="badge bg-label-info rounded p-2 flex-shrink-0">
-            <i class="bx bx-time-five fs-3"></i>
-          </span>
-        </div>
-      </div>
-      @if (sessionService.hasPermission('tickets:manage')) {
-        <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.InProgress }"
-           [attr.aria-label]="'Ver ' + store.inProgressCount() + ' tickets em andamento na fila de monitoramento'"></a>
-      }
-    </div>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <div class="card card-stats h-100" [class.card-stats-clickable]="sessionService.hasPermission('tickets:manage')">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div class="content-left">
-            <span class="text-muted">Resolvidos</span>
-            <div class="d-flex align-items-end mt-2">
-              @if (store.statusCountsLoading()) {
-                <span class="spinner-border spinner-border-sm text-success" role="status"><span class="visually-hidden">Carregando tickets resolvidos…</span></span>
-              } @else {
-                <h3 class="mb-0 me-2 text-success">{{ store.resolvedCount() }}</h3>
-              }
-            </div>
-            @if (sessionService.hasPermission('tickets:manage')) {
-              <small class="text-muted">Finalizados — toque para ver na fila</small>
-            } @else {
-              <small class="text-muted">Finalizados</small>
-            }
-          </div>
-          <span class="badge bg-label-success rounded p-2 flex-shrink-0">
-            <i class="bx bx-check-double fs-3"></i>
-          </span>
-        </div>
-      </div>
-      @if (sessionService.hasPermission('tickets:manage')) {
-        <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: TicketStatus.Resolved }"
-           [attr.aria-label]="'Ver ' + store.resolvedCount() + ' tickets resolvidos na fila de monitoramento'"></a>
-      }
-    </div>
-  </div>
+  }
 </div>
 
 <!-- Gráfico e Ações Rápidas -->
@@ -178,7 +118,7 @@
             </div>
           } @else {
             @defer (on idle) {
-              <canvas #volumeChart></canvas>
+              <canvas #volumeChart aria-hidden="true"></canvas>
             } @placeholder {
               <div class="d-flex align-items-center justify-content-center h-100">
                 <span class="spinner-border text-primary" aria-hidden="true"></span>
@@ -227,26 +167,12 @@
       <div class="card-body">
         @if (isAdministrative()) {
           <p class="text-muted small">Quem ainda precisa de atenção, direto da fila.</p>
-
-          <div class="d-grid gap-3 mt-4">
-            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-               routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
-              <div class="d-flex align-items-center">
-                <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
-                  <i class="bx bx-user-x fs-4"></i>
-                </span>
-                <div>
-                  <div class="fw-bold">Tickets sem responsável</div>
-                  <div class="small opacity-75">Fila sem atendente definido</div>
-                </div>
-              </div>
-              <i class="bx bx-chevron-right"></i>
-            </a>
-          </div>
         } @else {
           <p class="text-muted small">Continue direto do que você acabou de ver nos números acima.</p>
+        }
 
-          <div class="d-grid gap-3 mt-4">
+        <div class="d-grid gap-3 mt-4">
+          @if (!isAdministrative()) {
             <a class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between border-2"
                routerLink="/tickets/novo">
               <div class="d-flex align-items-center">
@@ -274,24 +200,24 @@
               </div>
               <i class="bx bx-chevron-right"></i>
             </a>
+          }
 
-            @if (sessionService.hasPermission('tickets:manage')) {
-              <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
-                 routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
-                <div class="d-flex align-items-center">
-                  <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
-                    <i class="bx bx-user-x fs-4"></i>
-                  </span>
-                  <div>
-                    <div class="fw-bold">Tickets sem responsável</div>
-                    <div class="small opacity-75">Fila sem atendente definido</div>
-                  </div>
+          @if (isAdministrative() || sessionService.hasPermission('tickets:manage')) {
+            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between border-2"
+               routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-user-x fs-4"></i>
+                </span>
+                <div>
+                  <div class="fw-bold">Tickets sem responsável</div>
+                  <div class="small opacity-75">Fila sem atendente definido</div>
                 </div>
-                <i class="bx bx-chevron-right"></i>
-              </a>
-            }
-          </div>
-        }
+              </div>
+              <i class="bx bx-chevron-right"></i>
+            </a>
+          }
+        </div>
       </div>
     </div>
 

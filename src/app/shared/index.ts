@@ -15,3 +15,4 @@ export * from './utils/password.validators';
 export * from './utils/chart-loader.util';
 export * from './utils/role-badges.util';
 export * from './utils/role-colors.util';
+export * from './utils/persisted-toggle.util';

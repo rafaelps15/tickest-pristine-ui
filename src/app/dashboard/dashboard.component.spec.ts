@@ -9,7 +9,7 @@ describe('DashboardComponent', () => {
   /** Cria um store de resumo falso com signals reais, para o template reagir como no store verdadeiro. */
   function createTicketsStoreFake() {
     return {
-      state: signal({ loading: false, error: null as string | null }),
+      summaryError: signal<string | null>(null),
       statusCountsLoading: signal(false),
       volumeLoading: signal(false),
       total: signal(10),
@@ -77,7 +77,7 @@ describe('DashboardComponent', () => {
   });
 
   it('mostra o alerta de erro quando o resumo da empresa falhar', async () => {
-    ticketsStoreFake.state.set({ loading: false, error: 'Erro ao carregar o resumo dos tickets' });
+    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos tickets');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
@@ -85,7 +85,7 @@ describe('DashboardComponent', () => {
   });
 
   it('recarrega o resumo ao clicar em "Tentar novamente" no alerta de erro', async () => {
-    ticketsStoreFake.state.set({ loading: false, error: 'Erro ao carregar o resumo dos tickets' });
+    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos tickets');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
