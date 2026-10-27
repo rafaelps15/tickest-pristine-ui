@@ -265,14 +265,17 @@
               <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
               <td data-label="SLA"><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
               <td class="text-nowrap small" data-label="Prazo" [class.text-danger]="isOverdue(ticket)">
-                @if (isOverdue(ticket)) {
-                  <i class="bx bx-error-circle me-1" aria-hidden="true"></i>
-                }
-                {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                <!-- Ícone e data num item só: no card do celular a célula vira flex e os separaria. -->
+                <span>
+                  @if (isOverdue(ticket)) {
+                    <i class="bx bx-error-circle me-1" aria-hidden="true"></i>
+                  }
+                  {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                </span>
               </td>
               <td class="text-end table-stack-actions" (click)="$event.stopPropagation()">
                 <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
                           [attr.aria-label]="'Ações para o ticket ' + ticket.title">
                     <i class="bx bx-dots-vertical-rounded"></i>

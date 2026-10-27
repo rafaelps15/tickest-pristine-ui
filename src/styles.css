@@ -240,10 +240,13 @@ body {
   color: var(--tk-text-secondary);
 }
 
+/* Hover/foco/aberto: realce leve em vez do preenchimento cinza-escuro do .btn-outline-secondary ativo. */
 .btn-row-actions:hover,
-.btn-row-actions:focus,
-.btn-row-actions[aria-expanded="true"] {
+.btn-row-actions:focus-visible,
+.btn-row-actions.show,
+.btn-row-actions:active {
   border-color: var(--tk-border);
+  background-color: rgba(var(--tk-primary-rgb), 0.08);
   color: var(--tk-text-primary);
 }
 

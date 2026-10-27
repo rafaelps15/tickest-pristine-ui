@@ -813,6 +813,22 @@ describe('TicketDetailComponent', () => {
       expect(findButton(fixture, 'Marcar como resolvido')).toBeFalsy();
     });
 
+    it('mostra o spinner só no botão do status clicado, e desabilita os demais', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Iniciar atendimento')!.click();
+      detailStoreFake.updatingStatus.set(true);
+      await fixture.whenStable();
+
+      const startButton = findButton(fixture, 'Iniciar atendimento')!;
+      const cancelButton = findButton(fixture, 'Cancelar chamado')!;
+      expect(startButton.querySelector('.spinner-border')).not.toBeNull();
+      expect(cancelButton.querySelector('.spinner-border')).toBeNull();
+      expect(cancelButton.disabled).toBeTrue();
+    });
+
     it('mostra só "Fechar chamado" pra um chamado Resolvido', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
       const fixture = TestBed.createComponent(TicketDetailComponent);

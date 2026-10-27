@@ -448,7 +448,15 @@ export class TicketDetailComponent implements OnInit {
         this.submitStatusChange(newStatus, currentDescription);
     }
 
+    /**
+     * Status pedido na última troca — só o botão desse status mostra o spinner enquanto
+     * `updatingStatus` está ativo (os outros ficam só desabilitados), pra ficar claro qual ação está em andamento.
+     */
+    protected readonly pendingStatus = signal<TicketStatus | null>(null);
+
+    /** Envia a troca de status e, em caso de sucesso, avisa por toast e recarrega o histórico. */
     private submitStatusChange(newStatus: TicketStatus, currentDescription: string): void {
+        this.pendingStatus.set(newStatus);
         this.detailStore.updateStatus(this.ticketId, newStatus, currentDescription, () => {
             this.toastService.show(this.statusChangeToastMessage(newStatus));
             this.historyStore.reload();

@@ -42,7 +42,7 @@
                     [class.btn-outline-danger]="nextStatus === TicketStatus.Canceled"
                     [class.btn-outline-primary]="nextStatus !== TicketStatus.Canceled"
                     [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(nextStatus, t.description)">
-              @if (detailStore.updatingStatus()) {
+              @if (detailStore.updatingStatus() && pendingStatus() === nextStatus) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
               {{ statusActionLabels[nextStatus] }}
@@ -58,7 +58,7 @@
           }
           @if (canCancelAsOwner(t)) {
             <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(TicketStatus.Canceled, t.description)">
-              @if (detailStore.updatingStatus()) {
+              @if (detailStore.updatingStatus() && pendingStatus() === TicketStatus.Canceled) {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               }
               Cancelar chamado
