@@ -1,32 +1,55 @@
 /*
- * Aviso do Resumo como filtro: parece texto (é o mesmo aviso de antes), mas tem alvo de 44px, realce
- * no hover/foco e fica tingido quando pressionado — o mesmo vocabulário dos cards de status do Monitor.
+ * Avisos do Resumo como chips de filtro: pílula com ícone, contagem e o problema, alvo de 44px.
+ * "Sem setor" em âmbar (o único estado que tira o departamento da abertura de chamados); "sem
+ * responsável" neutro. Pressionado = tingido e com borda da cor do estado, o mesmo vocabulário dos
+ * cards de status do Monitorar.
  */
-.insights-filter {
-  display: block;
-  width: calc(100% + 1rem);
-  min-height: 2.75rem;
-  margin: -0.5rem;
-  padding: 0.5rem;
-  border: 0;
-  border-radius: var(--tk-radius-sm);
-  background: transparent;
+.insights-filters-label {
   color: var(--tk-text-secondary);
-  text-align: start;
-  transition: background-color var(--tk-transition);
 }
 
-.insights-filter:hover,
-.insights-filter:focus-visible {
+.insights-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--tk-border);
+  border-radius: 999px;
+  background: var(--tk-surface);
+  color: var(--tk-text-primary);
+  font-size: 0.875rem;
+  transition: background-color var(--tk-transition), border-color var(--tk-transition);
+}
+
+.insights-chip-count {
+  font-weight: 700;
+}
+
+.insights-chip:hover,
+.insights-chip:focus-visible {
   background-color: rgba(var(--tk-primary-rgb), 0.06);
 }
 
-.insights-filter:focus-visible {
+.insights-chip:focus-visible {
   outline: 2px solid var(--tk-primary);
   outline-offset: 2px;
 }
 
-.insights-filter.active {
+.insights-chip.active {
   background-color: rgba(var(--tk-primary-rgb), 0.1);
-  color: var(--tk-text-primary);
+  border-color: var(--tk-primary);
+}
+
+.insights-chip-warning .bx {
+  color: var(--tk-warning-text);
+}
+
+.insights-chip-warning.active {
+  background-color: #fff2e2; /* o mesmo fundo âmbar do .bg-label-warning */
+  border-color: var(--tk-warning-text);
+}
+
+:host-context([data-bs-theme="dark"]) .insights-chip-warning.active {
+  background-color: rgba(255, 171, 0, 0.16); /* o âmbar do .bg-label-warning escuro */
 }

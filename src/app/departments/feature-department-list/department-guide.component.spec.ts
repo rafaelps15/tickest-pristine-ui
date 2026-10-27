@@ -21,8 +21,11 @@ describe('DepartmentGuideComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('também filtram a lista');
-    expect(text).toContain('Busca');
+    expect(text).toContain('Como os avisos filtram');
+    expect(text).toContain('o filtro sai sozinho');
+    expect(text).toContain('O que a busca encontra');
+    // Os títulos do Guia não repetem os títulos dos cards da tela (DESIGN.md).
+    expect(text).not.toMatch(/\bResumo\b/);
     expect(text).toContain('com chamados em andamento não pode ser excluído');
     expect(text).toContain('Responsável');
     // A relação departamento × setor já está no subtítulo e no card: o Guia não repete.

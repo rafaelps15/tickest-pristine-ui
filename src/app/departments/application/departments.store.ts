@@ -169,15 +169,15 @@ export const DepartmentsStore = signalStore(
     },
 
     /** Cria um setor dentro de um departamento e recarrega a listagem em caso de sucesso (POST /sectors). */
-    createSector(data: CreateSectorData, onSuccess?: () => void): void {
+    createSector(data: CreateSectorData, onSuccess?: (sectorId: string) => void): void {
       patchState(store, { mutating: true });
       store._sectorDataService.create(data).pipe(
         finalize(() => patchState(store, { mutating: false }))
       ).subscribe({
-        next: () => {
+        next: (sectorId) => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
-          onSuccess?.();
+          onSuccess?.(sectorId);
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar setor') });

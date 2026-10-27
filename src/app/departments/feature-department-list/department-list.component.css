@@ -14,9 +14,10 @@
   column-gap: 2rem;
 }
 
+/* Títulos pelo topo: com descrições de tamanhos diferentes, `center` desalinhava os nomes da mesma linha. */
 .sector-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
   min-height: 3.25rem;
@@ -33,7 +34,67 @@
   font-size: 0.75rem;
 }
 
-/* "Adicionar setor" é a ação mais repetida da tela: alvo de toque de 44px, como o "⋮". */
-.btn-add-sector {
+/*
+ * "Adicionar setor" como a próxima célula da grade: contorno tracejado discreto (é um lugar a
+ * preencher, não um card), alvo de 44px, e ganha o índigo só no hover/foco — antes era um botão
+ * contornado em cada card, a coisa mais pesada da tela, competindo com os próprios setores.
+ */
+.sector-add-cell {
+  display: flex;
+  align-items: center;
+  padding: 0.375rem 0;
+}
+
+.sector-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
   min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  /* O --tk-border some no branco: o tracejado precisa se ver como "lugar a preencher". */
+  border: 1px dashed rgba(var(--tk-primary-rgb), 0.35);
+  border-radius: var(--tk-radius-sm);
+  background: transparent;
+  color: var(--tk-text-secondary);
+  font-weight: 500;
+  text-align: start;
+  transition: color var(--tk-transition), border-color var(--tk-transition), background-color var(--tk-transition);
+}
+
+.sector-add:hover,
+.sector-add:focus-visible {
+  color: var(--tk-primary-darker);
+  border-color: var(--tk-primary);
+  background-color: rgba(var(--tk-primary-rgb), 0.04);
+}
+
+.sector-add:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+:host-context([data-bs-theme="dark"]) .sector-add:hover,
+:host-context([data-bs-theme="dark"]) .sector-add:focus-visible {
+  color: #b3b5ff; /* o índigo claro do .btn-outline-primary escuro (styles.css) */
+}
+
+/*
+ * Departamento/setor recém-criado: um realce índigo que se desfaz em 4s (o mesmo da linha nova de
+ * Usuários) — quem salvou acha o que criou depois que a lista reordena.
+ */
+.item-new {
+  animation: tk-new-item 4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tk-new-item {
+  from { background-color: rgba(var(--tk-primary-rgb), 0.14); }
+  to { background-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item-new {
+    animation: none;
+    background-color: rgba(var(--tk-primary-rgb), 0.08);
+  }
 }

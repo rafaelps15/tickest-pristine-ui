@@ -12,22 +12,29 @@
     </div>
   </div>
 
-  <!-- Cada aviso é um filtro: mostra só os departamentos que pedem ação (clicar de novo volta a todos). -->
-  @if (departmentsWithoutSectors() > 0) {
-    <div class="insights-section">
-      <button type="button" class="insights-filter small" [class.active]="activeIssue() === 'withoutSectors'"
-              [attr.aria-pressed]="activeIssue() === 'withoutSectors'" (click)="toggle('withoutSectors')">
-        <i class="bx bx-error-circle text-warning me-1" aria-hidden="true"></i>{{ departmentsWithoutSectors() }} {{ departmentsWithoutSectors() === 1 ? 'departamento sem nenhum setor' : 'departamentos sem nenhum setor' }} — não {{ departmentsWithoutSectors() === 1 ? 'aparece' : 'aparecem' }} na abertura de chamados.
-      </button>
-    </div>
-  }
-
-  @if (departmentsWithoutResponsible() > 0) {
+  <!-- Cada aviso é um filtro: um chip por problema, com a contagem; clicar de novo volta a todos. -->
+  @if (departmentsWithoutSectors() > 0 || departmentsWithoutResponsible() > 0) {
     <div class="insights-section mb-0">
-      <button type="button" class="insights-filter small" [class.active]="activeIssue() === 'withoutResponsible'"
-              [attr.aria-pressed]="activeIssue() === 'withoutResponsible'" (click)="toggle('withoutResponsible')">
-        <i class="bx bx-user-x me-1" aria-hidden="true"></i>{{ departmentsWithoutResponsible() }} {{ departmentsWithoutResponsible() === 1 ? 'departamento sem responsável definido' : 'departamentos sem responsável definido' }}.
-      </button>
+      <p class="insights-filters-label small mb-2">Pedem atenção:</p>
+      <div class="d-flex flex-wrap gap-2">
+        @if (departmentsWithoutSectors() > 0) {
+          <button type="button" class="insights-chip insights-chip-warning" [class.active]="activeIssue() === 'withoutSectors'"
+                  [attr.aria-pressed]="activeIssue() === 'withoutSectors'" (click)="toggle('withoutSectors')">
+            <i class="bx bx-error-circle" aria-hidden="true"></i>
+            <span class="insights-chip-count">{{ departmentsWithoutSectors() }}</span>
+            sem nenhum setor
+            <span class="visually-hidden">{{ departmentsWithoutSectors() === 1 ? '— não aparece na abertura de chamados' : '— não aparecem na abertura de chamados' }}</span>
+          </button>
+        }
+        @if (departmentsWithoutResponsible() > 0) {
+          <button type="button" class="insights-chip" [class.active]="activeIssue() === 'withoutResponsible'"
+                  [attr.aria-pressed]="activeIssue() === 'withoutResponsible'" (click)="toggle('withoutResponsible')">
+            <i class="bx bx-user-x" aria-hidden="true"></i>
+            <span class="insights-chip-count">{{ departmentsWithoutResponsible() }}</span>
+            sem responsável
+          </button>
+        }
+      </div>
     </div>
   }
 </app-summary-card>

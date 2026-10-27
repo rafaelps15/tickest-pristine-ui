@@ -1,5 +1,5 @@
 <app-page-header title="Departamentos e setores"
-                 subtitle="Os chamados são abertos para um setor dentro de um departamento. Cadastre cada setor no departamento a que ele pertence."
+                 subtitle="Todo chamado vai para um setor. Organize os setores por departamento — sem setor, o departamento não aparece na abertura de chamados."
                  [crumbs]="[{ label: 'Administração' }]">
   @if (canManageDepartments()) {
     <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
@@ -26,7 +26,7 @@
 @if (store.departments().length > 0) {
   <app-filter-bar label="Busca" clearLabel="Limpar filtros" [clearable]="hasFilters()" (clear)="clearFilters()">
     <div class="col-12 col-md-6 col-lg-4">
-      <label class="form-label small" for="departmentSearch">Buscar</label>
+      <label class="visually-hidden" for="departmentSearch">Buscar departamento ou setor</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
         <input id="departmentSearch" type="search" class="form-control" placeholder="Departamento ou setor"
@@ -56,7 +56,7 @@
     <div class="card-body">
       <app-empty-state icon="bx-search-alt"
                        [title]="searchInput().trim() ? 'Nenhum departamento ou setor encontrado para &quot;' + searchInput() + '&quot;.' : 'Nenhum departamento com esse problema.'"
-                       hint="Confira a grafia ou busque pelo nome do departamento ou de um setor.">
+                       [hint]="searchInput().trim() ? 'Confira a grafia ou busque pelo nome do departamento ou de um setor.' : 'Limpe o filtro pra voltar a ver todos.'">
         <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
           <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
         </button>
@@ -65,11 +65,12 @@
   </div>
 } @else {
   <!-- Quantos sobraram depois do filtro: o aviso pressionado no Resumo sozinho não diz que a lista encolheu. -->
-  @if (hasFilters()) {
-    <p class="small text-muted mb-2" aria-live="polite">
+  <!-- A região viva existe sempre (só o texto muda): criada junto com o texto, o leitor de tela não anuncia. -->
+  <p class="small text-muted mb-2" [class.d-none]="!hasFilters()" aria-live="polite">
+    @if (hasFilters()) {
       Mostrando {{ filteredDepartments().length }} de {{ store.departments().length }} departamentos.
-    </p>
-  }
+    }
+  </p>
   <!--
     Uma coluna: cada departamento ocupa a largura toda e os setores dele se distribuem numa grade
     interna. A grade de dois cards por linha deixava buracos sob os cards curtos.
@@ -77,6 +78,7 @@
   <div class="d-flex flex-column gap-3">
     @for (department of filteredDepartments(); track department.id) {
       <section class="card shadow-sm border-0" [attr.aria-labelledby]="'department-' + department.id"
+               [attr.data-item-id]="department.id" [class.item-new]="highlightedId() === department.id"
                [attr.aria-busy]="isDeletingIn(department) ? 'true' : null">
         <div class="card-header d-flex align-items-start justify-content-between gap-3">
           <div class="min-w-0">
@@ -89,7 +91,15 @@
               @if (department.responsibleUserName) {
                 <span class="text-muted fw-normal"><i class="bx bx-user me-1" aria-hidden="true"></i>Responsável: {{ department.responsibleUserName }}</span>
               } @else {
-                <span class="text-muted fw-normal"><i class="bx bx-user-x me-1" aria-hidden="true"></i>Sem responsável</span>
+                @if (canManageDepartments()) {
+                  <!-- O problema "sem responsável" do Resumo com a correção no próprio card, como o "Adicionar o primeiro setor". -->
+                  <button type="button" class="btn btn-link btn-sm p-0 fw-normal align-baseline" (click)="openEditModal(department, true)"
+                          [attr.aria-label]="'Definir responsável de ' + department.name">
+                    <i class="bx bx-user-plus me-1" aria-hidden="true"></i>Definir responsável
+                  </button>
+                } @else {
+                  <span class="text-muted fw-normal"><i class="bx bx-user-x me-1" aria-hidden="true"></i>Sem responsável</span>
+                }
               }
             </p>
             <p class="text-muted small fw-normal mb-0">{{ department.description }}</p>
@@ -120,10 +130,15 @@
         }
 
         <div class="card-body py-2">
-          @if (department.sectors.length > 0) {
-            <ul class="sector-grid list-unstyled mb-0">
+          @if (department.sectors.length === 0) {
+            <p class="small mb-2 pt-2 sector-empty">
+              <i class="bx bx-error-circle me-1" aria-hidden="true"></i>Nenhum setor ainda. Sem setores, este departamento não aparece na abertura de chamados.
+            </p>
+          }
+          @if (department.sectors.length > 0 || canManageSectors()) {
+            <ul class="sector-grid list-unstyled mb-0" [attr.aria-label]="'Setores de ' + department.name">
               @for (sector of department.sectors; track sector.id) {
-                <li class="sector-item">
+                <li class="sector-item" [attr.data-item-id]="sector.id" [class.item-new]="highlightedId() === sector.id">
                   <div class="min-w-0">
                     <div class="fw-semibold"><i class="bx bx-git-branch text-muted me-1" aria-hidden="true"></i>{{ sector.name }}</div>
                     @if (sector.description) {
@@ -147,21 +162,18 @@
                   }
                 </li>
               }
+              <!-- Adicionar fica na própria grade, como a próxima célula: a ação mais repetida da tela sem um botão por card competindo com os setores. -->
+              @if (canManageSectors()) {
+                <li class="sector-add-cell">
+                  <button type="button" class="sector-add" (click)="openCreateSectorModal(department)"
+                          [attr.aria-label]="(department.sectors.length === 0 ? 'Adicionar o primeiro setor' : 'Adicionar setor') + ' em ' + department.name">
+                    <i class="bx bx-plus" aria-hidden="true"></i>{{ department.sectors.length === 0 ? 'Adicionar o primeiro setor' : 'Adicionar setor' }}
+                  </button>
+                </li>
+              }
             </ul>
-          } @else {
-            <p class="small mb-0 py-2 sector-empty">
-              <i class="bx bx-error-circle me-1" aria-hidden="true"></i>Nenhum setor ainda. Sem setores, este departamento não aparece na abertura de chamados.
-            </p>
           }
         </div>
-
-        @if (canManageSectors()) {
-          <div class="card-footer bg-transparent border-0 pt-0">
-            <button type="button" class="btn btn-sm btn-outline-primary btn-add-sector" (click)="openCreateSectorModal(department)">
-              <i class="bx bx-plus me-1" aria-hidden="true"></i> Adicionar setor
-            </button>
-          </div>
-        }
       </section>
     }
   </div>
@@ -231,6 +243,7 @@
         <div class="input-group mb-2">
           <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
           <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
+                 [attr.data-dialog-focus]="focusResponsible() ? '' : null"
                  [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
         </div>
 

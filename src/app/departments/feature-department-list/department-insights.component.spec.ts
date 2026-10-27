@@ -49,7 +49,9 @@ describe('DepartmentInsightsComponent', () => {
     fixture.componentRef.setInput('departments', [makeDepartment({ sectors: [] })]);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('1 departamento sem nenhum setor');
+    const chip = fixture.nativeElement.querySelector('.insights-chip-warning') as HTMLButtonElement;
+    expect(chip.textContent?.replace(/\s+/g, ' ')).toContain('1 sem nenhum setor');
+    expect(chip.textContent).toContain('não aparece na abertura de chamados');
   });
 
   it('avisa quantos departamentos estão sem responsável definido', async () => {
@@ -57,7 +59,7 @@ describe('DepartmentInsightsComponent', () => {
     fixture.componentRef.setInput('departments', [makeDepartment({ responsibleUserName: null })]);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('1 departamento sem responsável definido');
+    expect(fixture.nativeElement.textContent.replace(/\s+/g, ' ')).toContain('1 sem responsável');
   });
 
   it('o aviso é um filtro: emite o problema ao clicar e desliga ao clicar de novo', async () => {
@@ -67,7 +69,7 @@ describe('DepartmentInsightsComponent', () => {
     fixture.componentInstance.issueChange.subscribe(issue => emitted.push(issue));
     await fixture.whenStable();
 
-    const button = fixture.nativeElement.querySelector('.insights-filter') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('.insights-chip') as HTMLButtonElement;
     expect(button.getAttribute('aria-pressed')).toBe('false');
     button.click();
 

@@ -116,7 +116,7 @@ describe('DepartmentsStore', () => {
 
     expect(sectorDataService.create).toHaveBeenCalledWith({ name: 'Sistemas', departmentId: 'dep-1' });
     expect(departmentDataService.getAll).toHaveBeenCalled();
-    expect(onSuccess).toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledWith('sec-2');
   });
 
   it('expõe a mensagem da API quando o nome do setor já existe no departamento', () => {

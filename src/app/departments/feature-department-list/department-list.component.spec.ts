@@ -109,6 +109,7 @@ describe('DepartmentListComponent', () => {
   });
 
   it('destaca em âmbar o departamento sem setor e diz quando não há responsável', async () => {
+    permissions = new Set(['sectors:manage']);
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
@@ -116,6 +117,68 @@ describe('DepartmentListComponent', () => {
     expect(itCard.querySelector('.badge')!.classList).toContain('bg-label-secondary');
     expect(commercialCard.querySelector('.badge')!.classList).toContain('bg-label-warning');
     expect(commercialCard.textContent).toContain('Sem responsável');
+  });
+
+  it('para quem gerencia departamentos, "Definir responsável" no card abre a edição com o foco na busca de responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const card = fixture.nativeElement.querySelector('section.card') as HTMLElement;
+    const button = Array.from(card.querySelectorAll('button')).find(b => b.textContent?.includes('Definir responsável'))!;
+    expect(button.getAttribute('aria-label')).toBe('Definir responsável de TI');
+    button.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.editingDepartment()).toEqual(informationTechnology);
+    const search = document.querySelector('#departmentResponsibleSearch') as HTMLElement;
+    expect(search.hasAttribute('data-dialog-focus')).toBeTrue();
+  });
+
+  it('o "Editar departamento" do "⋮" não leva o foco pra busca de responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect((document.querySelector('#departmentResponsibleSearch') as HTMLElement).hasAttribute('data-dialog-focus')).toBeFalse();
+  });
+
+  it('a região que anuncia "Mostrando X de Y" já existe antes do filtro, pra o leitor de tela anunciar a mudança', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const live = fixture.nativeElement.querySelector('[aria-live="polite"]') as HTMLElement;
+    expect(live).not.toBeNull();
+    expect(live.textContent?.trim()).toBe('');
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[aria-live="polite"]')).toBe(live);
+    expect(live.textContent).toContain('Mostrando 1 de 2 departamentos.');
+  });
+
+  it('corrigido o último departamento do problema filtrado, o filtro sai sozinho e um toast avisa', async () => {
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const fixed = { ...commercial, sectors: [{ id: 'sec-9', name: 'Vendas', description: null }] };
+    storeFake.departments.set([informationTechnology, fixed]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.issueFilter()).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('section.card').length).toBe(2);
+    expect(toast.show).toHaveBeenCalledWith('Todos os departamentos têm setor agora.');
   });
 
   it('filtra pelo problema escolhido no Resumo e diz quantos sobraram; "Limpar filtros" volta a todos', async () => {
@@ -566,5 +629,58 @@ describe('DepartmentListComponent', () => {
     expect(fixture.nativeElement.querySelector('.card .btn-outline-danger')).toBeNull();
     expect(fixture.nativeElement.querySelector('[aria-label="Ações para o departamento TI"]')).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Excluir departamento');
+  });
+
+  it('"Adicionar setor" é a última célula da grade de cada departamento (e "o primeiro setor" quando não há nenhum)', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('section.card') as NodeListOf<HTMLElement>);
+    for (const card of cards) {
+      const grid = card.querySelector('.sector-grid') as HTMLElement;
+      expect(grid.lastElementChild?.classList).toContain('sector-add-cell');
+    }
+    const empty = cards.find(card => card.textContent?.includes('Nenhum setor ainda'))!;
+    expect(empty.querySelector('.sector-add')?.textContent).toContain('Adicionar o primeiro setor');
+    // O nome acessível contém o texto visível (WCAG 2.5.3), pro comando de voz achar o botão.
+    expect(empty.querySelector('.sector-add')?.getAttribute('aria-label')).toBe('Adicionar o primeiro setor em Comercial');
+    expect(cards[0].querySelector('.sector-grid')?.getAttribute('aria-label')).toBe('Setores de TI');
+    expect(fixture.nativeElement.querySelector('.btn-add-sector')).toBeNull();
+  });
+
+  it('destaca o departamento recém-criado e solta o destaque depois de alguns segundos', async () => {
+    jasmine.clock().install();
+    try {
+      storeFake.create.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('dep-1'));
+      const fixture = TestBed.createComponent(DepartmentListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+
+      component.openCreateModal();
+      component.form.setValue({ name: 'TI', description: 'Tecnologia' });
+      component.onSubmit();
+      fixture.detectChanges();
+
+      expect(component.highlightedId()).toBe('dep-1');
+      expect(fixture.nativeElement.querySelector('[data-item-id="dep-1"]')?.classList).toContain('item-new');
+
+      jasmine.clock().tick(4001);
+      expect(component.highlightedId()).toBeNull();
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('destaca o setor recém-criado com o id que o store devolve', async () => {
+    storeFake.createSector.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('sec-novo'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateSectorModal(commercial);
+    component.sectorForm.setValue({ name: 'Vendas', description: '' });
+    component.onSubmitSector();
+
+    expect(component.highlightedId()).toBe('sec-novo');
   });
 });

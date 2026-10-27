@@ -185,6 +185,8 @@ nova inventada para aquela tela.
 
 **The No Factory Blue Rule.** Componente do Bootstrap que usa a cor primária (ex.: `btn-outline-primary`, `text-primary`, `border-primary`) é sobrescrito pro índigo da marca em `styles.css` — nunca aparece o azul de fábrica `#0d6efd`. Texto sobre índigo preenchido usa `--tk-primary-dark` ou mais escuro (o `--tk-primary` não passa AA com texto branco pequeno).
 
+**The Host-Context Dark Rule.** Em CSS de componente (encapsulado), o tema escuro se escreve `:host-context([data-bs-theme="dark"]) .x` — nunca `[data-bs-theme="dark"] .x`, que o Angular prende ao componente e nunca casa com o `<html>` (a barra superior ficava clara no escuro por isso).
+
 *Exceção deliberada:* o gráfico "Chamados criados" do Dashboard usa uma paleta categórica de 5 cores
 (azul, laranja, verde, âmbar, rosa — validada pra daltonismo) só como ritmo visual entre barras, a
 pedido do usuário em 2026-10-24. A cor ali não carrega significado; a exceção vale só pra esse
@@ -504,6 +506,19 @@ quando já há responsável. Nunca atribuir no primeiro clique.
 ### Detalhe do chamado
 De `lg` pra cima, duas colunas: à esquerda o trabalho (resumo com as ações, conversa e anexos); à
 direita, num `<aside>`, o apoio (SLA e histórico). Abaixo disso, coluna única nessa mesma ordem.
+
+### Departamentos e setores
+- **Lista em uma coluna:** cada departamento é um card de largura total (`<section>` rotulada pelo
+  nome) e os setores dele se distribuem numa grade interna (`.sector-grid`, 1 a 3 colunas).
+- **Adicionar setor como a próxima célula da grade** (`.sector-add`): contorno tracejado em índigo
+  a 35%, alvo de 44px, índigo só no hover/foco — um lugar a preencher, não um botão por card
+  competindo com os setores. Sem nenhum setor, vira "Adicionar o primeiro setor" sob o aviso âmbar.
+- **Avisos do Resumo como chips de filtro** (`.insights-chip`): pílula com ícone e contagem ("1
+  sem nenhum setor", "2 sem responsável"), `aria-pressed`; "sem setor" em âmbar (é o que tira o
+  departamento da abertura de chamados), o resto neutro.
+- **Item recém-criado** (`.item-new`): realce índigo que se desfaz em 4s e rolagem até ele — a
+  lista reordena por nome e o item novo podia nascer fora da tela. Com `prefers-reduced-motion`,
+  só o fundo, sem animação. Mesmo tempo da linha nova de Usuários.
 
 ### Cor da função
 A cor do badge (prévia só neste navegador) se escolhe no diálogo "Cor do badge…" do "⋮" da linha,

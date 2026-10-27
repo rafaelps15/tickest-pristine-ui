@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, computed, signal, viewChild, afterNextRender, Injector } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, computed, signal, viewChild, afterNextRender, Injector, effect, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
@@ -18,6 +18,9 @@ import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
  * Tela administrativa de departamentos e setores: cada departamento mostra os seus setores, e o setor é
  * sempre cadastrado a partir do departamento a que pertence.
  */
+/** Por quanto tempo o departamento/setor recém-criado fica destacado (mesmo tempo da linha nova de Usuários). */
+const NEW_ITEM_HIGHLIGHT_MS = 4000;
+
 @Component({
     selector: 'app-department-list',
     imports: [ReactiveFormsModule, PageHeaderComponent, DepartmentGuideComponent, DepartmentInsightsComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, RowActionsComponent],
@@ -74,6 +77,9 @@ export class DepartmentListComponent implements OnInit {
     /** Enquanto busca o id do responsável atual (GET /departments/{id}) ao abrir o modal de edição. */
     loadingCurrentResponsible = signal(false);
 
+    /** Departamento ou setor recém-criado, destacado por {@link NEW_ITEM_HIGHLIGHT_MS} pra quem acabou de salvar achar o que criou. */
+    readonly highlightedId = signal<string | null>(null);
+
     /** Falha ao buscar o responsável atual no modal de edição (mostrada ali, com "Tentar de novo"), ou `null`. */
     currentResponsibleError = signal<string | null>(null);
 
@@ -85,6 +91,9 @@ export class DepartmentListComponent implements OnInit {
 
     /** Problema escolhido num aviso do Resumo ("sem setor"/"sem responsável"), ou `null` pra todos. */
     readonly issueFilter = signal<DepartmentIssue | null>(null);
+
+    /** Se o modal de departamento abre com o foco na busca de responsável ("Definir responsável" do card). */
+    readonly focusResponsible = signal(false);
 
     /** Se há algum filtro ligado (busca ou problema do Resumo) — o "Limpar" da barra aparece. */
     readonly hasFilters = computed(() => this.searchInput().trim() !== '' || this.issueFilter() !== null);
@@ -143,6 +152,22 @@ export class DepartmentListComponent implements OnInit {
             distinctUntilChanged(),
             takeUntilDestroyed()
         ).subscribe(search => this.store.searchResponsibleCandidates(search));
+
+        // Corrigiu o último departamento com o problema filtrado: o chip some, então o filtro sai junto
+        // (senão a lista caía num "nenhum departamento" sem o controle que o desligaria).
+        effect(() => {
+            const issue = this.issueFilter();
+            if (!issue || this.store.listState().loading) return;
+            const remaining = this.store.departments().some(department =>
+                issue === 'withoutSectors' ? department.sectors.length === 0 : !department.responsibleUserName);
+            if (remaining) return;
+            untracked(() => {
+                this.issueFilter.set(null);
+                this.toastService.show(issue === 'withoutSectors'
+                    ? 'Todos os departamentos têm setor agora.'
+                    : 'Todos os departamentos têm responsável agora.');
+            });
+        });
     }
 
     /** Carrega os departamentos, já com os setores de cada um. */
@@ -152,6 +177,7 @@ export class DepartmentListComponent implements OnInit {
 
     /** Prepara o modal de departamento para criação. */
     openCreateModal(): void {
+        this.focusResponsible.set(false);
         this.openDialog.set('department');
         this.store.clearMutationError();
         this.store.clearResponsibleSearch();
@@ -170,7 +196,8 @@ export class DepartmentListComponent implements OnInit {
      * atual já vem na listagem, mas o id não — busca o detalhe (GET /departments/{id}) pra saber
      * quem está selecionado antes do admin trocar.
      */
-    openEditModal(department: Department): void {
+    openEditModal(department: Department, focusResponsible = false): void {
+        this.focusResponsible.set(focusResponsible);
         this.openDialog.set('department');
         this.store.clearMutationError();
         this.store.clearResponsibleSearch();
@@ -254,6 +281,7 @@ export class DepartmentListComponent implements OnInit {
             // Departamento novo ainda não aparece na abertura de chamados: o toast já leva ao primeiro setor.
             this.store.create(data, departmentId => {
                 this.closeDialog();
+                this.highlight(departmentId);
                 this.toastService.show(`Departamento "${data.name}" criado. Ele só aparece na abertura de chamados depois do primeiro setor.`, 'success', {
                     label: 'Adicionar setor',
                     run: () => this.openCreateSectorModal(this.store.departments().find(d => d.id === departmentId)
@@ -293,6 +321,21 @@ export class DepartmentListComponent implements OnInit {
                 this.pageHeader()?.focus();
             }, () => this.focusRowActions(department.id));
         });
+    }
+
+    /**
+     * Destaca o departamento ou setor recém-criado e rola até ele: a lista recarrega em ordem
+     * alfabética e o item novo podia nascer fora da tela, sem sinal de onde foi parar. O realce some
+     * sozinho (com `prefers-reduced-motion`, fica só o fundo, sem animação).
+     */
+    private highlight(id: string): void {
+        this.highlightedId.set(id);
+        afterNextRender(() => {
+            document.querySelector<HTMLElement>(`[data-item-id="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, { injector: this.injector });
+        setTimeout(() => {
+            if (this.highlightedId() === id) this.highlightedId.set(null);
+        }, NEW_ITEM_HIGHLIGHT_MS);
     }
 
     /** Devolve o foco ao botão "⋮" do departamento ou setor (o modal de confirmação o tirou dali). */
@@ -355,7 +398,10 @@ export class DepartmentListComponent implements OnInit {
         if (editing) {
             this.store.updateSector(editing.id, data, onSuccess);
         } else {
-            this.store.createSector({ ...data, departmentId: department.id }, onSuccess);
+            this.store.createSector({ ...data, departmentId: department.id }, sectorId => {
+                onSuccess();
+                this.highlight(sectorId);
+            });
         }
     }
 
