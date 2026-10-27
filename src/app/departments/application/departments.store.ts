@@ -61,16 +61,19 @@ export const DepartmentsStore = signalStore(
       store._listResource.reload();
     },
 
-    /** Cria um novo departamento e recarrega a listagem em caso de sucesso (POST /departments). */
-    create(data: DepartmentData, onSuccess?: () => void): void {
+    /**
+     * Cria um novo departamento e recarrega a listagem em caso de sucesso (POST /departments). O
+     * `onSuccess` recebe o id criado — a tela oferece cadastrar o primeiro setor nele.
+     */
+    create(data: DepartmentData, onSuccess?: (departmentId: string) => void): void {
       patchState(store, { mutating: true });
       store._departmentDataService.create(data).pipe(
         finalize(() => patchState(store, { mutating: false }))
       ).subscribe({
-        next: () => {
+        next: (departmentId) => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
-          onSuccess?.();
+          onSuccess?.(departmentId);
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar departamento') });

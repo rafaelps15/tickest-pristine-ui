@@ -382,6 +382,30 @@ describe('DepartmentListComponent', () => {
     );
   });
 
+  it('depois de criar, o toast oferece "Adicionar setor" e abre o modal de setor no departamento novo', async () => {
+    storeFake.create.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('dep-novo'));
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateModal();
+    component.form.setValue({ name: 'Operações', description: 'Logística' });
+    component.onSubmit();
+
+    const [message, variant, action] = (toast.show as jasmine.Spy).calls.mostRecent().args;
+    expect(message).toContain('Departamento "Operações" criado.');
+    expect(variant).toBe('success');
+    expect(action.label).toBe('Adicionar setor');
+    expect(component['openDialog']()).toBeNull();
+
+    action.run();
+    expect(component['openDialog']()).toBe('sector');
+    expect(component.sectorDepartment()?.id).toBe('dep-novo');
+    expect(component.sectorDepartment()?.name).toBe('Operações');
+  });
+
   it('envia responsibleUserId indefinido ao salvar sem nenhum responsável selecionado', async () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();

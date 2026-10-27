@@ -59,6 +59,15 @@ describe('DepartmentsStore', () => {
     expect(store.departments()).toEqual(departments);
   });
 
+  it('entrega o id do departamento criado pro onSuccess', () => {
+    departmentDataService.create.and.returnValue(of('dep-novo'));
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.create({ name: 'Operações', description: 'Logística' }, onSuccess);
+
+    expect(onSuccess).toHaveBeenCalledWith('dep-novo');
+  });
+
   it('marca mutating durante a criação de departamento, e libera ao terminar', async () => {
     const subject = new Subject<string>();
     departmentDataService.create.and.returnValue(subject);

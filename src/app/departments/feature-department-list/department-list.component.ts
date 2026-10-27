@@ -245,15 +245,21 @@ export class DepartmentListComponent implements OnInit {
         };
         const editing = this.editingDepartment();
 
-        const onSuccess = () => {
-            this.closeDialog();
-            this.toastService.show(editing ? `Departamento "${data.name}" atualizado.` : `Departamento "${data.name}" criado.`);
-        };
-
         if (editing) {
-            this.store.update(editing.id, data, onSuccess);
+            this.store.update(editing.id, data, () => {
+                this.closeDialog();
+                this.toastService.show(`Departamento "${data.name}" atualizado.`);
+            });
         } else {
-            this.store.create(data, onSuccess);
+            // Departamento novo ainda não aparece na abertura de chamados: o toast já leva ao primeiro setor.
+            this.store.create(data, departmentId => {
+                this.closeDialog();
+                this.toastService.show(`Departamento "${data.name}" criado. Ele só aparece na abertura de chamados depois do primeiro setor.`, 'success', {
+                    label: 'Adicionar setor',
+                    run: () => this.openCreateSectorModal(this.store.departments().find(d => d.id === departmentId)
+                        ?? { id: departmentId, name: data.name, description: data.description, responsibleUserName: null, sectors: [] })
+                });
+            });
         }
     }
 
