@@ -12,15 +12,22 @@
     </div>
   </div>
 
+  <!-- Cada aviso é um filtro: mostra só os departamentos que pedem ação (clicar de novo volta a todos). -->
   @if (departmentsWithoutSectors() > 0) {
     <div class="insights-section">
-      <p class="text-muted small mb-0"><i class="bx bx-error-circle text-warning me-1"></i>{{ departmentsWithoutSectors() }} {{ departmentsWithoutSectors() === 1 ? 'departamento sem nenhum setor' : 'departamentos sem nenhum setor' }} — não {{ departmentsWithoutSectors() === 1 ? 'aparece' : 'aparecem' }} na abertura de chamados.</p>
+      <button type="button" class="insights-filter small" [class.active]="activeIssue() === 'withoutSectors'"
+              [attr.aria-pressed]="activeIssue() === 'withoutSectors'" (click)="toggle('withoutSectors')">
+        <i class="bx bx-error-circle text-warning me-1" aria-hidden="true"></i>{{ departmentsWithoutSectors() }} {{ departmentsWithoutSectors() === 1 ? 'departamento sem nenhum setor' : 'departamentos sem nenhum setor' }} — não {{ departmentsWithoutSectors() === 1 ? 'aparece' : 'aparecem' }} na abertura de chamados.
+      </button>
     </div>
   }
 
   @if (departmentsWithoutResponsible() > 0) {
     <div class="insights-section mb-0">
-      <p class="text-muted small mb-0"><i class="bx bx-user-x text-muted me-1"></i>{{ departmentsWithoutResponsible() }} {{ departmentsWithoutResponsible() === 1 ? 'departamento sem responsável definido' : 'departamentos sem responsável definido' }}.</p>
+      <button type="button" class="insights-filter small" [class.active]="activeIssue() === 'withoutResponsible'"
+              [attr.aria-pressed]="activeIssue() === 'withoutResponsible'" (click)="toggle('withoutResponsible')">
+        <i class="bx bx-user-x me-1" aria-hidden="true"></i>{{ departmentsWithoutResponsible() }} {{ departmentsWithoutResponsible() === 1 ? 'departamento sem responsável definido' : 'departamentos sem responsável definido' }}.
+      </button>
     </div>
   }
 </app-summary-card>

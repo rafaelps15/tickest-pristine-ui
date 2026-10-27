@@ -60,6 +60,25 @@ describe('DepartmentInsightsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1 departamento sem responsável definido');
   });
 
+  it('o aviso é um filtro: emite o problema ao clicar e desliga ao clicar de novo', async () => {
+    const fixture = TestBed.createComponent(DepartmentInsightsComponent);
+    fixture.componentRef.setInput('departments', [makeDepartment({ sectors: [] })]);
+    const emitted: (string | null)[] = [];
+    fixture.componentInstance.issueChange.subscribe(issue => emitted.push(issue));
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('.insights-filter') as HTMLButtonElement;
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    button.click();
+
+    fixture.componentRef.setInput('activeIssue', 'withoutSectors');
+    await fixture.whenStable();
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    button.click();
+
+    expect(emitted).toEqual(['withoutSectors', null]);
+  });
+
   it('mostra "—" e o motivo, em vez de "0 departamentos", quando a lista falhou ao carregar', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', []);

@@ -1,0 +1,32 @@
+/*
+ * Aviso do Resumo como filtro: parece texto (é o mesmo aviso de antes), mas tem alvo de 44px, realce
+ * no hover/foco e fica tingido quando pressionado — o mesmo vocabulário dos cards de status do Monitor.
+ */
+.insights-filter {
+  display: block;
+  width: calc(100% + 1rem);
+  min-height: 2.75rem;
+  margin: -0.5rem;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: var(--tk-radius-sm);
+  background: transparent;
+  color: var(--tk-text-secondary);
+  text-align: start;
+  transition: background-color var(--tk-transition);
+}
+
+.insights-filter:hover,
+.insights-filter:focus-visible {
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.insights-filter:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+.insights-filter.active {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+  color: var(--tk-text-primary);
+}

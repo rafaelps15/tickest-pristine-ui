@@ -7,7 +7,7 @@ import { Department, DepartmentSector } from '../entities/department';
 import { ConfirmDialogService, SessionService , ToastService} from '../../shared';
 import { UserSummary } from '../../users';
 import { DepartmentGuideComponent } from './department-guide.component';
-import { DepartmentInsightsComponent } from './department-insights.component';
+import { DepartmentInsightsComponent, DepartmentIssue } from './department-insights.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
@@ -83,17 +83,34 @@ export class DepartmentListComponent implements OnInit {
      */
     responsibleKnown = signal(true);
 
-    /** Departamentos que batem com a busca — por nome do departamento ou de algum dos seus setores. */
+    /** Problema escolhido num aviso do Resumo ("sem setor"/"sem responsável"), ou `null` pra todos. */
+    readonly issueFilter = signal<DepartmentIssue | null>(null);
+
+    /** Se há algum filtro ligado (busca ou problema do Resumo) — o "Limpar" da barra aparece. */
+    readonly hasFilters = computed(() => this.searchInput().trim() !== '' || this.issueFilter() !== null);
+
+    /**
+     * Departamentos que batem com a busca (nome do departamento ou de algum dos seus setores) e com o
+     * problema escolhido no Resumo.
+     */
     readonly filteredDepartments = computed(() => {
         const query = this.searchInput().trim().toLowerCase();
-        const departments = this.store.departments();
-        if (!query) return departments;
+        const issue = this.issueFilter();
 
-        return departments.filter(department =>
-            department.name.toLowerCase().includes(query) ||
-            department.sectors.some(sector => sector.name.toLowerCase().includes(query))
-        );
+        return this.store.departments().filter(department => {
+            if (issue === 'withoutSectors' && department.sectors.length > 0) return false;
+            if (issue === 'withoutResponsible' && department.responsibleUserName) return false;
+            if (!query) return true;
+            return department.name.toLowerCase().includes(query) ||
+                department.sectors.some(sector => sector.name.toLowerCase().includes(query));
+        });
     });
+
+    /** Desliga a busca e o filtro de problema, voltando a mostrar todos os departamentos. */
+    clearFilters(): void {
+        this.searchInput.set('');
+        this.issueFilter.set(null);
+    }
 
     /** Formulário do modal de departamento (criação e edição). */
     form = this.fb.group({

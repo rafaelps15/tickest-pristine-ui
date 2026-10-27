@@ -9,7 +9,7 @@
 </app-page-header>
 
 <app-department-guide />
-<app-department-insights [departments]="store.departments()"
+<app-department-insights [departments]="store.departments()" [activeIssue]="issueFilter()" (issueChange)="issueFilter.set($event)"
                          [loading]="store.listState().loading && store.departments().length === 0"
                          [failed]="!!store.listState().error && store.departments().length === 0" />
 
@@ -24,7 +24,7 @@
 }
 
 @if (store.departments().length > 0) {
-  <app-filter-bar label="Busca" clearLabel="Limpar busca" [clearable]="searchInput() !== ''" (clear)="searchInput.set('')">
+  <app-filter-bar label="Busca" clearLabel="Limpar filtros" [clearable]="hasFilters()" (clear)="clearFilters()">
     <div class="col-12 col-md-6 col-lg-4">
       <label class="form-label small" for="departmentSearch">Buscar</label>
       <div class="input-group">
@@ -40,108 +40,129 @@
   <app-loading-state label="Carregando departamentos…" />
 } @else if (store.departments().length === 0) {
   <div class="card shadow-sm border-0">
-    <app-empty-state icon="bx-sitemap" title="Nenhum departamento cadastrado ainda."
-                     hint="Crie o primeiro departamento e cadastre nele os setores que atendem chamados.">
-      @if (canManageDepartments()) {
-        <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
-          <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Departamento
-        </button>
-      }
-    </app-empty-state>
+    <div class="card-body">
+      <app-empty-state icon="bx-sitemap" title="Nenhum departamento cadastrado ainda."
+                       hint="Crie o primeiro departamento e cadastre nele os setores que atendem chamados.">
+        @if (canManageDepartments()) {
+          <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
+            <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Departamento
+          </button>
+        }
+      </app-empty-state>
+    </div>
   </div>
 } @else if (filteredDepartments().length === 0) {
   <div class="card shadow-sm border-0">
-    <app-empty-state icon="bx-search-alt" [title]="'Nenhum departamento ou setor encontrado para &quot;' + searchInput() + '&quot;.'"
-                     hint="Confira a grafia ou busque pelo nome do departamento.">
-      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="searchInput.set('')">
-        <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar busca
-      </button>
-    </app-empty-state>
+    <div class="card-body">
+      <app-empty-state icon="bx-search-alt"
+                       [title]="searchInput().trim() ? 'Nenhum departamento ou setor encontrado para &quot;' + searchInput() + '&quot;.' : 'Nenhum departamento com esse problema.'"
+                       hint="Confira a grafia ou busque pelo nome do departamento ou de um setor.">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+        </button>
+      </app-empty-state>
+    </div>
   </div>
 } @else {
-  <div class="row g-4">
+  <!-- Quantos sobraram depois do filtro: o aviso pressionado no Resumo sozinho não diz que a lista encolheu. -->
+  @if (hasFilters()) {
+    <p class="small text-muted mb-2" aria-live="polite">
+      Mostrando {{ filteredDepartments().length }} de {{ store.departments().length }} departamentos.
+    </p>
+  }
+  <!--
+    Uma coluna: cada departamento ocupa a largura toda e os setores dele se distribuem numa grade
+    interna. A grade de dois cards por linha deixava buracos sob os cards curtos.
+  -->
+  <div class="d-flex flex-column gap-3">
     @for (department of filteredDepartments(); track department.id) {
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0" [attr.aria-busy]="isDeletingIn(department) ? 'true' : null">
-          <div class="card-header d-flex align-items-start justify-content-between gap-3">
-            <div>
-              <h2 class="h5 mb-1 fw-bold">
-                {{ department.name }}
-                <span class="badge bg-label-secondary ms-1 align-middle">
-                  {{ department.sectors.length }} {{ department.sectors.length === 1 ? 'setor' : 'setores' }}
-                </span>
-              </h2>
-              <div class="text-muted small">{{ department.description }}</div>
+      <section class="card shadow-sm border-0" [attr.aria-labelledby]="'department-' + department.id"
+               [attr.aria-busy]="isDeletingIn(department) ? 'true' : null">
+        <div class="card-header d-flex align-items-start justify-content-between gap-3">
+          <div class="min-w-0">
+            <h2 class="h5 mb-1 fw-bold" [id]="'department-' + department.id">{{ department.name }}</h2>
+            <p class="department-meta small mb-1 d-flex flex-wrap align-items-center column-gap-3 row-gap-1">
+              <!-- Sem setor, o departamento some da abertura de chamados: o único estado que pede ação fica em âmbar. -->
+              <span class="badge" [class.bg-label-warning]="department.sectors.length === 0" [class.bg-label-secondary]="department.sectors.length > 0">
+                {{ department.sectors.length }} {{ department.sectors.length === 1 ? 'setor' : 'setores' }}
+              </span>
               @if (department.responsibleUserName) {
-                <div class="text-muted small mt-1"><i class="bx bx-user me-1"></i>Responsável: {{ department.responsibleUserName }}</div>
+                <span class="text-muted fw-normal"><i class="bx bx-user me-1" aria-hidden="true"></i>Responsável: {{ department.responsibleUserName }}</span>
+              } @else {
+                <span class="text-muted fw-normal"><i class="bx bx-user-x me-1" aria-hidden="true"></i>Sem responsável</span>
               }
-            </div>
-            @if (canManageDepartments()) {
-              <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name"
-                               [busy]="store.deletingId() === department.id" [rowKey]="department.id">
-                <li>
-                  <button type="button" class="dropdown-item" (click)="openEditModal(department)">
-                    <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar departamento
-                  </button>
-                </li>
-                <li>
-                  <button type="button" class="dropdown-item text-danger" (click)="onDelete(department)">
-                    <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir departamento
-                  </button>
-                </li>
-              </app-row-actions>
-            }
+            </p>
+            <p class="text-muted small fw-normal mb-0">{{ department.description }}</p>
           </div>
-
-          <!-- A falha de excluir este departamento ou um setor dele aparece aqui, perto de onde a ação partiu. -->
-          @if (deleteErrorFor(department); as deleteError) {
-            <div class="alert alert-danger border-0 rounded-0 mb-0 py-2 small d-flex align-items-start justify-content-between gap-2" role="alert">
-              <span>{{ deleteError }}</span>
-              <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearDeleteError()"></button>
-            </div>
-          }
-
-          <ul class="list-group list-group-flush">
-            @for (sector of department.sectors; track sector.id) {
-              <li class="list-group-item d-flex align-items-center justify-content-between gap-3">
-                <div>
-                  <div class="fw-semibold"><i class="bx bx-git-branch text-muted me-1"></i>{{ sector.name }}</div>
-                  @if (sector.description) {
-                    <div class="text-muted small">{{ sector.description }}</div>
-                  }
-                </div>
-                @if (canManageSectors()) {
-                  <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name"
-                                   [busy]="store.deletingId() === sector.id" [rowKey]="sector.id">
-                    <li>
-                      <button type="button" class="dropdown-item" (click)="openEditSectorModal(department, sector)">
-                        <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar setor
-                      </button>
-                    </li>
-                    <li>
-                      <button type="button" class="dropdown-item text-danger" (click)="onDeleteSector(department, sector)">
-                        <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir setor
-                      </button>
-                    </li>
-                  </app-row-actions>
-                }
+          @if (canManageDepartments()) {
+            <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name"
+                             [busy]="store.deletingId() === department.id" [rowKey]="department.id">
+              <li>
+                <button type="button" class="dropdown-item" (click)="openEditModal(department)">
+                  <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar departamento
+                </button>
               </li>
-            } @empty {
-              <li class="list-group-item text-muted small py-3">
-                Nenhum setor ainda. Sem setores, este departamento não aparece na abertura de chamados.
+              <li>
+                <button type="button" class="dropdown-item text-danger" (click)="onDelete(department)">
+                  <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir departamento
+                </button>
               </li>
-            }
-          </ul>
-
-          @if (canManageSectors()) {
-            <div class="card-footer bg-transparent">
-              <button type="button" class="btn btn-sm btn-outline-primary" (click)="openCreateSectorModal(department)">
-                <i class="bx bx-plus me-1"></i> Adicionar setor
-              </button>
-            </div>
+            </app-row-actions>
           }
         </div>
-      </div>
+
+        <!-- A falha de excluir este departamento ou um setor dele aparece aqui, perto de onde a ação partiu. -->
+        @if (deleteErrorFor(department); as deleteError) {
+          <div class="alert alert-danger border-0 rounded-0 mb-0 py-2 small d-flex align-items-start justify-content-between gap-2" role="alert">
+            <span>{{ deleteError }}</span>
+            <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearDeleteError()"></button>
+          </div>
+        }
+
+        <div class="card-body py-2">
+          @if (department.sectors.length > 0) {
+            <ul class="sector-grid list-unstyled mb-0">
+              @for (sector of department.sectors; track sector.id) {
+                <li class="sector-item">
+                  <div class="min-w-0">
+                    <div class="fw-semibold"><i class="bx bx-git-branch text-muted me-1" aria-hidden="true"></i>{{ sector.name }}</div>
+                    @if (sector.description) {
+                      <div class="text-muted small">{{ sector.description }}</div>
+                    }
+                  </div>
+                  @if (canManageSectors()) {
+                    <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name"
+                                     [busy]="store.deletingId() === sector.id" [rowKey]="sector.id">
+                      <li>
+                        <button type="button" class="dropdown-item" (click)="openEditSectorModal(department, sector)">
+                          <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar setor
+                        </button>
+                      </li>
+                      <li>
+                        <button type="button" class="dropdown-item text-danger" (click)="onDeleteSector(department, sector)">
+                          <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir setor
+                        </button>
+                      </li>
+                    </app-row-actions>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="small mb-0 py-2 sector-empty">
+              <i class="bx bx-error-circle me-1" aria-hidden="true"></i>Nenhum setor ainda. Sem setores, este departamento não aparece na abertura de chamados.
+            </p>
+          }
+        </div>
+
+        @if (canManageSectors()) {
+          <div class="card-footer bg-transparent border-0 pt-0">
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="openCreateSectorModal(department)">
+              <i class="bx bx-plus me-1" aria-hidden="true"></i> Adicionar setor
+            </button>
+          </div>
+        }
+      </section>
     }
   </div>
 }

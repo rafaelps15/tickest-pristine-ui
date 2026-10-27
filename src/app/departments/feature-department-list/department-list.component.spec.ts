@@ -90,12 +90,60 @@ describe('DepartmentListComponent', () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
-    const cards = fixture.nativeElement.querySelectorAll('.row.g-4 .card');
+    const cards = fixture.nativeElement.querySelectorAll('section.card');
     expect(cards[0].textContent).toContain('TI');
     expect(cards[0].textContent).toContain('Helpdesk');
     expect(cards[0].textContent).toContain('Infraestrutura');
     expect(cards[0].textContent).toContain('2 setores');
     expect(cards[1].textContent).toContain('Nenhum setor ainda');
+  });
+
+  it('o título do card é só o nome (o badge de setores fica fora do h2) e rotula a seção', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const card = fixture.nativeElement.querySelector('section.card') as HTMLElement;
+    const heading = card.querySelector('h2')!;
+    expect(heading.textContent?.trim()).toBe('TI');
+    expect(card.getAttribute('aria-labelledby')).toBe(heading.id);
+  });
+
+  it('destaca em âmbar o departamento sem setor e diz quando não há responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const [itCard, commercialCard] = fixture.nativeElement.querySelectorAll('section.card') as NodeListOf<HTMLElement>;
+    expect(itCard.querySelector('.badge')!.classList).toContain('bg-label-secondary');
+    expect(commercialCard.querySelector('.badge')!.classList).toContain('bg-label-warning');
+    expect(commercialCard.textContent).toContain('Sem responsável');
+  });
+
+  it('filtra pelo problema escolhido no Resumo e diz quantos sobraram; "Limpar filtros" volta a todos', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const cards = fixture.nativeElement.querySelectorAll('section.card') as NodeListOf<HTMLElement>;
+    expect(cards.length).toBe(1);
+    expect(cards[0].querySelector('h2')!.textContent).toContain('Comercial');
+    expect(fixture.nativeElement.textContent).toContain('Mostrando 1 de 2 departamentos.');
+
+    fixture.componentInstance.clearFilters();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelectorAll('section.card').length).toBe(2);
+  });
+
+  it('filtra pelos departamentos sem responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutResponsible');
+
+    expect(fixture.componentInstance.filteredDepartments().map(d => d.id)).toEqual(['dep-1', 'dep-2']);
   });
 
   it('filtra pelo nome do departamento', async () => {
