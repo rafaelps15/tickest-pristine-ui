@@ -54,6 +54,13 @@ export const TicketSummaryStore = signalStore(
     statusCountsLoading: computed(() => store._statusCountsResource.isLoading()),
     /** Carregando o volume de tickets do período (dia/semana/mês) — só esse recurso, não os totais por status. */
     volumeLoading: computed(() => store._volumeResource.isLoading()),
+    /**
+     * A busca dos totais por status falhou — os cards mostram "—" em vez do `0` de fallback, que
+     * passaria por dado real ("0 em aberto, tudo certo") quando na verdade a API não respondeu.
+     */
+    statusCountsFailed: computed(() => !!store._statusCountsResource.error()),
+    /** A busca do volume falhou — o gráfico mostra erro em vez do vazio "nenhum ticket", que seria falso. */
+    volumeFailed: computed(() => !!store._volumeResource.error()),
     /** Erro de carregamento do resumo (totais por status ou volume) — usado pro alerta de erro no topo, que cobre os dois. */
     summaryError: computed(() => {
       const statusError = store._statusCountsResource.error() as HttpErrorResponse | undefined;

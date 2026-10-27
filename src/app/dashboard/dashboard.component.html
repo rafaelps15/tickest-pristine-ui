@@ -30,6 +30,9 @@
             <div class="d-flex align-items-end mt-2">
               @if (store.statusCountsLoading()) {
                 <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando total de tickets…</span></span>
+              } @else if (store.statusCountsFailed()) {
+                <!-- Sem resposta da API: "—" em vez do 0 de fallback, que passaria por dado real. -->
+                <div class="mb-0 me-2 fs-3 stat-value text-muted"><span aria-hidden="true">—</span><span class="visually-hidden">indisponível</span></div>
               } @else {
                 <div class="mb-0 me-2 fs-3 stat-value">{{ store.total() }}</div>
               }
@@ -58,6 +61,8 @@
               <div class="d-flex align-items-end mt-2">
                 @if (store.statusCountsLoading()) {
                   <span class="spinner-border spinner-border-sm {{ card.colorClass }}" role="status"><span class="visually-hidden">Carregando {{ card.loadingLabel }}…</span></span>
+                } @else if (store.statusCountsFailed()) {
+                  <div class="mb-0 me-2 fs-3 stat-value text-muted"><span aria-hidden="true">—</span><span class="visually-hidden">indisponível</span></div>
                 } @else {
                   <div class="mb-0 me-2 fs-3 stat-value {{ card.colorClass }}">{{ card.value }}</div>
                 }
@@ -75,7 +80,9 @@
         </div>
         @if (sessionService.hasPermission('tickets:manage')) {
           <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: card.status }"
-             [attr.aria-label]="'Ver ' + card.value + ' tickets ' + card.ariaNoun + ' na fila de monitoramento'"></a>
+             [attr.aria-label]="store.statusCountsFailed()
+               ? 'Ver tickets ' + card.ariaNoun + ' na fila de monitoramento'
+               : 'Ver ' + card.value + ' tickets ' + card.ariaNoun + ' na fila de monitoramento'"></a>
         }
       </div>
     </div>
@@ -111,9 +118,16 @@
             <div class="d-flex align-items-center justify-content-center h-100">
               <span class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span>
             </div>
+          } @else if (store.volumeFailed()) {
+            <!-- Erro de verdade, não o vazio "nenhum ticket" — que diria que a empresa não abriu chamados. -->
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center">
+              <i class="bx bx-error-circle display-6 d-block mb-2 text-danger" aria-hidden="true"></i>
+              <p class="mb-3">Não foi possível carregar o volume de tickets.</p>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="store.load()">Tentar novamente</button>
+            </div>
           } @else if (store.volume().length === 0) {
             <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted text-center">
-              <i class="bx bx-bar-chart-alt-2 display-6 d-block mb-2 opacity-50"></i>
+              <i class="bx bx-bar-chart-alt-2 display-6 d-block mb-2 opacity-50" aria-hidden="true"></i>
               Nenhum ticket aberto neste período ainda.
             </div>
           } @else {
@@ -140,6 +154,8 @@
               <tbody>
                 @if (store.volumeLoading()) {
                   <tr><td colspan="2" class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando volume de tickets…</span></span></td></tr>
+                } @else if (store.volumeFailed()) {
+                  <tr><td colspan="2" class="text-center py-4">Não foi possível carregar o volume de tickets.</td></tr>
                 } @else if (store.volume().length === 0) {
                   <tr><td colspan="2" class="text-center py-4 text-muted">Nenhum ticket aberto neste período ainda.</td></tr>
                 } @else {

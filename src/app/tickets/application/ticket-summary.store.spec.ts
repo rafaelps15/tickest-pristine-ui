@@ -96,6 +96,13 @@ describe('TicketSummaryStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.summaryError()).toBe('Erro ao carregar o resumo dos tickets');
+    expect(store.statusCountsFailed()).toBeTrue();
+    expect(store.volumeFailed()).toBeFalse();
+  });
+
+  it('não marca nenhuma busca como falha quando as duas respondem', () => {
+    expect(store.statusCountsFailed()).toBeFalse();
+    expect(store.volumeFailed()).toBeFalse();
   });
 
   it('expõe mensagem de erro quando a busca do volume falhar', async () => {
@@ -105,6 +112,8 @@ describe('TicketSummaryStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.summaryError()).toBe('Erro ao carregar o volume de tickets');
+    expect(store.volumeFailed()).toBeTrue();
+    expect(store.statusCountsFailed()).toBeFalse();
   });
 
   it('busca os chamados com SLA em risco, ordenados por prazo, para quem tem tickets:manage', () => {

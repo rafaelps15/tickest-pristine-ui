@@ -12,6 +12,8 @@ describe('DashboardComponent', () => {
       summaryError: signal<string | null>(null),
       statusCountsLoading: signal(false),
       volumeLoading: signal(false),
+      statusCountsFailed: signal(false),
+      volumeFailed: signal(false),
       total: signal(10),
       openCount: signal(3),
       inProgressCount: signal(2),
@@ -93,6 +95,32 @@ describe('DashboardComponent', () => {
       .find(b => b.textContent?.includes('Tentar novamente'));
     retryButton?.click();
 
+    expect(ticketsStoreFake.load).toHaveBeenCalled();
+  });
+
+  it('mostra "—" (indisponível) nos cards quando os totais falham, em vez de um 0 que passaria por dado real', async () => {
+    ticketsStoreFake.statusCountsFailed.set(true);
+    ticketsStoreFake.total.set(0);
+    ticketsStoreFake.openCount.set(0);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const values = Array.from(fixture.nativeElement.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>)
+      .map(v => v.textContent?.trim());
+    expect(values.length).toBe(4);
+    expect(values.every(v => v === '—indisponível')).toBeTrue();
+  });
+
+  it('mostra erro com "Tentar novamente" no gráfico quando o volume falha, não o vazio "nenhum ticket"', async () => {
+    ticketsStoreFake.volumeFailed.set(true);
+    ticketsStoreFake.volume.set([]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const chart = fixture.nativeElement.querySelector('.chart-container') as HTMLElement;
+    expect(chart.textContent).toContain('Não foi possível carregar o volume de tickets.');
+    expect(chart.textContent).not.toContain('Nenhum ticket aberto');
+    (chart.querySelector('button') as HTMLButtonElement).click();
     expect(ticketsStoreFake.load).toHaveBeenCalled();
   });
 
