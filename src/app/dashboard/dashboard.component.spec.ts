@@ -64,7 +64,7 @@ describe('DashboardComponent', () => {
       await fixture.whenStable();
 
       const expected = `${greetingForHour(new Date().getHours())}, Maria!`;
-      expect(fixture.nativeElement.querySelector('h4').textContent).toContain(expected);
+      expect(fixture.nativeElement.querySelector('h1').textContent).toContain(expected);
     });
 
     it('cumprimenta sem nome quando o usuário logado ainda não foi carregado', async () => {
@@ -72,7 +72,7 @@ describe('DashboardComponent', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.querySelector('h4').textContent.trim()).toBe(`${greetingForHour(new Date().getHours())}!`);
+      expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe(`${greetingForHour(new Date().getHours())}!`);
     });
 
     it('escolhe "Bom dia", "Boa tarde" ou "Boa noite" pela hora (madrugada é noite)', () => {
@@ -272,6 +272,19 @@ describe('DashboardComponent', () => {
     ticketsStoreFake.volume.set([]);
     await fixture.whenStable();
     expect(header()).toContain('Últimas 12 semanas');
+    // O intervalo é anunciado ao trocar o agrupamento.
+    expect(fixture.nativeElement.querySelector('.card-header [aria-live="polite"]').textContent.trim()).toBe('Últimas 12 semanas');
+  });
+
+  it('usa uma hierarquia de títulos sem saltos: h1 na saudação, h2 nos cards', async () => {
+    hasPermission.and.returnValue(true);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const levels = Array.from(fixture.nativeElement.querySelectorAll('h1, h2, h3, h4, h5, h6') as NodeListOf<HTMLElement>)
+      .map(h => h.tagName);
+    expect(levels[0]).toBe('H1');
+    expect(levels.slice(1).every(tag => tag === 'H2')).toBeTrue();
   });
 
   it('pluraliza corretamente a legenda de detalhamento quando há mais de um fechado e mais de um cancelado', async () => {

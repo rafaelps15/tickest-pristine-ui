@@ -2,7 +2,7 @@
   <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
           [attr.aria-expanded]="open()" aria-controls="dashboardGuideBody" (click)="toggle()">
     <span class="fw-bold">
-      <i class="bx bx-info-circle me-2"></i>Guia da Tela
+      <i class="bx bx-info-circle me-2" aria-hidden="true"></i>Guia da Tela
     </span>
     <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
   </button>
@@ -10,7 +10,7 @@
   @if (open()) {
     <div id="dashboardGuideBody" class="card-body pt-0">
       <div class="guide-section">
-        <h6 class="guide-section-title">Cards de estatística</h6>
+        <h2 class="h6 guide-section-title">Cards de estatística</h2>
         <p class="small text-muted mb-2"><strong>Total de Tickets:</strong> todos os tickets da empresa, incluindo fechados e cancelados.</p>
         <p class="small text-muted mb-2"><strong>Em Aberto:</strong> aguardando atendimento.</p>
         <p class="small text-muted mb-2"><strong>Em Andamento:</strong> já em atendimento por alguém.</p>
@@ -18,7 +18,7 @@
       </div>
 
       <div class="guide-section mb-0">
-        <h6 class="guide-section-title">Tickets criados</h6>
+        <h2 class="h6 guide-section-title">Tickets criados</h2>
         <p class="small text-muted mb-2">Quantos tickets foram criados em cada período: últimos 30 dias, 12 semanas ou 12 meses, conforme o botão Dia, Semana ou Mês.</p>
         <p class="small text-muted mb-0">Os números são de toda a empresa e iguais para qualquer papel logado. Não é uma visão pessoal.</p>
       </div>

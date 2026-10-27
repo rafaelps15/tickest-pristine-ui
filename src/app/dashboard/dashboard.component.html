@@ -2,9 +2,9 @@
 <div class="row mb-4">
   <div class="col-12">
     @if (sessionService.currentUser(); as user) {
-      <h4 class="fw-bold mb-1">{{ greeting }}, <span class="text-primary">{{ user.firstName }}</span>!</h4>
+      <h1 class="h4 fw-bold mb-1">{{ greeting }}, <span class="text-primary">{{ user.firstName }}</span>!</h1>
     } @else {
-      <h4 class="fw-bold mb-1">{{ greeting }}!</h4>
+      <h1 class="h4 fw-bold mb-1">{{ greeting }}!</h1>
     }
     <p class="text-muted small mb-0">Veja como estão os tickets de toda a empresa.</p>
   </div>
@@ -103,7 +103,7 @@
 
     <div class="card">
       <div class="card-header py-3">
-        <h5 class="card-title m-0 fw-bold">Ações Rápidas</h5>
+        <h2 class="h5 card-title m-0 fw-bold">Ações Rápidas</h2>
       </div>
       <!-- Uma ação primária (Novo Ticket, botão sólido) e os atalhos como linhas discretas — antes eram
            três caixas com borda e ícone colorido, todas com o mesmo peso, disputando com o primário. Os ícones coloridos ficam (pedido do usuário em 2026-10-24). -->
@@ -150,8 +150,9 @@
       <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
         <!-- "Criados", não "abertos": "Em Aberto" é um status, e o gráfico conta tickets criados em cada período. -->
         <div>
-          <h5 class="card-title m-0 fw-bold">Tickets criados</h5>
-          <p class="text-muted small mb-0">{{ volumeRangeLabel() }}</p>
+          <h2 class="h5 card-title m-0 fw-bold">Tickets criados</h2>
+          <!-- aria-live: ao trocar Dia/Semana/Mês, o leitor de tela ouve o novo intervalo ("Últimas 12 semanas"). -->
+          <p class="text-muted small mb-0" aria-live="polite">{{ volumeRangeLabel() }}</p>
         </div>
         <div class="d-flex align-items-center gap-2">
           <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
