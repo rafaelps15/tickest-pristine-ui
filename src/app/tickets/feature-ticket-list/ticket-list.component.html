@@ -2,11 +2,11 @@
   <div class="col-12">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
       <div>
-        <h4 #pageTitle id="ticketListTitle" class="fw-bold mb-1" tabindex="-1"><span class="text-muted fw-light">Início /</span> Meus Tickets</h4>
+        <h4 #pageTitle id="ticketListTitle" class="fw-bold mb-1" tabindex="-1"><span class="text-muted fw-light">Início /</span> Meus Chamados</h4>
         <p class="page-subtitle small mb-0">Os chamados que você abriu, com prioridade e status atuais.</p>
       </div>
       <a routerLink="/tickets/novo" class="btn btn-primary">
-        <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Ticket
+        <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
       </a>
     </div>
   </div>
@@ -31,7 +31,7 @@
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.state().loading && store.tickets().length > 0">
-      <caption class="visually-hidden">Tickets que você abriu, do mais novo para o mais antigo</caption>
+      <caption class="visually-hidden">Chamados que você abriu, do mais novo para o mais antigo</caption>
       <thead>
         <tr>
           <th scope="col">Título</th>
@@ -43,28 +43,28 @@
       </thead>
       <tbody>
         @if (store.state().loading && store.tickets().length === 0) {
-          <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
+          <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando chamados…</span></span></td></tr>
         } @else if (store.tickets().length === 0) {
           <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro ticket. -->
           <tr>
             <td colspan="5" class="first-use py-5">
               <div class="first-use-body">
                 <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
-                <h5 class="fw-bold mb-2">Nenhum ticket aberto ainda</h5>
+                <h5 class="fw-bold mb-2">Nenhum chamado aberto ainda</h5>
                 <p class="first-use-lead mb-3">
-                  Precisa de algo de outro departamento? Abra um ticket em vez de mandar e-mail ou WhatsApp:
+                  Precisa de algo de outro departamento? Abra um chamado em vez de mandar e-mail ou WhatsApp:
                   o pedido chega ao setor certo e você acompanha tudo por aqui.
                 </p>
                 <ol class="first-use-steps small mb-3">
                   <li>Descreva o que precisa e escolha o setor que vai atender.</li>
-                  <li>O setor assume o ticket e o status muda aqui, nesta lista.</li>
-                  <li>A conversa fica dentro do ticket, com prazo de atendimento.</li>
+                  <li>O setor assume o chamado e o status muda aqui, nesta lista.</li>
+                  <li>A conversa fica dentro do chamado, com prazo de atendimento.</li>
                 </ol>
                 @if (attendingDepartments()) {
-                  <p class="first-use-departments small mb-4">Atendem tickets: {{ attendingDepartments() }}.</p>
+                  <p class="first-use-departments small mb-4">Atendem chamados: {{ attendingDepartments() }}.</p>
                 }
                 <a routerLink="/tickets/novo" class="btn btn-primary">
-                  <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro ticket
+                  <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro chamado
                 </a>
               </div>
             </td>
@@ -84,7 +84,7 @@
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
                           [attr.data-ticket-actions]="ticket.id"
-                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
+                          [attr.aria-label]="'Ações para o chamado ' + ticket.title">
                     @if (isPending(ticket)) {
                       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                     } @else {
@@ -100,13 +100,13 @@
                       </li>
                       <li>
                         <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
-                          <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar ticket
+                          <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar chamado
                         </button>
                       </li>
                     } @else if (canReopen(ticket)) {
                       <li>
                         <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)">
-                          <i class="bx bx-refresh me-2" aria-hidden="true"></i>Reabrir ticket
+                          <i class="bx bx-refresh me-2" aria-hidden="true"></i>Reabrir chamado
                         </button>
                       </li>
                     }
@@ -122,7 +122,7 @@
 
   @if (store.total() > 0) {
     <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} tickets</span>
+      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} chamados</span>
 
       @if (store.totalPages() > 1) {
         <nav class="pagination-group d-flex align-items-center gap-2" aria-label="Paginação">

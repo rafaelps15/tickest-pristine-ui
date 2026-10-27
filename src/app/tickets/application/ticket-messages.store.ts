@@ -123,7 +123,7 @@ export const TicketMessagesStore = signalStore(
           patchState(store, {
             postError: extractErrorMessage(err, {
               403: 'Você não tem permissão para enviar mensagens neste chamado.',
-              404: 'Ticket não encontrado — ele pode ter sido removido.'
+              404: 'Chamado não encontrado — ele pode ter sido removido.'
             }, 'Erro ao enviar a mensagem.')
           });
         }

@@ -60,9 +60,9 @@ export const TicketDetailStore = signalStore(
         loading: store._detailResource.isLoading(),
         error: resourceError
           ? extractErrorMessage(resourceError, {
-              403: 'Você não tem acesso a este ticket.',
-              404: 'Não encontramos esse ticket — ele pode ter sido removido.'
-            }, 'Erro ao carregar o ticket')
+              403: 'Você não tem acesso a este chamado.',
+              404: 'Não encontramos esse chamado — ele pode ter sido removido.'
+            }, 'Erro ao carregar o chamado')
           : null
       };
     })
@@ -97,7 +97,7 @@ export const TicketDetailStore = signalStore(
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             slaError: extractErrorMessage(err, {
-              404: 'Ticket não encontrado — ele pode ter sido removido.'
+              404: 'Chamado não encontrado — ele pode ter sido removido.'
             }, 'Erro ao atualizar o SLA.')
           });
         }
@@ -126,8 +126,8 @@ export const TicketDetailStore = signalStore(
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             mutationError: extractErrorMessage(err, {
-              403: 'Você não tem permissão para remover o responsável deste ticket.',
-              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              403: 'Você não tem permissão para remover o responsável deste chamado.',
+              404: 'Chamado não encontrado — ele pode ter sido removido.',
               409: 'Não foi possível remover o responsável — tente novamente.'
             }, 'Erro ao remover o responsável.')
           });
@@ -186,7 +186,7 @@ export const TicketDetailStore = signalStore(
           patchState(store, {
             mutationError: extractErrorMessage(err, {
               403: 'Você não tem permissão para mudar o status deste chamado.',
-              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              404: 'Chamado não encontrado — ele pode ter sido removido.',
               409: 'Não foi possível mudar o status — tente novamente.'
             }, 'Erro ao mudar o status do chamado.')
           });
@@ -213,7 +213,7 @@ export const TicketDetailStore = signalStore(
           patchState(store, {
             mutationError: extractErrorMessage(err, {
               403: 'Você não tem permissão para editar este chamado.',
-              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              404: 'Chamado não encontrado — ele pode ter sido removido.',
               409: 'Não foi possível salvar a edição — tente novamente.'
             }, 'Erro ao editar o chamado.')
           });
@@ -236,7 +236,7 @@ export const TicketDetailStore = signalStore(
           patchState(store, {
             mutationError: extractErrorMessage(err, {
               403: 'Você não tem permissão para reabrir este chamado.',
-              404: 'Ticket não encontrado — ele pode ter sido removido.',
+              404: 'Chamado não encontrado — ele pode ter sido removido.',
               409: 'Não foi possível reabrir o chamado — tente novamente.'
             }, 'Erro ao reabrir o chamado.')
           });
@@ -268,8 +268,8 @@ export const TicketDetailStore = signalStore(
             mutationError: candidateNotEligible
               ? `${extractErrorMessage(err, {}, 'Esse usuário não pode ser responsável.')} Escolha outro usuário na lista.`
               : extractErrorMessage(err, {
-                  403: 'Você não tem permissão para atribuir o responsável deste ticket.',
-                  404: 'Ticket ou usuário não encontrado.',
+                  403: 'Você não tem permissão para atribuir o responsável deste chamado.',
+                  404: 'Chamado ou usuário não encontrado.',
                   409: 'Não foi possível atribuir o responsável — tente novamente.'
                 }, 'Erro ao atribuir o responsável.')
           });

@@ -105,7 +105,7 @@ describe('TicketSummaryStore', () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.summaryError()).toBe('Erro ao carregar o resumo dos tickets');
+    expect(store.summaryError()).toBe('Erro ao carregar o resumo dos chamados');
     expect(store.statusCountsFailed()).toBeTrue();
     expect(store.volumeFailed()).toBeFalse();
     // Os totais em erro não podem lançar — o template os lê sempre, mesmo mostrando "—".
@@ -124,13 +124,13 @@ describe('TicketSummaryStore', () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.summaryError()).toBe('Erro ao carregar o volume de tickets');
+    expect(store.summaryError()).toBe('Erro ao carregar o volume de chamados');
     expect(store.volumeFailed()).toBeTrue();
     expect(store.statusCountsFailed()).toBeFalse();
     expect(store.volume()).toEqual([]);
   });
 
-  it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem tickets:manage', () => {
+  it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem chamados:manage', () => {
     expect(dataService.getAll).toHaveBeenCalledWith({
       slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5
     });

@@ -1,6 +1,6 @@
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
   <div>
-    <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Administração /</span> Monitorar Tickets</h4>
+    <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Administração /</span> Monitorar Chamados</h4>
     <p class="page-subtitle small mb-0">Todos os chamados do sistema, com prazos e situação de SLA.</p>
   </div>
 </div>
@@ -204,7 +204,7 @@
   <div class="card">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
-      <caption class="visually-hidden">Tickets do sistema, filtrados conforme os filtros acima</caption>
+      <caption class="visually-hidden">Chamados do sistema, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
           <th scope="col">Título</th>
@@ -220,12 +220,12 @@
       </thead>
       <tbody>
         @if (store.listState().loading && store.tickets().length === 0) {
-          <tr><td colspan="9" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
+          <tr><td colspan="9" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando chamados…</span></span></td></tr>
         } @else if (store.tickets().length === 0) {
           <tr>
             <td colspan="9" class="text-center py-5 text-muted">
               <i class="bx bx-receipt display-6 d-block mb-2 opacity-50"></i>
-              Nenhum ticket encontrado com esses filtros.
+              Nenhum chamado encontrado com esses filtros.
             </td>
           </tr>
         } @else {
@@ -236,7 +236,7 @@
               <td>
                 <button #selectButton type="button" class="ticket-select fw-semibold text-start text-break"
                         [attr.aria-pressed]="selectedTicketId() === ticket.id"
-                        [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do ticket ' : 'Ver informações do ticket ') + ticket.title"
+                        [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do chamado ' : 'Ver informações do chamado ') + ticket.title"
                         (click)="selectTicket(ticket.id, selectButton); $event.stopPropagation()">
                   {{ ticket.title }}
                 </button>
@@ -277,14 +277,14 @@
                 <div class="dropdown">
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
-                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
+                          [attr.aria-label]="'Ações para o chamado ' + ticket.title">
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end">
                     @if (canAssignToMe(ticket)) {
                       <li>
                         <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
-                                [attr.aria-label]="'Atribuir o ticket ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
+                                [attr.aria-label]="'Atribuir o chamado ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
                           @if (store.assigningToMeIds().includes(ticket.id)) {
                             <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                           } @else {
@@ -297,14 +297,14 @@
                     @if (canAssignResponsible(ticket)) {
                       <li>
                         <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#monitorAssignResponsibleModal"
-                                [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo ticket ' : 'Atribuir responsável pelo ticket ') + ticket.title"
+                                [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo chamado ' : 'Atribuir responsável pelo chamado ') + ticket.title"
                                 (click)="onOpenAssignResponsibleModal(ticket.id)">
                           <i class="bx bx-user-check me-2"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
                         </button>
                       </li>
                     }
                     <li>
-                      <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
+                      <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do chamado ' + ticket.title">
                         <i class="bx bx-show me-2"></i>Ver detalhes
                       </a>
                     </li>
@@ -320,7 +320,7 @@
 
   @if (store.total() > 0) {
     <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} tickets</span>
+      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} chamados</span>
 
       @if (store.totalPages() > 1) {
         <nav class="pagination-group d-flex align-items-center gap-2" aria-label="Paginação">

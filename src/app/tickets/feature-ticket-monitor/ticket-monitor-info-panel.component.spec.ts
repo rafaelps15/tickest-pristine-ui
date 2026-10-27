@@ -59,7 +59,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(text).toContain('No prazo');
   });
 
-  it('mostra o nome do atendente quando o ticket já tem um responsável', async () => {
+  it('mostra o nome do atendente quando o chamado já tem um responsável', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('ticket', { ...ticket, assignedToUserId: 'u2', assignedToName: 'Carlos Souza' });
     await fixture.whenStable();
@@ -67,7 +67,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Carlos Souza');
   });
 
-  it('mostra a data de resolução só quando o ticket já foi resolvido', async () => {
+  it('mostra a data de resolução só quando o chamado já foi resolvido', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Resolvido em');
@@ -101,11 +101,11 @@ describe('TicketMonitorInfoPanelComponent', () => {
   });
 
   it('mostra a mensagem de erro quando a busca da descrição falha', async () => {
-    quickInfoStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este ticket.' });
+    quickInfoStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este chamado.' });
     const fixture = createFixture();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este ticket.');
+    expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este chamado.');
   });
 
   it('emite "close" ao clicar no botão de fechar', async () => {
@@ -115,13 +115,13 @@ describe('TicketMonitorInfoPanelComponent', () => {
     const closeSpy = jasmine.createSpy('close');
     fixture.componentInstance.close.subscribe(closeSpy);
 
-    const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar painel de informações do ticket"]') as HTMLButtonElement;
+    const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar painel de informações do chamado"]') as HTMLButtonElement;
     closeButton.click();
 
     expect(closeSpy).toHaveBeenCalled();
   });
 
-  it('o link "Ver detalhes completos" leva pro ticket com ?from=monitor', async () => {
+  it('o link "Ver detalhes completos" leva pro chamado com ?from=monitor', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 

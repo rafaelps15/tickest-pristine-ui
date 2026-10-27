@@ -331,7 +331,7 @@ export class TicketMonitorComponent implements OnInit {
         const currentUserId = this.sessionService.currentUser()?.id;
         if (!currentUserId) return;
 
-        this.store.assignToMe(ticketId, currentUserId, () => this.toastService.show('Ticket atribuído a você.'));
+        this.store.assignToMe(ticketId, currentUserId, () => this.toastService.show('Chamado atribuído a você.'));
     }
 
     /** Indica se o botão "Atribuir responsável" deve aparecer: chamado ativo, pra quem administra a fila (com ou sem responsável atual, pra permitir reatribuir). */

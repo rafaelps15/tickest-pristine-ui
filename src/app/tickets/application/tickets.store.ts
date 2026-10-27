@@ -47,7 +47,7 @@ export const TicketsStore = signalStore(
     /** Erro só da leitura da listagem (sem os erros de mutação) — o único que "Tentar novamente" resolve. */
     loadError: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
-      return resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar tickets') : null;
+      return resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados') : null;
     }),
     /** Estado agregado da listagem: dados, carregamento e erro (de leitura ou de mutação). */
     state: computed(() => {
@@ -56,7 +56,7 @@ export const TicketsStore = signalStore(
         data: store._listResource.value()?.items ?? ([] as Ticket[]),
         loading: store._listResource.isLoading(),
         error: store.mutationError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar tickets')
+          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados')
           : null)
       };
     })
@@ -115,7 +115,7 @@ export const TicketsStore = signalStore(
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao abrir o ticket') });
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao abrir o chamado') });
         }
       });
     },
@@ -140,10 +140,10 @@ export const TicketsStore = signalStore(
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             mutationError: extractErrorMessage(err, {
-              403: 'Você não tem permissão para atualizar este ticket.',
-              404: 'Ticket não encontrado — ele pode ter sido removido.',
-              409: 'Não foi possível atualizar o ticket — tente novamente.'
-            }, 'Erro ao atualizar o ticket')
+              403: 'Você não tem permissão para atualizar este chamado.',
+              404: 'Chamado não encontrado — ele pode ter sido removido.',
+              409: 'Não foi possível atualizar o chamado — tente novamente.'
+            }, 'Erro ao atualizar o chamado')
           });
         }
       });
@@ -174,13 +174,13 @@ export const TicketsStore = signalStore(
           store._listResource.reload();
           if (!reasonPublished) {
             patchState(store, {
-              mutationError: 'O ticket foi reaberto, mas o motivo não foi publicado — envie-o como mensagem no chamado.'
+              mutationError: 'O chamado foi reaberto, mas o motivo não foi publicado — envie-o como mensagem.'
             });
           }
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao reabrir o ticket') });
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao reabrir o chamado') });
         }
       });
     },
@@ -207,7 +207,7 @@ export const TicketsStore = signalStore(
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir o ticket') });
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir o chamado') });
         }
       });
     }

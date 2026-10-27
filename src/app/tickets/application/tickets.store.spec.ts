@@ -47,7 +47,7 @@ describe('TicketsStore', () => {
     store = TestBed.inject(TicketsStore);
   });
 
-  it('carrega a primeira página dos tickets do usuário logado', async () => {
+  it('carrega a primeira página dos chamados do usuário logado', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getMine).toHaveBeenCalledWith(1, 20);
@@ -87,7 +87,7 @@ describe('TicketsStore', () => {
     expect(dataService.getMine).toHaveBeenCalledWith(1, 50);
   });
 
-  it('volta uma página ao excluir o último ticket de uma página que não é a primeira', async () => {
+  it('volta uma página ao excluir o último chamado de uma página que não é a primeira', async () => {
     dataService.getMine.and.returnValues(of(pageOf([ticket], 1, 21)), of(pageOf([ticket], 2, 21)), of(pageOf([ticket], 1, 20)));
     dataService.delete.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
@@ -100,7 +100,7 @@ describe('TicketsStore', () => {
     expect(dataService.getMine.calls.mostRecent().args).toEqual([1, 20]);
   });
 
-  it('cria um ticket, volta para a primeira página e recarrega a listagem', async () => {
+  it('cria um chamado, volta para a primeira página e recarrega a listagem', async () => {
     dataService.create.and.returnValue(of('t2'));
     const onSuccess = jasmine.createSpy('onSuccess');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -150,10 +150,10 @@ describe('TicketsStore', () => {
     store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao abrir o ticket');
+    expect(store.state().error).toBe('Erro ao abrir o chamado');
   });
 
-  it('atualiza um ticket e recarrega a listagem', async () => {
+  it('atualiza um chamado e recarrega a listagem', async () => {
     dataService.update.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -172,10 +172,10 @@ describe('TicketsStore', () => {
     store.update('t1', { description: 'Atualizado', status: TicketStatus.InProgress });
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao atualizar o ticket');
+    expect(store.state().error).toBe('Erro ao atualizar o chamado');
   });
 
-  it('chama onSuccess ao atualizar um ticket com sucesso', async () => {
+  it('chama onSuccess ao atualizar um chamado com sucesso', async () => {
     dataService.update.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -186,7 +186,7 @@ describe('TicketsStore', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('marca o ticket como pendente durante a atualização, e libera ao terminar', async () => {
+  it('marca o chamado como pendente durante a atualização, e libera ao terminar', async () => {
     const subject = new Subject<void>();
     dataService.update.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -201,7 +201,7 @@ describe('TicketsStore', () => {
     expect(store.pendingTicketIds()).toEqual([]);
   });
 
-  it('reabre um ticket e recarrega a listagem', async () => {
+  it('reabre um chamado e recarrega a listagem', async () => {
     dataService.reopen.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -220,7 +220,7 @@ describe('TicketsStore', () => {
     store.reopen('t1', null);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao reabrir o ticket');
+    expect(store.state().error).toBe('Erro ao reabrir o chamado');
   });
 
   it('expõe mensagem de erro quando a exclusão falhar', async () => {
@@ -230,10 +230,10 @@ describe('TicketsStore', () => {
     store.remove('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao excluir o ticket');
+    expect(store.state().error).toBe('Erro ao excluir o chamado');
   });
 
-  it('marca o ticket como pendente durante a reabertura, e libera ao terminar', async () => {
+  it('marca o chamado como pendente durante a reabertura, e libera ao terminar', async () => {
     const subject = new Subject<void>();
     dataService.reopen.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -248,7 +248,7 @@ describe('TicketsStore', () => {
     expect(store.pendingTicketIds()).toEqual([]);
   });
 
-  it('libera o ticket pendente mesmo quando a exclusão falha', async () => {
+  it('libera o chamado pendente mesmo quando a exclusão falha', async () => {
     const subject = new Subject<void>();
     dataService.delete.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -270,13 +270,13 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.loadError()).toBeNull();
-    expect(store.mutationError()).toBe('Erro ao excluir o ticket');
+    expect(store.mutationError()).toBe('Erro ao excluir o chamado');
 
     store.clearMutationError();
     expect(store.mutationError()).toBeNull();
   });
 
-  it('chama onSuccess ao reabrir e ao excluir um ticket com sucesso', async () => {
+  it('chama onSuccess ao reabrir e ao excluir um chamado com sucesso', async () => {
     dataService.reopen.and.returnValue(of(undefined));
     dataService.delete.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
@@ -315,7 +315,7 @@ describe('TicketsStore', () => {
     expect(messageDataService.post).not.toHaveBeenCalled();
   });
 
-  it('mantém o ticket reaberto e avisa quando só a publicação do motivo falha', async () => {
+  it('mantém o chamado reaberto e avisa quando só a publicação do motivo falha', async () => {
     dataService.reopen.and.returnValue(of(undefined));
     messageDataService.post.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();

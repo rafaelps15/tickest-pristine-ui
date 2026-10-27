@@ -38,11 +38,11 @@ describe('TicketQuickInfoStore', () => {
     store = TestBed.inject(TicketQuickInfoStore);
   });
 
-  it('não chama a API antes de um ticket ser selecionado', () => {
+  it('não chama a API antes de um chamado ser selecionado', () => {
     expect(dataService.getById).not.toHaveBeenCalled();
   });
 
-  it('busca o detalhe completo do ticket selecionado', async () => {
+  it('busca o detalhe completo do chamado selecionado', async () => {
     store.select('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -62,13 +62,13 @@ describe('TicketQuickInfoStore', () => {
     expect(store.ticket()).toBeUndefined();
   });
 
-  it('expõe mensagem própria quando o ticket não existe (404)', async () => {
+  it('expõe mensagem própria quando o chamado não existe (404)', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
     store.select('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Não encontramos esse ticket — ele pode ter sido removido.');
+    expect(store.state().error).toBe('Não encontramos esse chamado — ele pode ter sido removido.');
   });
 
   it('expõe mensagem própria quando falta permissão (403)', async () => {
@@ -77,6 +77,6 @@ describe('TicketQuickInfoStore', () => {
     store.select('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Você não tem acesso a este ticket.');
+    expect(store.state().error).toBe('Você não tem acesso a este chamado.');
   });
 });

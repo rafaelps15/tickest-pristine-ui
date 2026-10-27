@@ -143,7 +143,7 @@ export class TicketListComponent implements OnInit {
         if (!ticket) return;
 
         this.store.reopen(ticket.id, reason, () => {
-            this.toastService.show('Ticket reaberto.');
+            this.toastService.show('Chamado reaberto.');
             this.onReopenClosed();
         });
     }
@@ -182,9 +182,9 @@ export class TicketListComponent implements OnInit {
     /** Confirma e cancela o ticket selecionado, preservando a descrição atual. */
     onCancelTicket(ticket: Ticket): void {
         this.confirmDialogService.confirm({
-            title: `Cancelar o ticket "${ticket.title}"?`,
+            title: `Cancelar o chamado "${ticket.title}"?`,
             message: 'O chamado passa para Cancelado e o setor deixa de atendê-lo. O histórico continua disponível e dá pra reabrir depois.',
-            confirmLabel: 'Cancelar ticket',
+            confirmLabel: 'Cancelar chamado',
             // "Cancelar" ao lado de "Cancelar ticket" deixava ambíguo qual botão desiste da ação.
             cancelLabel: 'Voltar',
             variant: 'danger'
@@ -193,7 +193,7 @@ export class TicketListComponent implements OnInit {
             if (!confirmed) return;
 
             this.store.update(ticket.id, { description: ticket.description, status: TicketStatus.Canceled }, () => {
-                this.toastService.show('Ticket cancelado.');
+                this.toastService.show('Chamado cancelado.');
             });
         });
     }

@@ -82,7 +82,7 @@ export class TicketCreateComponent implements OnInit {
             priority: raw.priority!,
             sectorId: raw.sectorId!
         }, () => {
-            this.toastService.show('Ticket aberto com sucesso.');
+            this.toastService.show('Chamado aberto com sucesso.');
             this.router.navigate(['/tickets']);
         });
     }

@@ -63,8 +63,8 @@ export const TicketMonitorStore = signalStore(
       return {
         loading: store._listResource.isLoading(),
         error: resourceError ? extractErrorMessage(resourceError, {
-          403: 'Você não tem permissão para monitorar os tickets do sistema.'
-        }, 'Erro ao carregar tickets') : null
+          403: 'Você não tem permissão para monitorar os chamados do sistema.'
+        }, 'Erro ao carregar chamados') : null
       };
     }),
     /** Resumo de SLA dos chamados ativos, respeitando o filtro de setor atual. */
@@ -188,10 +188,10 @@ export const TicketMonitorStore = signalStore(
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             mutationError: extractErrorMessage(err, {
-              403: 'Você não tem permissão pra ser responsável por este ticket.',
-              404: 'Ticket não encontrado.',
-              409: 'Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.'
-            }, 'Erro ao atribuir o ticket a você.')
+              403: 'Você não tem permissão pra ser responsável por este chamado.',
+              404: 'Chamado não encontrado.',
+              409: 'Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.'
+            }, 'Erro ao atribuir o chamado a você.')
           });
         }
       });
@@ -245,9 +245,9 @@ export const TicketMonitorStore = signalStore(
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             mutationError: extractErrorMessage(err, {
-              403: 'Você não tem permissão para atribuir o responsável deste ticket.',
-              404: 'Ticket ou usuário não encontrado.',
-              409: 'Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.'
+              403: 'Você não tem permissão para atribuir o responsável deste chamado.',
+              404: 'Chamado ou usuário não encontrado.',
+              409: 'Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.'
             }, 'Erro ao atribuir o responsável.')
           });
         }

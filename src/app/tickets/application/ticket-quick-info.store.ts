@@ -37,9 +37,9 @@ export const TicketQuickInfoStore = signalStore(
       return {
         loading: store._detailResource.isLoading(),
         error: resourceError ? extractErrorMessage(resourceError, {
-          403: 'Você não tem acesso a este ticket.',
-          404: 'Não encontramos esse ticket — ele pode ter sido removido.'
-        }, 'Erro ao carregar os detalhes do ticket') : null
+          403: 'Você não tem acesso a este chamado.',
+          404: 'Não encontramos esse chamado — ele pode ter sido removido.'
+        }, 'Erro ao carregar os detalhes do chamado') : null
       };
     })
   })),

@@ -69,14 +69,14 @@ describe('TicketListComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega os tickets do usuário logado ao inicializar', async () => {
+  it('carrega os chamados do usuário logado ao inicializar', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     expect(storeFake.loadForCurrentUser).toHaveBeenCalled();
   });
 
-  it('renderiza os tickets carregados, com prioridade e status', async () => {
+  it('renderiza os chamados carregados, com prioridade e status', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -95,12 +95,12 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
   });
 
-  it('mostra o estado vazio quando não há tickets', async () => {
+  it('mostra o estado vazio quando não há chamados', async () => {
     storeFake.tickets.set([]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum ticket aberto ainda');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado aberto ainda');
     const cta = fixture.nativeElement.querySelector('.first-use a.btn-primary') as HTMLAnchorElement;
     expect(cta.getAttribute('href')).toBe('/tickets/novo');
   });
@@ -116,19 +116,19 @@ describe('TicketListComponent', () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Atendem tickets: TI, RH e Financeiro.');
+    expect(fixture.nativeElement.textContent).toContain('Atendem chamados: TI, RH e Financeiro.');
   });
 
   it('mostra a mensagem de erro de carregamento do store', async () => {
-    storeFake.loadError.set('Erro ao carregar tickets');
+    storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar tickets');
+    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar chamados');
   });
 
-  it('recarrega os tickets ao clicar em "Tentar novamente" no alerta de erro', async () => {
-    storeFake.loadError.set('Erro ao carregar tickets');
+  it('recarrega os chamados ao clicar em "Tentar novamente" no alerta de erro', async () => {
+    storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -139,7 +139,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.loadForCurrentUser).toHaveBeenCalledTimes(2);
   });
 
-  it('só mostra "Reabrir" para tickets inativos (Resolvido/Fechado/Cancelado)', async () => {
+  it('só mostra "Reabrir" para chamados inativos (Resolvido/Fechado/Cancelado)', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -149,7 +149,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.dropdown-item.text-success').length).toBe(1);
   });
 
-  it('leva ao detalhe pelo título do ticket, sem um botão "Ver detalhes" separado', async () => {
+  it('leva ao detalhe pelo título do chamado, sem um botão "Ver detalhes" separado', async () => {
     storeFake.tickets.set([openTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -160,7 +160,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.bx-show')).toBeNull();
   });
 
-  it('reabre o ticket pelo modal, com o motivo informado, e fecha o modal em caso de sucesso', async () => {
+  it('reabre o chamado pelo modal, com o motivo informado, e fecha o modal em caso de sucesso', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -173,7 +173,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.reopen).toHaveBeenCalledWith('t2', 'O monitor voltou a piscar.', jasmine.any(Function));
 
     storeFake.reopen.calls.mostRecent().args[2]();
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket reaberto.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto.');
     expect(fixture.componentInstance.reopeningTicket()).toBeNull();
   });
 
@@ -244,7 +244,7 @@ describe('TicketListComponent', () => {
     expect(pageTwoButton?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('desabilita as ações e troca o ícone do "⋮" por um spinner no ticket pendente', async () => {
+  it('desabilita as ações e troca o ícone do "⋮" por um spinner no chamado pendente', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     storeFake.pendingTicketIds.set(['t2']);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -260,7 +260,7 @@ describe('TicketListComponent', () => {
     expect(menuButtons[0].querySelector('.spinner-border')).toBeNull();
   });
 
-  it('mostra Editar descrição/Cancelar ticket no "⋮" só para tickets ativos (Aberto/Em Andamento)', async () => {
+  it('mostra Editar descrição/Cancelar chamado no "⋮" só para chamados ativos (Aberto/Em Andamento)', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -271,10 +271,10 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.btn-row-actions').length).toBe(2);
     const itemLabels = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLElement>)
       .map(item => item.textContent?.trim());
-    expect(itemLabels).toEqual(['Editar descrição', 'Cancelar ticket', 'Reabrir ticket']);
+    expect(itemLabels).toEqual(['Editar descrição', 'Cancelar chamado', 'Reabrir chamado']);
   });
 
-  it('abre o modal de edição pré-carregando o ticket, e fecha sem salvar', async () => {
+  it('abre o modal de edição pré-carregando o chamado, e fecha sem salvar', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -311,7 +311,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('app-ticket-edit-dialog')).not.toBeNull();
   });
 
-  it('cancela o ticket quando confirmado, preservando a descrição atual', async () => {
+  it('cancela o chamado quando confirmado, preservando a descrição atual', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -319,14 +319,14 @@ describe('TicketListComponent', () => {
     fixture.componentInstance.onCancelTicket(openTicket);
 
     // "Voltar" em vez de "Cancelar" ao lado de "Cancelar ticket", pra não ficar ambíguo.
-    expect(confirmDialogServiceFake.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ confirmLabel: 'Cancelar ticket', cancelLabel: 'Voltar' }));
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ confirmLabel: 'Cancelar chamado', cancelLabel: 'Voltar' }));
     expect(storeFake.update).toHaveBeenCalledWith('t1', { description: openTicket.description, status: TicketStatus.Canceled }, jasmine.any(Function));
 
     storeFake.update.calls.mostRecent().args[2]();
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket cancelado.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado cancelado.');
   });
 
-  it('não cancela o ticket quando a confirmação for cancelada', async () => {
+  it('não cancela o chamado quando a confirmação for cancelada', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -355,11 +355,11 @@ describe('TicketListComponent', () => {
   });
 
   it('mostra o erro de uma ação sem "Tentar novamente", e o dispensa pelo botão de fechar', async () => {
-    storeFake.mutationError.set('Erro ao excluir o ticket');
+    storeFake.mutationError.set('Erro ao excluir o chamado');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Erro ao excluir o ticket');
+    expect(fixture.nativeElement.textContent).toContain('Erro ao excluir o chamado');
     expect(fixture.nativeElement.textContent).not.toContain('Tentar novamente');
 
     (fixture.nativeElement.querySelector('.alert .btn-close') as HTMLButtonElement).click();

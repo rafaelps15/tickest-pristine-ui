@@ -37,11 +37,11 @@ describe('TicketHistoryStore', () => {
     store = TestBed.inject(TicketHistoryStore);
   });
 
-  it('não chama a API antes de um ticket ser definido', () => {
+  it('não chama a API antes de um chamado ser definido', () => {
     expect(dataService.getHistory).not.toHaveBeenCalled();
   });
 
-  it('carrega o histórico do ticket informado', async () => {
+  it('carrega o histórico do chamado informado', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 

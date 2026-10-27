@@ -106,7 +106,7 @@ describe('TicketMonitorComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega os tickets ao inicializar, sem recarregar os departamentos (o store já os carrega sozinho)', async () => {
+  it('carrega os chamados ao inicializar, sem recarregar os departamentos (o store já os carrega sozinho)', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -157,7 +157,7 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  it('restaura o ticket selecionado a partir do "ticketId" da query string ao inicializar', async () => {
+  it('restaura o chamado selecionado a partir do "ticketId" da query string ao inicializar', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ ticketId: 't1' }) } }
     });
@@ -169,7 +169,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.selectedTicketId()).toBe('t1');
   });
 
-  it('reflete o ticket selecionado na URL, sem navegar pra outra rota', async () => {
+  it('reflete o chamado selecionado na URL, sem navegar pra outra rota', async () => {
     const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
 
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -232,7 +232,7 @@ describe('TicketMonitorComponent', () => {
     expect(sectorOptions).toContain('Suporte');
   });
 
-  it('renderiza os tickets carregados, com solicitante, setor, prioridade, status e SLA', async () => {
+  it('renderiza os chamados carregados, com solicitante, setor, prioridade, status e SLA', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -245,7 +245,7 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('No prazo');
   });
 
-  it('o link "Ver detalhes" leva pro ticket com ?from=monitor, pra o detalhe saber de onde o usuário veio', async () => {
+  it('o link "Ver detalhes" leva pro chamado com ?from=monitor, pra o detalhe saber de onde o usuário veio', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -253,7 +253,7 @@ describe('TicketMonitorComponent', () => {
     expect(detailLink.getAttribute('href')).toBe('/tickets/t1?from=monitor');
   });
 
-  it('seleciona um ticket ao clicar na linha, e desseleciona ao clicar de novo na mesma linha', async () => {
+  it('seleciona um chamado ao clicar na linha, e desseleciona ao clicar de novo na mesma linha', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -291,14 +291,14 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    const assignButton = row.querySelector('button[aria-label^="Atribuir o ticket"]') as HTMLButtonElement;
+    const assignButton = row.querySelector('button[aria-label^="Atribuir o chamado"]') as HTMLButtonElement;
     assignButton.click();
     await fixture.whenStable();
 
     expect(row.querySelector('.ticket-select')!.getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('mostra o painel "Informações do Ticket" ao selecionar um ticket, e repassa a seleção pro TicketQuickInfoStore', async () => {
+  it('mostra o painel "Informações do Chamado" ao selecionar um chamado, e repassa a seleção pro TicketQuickInfoStore', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeNull();
@@ -311,7 +311,7 @@ describe('TicketMonitorComponent', () => {
     expect(quickInfoStoreFake.select).toHaveBeenCalledWith('t1');
   });
 
-  it('não mostra o painel quando o ticket selecionado não está (mais) na página/filtro atual', async () => {
+  it('não mostra o painel quando o chamado selecionado não está (mais) na página/filtro atual', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ ticketId: 'inexistente' }) } }
     });
@@ -395,7 +395,7 @@ describe('TicketMonitorComponent', () => {
     expect(guideIndex).toBeLessThan(tableIndex);
   });
 
-  it('mostra "Não atribuído" quando o ticket não tem atendente, e o nome quando tem', async () => {
+  it('mostra "Não atribuído" quando o chamado não tem atendente, e o nome quando tem', async () => {
     storeFake.tickets.set([
       { ...ticket, id: 't1', assignedToUserId: null, assignedToName: null },
       { ...ticket, id: 't2', assignedToUserId: 'u2', assignedToName: 'Carlos Souza' }
@@ -417,8 +417,8 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const assignButtons = fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o ticket"]') as NodeListOf<HTMLButtonElement>;
-    expect(assignButtons.length).withContext('só o ticket t1 (ativo e sem responsável) deve ter o botão').toBe(1);
+    const assignButtons = fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o chamado"]') as NodeListOf<HTMLButtonElement>;
+    expect(assignButtons.length).withContext('só o chamado t1 (ativo e sem responsável) deve ter o botão').toBe(1);
 
     assignButtons[0].click();
     expect(storeFake.assignToMe).toHaveBeenCalledWith('t1', 'u-current', jasmine.any(Function));
@@ -428,13 +428,13 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const assignButton = fixture.nativeElement.querySelector('button[aria-label^="Atribuir o ticket"]') as HTMLButtonElement;
+    const assignButton = fixture.nativeElement.querySelector('button[aria-label^="Atribuir o chamado"]') as HTMLButtonElement;
     assignButton.click();
 
     const onSuccess = storeFake.assignToMe.calls.mostRecent().args[2] as () => void;
     onSuccess();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket atribuído a você.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado atribuído a você.');
   });
 
   it('não mostra "Atribuir a mim" sem a permissão tickets:manage', async () => {
@@ -442,10 +442,10 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir o ticket"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir o chamado"]')).toBeNull();
   });
 
-  it('desabilita e mostra um spinner só no botão do ticket que está sendo atribuído', async () => {
+  it('desabilita e mostra um spinner só no botão do chamado que está sendo atribuído', async () => {
     storeFake.tickets.set([
       { ...ticket, id: 't1', assignedToUserId: null, status: TicketStatus.Open },
       { ...ticket, id: 't2', assignedToUserId: null, status: TicketStatus.Open }
@@ -454,7 +454,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const assignButtons = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o ticket"]') as NodeListOf<HTMLButtonElement>);
+    const assignButtons = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o chamado"]') as NodeListOf<HTMLButtonElement>);
     expect(assignButtons[0].disabled).toBeTrue();
     expect(assignButtons[0].querySelector('.spinner-border')).toBeTruthy();
     expect(assignButtons[1].disabled).toBeFalse();
@@ -462,7 +462,7 @@ describe('TicketMonitorComponent', () => {
   });
 
   it('mostra a mensagem de erro de atribuição quando falhar', async () => {
-    storeFake.mutationError.set('Não foi possível atribuir — o ticket pode já ter outro responsável ou ter mudado de status. Tente novamente.');
+    storeFake.mutationError.set('Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.');
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -501,20 +501,20 @@ describe('TicketMonitorComponent', () => {
     expect(resolvedOptions).toEqual(['Cumprido', 'Violado', 'Sem SLA']);
   });
 
-  it('mostra o estado vazio quando não há tickets', async () => {
+  it('mostra o estado vazio quando não há chamados', async () => {
     storeFake.tickets.set([]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum ticket encontrado com esses filtros.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado encontrado com esses filtros.');
   });
 
   it('mostra a mensagem de erro do store, com botão para tentar novamente', async () => {
-    storeFake.listState.set({ loading: false, error: 'Você não tem permissão para monitorar os tickets do sistema.' });
+    storeFake.listState.set({ loading: false, error: 'Você não tem permissão para monitorar os chamados do sistema.' });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para monitorar os tickets do sistema.');
+    expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para monitorar os chamados do sistema.');
 
     const retryButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
       .find(b => b.textContent?.includes('Tentar novamente'));
@@ -637,7 +637,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setPageSize).toHaveBeenCalledWith(50);
   });
 
-  it('indica um ticket atrasado quando o prazo já passou e não foi resolvido', async () => {
+  it('indica um chamado atrasado quando o prazo já passou e não foi resolvido', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -666,16 +666,16 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const buttons = fixture.nativeElement.querySelectorAll('button[aria-label*="responsável pelo ticket"]') as NodeListOf<HTMLButtonElement>;
-    expect(buttons.length).withContext('só os tickets ativos (t1, t2) devem ter o botão').toBe(2);
+    const buttons = fixture.nativeElement.querySelectorAll('button[aria-label*="responsável pelo chamado"]') as NodeListOf<HTMLButtonElement>;
+    expect(buttons.length).withContext('só os chamados ativos (t1, t2) devem ter o botão').toBe(2);
   });
 
-  it('abre o modal "Atribuir responsável" pro ticket clicado, limpando a busca de uma abertura anterior', async () => {
+  it('abre o modal "Atribuir responsável" pro chamado clicado, limpando a busca de uma abertura anterior', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.responsibleSearchInput.set('resquício');
 
-    const openButton = fixture.nativeElement.querySelector('button[aria-label*="responsável pelo ticket"]') as HTMLButtonElement;
+    const openButton = fixture.nativeElement.querySelector('button[aria-label*="responsável pelo chamado"]') as HTMLButtonElement;
     openButton.click();
 
     expect(fixture.componentInstance.assigningResponsibleTicketId()).toBe('t1');
@@ -779,7 +779,7 @@ describe('TicketMonitorComponent', () => {
     expect(closeSpy).toHaveBeenCalled();
   });
 
-  it('não dispara a atribuição de responsável se nenhum ticket estiver com o modal aberto', async () => {
+  it('não dispara a atribuição de responsável se nenhum chamado estiver com o modal aberto', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 

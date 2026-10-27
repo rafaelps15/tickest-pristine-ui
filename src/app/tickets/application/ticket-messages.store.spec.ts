@@ -36,11 +36,11 @@ describe('TicketMessagesStore', () => {
     store = TestBed.inject(TicketMessagesStore);
   });
 
-  it('não chama a API antes de um ticket ser definido', () => {
+  it('não chama a API antes de um chamado ser definido', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
-  it('carrega as mensagens do ticket informado', async () => {
+  it('carrega as mensagens do chamado informado', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 

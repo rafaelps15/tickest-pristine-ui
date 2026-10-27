@@ -69,11 +69,11 @@ describe('TicketDetailStore', () => {
     store = TestBed.inject(TicketDetailStore);
   });
 
-  it('não chama a API antes de um ticket ser definido', () => {
+  it('não chama a API antes de um chamado ser definido', () => {
     expect(dataService.getById).not.toHaveBeenCalled();
   });
 
-  it('carrega o detalhe do ticket informado', async () => {
+  it('carrega o detalhe do chamado informado', async () => {
     store.loadTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -81,13 +81,13 @@ describe('TicketDetailStore', () => {
     expect(store.ticket()).toEqual(ticket);
   });
 
-  it('expõe mensagem própria quando o ticket não existe (404)', async () => {
+  it('expõe mensagem própria quando o chamado não existe (404)', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
     store.loadTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Não encontramos esse ticket — ele pode ter sido removido.');
+    expect(store.state().error).toBe('Não encontramos esse chamado — ele pode ter sido removido.');
   });
 
   it('expõe mensagem própria quando o usuário não tem acesso (403)', async () => {
@@ -96,7 +96,7 @@ describe('TicketDetailStore', () => {
     store.loadTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Você não tem acesso a este ticket.');
+    expect(store.state().error).toBe('Você não tem acesso a este chamado.');
   });
 
   describe('removeAssignee', () => {
@@ -117,7 +117,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando o chamado não está ativo (400 Tickets.NotActive)', async () => {
+    it('expõe mensagem própria quando o chamado não está ativo (400 Chamados.NotActive)', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({
         status: 400, error: { title: 'Tickets.NotActive', detail: 'O chamado não está ativo.' }
       })));
@@ -134,16 +134,16 @@ describe('TicketDetailStore', () => {
       store.removeAssignee('t1');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(store.mutationError()).toBe('Você não tem permissão para remover o responsável deste ticket.');
+      expect(store.mutationError()).toBe('Você não tem permissão para remover o responsável deste chamado.');
     });
 
-    it('expõe mensagem própria quando o ticket não é encontrado (404)', async () => {
+    it('expõe mensagem própria quando o chamado não é encontrado (404)', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
       store.removeAssignee('t1');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(store.mutationError()).toBe('Ticket não encontrado — ele pode ter sido removido.');
+      expect(store.mutationError()).toBe('Chamado não encontrado — ele pode ter sido removido.');
     });
 
     it('expõe mensagem própria em conflito (409)', async () => {
@@ -183,7 +183,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando o chamado não está ativo (400 Tickets.NotActive)', async () => {
+    it('expõe mensagem própria quando o chamado não está ativo (400 Chamados.NotActive)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({
         status: 400, error: { title: 'Tickets.NotActive', detail: 'O chamado não está ativo.' }
       })));
@@ -194,7 +194,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('O chamado não está ativo.');
     });
 
-    it('expõe a mensagem do back-end com uma dica de ação quando o candidato não pode gerenciar chamados (400 Tickets.AssigneeCannotManageTickets)', async () => {
+    it('expõe a mensagem do back-end com uma dica de ação quando o candidato não pode gerenciar chamados (400 Chamados.AssigneeCannotManageTickets)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({
         status: 400, error: { title: 'Tickets.AssigneeCannotManageTickets', detail: 'O usuário não atende chamados e não pode ser o responsável.' }
       })));
@@ -211,16 +211,16 @@ describe('TicketDetailStore', () => {
       store.assignTicket('t1', 'u2');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(store.mutationError()).toBe('Você não tem permissão para atribuir o responsável deste ticket.');
+      expect(store.mutationError()).toBe('Você não tem permissão para atribuir o responsável deste chamado.');
     });
 
-    it('expõe mensagem própria quando o ticket ou o usuário não é encontrado (404)', async () => {
+    it('expõe mensagem própria quando o chamado ou o usuário não é encontrado (404)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
       store.assignTicket('t1', 'u2');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(store.mutationError()).toBe('Ticket ou usuário não encontrado.');
+      expect(store.mutationError()).toBe('Chamado ou usuário não encontrado.');
     });
 
     it('volta assigningTicket pra false depois do erro', async () => {
@@ -313,7 +313,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('reabre o ticket, recarrega o detalhe e chama onSuccess', async () => {
+    it('reabre o chamado, recarrega o detalhe e chama onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
       store.reopen('t1', onSuccess);
@@ -352,7 +352,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('expõe o sla que já vem no detalhe do ticket', () => {
+    it('expõe o sla que já vem no detalhe do chamado', () => {
       expect(store.sla()).toEqual(sla);
     });
 

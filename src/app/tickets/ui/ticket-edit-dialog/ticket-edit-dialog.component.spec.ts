@@ -44,7 +44,7 @@ describe('TicketEditDialogComponent', () => {
     return fixture.nativeElement.querySelector('#ticketEditDescription');
   }
 
-  it('pré-carrega a descrição atual do ticket', async () => {
+  it('pré-carrega a descrição atual do chamado', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 

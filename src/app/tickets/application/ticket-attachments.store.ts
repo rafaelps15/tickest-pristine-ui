@@ -52,7 +52,7 @@ export const TicketAttachmentsStore = signalStore(
         loading: store._listResource.isLoading(),
         error: store.mutationError() ?? (resourceError
           ? extractErrorMessage(resourceError, {
-              403: 'Você não tem permissão para ver os anexos deste ticket.'
+              403: 'Você não tem permissão para ver os anexos deste chamado.'
             }, 'Erro ao carregar anexos')
           : null)
       };
@@ -117,7 +117,7 @@ export const TicketAttachmentsStore = signalStore(
         error: (err: HttpErrorResponse) => {
           patchState(store, {
             uploadError: extractErrorMessage(err, {
-              403: 'Você não tem permissão para anexar arquivos a este ticket.'
+              403: 'Você não tem permissão para anexar arquivos a este chamado.'
             }, 'Erro ao enviar o anexo.')
           });
         }

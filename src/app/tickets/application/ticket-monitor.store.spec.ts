@@ -57,7 +57,7 @@ describe('TicketMonitorStore', () => {
     store = TestBed.inject(TicketMonitorStore);
   });
 
-  it('carrega a primeira página de tickets e o resumo de SLA com os filtros padrão', async () => {
+  it('carrega a primeira página de chamados e o resumo de SLA com os filtros padrão', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith({ sort: TicketSortOrder.Newest, page: 1, pageSize: 20 });
@@ -73,7 +73,7 @@ describe('TicketMonitorStore', () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Você não tem permissão para monitorar os tickets do sistema.');
+    expect(store.listState().error).toBe('Você não tem permissão para monitorar os chamados do sistema.');
   });
 
   it('expõe a mensagem de erro quando o resumo de SLA falhar, e recarrega ao chamar reloadSlaSummary', async () => {
@@ -203,7 +203,7 @@ describe('TicketMonitorStore', () => {
     expect(store.assigningToMeIds()).toEqual([]);
   });
 
-  it('marca só o ticket em questão como "atribuindo", sem afetar outros, enquanto a atribuição está em voo', async () => {
+  it('marca só o chamado em questão como "atribuindo", sem afetar outros, enquanto a atribuição está em voo', async () => {
     let resolveAssign!: () => void;
     dataService.assignTicket.and.returnValue(new Observable<void>(subscriber => {
       resolveAssign = () => { subscriber.next(); subscriber.complete(); };
@@ -301,7 +301,7 @@ describe('TicketMonitorStore', () => {
     store.assignResponsible('t1', 'u2');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.mutationError()).toBe('Ticket ou usuário não encontrado.');
+    expect(store.mutationError()).toBe('Chamado ou usuário não encontrado.');
     expect(store.assigningResponsible()).toBeFalse();
     expect(dataService.getAll).not.toHaveBeenCalled();
   });

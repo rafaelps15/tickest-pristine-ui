@@ -86,9 +86,9 @@ export const TicketSummaryStore = signalStore(
       const statusError = store._statusCountsResource.error() as HttpErrorResponse | undefined;
       const volumeError = store._volumeResource.error() as HttpErrorResponse | undefined;
       return statusError
-        ? extractErrorMessage(statusError, {}, 'Erro ao carregar o resumo dos tickets')
+        ? extractErrorMessage(statusError, {}, 'Erro ao carregar o resumo dos chamados')
         : volumeError
-          ? extractErrorMessage(volumeError, {}, 'Erro ao carregar o volume de tickets')
+          ? extractErrorMessage(volumeError, {}, 'Erro ao carregar o volume de chamados')
           : null;
     })
   })),

@@ -190,7 +190,7 @@ describe('TicketCreateComponent', () => {
     const onSuccess = ticketsStoreFake.create.calls.mostRecent().args[1];
     onSuccess();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket aberto com sucesso.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado aberto com sucesso.');
   });
 
   it('deixa o envio habilitado com o formulário vazio e, ao enviar, mostra os erros sem abrir o chamado', async () => {
@@ -224,7 +224,7 @@ describe('TicketCreateComponent', () => {
     expect(hint()).toBe('17/500');
   });
 
-  it('desabilita e mostra um spinner no botão de envio enquanto o ticket está sendo criado', async () => {
+  it('desabilita e mostra um spinner no botão de envio enquanto o chamado está sendo criado', async () => {
     ticketsStoreFake.creating.set(true);
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();

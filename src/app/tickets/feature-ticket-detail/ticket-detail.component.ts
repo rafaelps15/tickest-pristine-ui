@@ -128,7 +128,7 @@ export class TicketDetailComponent implements OnInit {
      * (achado do critique de 2026-10-25: aqui descartava esse nível, perdendo o pai que o usuário
      * acabou de ver um clique antes).
      */
-    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Administração / Monitorar Tickets /' : 'Meus Tickets /';
+    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Administração / Monitorar Chamados /' : 'Meus Chamados /';
 
     /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
     protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';

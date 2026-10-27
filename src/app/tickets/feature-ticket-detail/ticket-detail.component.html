@@ -2,7 +2,7 @@
   <div class="col-12">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
       <div class="text-break">
-        <h4 class="fw-bold mb-0"><span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Ticket' }}</h4>
+        <h4 class="fw-bold mb-0"><span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Chamado' }}</h4>
       </div>
       <a [routerLink]="backLink" class="btn btn-outline-secondary btn-sm">
         <i class="bx bx-arrow-back me-1"></i> Voltar
@@ -29,7 +29,7 @@
         <span class="text-muted">{{ t.description }}</span>
         @if (canEditTicket(t)) {
           <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle flex-shrink-0"
-                  [attr.aria-label]="'Editar a descrição do ticket ' + t.title" (click)="onStartEditDescription(t)">
+                  [attr.aria-label]="'Editar a descrição do chamado ' + t.title" (click)="onStartEditDescription(t)">
             <i class="bx bx-edit"></i>
           </button>
         }
@@ -120,7 +120,7 @@
   </div>
 } @else {
   <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
-    <span>{{ detailStore.state().error ?? 'Não encontramos esse ticket — ele pode ter sido removido.' }}</span>
+    <span>{{ detailStore.state().error ?? 'Não encontramos esse chamado — ele pode ter sido removido.' }}</span>
     @if (detailStore.state().error) {
       <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="detailStore.loadTicket(ticketId)">Tentar novamente</button>
     }

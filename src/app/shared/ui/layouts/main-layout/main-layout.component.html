@@ -32,7 +32,7 @@
         <li class="menu-item" [class.active]="activeTicketsItem() === 'mine'">
           <a routerLink="/tickets" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'mine' ? 'page' : null">
             <i class="menu-icon tf-icons bx bx-receipt"></i>
-            <div>Meus Tickets</div>
+            <div>Meus Chamados</div>
           </a>
         </li>
 
@@ -49,7 +49,7 @@
           <li class="menu-item" [class.active]="activeTicketsItem() === 'monitor'">
             <a routerLink="/tickets/monitorar" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'monitor' ? 'page' : null">
               <i class="menu-icon tf-icons bx bx-list-check"></i>
-              <div>Monitorar Tickets</div>
+              <div>Monitorar Chamados</div>
             </a>
           </li>
         }
