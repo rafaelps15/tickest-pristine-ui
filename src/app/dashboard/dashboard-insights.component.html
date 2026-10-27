@@ -3,6 +3,18 @@
     <div class="d-flex align-items-center gap-2 mb-3">
       <i class="bx bx-error fs-5 text-warning" aria-hidden="true"></i>
       <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
+      <!-- A idade da lista à vista: o prazo relativo anda sozinho, mas a lista é a da última carga. -->
+      @if (loadedAtMs(); as loadedAt) {
+        <span class="ms-auto text-muted small text-nowrap">Atualizado às {{ loadedAt | date:'HH:mm' }}</span>
+      }
+      <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0" [class.ms-auto]="!loadedAtMs()"
+              [disabled]="loading() || refreshing()" aria-label="Atualizar alertas de SLA" (click)="refresh.emit()">
+        @if (refreshing()) {
+          <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        } @else {
+          <i class="bx bx-refresh fs-5" aria-hidden="true"></i>
+        }
+      </button>
     </div>
 
     @if (loading()) {
@@ -10,7 +22,10 @@
         <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando alertas de SLA…</span></span>
       </div>
     } @else if (error(); as errorMessage) {
-      <p class="text-danger small mb-0">{{ errorMessage }}</p>
+      <div class="d-flex flex-column align-items-start gap-2" role="alert">
+        <p class="text-danger small mb-0">{{ errorMessage }}</p>
+        <button type="button" class="btn btn-sm btn-outline-danger" (click)="refresh.emit()">Tentar novamente</button>
+      </div>
     } @else if (criticalTickets().length === 0) {
       <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
       <div class="d-flex align-items-center gap-3 sla-all-clear">

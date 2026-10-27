@@ -9,6 +9,16 @@ import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, SessionService } from '../../shared';
 
+/**
+ * Valor do recurso, ou `undefined` sem valor — inclusive em erro. Ler `.value()` direto num
+ * `resource()` em estado de erro lança exceção (Angular 20+), e os derivados abaixo são lidos pelo
+ * template sempre, mesmo quando ele está mostrando o erro: sem isso, a falha da API quebrava a tela
+ * em vez de mostrar "—" / "Tentar novamente".
+ */
+function valueOf<T>(resource: { hasValue(): boolean; value(): T }): T | undefined {
+  return resource.hasValue() ? resource.value() : undefined;
+}
+
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
 const CRITICAL_TICKETS_LIMIT = 5;
 
@@ -56,7 +66,7 @@ export const TicketSummaryStore = signalStore(
   })),
   withComputed((store) => ({
     /** Pontos de volume de tickets abertos no período atual (dia/semana/mês), do mais antigo pro mais novo. */
-    volume: computed(() => store._volumeResource.value() ?? []),
+    volume: computed(() => valueOf(store._volumeResource) ?? []),
     /** Carregando os totais por status — só esse recurso, não o volume (os 2 são independentes; trocar o agrupamento do gráfico não deve acender o spinner dos 4 cards de status). */
     statusCountsLoading: computed(() => store._statusCountsResource.isLoading()),
     /** Carregando o volume de tickets do período (dia/semana/mês) — só esse recurso, não os totais por status. */
@@ -81,42 +91,52 @@ export const TicketSummaryStore = signalStore(
   })),
   withComputed((store) => ({
     /** Total de tickets da empresa (todos os status, incluindo Fechados e Cancelados). */
-    total: computed(() => store._statusCountsResource.value()?.totalCount ?? 0),
+    total: computed(() => valueOf(store._statusCountsResource)?.totalCount ?? 0),
     /** Quantidade de tickets com status Aberto, de toda a empresa. */
-    openCount: computed(() => store._statusCountsResource.value()?.openCount ?? 0),
+    openCount: computed(() => valueOf(store._statusCountsResource)?.openCount ?? 0),
     /** Quantidade de tickets com status Em Andamento, de toda a empresa. */
-    inProgressCount: computed(() => store._statusCountsResource.value()?.inProgressCount ?? 0),
+    inProgressCount: computed(() => valueOf(store._statusCountsResource)?.inProgressCount ?? 0),
     /** Quantidade de tickets com status Resolvido, de toda a empresa. */
-    resolvedCount: computed(() => store._statusCountsResource.value()?.resolvedCount ?? 0),
+    resolvedCount: computed(() => valueOf(store._statusCountsResource)?.resolvedCount ?? 0),
     /** Quantidade de tickets com status Fechado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
-    closedCount: computed(() => store._statusCountsResource.value()?.closedCount ?? 0),
+    closedCount: computed(() => valueOf(store._statusCountsResource)?.closedCount ?? 0),
     /** Quantidade de tickets com status Cancelado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
-    canceledCount: computed(() => store._statusCountsResource.value()?.canceledCount ?? 0),
+    canceledCount: computed(() => valueOf(store._statusCountsResource)?.canceledCount ?? 0),
     /**
      * Chamados com SLA vencido ou em risco (até 5), do prazo mais antigo pro mais novo — o vencido há
      * mais tempo primeiro — vazio para quem não tem `tickets:manage`.
      */
     criticalTickets: computed(() => {
-      const value = store._criticalTicketsResource.value();
+      const value = valueOf(store._criticalTicketsResource);
       if (!value) return [];
       return [...value.breached.items, ...value.atRisk.items]
         .sort((a, b) => a.dueAtUtc.localeCompare(b.dueAtUtc))
         .slice(0, CRITICAL_TICKETS_LIMIT);
     }),
     /** Total de chamados ativos com SLA vencido em toda a empresa (não só os 5 listados). */
-    breachedCount: computed(() => store._criticalTicketsResource.value()?.breached.totalCount ?? 0),
+    breachedCount: computed(() => valueOf(store._criticalTicketsResource)?.breached.totalCount ?? 0),
     /** Total de chamados ativos com SLA em risco em toda a empresa (não só os 5 listados). */
-    atRiskCount: computed(() => store._criticalTicketsResource.value()?.atRisk.totalCount ?? 0),
+    atRiskCount: computed(() => valueOf(store._criticalTicketsResource)?.atRisk.totalCount ?? 0),
     /**
      * Diferença (ms) entre o relógio do servidor e o do navegador, medida quando os alertas chegaram —
      * `Date.now() + clockOffsetMs` é a "hora do servidor" usada pelo prazo relativo do card. 0 sem dados.
      */
     clockOffsetMs: computed(() => {
-      const value = store._criticalTicketsResource.value();
+      const value = valueOf(store._criticalTicketsResource);
       return value ? new Date(value.slaSummary.serverNowUtc).getTime() - value.receivedAtMs : 0;
     }),
-    /** Carregando os chamados em risco de SLA. */
-    criticalTicketsLoading: computed(() => store._criticalTicketsResource.isLoading()),
+    /**
+     * Primeira carga dos alertas de SLA (ainda sem nada pra mostrar) — numa atualização, a lista
+     * atual fica na tela e quem sinaliza a busca é {@link criticalTicketsRefreshing}.
+     */
+    criticalTicketsLoading: computed(() => store._criticalTicketsResource.isLoading() && !store._criticalTicketsResource.hasValue()),
+    /** Atualizando os alertas de SLA com a lista anterior ainda na tela (botão "Atualizar" gira). */
+    criticalTicketsRefreshing: computed(() => store._criticalTicketsResource.isLoading() && store._criticalTicketsResource.hasValue()),
+    /**
+     * Quando os alertas de SLA chegaram (ms, relógio do navegador) — o card mostra "Atualizado às" e
+     * decide recarregar ao voltar pra aba. Null sem dados.
+     */
+    criticalTicketsLoadedAtMs: computed(() => valueOf(store._criticalTicketsResource)?.receivedAtMs ?? null),
     /** Mensagem de erro ao buscar os chamados em risco de SLA — não derruba o resto do dashboard, só esse card. */
     criticalTicketsError: computed(() => {
       const error = store._criticalTicketsResource.error() as HttpErrorResponse | undefined;
@@ -128,6 +148,14 @@ export const TicketSummaryStore = signalStore(
     load(): void {
       store._statusCountsResource.reload();
       store._volumeResource.reload();
+      store._criticalTicketsResource.reload();
+    },
+
+    /**
+     * Recarrega só os alertas de SLA ("Atualizar", "Tentar novamente", volta pra aba depois de um
+     * tempo) — sem tocar nos totais nem no volume, que piscariam os KPIs e o gráfico à toa.
+     */
+    reloadCritical(): void {
       store._criticalTicketsResource.reload();
     },
 

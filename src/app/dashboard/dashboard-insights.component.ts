@@ -1,10 +1,13 @@
-import { Component, ChangeDetectionStrategy, input, signal, computed, effect, inject, DestroyRef, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TicketMonitorItem, TicketSlaStatus } from '../tickets';
 
 /** De quanto em quanto tempo o prazo relativo ("vence em 2h 14min") é recalculado, com a aba visível. */
 const CLOCK_TICK_MS = 30_000;
+
+/** Idade a partir da qual a lista é recarregada ao voltar pra aba (não é polling: só na volta). */
+const STALE_AFTER_MS = 5 * 60_000;
 
 /** Duração do realce de um item que acabou de vencer — o mesmo tempo da animação `.just-crossed` no CSS. */
 const HIGHLIGHT_MS = 1_600;
@@ -67,6 +70,13 @@ export class DashboardInsightsComponent {
   readonly loading = input(false);
   /** Mensagem de erro ao buscar os chamados em risco de SLA, se a busca falhar. */
   readonly error = input<string | null>(null);
+  /** Quando os alertas chegaram (ms) — "Atualizado às" e a recarga ao voltar pra aba. Null sem dados. */
+  readonly loadedAtMs = input<number | null>(null);
+  /** Atualizando os alertas com a lista anterior ainda na tela — o botão "Atualizar" gira. */
+  readonly refreshing = input(false);
+
+  /** Pede pra recarregar só os alertas ("Atualizar", "Tentar novamente" ou volta pra aba depois de um tempo). */
+  readonly refresh = output<void>();
 
   /** Enum exposto ao template, pra montar o filtro da fila nos totais. */
   protected readonly TicketSlaStatus = TicketSlaStatus;
@@ -131,12 +141,20 @@ export class DashboardInsightsComponent {
     const tick = () => {
       if (!document.hidden) this.nowMs.set(Date.now());
     };
+    // Ao voltar pra aba: o relógio anda na hora e, se a lista é mais velha que STALE_AFTER_MS, pede
+    // dados novos — sem isso o relógio vivo dava a impressão de "agora" sobre uma lista de horas atrás.
+    const onVisibility = () => {
+      tick();
+      const loadedAt = this.loadedAtMs();
+      if (!document.hidden && loadedAt !== null && !this.refreshing() && Date.now() - loadedAt > STALE_AFTER_MS) {
+        this.refresh.emit();
+      }
+    };
     const intervalId = setInterval(tick, CLOCK_TICK_MS);
-    // Ao voltar pra aba, atualiza na hora em vez de esperar o próximo tick.
-    document.addEventListener('visibilitychange', tick);
+    document.addEventListener('visibilitychange', onVisibility);
     this.destroyRef.onDestroy(() => {
       clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', tick);
+      document.removeEventListener('visibilitychange', onVisibility);
     });
   }
 

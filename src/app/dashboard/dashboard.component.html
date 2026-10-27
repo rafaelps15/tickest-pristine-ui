@@ -98,7 +98,9 @@
       <app-dashboard-insights class="insights-rail" [criticalTickets]="store.criticalTickets()"
                               [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
                               [clockOffsetMs]="store.clockOffsetMs()"
-                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()" />
+                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
+                              [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
+                              (refresh)="store.reloadCritical()" />
     }
 
     <div class="card">

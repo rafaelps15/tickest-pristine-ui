@@ -108,6 +108,9 @@ describe('TicketSummaryStore', () => {
     expect(store.summaryError()).toBe('Erro ao carregar o resumo dos tickets');
     expect(store.statusCountsFailed()).toBeTrue();
     expect(store.volumeFailed()).toBeFalse();
+    // Os totais em erro não podem lançar — o template os lê sempre, mesmo mostrando "—".
+    expect(store.total()).toBe(0);
+    expect(store.closedCount()).toBe(0);
   });
 
   it('não marca nenhuma busca como falha quando as duas respondem', () => {
@@ -124,6 +127,7 @@ describe('TicketSummaryStore', () => {
     expect(store.summaryError()).toBe('Erro ao carregar o volume de tickets');
     expect(store.volumeFailed()).toBeTrue();
     expect(store.statusCountsFailed()).toBeFalse();
+    expect(store.volume()).toEqual([]);
   });
 
   it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem tickets:manage', () => {
@@ -164,6 +168,28 @@ describe('TicketSummaryStore', () => {
     expect(store.criticalTickets().length).toBe(5);
   });
 
+  it('recarrega só os alertas de SLA com reloadCritical(), sem refazer totais nem volume', async () => {
+    dataService.getStatusCounts.calls.reset();
+    dataService.getVolume.calls.reset();
+    dataService.getAll.calls.reset();
+
+    store.reloadCritical();
+    expect(store.criticalTicketsRefreshing()).toBeTrue();
+    expect(store.criticalTicketsLoading()).toBeFalse(); // a lista atual continua na tela
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledTimes(2);
+    expect(dataService.getStatusCounts).not.toHaveBeenCalled();
+    expect(dataService.getVolume).not.toHaveBeenCalled();
+    expect(store.criticalTicketsRefreshing()).toBeFalse();
+  });
+
+  it('expõe quando os alertas de SLA chegaram, pro "Atualizado às" do card', () => {
+    const loadedAt = store.criticalTicketsLoadedAtMs();
+    expect(loadedAt).not.toBeNull();
+    expect(Math.abs(Date.now() - loadedAt!)).toBeLessThan(5_000);
+  });
+
   it('refaz a busca dos chamados críticos de SLA ao chamar load()', async () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -180,6 +206,10 @@ describe('TicketSummaryStore', () => {
 
     expect(store.criticalTicketsError()).toBe('Erro ao carregar os alertas de SLA');
     expect(store.criticalTicketsLoading()).toBeFalse();
+    // Ler os derivados em erro não pode lançar (o template os lê sempre, mesmo mostrando o erro).
+    expect(store.criticalTickets()).toEqual([]);
+    expect(store.breachedCount()).toBe(0);
+    expect(store.clockOffsetMs()).toBe(0);
   });
 
   describe('sem a permissão tickets:manage', () => {

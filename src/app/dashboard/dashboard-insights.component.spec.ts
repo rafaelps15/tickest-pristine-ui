@@ -14,6 +14,10 @@ const ticket: TicketMonitorItem = {
 
 describe('DashboardInsightsComponent', () => {
   beforeEach(async () => {
+    // O relógio do card só anda com a aba visível; a janela do Karma pode estar oculta/em segundo
+    // plano, então a visibilidade é fixada aqui em vez de depender de onde o navegador de teste está.
+    spyOnProperty(document, 'hidden', 'get').and.returnValue(false);
+
     await TestBed.configureTestingModule({
       imports: [DashboardInsightsComponent],
       providers: [provideZonelessChangeDetection(), provideRouter([])]
@@ -94,6 +98,61 @@ describe('DashboardInsightsComponent', () => {
     expect(breached.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.Breached}`);
     expect(atRisk.textContent).toContain('1');
     expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
+  });
+
+  describe('atualidade da lista', () => {
+    it('mostra a hora da última carga e pede atualização pelo botão', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('loadedAtMs', new Date(2026, 9, 27, 14, 32).getTime());
+      const refresh = jasmine.createSpy('refresh');
+      fixture.componentInstance.refresh.subscribe(refresh);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Atualizado às 14:32');
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement).click();
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('gira o botão e o desabilita enquanto atualiza, sem esconder a lista', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [ticket]);
+      fixture.componentRef.setInput('refreshing', true);
+      await fixture.whenStable();
+
+      const button = fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement;
+      expect(button.disabled).toBeTrue();
+      expect(button.querySelector('.spinner-border')).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.critical-ticket-link').length).toBe(1);
+    });
+
+    it('oferece "Tentar novamente" no erro, que pede uma nova carga', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
+      const refresh = jasmine.createSpy('refresh');
+      fixture.componentInstance.refresh.subscribe(refresh);
+      await fixture.whenStable();
+
+      const retry = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Tentar novamente'))!;
+      retry.click();
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('ao voltar pra aba, recarrega só se a lista tiver mais de 5 minutos', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      const refresh = jasmine.createSpy('refresh');
+      fixture.componentInstance.refresh.subscribe(refresh);
+
+      fixture.componentRef.setInput('loadedAtMs', Date.now() - 60_000);
+      await fixture.whenStable();
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(refresh).not.toHaveBeenCalled();
+
+      fixture.componentRef.setInput('loadedAtMs', Date.now() - 6 * 60_000);
+      await fixture.whenStable();
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('prazo vivo', () => {

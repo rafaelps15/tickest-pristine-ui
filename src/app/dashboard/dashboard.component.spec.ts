@@ -31,6 +31,9 @@ describe('DashboardComponent', () => {
       breachedCount: signal(0),
       atRiskCount: signal(0),
       clockOffsetMs: signal(0),
+      criticalTicketsLoadedAtMs: signal<number | null>(null),
+      criticalTicketsRefreshing: signal(false),
+      reloadCritical: jasmine.createSpy('reloadCritical'),
       criticalTicketsLoading: signal(false),
       criticalTicketsError: signal<string | null>(null)
     };
