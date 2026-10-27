@@ -91,7 +91,73 @@
 
 <!-- Gráfico e Ações Rápidas -->
 <div class="row">
-  <div class="col-12 col-lg-8 mb-4 order-2 order-lg-1">
+  <!-- Alertas de SLA + Ações Rápidas: o que pede ação vem primeiro — antes do gráfico no DOM (ordem de
+       leitura/Tab igual à visual no celular); só no desktop o gráfico vai pra esquerda (order-lg-*). -->
+  <div class="col-12 col-lg-4 mb-4 order-lg-2">
+    @if (sessionService.hasPermission('tickets:manage')) {
+      <app-dashboard-insights class="insights-rail" [criticalTickets]="store.criticalTickets()"
+                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
+                              [clockOffsetMs]="store.clockOffsetMs()"
+                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()" />
+    }
+
+    <div class="card">
+      <div class="card-header py-3">
+        <h5 class="card-title m-0 fw-bold">Ações Rápidas</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-3">
+          @if (!isAdministrative()) {
+            <a class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between"
+               routerLink="/tickets/novo">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-label-primary rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-plus-circle fs-4"></i>
+                </span>
+                <div>
+                  <div class="fw-bold">Novo Ticket</div>
+                  <div class="small opacity-75">Abrir uma nova solicitação</div>
+                </div>
+              </div>
+              <i class="bx bx-chevron-right"></i>
+            </a>
+
+            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between"
+               routerLink="/tickets">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-label-info rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-receipt fs-4"></i>
+                </span>
+                <div>
+                  <div class="fw-bold">Meus Tickets</div>
+                  <div class="small opacity-75">Acompanhar minhas solicitações</div>
+                </div>
+              </div>
+              <i class="bx bx-chevron-right"></i>
+            </a>
+          }
+
+          @if (isAdministrative() || sessionService.hasPermission('tickets:manage')) {
+            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between"
+               routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
+                  <i class="bx bx-user-x fs-4"></i>
+                </span>
+                <div>
+                  <div class="fw-bold">Tickets sem responsável</div>
+                  <div class="small opacity-75">Fila sem atendente definido</div>
+                </div>
+              </div>
+              <i class="bx bx-chevron-right"></i>
+            </a>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8 mb-4 order-lg-1">
     <div class="card">
       <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
         <h5 class="card-title m-0 fw-bold">Tickets Abertos por Período</h5>
@@ -170,71 +236,6 @@
             </table>
           </div>
         }
-      </div>
-    </div>
-  </div>
-
-  <!-- Alertas de SLA + Ações Rápidas: o que pede ação vem antes do volume histórico — abaixo de "lg"
-       a coluna sobe pra antes do gráfico (order-*); no desktop fica à direita, com os alertas no topo. -->
-  <div class="col-12 col-lg-4 mb-4 order-1 order-lg-2">
-    @if (sessionService.hasPermission('tickets:manage')) {
-      <app-dashboard-insights class="insights-rail" [criticalTickets]="store.criticalTickets()"
-                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
-                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()" />
-    }
-
-    <div class="card">
-      <div class="card-header py-3">
-        <h5 class="card-title m-0 fw-bold">Ações Rápidas</h5>
-      </div>
-      <div class="card-body">
-        <div class="d-grid gap-3">
-          @if (!isAdministrative()) {
-            <a class="btn btn-outline-primary text-start p-3 d-flex align-items-center justify-content-between"
-               routerLink="/tickets/novo">
-              <div class="d-flex align-items-center">
-                <span class="badge bg-label-primary rounded-circle p-2 quick-action-icon me-3">
-                  <i class="bx bx-plus-circle fs-4"></i>
-                </span>
-                <div>
-                  <div class="fw-bold">Novo Ticket</div>
-                  <div class="small opacity-75">Abrir uma nova solicitação</div>
-                </div>
-              </div>
-              <i class="bx bx-chevron-right"></i>
-            </a>
-
-            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between"
-               routerLink="/tickets">
-              <div class="d-flex align-items-center">
-                <span class="badge bg-label-info rounded-circle p-2 quick-action-icon me-3">
-                  <i class="bx bx-receipt fs-4"></i>
-                </span>
-                <div>
-                  <div class="fw-bold">Meus Tickets</div>
-                  <div class="small opacity-75">Acompanhar minhas solicitações</div>
-                </div>
-              </div>
-              <i class="bx bx-chevron-right"></i>
-            </a>
-          }
-
-          @if (isAdministrative() || sessionService.hasPermission('tickets:manage')) {
-            <a class="btn btn-outline-secondary text-start p-3 d-flex align-items-center justify-content-between"
-               routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
-              <div class="d-flex align-items-center">
-                <span class="badge bg-label-warning rounded-circle p-2 quick-action-icon me-3">
-                  <i class="bx bx-user-x fs-4"></i>
-                </span>
-                <div>
-                  <div class="fw-bold">Tickets sem responsável</div>
-                  <div class="small opacity-75">Fila sem atendente definido</div>
-                </div>
-              </div>
-              <i class="bx bx-chevron-right"></i>
-            </a>
-          }
-        </div>
       </div>
     </div>
   </div>

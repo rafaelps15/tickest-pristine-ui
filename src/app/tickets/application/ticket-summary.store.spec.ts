@@ -41,7 +41,12 @@ describe('TicketSummaryStore', () => {
   }
 
   beforeEach(async () => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll', 'getSlaSummary']);
+    // Servidor 2 minutos à frente do navegador — o prazo relativo do card deve seguir o servidor.
+    dataService.getSlaSummary.and.callFake(() => of({
+      activeCount: 0, onTimeCount: 0, atRiskCount: 0, breachedCount: 0,
+      serverNowUtc: new Date(Date.now() + 120_000).toISOString()
+    }));
     dataService.getStatusCounts.and.returnValue(of(statusCounts));
     dataService.getVolume.and.returnValue(of([
       { periodStart: '2026-01-05', count: 2 },
@@ -132,6 +137,13 @@ describe('TicketSummaryStore', () => {
     expect(store.criticalTickets()).toEqual([breachedTicket, criticalTicket]);
   });
 
+  it('mede a diferença entre o relógio do servidor e o do navegador, pra ancorar o prazo relativo', () => {
+    expect(dataService.getSlaSummary).toHaveBeenCalled();
+    // ~120s, com folga pro tempo que o teste leva entre o fake e o recebimento.
+    expect(store.clockOffsetMs()).toBeGreaterThan(115_000);
+    expect(store.clockOffsetMs()).toBeLessThan(125_000);
+  });
+
   it('expõe o total de vencidos e de em risco da empresa, não só os listados', () => {
     expect(store.breachedCount()).toBe(7);
     expect(store.atRiskCount()).toBe(1);
@@ -174,6 +186,7 @@ describe('TicketSummaryStore', () => {
     beforeEach(async () => {
       sessionService.hasPermission.and.returnValue(false);
       dataService.getAll.calls.reset();
+      dataService.getSlaSummary.calls.reset();
 
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
@@ -189,7 +202,9 @@ describe('TicketSummaryStore', () => {
 
     it('não busca os chamados em risco de SLA, e a lista fica vazia', () => {
       expect(dataService.getAll).not.toHaveBeenCalled();
+      expect(dataService.getSlaSummary).not.toHaveBeenCalled();
       expect(store.criticalTickets()).toEqual([]);
+      expect(store.clockOffsetMs()).toBe(0);
     });
   });
 });

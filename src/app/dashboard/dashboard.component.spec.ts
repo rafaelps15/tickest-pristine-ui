@@ -30,6 +30,7 @@ describe('DashboardComponent', () => {
       criticalTickets: signal<TicketMonitorItem[]>([]),
       breachedCount: signal(0),
       atRiskCount: signal(0),
+      clockOffsetMs: signal(0),
       criticalTicketsLoading: signal(false),
       criticalTicketsError: signal<string | null>(null)
     };

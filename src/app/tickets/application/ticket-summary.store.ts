@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { forkJoin } from 'rxjs';
+import { forkJoin, map } from 'rxjs';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
@@ -45,10 +45,13 @@ export const TicketSummaryStore = signalStore(
       params: () => (store._sessionService.hasPermission('tickets:manage') ? true : undefined),
       // Vencidos (Breached) e em risco (AtRisk) — o filtro da API aceita um status por vez. Antes só
       // AtRisk: os chamados que já estouraram o prazo, os mais graves, ficavam fora do alerta.
+      // `slaSummary` só pra ler a hora do servidor (`serverNowUtc`): o prazo relativo do card ("vence em
+      // 2h") anda sozinho no navegador, mas ancorado no relógio do servidor, não no da máquina.
       stream: () => forkJoin({
         breached: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
-        atRisk: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT })
-      })
+        atRisk: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
+        slaSummary: store._ticketDataService.getSlaSummary()
+      }).pipe(map(result => ({ ...result, receivedAtMs: Date.now() })))
     })
   })),
   withComputed((store) => ({
@@ -104,6 +107,14 @@ export const TicketSummaryStore = signalStore(
     breachedCount: computed(() => store._criticalTicketsResource.value()?.breached.totalCount ?? 0),
     /** Total de chamados ativos com SLA em risco em toda a empresa (não só os 5 listados). */
     atRiskCount: computed(() => store._criticalTicketsResource.value()?.atRisk.totalCount ?? 0),
+    /**
+     * Diferença (ms) entre o relógio do servidor e o do navegador, medida quando os alertas chegaram —
+     * `Date.now() + clockOffsetMs` é a "hora do servidor" usada pelo prazo relativo do card. 0 sem dados.
+     */
+    clockOffsetMs: computed(() => {
+      const value = store._criticalTicketsResource.value();
+      return value ? new Date(value.slaSummary.serverNowUtc).getTime() - value.receivedAtMs : 0;
+    }),
     /** Carregando os chamados em risco de SLA. */
     criticalTicketsLoading: computed(() => store._criticalTicketsResource.isLoading()),
     /** Mensagem de erro ao buscar os chamados em risco de SLA — não derruba o resto do dashboard, só esse card. */

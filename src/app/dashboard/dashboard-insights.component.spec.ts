@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { DashboardInsightsComponent } from './dashboard-insights.component';
+import { DashboardInsightsComponent, formatSlaDuration } from './dashboard-insights.component';
 import { TicketMonitorItem, TicketSlaStatus, TicketPriority, TicketStatus } from '../tickets';
 
 const ticket: TicketMonitorItem = {
@@ -62,13 +62,17 @@ describe('DashboardInsightsComponent', () => {
     const link = fixture.nativeElement.querySelector('.critical-ticket-link') as HTMLAnchorElement;
     expect(link.textContent).toContain('Chamado urgente');
     // A linha inteira (setor + prazo) fica dentro do link — alvo de toque maior que só o título.
-    expect(link.textContent).toContain('TI · prazo');
+    expect(link.textContent).toContain('TI ·');
     expect(link.getAttribute('href')).toBe('/tickets/t1');
   });
 
   it('marca cada chamado como "Vencido" ou "Em risco" com texto, não só com cor', async () => {
+    const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
-    fixture.componentRef.setInput('criticalTickets', [{ ...ticket, id: 't0', slaStatus: TicketSlaStatus.Breached }, ticket]);
+    fixture.componentRef.setInput('criticalTickets', [
+      { ...ticket, id: 't0', slaStatus: TicketSlaStatus.Breached },
+      { ...ticket, dueAtUtc: inTwoHours }
+    ]);
     await fixture.whenStable();
 
     const badges = Array.from(fixture.nativeElement.querySelectorAll('.critical-ticket-link .badge') as NodeListOf<HTMLElement>)
@@ -78,7 +82,7 @@ describe('DashboardInsightsComponent', () => {
 
   it('mostra os totais de vencidos e em risco da empresa, cada um levando à fila filtrada por esse SLA', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
-    fixture.componentRef.setInput('criticalTickets', [ticket]);
+    fixture.componentRef.setInput('criticalTickets', [{ ...ticket, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() }]);
     fixture.componentRef.setInput('breachedCount', 7);
     fixture.componentRef.setInput('atRiskCount', 1);
     await fixture.whenStable();
@@ -89,5 +93,77 @@ describe('DashboardInsightsComponent', () => {
     expect(breached.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.Breached}`);
     expect(atRisk.textContent).toContain('1');
     expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
+  });
+
+  describe('prazo vivo', () => {
+    const base = new Date('2026-10-27T12:00:00Z');
+
+    beforeEach(() => {
+      jasmine.clock().install();
+      jasmine.clock().mockDate(base);
+    });
+
+    afterEach(() => jasmine.clock().uninstall());
+
+    /** Item em risco que vence `ms` depois de `base`. */
+    const dueIn = (ms: number): TicketMonitorItem => ({ ...ticket, dueAtUtc: new Date(base.getTime() + ms).toISOString() });
+
+    it('mostra o prazo relativo ("vence em" / "venceu há"), pela hora do servidor', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [dueIn(2 * 3_600_000 + 14 * 60_000), { ...dueIn(-35 * 60_000), id: 't2' }]);
+      await fixture.whenStable();
+
+      const times = Array.from(fixture.nativeElement.querySelectorAll('time') as NodeListOf<HTMLElement>).map(t => t.textContent?.trim());
+      expect(times).toEqual(['vence em 2h 14min', 'venceu há 35 min']);
+
+      // Servidor 1h à frente do navegador: o mesmo prazo fica 1h mais perto.
+      fixture.componentRef.setInput('clockOffsetMs', 3_600_000);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('time').textContent.trim()).toBe('vence em 1h 14min');
+    });
+
+    it('vira "Vencido" sozinho ao cruzar o prazo, e anuncia a virada ao leitor de tela', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [dueIn(20_000)]);
+      fixture.componentRef.setInput('breachedCount', 7);
+      fixture.componentRef.setInput('atRiskCount', 2);
+      await fixture.whenStable();
+
+      const totals = () => Array.from(fixture.nativeElement.querySelectorAll('.sla-total .stat-value') as NodeListOf<HTMLElement>)
+        .map(t => t.textContent?.trim());
+      expect(totals()).toEqual(['7', '2']);
+
+      const badge = () => (fixture.nativeElement.querySelector('.critical-ticket-link .badge') as HTMLElement).textContent?.trim();
+      const live = () => (fixture.nativeElement.querySelector('[aria-live]') as HTMLElement).textContent?.trim();
+      expect(badge()).toBe('Em risco');
+      expect(live()).toBe('');
+
+      jasmine.clock().tick(30_000);
+      await fixture.whenStable();
+
+      expect(badge()).toBe('Vencido');
+      expect(live()).toBe('O ticket "Chamado urgente" venceu o prazo de SLA.');
+      // Os totais acompanham a virada, pra não dizer "2 em risco" com a lista já mostrando um vencido a mais.
+      expect(totals()).toEqual(['8', '1']);
+    });
+
+    it('não anuncia nada na carga inicial, mesmo com chamados já vencidos', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [dueIn(-60_000)]);
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement.querySelector('[aria-live]') as HTMLElement).textContent?.trim()).toBe('');
+    });
+  });
+
+  describe('formatSlaDuration', () => {
+    it('formata em pt-BR curto, de minutos a dias', () => {
+      expect(formatSlaDuration(20_000)).toBe('menos de 1 min');
+      expect(formatSlaDuration(35 * 60_000)).toBe('35 min');
+      expect(formatSlaDuration(2 * 3_600_000)).toBe('2h');
+      expect(formatSlaDuration(2 * 3_600_000 + 14 * 60_000)).toBe('2h 14min');
+      expect(formatSlaDuration(26 * 3_600_000)).toBe('1 dia');
+      expect(formatSlaDuration(72 * 3_600_000)).toBe('3 dias');
+    });
   });
 });
