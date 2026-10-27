@@ -33,13 +33,13 @@
 }
 
 .dropdown-toggle:hover .avatar img {
-  box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--tk-primary-rgb), 0.2);
 }
 
 .dropdown-menu {
   border: none;
   border-radius: 0.75rem;
-  box-shadow: 0 0.5rem 2rem rgba(105, 108, 255, 0.18);
+  box-shadow: 0 0.5rem 2rem rgba(var(--tk-primary-rgb), 0.18);
   padding: 0.5rem;
 }
 

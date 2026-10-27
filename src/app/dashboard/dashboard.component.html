@@ -43,7 +43,7 @@
               <small class="text-muted">Todos os status</small>
             }
           </div>
-          <span class="badge bg-label-primary rounded p-2 flex-shrink-0 kpi-icon" aria-hidden="true">
+          <span class="badge bg-label-primary rounded p-2 kpi-icon icon-tile icon-tile-lg" aria-hidden="true">
             <i class="bx bx-receipt fs-3"></i>
           </span>
         </div>
@@ -73,7 +73,7 @@
                 <small class="kpi-cta">Ver na fila <i class="bx bx-chevron-right" aria-hidden="true"></i></small>
               }
             </div>
-            <span class="badge {{ card.badgeClass }} rounded p-2 flex-shrink-0 kpi-icon" aria-hidden="true">
+            <span class="badge {{ card.badgeClass }} rounded p-2 kpi-icon icon-tile icon-tile-lg" aria-hidden="true">
               <i class="bx {{ card.icon }} fs-3"></i>
             </span>
           </div>
@@ -118,7 +118,7 @@
           @if (!isAdministrative()) {
             <li>
               <a class="quick-link" routerLink="/tickets">
-                <span class="badge bg-label-info rounded-circle quick-action-icon" aria-hidden="true"><i class="bx bx-receipt fs-5"></i></span>
+                <span class="badge bg-label-info rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-receipt fs-5"></i></span>
                 <span>
                   <span class="d-block fw-semibold">Meus Tickets</span>
                   <span class="d-block small text-muted">Acompanhar minhas solicitações</span>
@@ -131,7 +131,7 @@
           @if (isAdministrative() || sessionService.hasPermission('tickets:manage')) {
             <li>
               <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
-                <span class="badge bg-label-warning rounded-circle quick-action-icon" aria-hidden="true"><i class="bx bx-user-x fs-5"></i></span>
+                <span class="badge bg-label-warning rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-user-x fs-5"></i></span>
                 <span>
                   <span class="d-block fw-semibold">Tickets sem responsável</span>
                   <span class="d-block small text-muted">Fila sem atendente definido</span>
@@ -188,7 +188,7 @@
           } @else if (isFirstUse()) {
             <!-- Empresa sem nenhum ticket ainda: em vez de um gráfico vazio, a próxima ação de quem chegou. -->
             <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3">
-              <span class="badge bg-label-primary rounded-circle p-3 mb-3 first-use-icon" aria-hidden="true">
+              <span class="badge bg-label-primary rounded-circle mb-3 icon-tile icon-tile-xl" aria-hidden="true">
                 <i class="bx bx-receipt fs-2"></i>
               </span>
               <p class="fw-semibold mb-1">A empresa ainda não tem nenhum ticket.</p>

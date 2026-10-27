@@ -92,7 +92,7 @@
  * etiqueta e a cor do prazo já mudam sozinhas).
  */
 @keyframes sla-just-crossed {
-  from { background-color: rgba(255, 62, 29, 0.16); }
+  from { background-color: rgba(var(--tk-danger-rgb), 0.16); }
   to { background-color: transparent; }
 }
 
@@ -104,14 +104,4 @@
   .critical-ticket-link.just-crossed {
     animation: none;
   }
-}
-
-/* "Fila em dia": o vazio do card dito com clareza, com o check na cor de sucesso do sistema. */
-.sla-all-clear-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }

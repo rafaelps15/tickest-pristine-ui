@@ -14,7 +14,7 @@
   min-height: 100vh;
   border-right: 1px solid var(--tk-border, #e7e7ff);
   background: var(--tk-surface, #fff);
-  box-shadow: 0.25rem 0 1.5rem rgba(105, 108, 255, 0.04);
+  box-shadow: 0.25rem 0 1.5rem rgba(var(--tk-primary-rgb), 0.04);
 }
 
 .layout-page {
@@ -36,7 +36,7 @@
 
 .app-brand {
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(105, 108, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--tk-primary-rgb), 0.08);
   margin-bottom: 0.5rem;
 }
 
@@ -69,7 +69,7 @@
 }
 
 .menu-item.active .menu-link {
-  background: linear-gradient(to right, rgba(105, 108, 255, 0.14), rgba(105, 108, 255, 0.02));
+  background: linear-gradient(to right, rgba(var(--tk-primary-rgb), 0.14), rgba(var(--tk-primary-rgb), 0.02));
   color: var(--tk-primary);
   font-weight: 600;
 }
@@ -86,7 +86,7 @@
 }
 
 .menu-link:hover {
-  background: rgba(105, 108, 255, 0.08);
+  background: rgba(var(--tk-primary-rgb), 0.08);
   color: var(--tk-primary);
   transform: translateX(0.15rem);
 }
@@ -117,7 +117,7 @@
 }
 
 .menu-item.mt-4 .menu-link:hover {
-  background: rgba(255, 62, 29, 0.08);
+  background: rgba(var(--tk-danger-rgb), 0.08);
   padding-left: 1rem;
 }
 
@@ -136,7 +136,7 @@
   padding: 0.65rem 1.5rem;
   border-radius: 0.75rem;
   background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0.25rem 1rem rgba(105, 108, 255, 0.08);
+  box-shadow: 0 0.25rem 1rem rgba(var(--tk-primary-rgb), 0.08);
 }
 
 .layout-navbar::before {
