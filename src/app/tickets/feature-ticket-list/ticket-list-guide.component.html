@@ -1,0 +1,25 @@
+<app-screen-guide storageKey="tickest.ticketListGuide.open">
+  <app-guide-section title="Status">
+    <ul class="list-unstyled mb-0">
+      @for (status of statusOptions; track status; let last = $last) {
+        <li class="d-flex align-items-start gap-2" [class.mb-2]="!last">
+          <span class="badge flex-shrink-0" [ngClass]="statusBadgeClass[status]">{{ statusLabels[status] }}</span>
+          <span class="small text-muted">{{ statusExplanations[status] }}</span>
+        </li>
+      }
+    </ul>
+  </app-guide-section>
+
+  <app-guide-section title="O que dá pra fazer">
+    <p class="small text-muted mb-2">Pelo menu ⋮ da linha: <strong>editar a descrição</strong> ou <strong>cancelar</strong> enquanto o chamado está aberto ou em andamento.</p>
+    <p class="small text-muted mb-0">Depois de resolvido, fechado ou cancelado, dá pra <strong>reabrir</strong> e dizer o que faltou — o prazo de atendimento recomeça.</p>
+  </app-guide-section>
+
+  <app-guide-section title="Prioridade">
+    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0">
+      @for (priority of priorityOptions; track priority) {
+        <li><span class="badge" [ngClass]="priorityBadgeClass[priority]">{{ priorityLabels[priority] }}</span></li>
+      }
+    </ul>
+  </app-guide-section>
+</app-screen-guide>

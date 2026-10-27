@@ -48,7 +48,7 @@
 </div>
 
 <app-filter-bar (clear)="onClearFilters()">
-  <div class="col-12 col-md-5">
+  <div class="col-12 col-md-4">
     <label class="form-label small" for="monitorSearch">Buscar</label>
     <div class="input-group">
       <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
@@ -56,7 +56,7 @@
              [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
     </div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-2">
     <label class="form-label small" for="monitorStatus">Status</label>
     <select id="monitorStatus" class="form-select" [value]="store.filters().status ?? ''"
             (change)="store.setStatus($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -66,7 +66,7 @@
       }
     </select>
   </div>
-  <div class="col-6 col-md-4">
+  <div class="col-6 col-md-3">
     <label class="form-label small" for="monitorSla">SLA</label>
     <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
             (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -83,11 +83,21 @@
       </optgroup>
     </select>
   </div>
+  <!-- A fila de quem atende: "Atribuídos a mim" e "Sem responsável" são as duas pontas da mesma pergunta. -->
+  <div class="col-12 col-md-3">
+    <label class="form-label small" for="monitorResponsible">Responsável</label>
+    <select id="monitorResponsible" class="form-select" [value]="responsibleFilter()"
+            (change)="onResponsibleFilterChange($any($event.target).value)">
+      <option value="any">Qualquer um</option>
+      <option value="me">Atribuídos a mim</option>
+      <option value="none">Sem responsável</option>
+    </select>
+  </div>
 
   <!-- Filtros de uso menos frequente: recolhidos por padrão; o botão mostra quantos estão aplicados. -->
   <div id="monitorMoreFilters" class="col-12" [hidden]="!moreFiltersOpen()">
     <div class="row g-3 align-items-end">
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md-4">
         <label class="form-label small" for="monitorPriority">Prioridade</label>
         <select id="monitorPriority" class="form-select" [value]="store.filters().priority ?? ''"
                 (change)="store.setPriority($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -97,7 +107,7 @@
           }
         </select>
       </div>
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md-4">
         <label class="form-label small" for="monitorSort">Ordenar</label>
         <select id="monitorSort" class="form-select" [value]="store.filters().sort"
                 (change)="store.setSort(+$any($event.target).value)">
@@ -105,14 +115,6 @@
             <option [value]="sort">{{ sortOrderLabels[sort] }}</option>
           }
         </select>
-      </div>
-      <div class="col-12 col-md-6">
-        <div class="form-check form-switch mb-2">
-          <input class="form-check-input" type="checkbox" role="switch" id="monitorUnassignedOnly"
-                 [checked]="store.filters().unassignedOnly ?? false"
-                 (change)="store.setUnassignedOnly($any($event.target).checked)" />
-          <label class="form-check-label small" for="monitorUnassignedOnly">Só sem responsável</label>
-        </div>
       </div>
     </div>
   </div>

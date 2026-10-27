@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { DashboardComponent, greetingForHour } from './dashboard.component';
-import { TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
 import { SessionService } from '../shared';
 
 describe('DashboardComponent', () => {
@@ -43,11 +43,20 @@ describe('DashboardComponent', () => {
 
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
+  let myTicketsFake: {
+    openCount: ReturnType<typeof signal<number | null>>; inProgressCount: ReturnType<typeof signal<number | null>>;
+    resolvedCount: ReturnType<typeof signal<number | null>>; loading: ReturnType<typeof signal<boolean>>;
+    failed: ReturnType<typeof signal<boolean>>; reload: jasmine.Spy;
+  };
   let currentUser: ReturnType<typeof signal<CurrentUserFake>>;
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
     hasPermission = jasmine.createSpy('hasPermission').and.returnValue(false);
+    myTicketsFake = {
+      openCount: signal<number | null>(2), inProgressCount: signal<number | null>(1), resolvedCount: signal<number | null>(5),
+      loading: signal(false), failed: signal(false), reload: jasmine.createSpy('reload')
+    };
     currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Colaborador' }] });
 
     await TestBed.configureTestingModule({
@@ -56,6 +65,7 @@ describe('DashboardComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketSummaryStore, useValue: ticketsStoreFake },
+        { provide: MyTicketsSummaryStore, useValue: myTicketsFake },
         { provide: SessionService, useValue: { hasPermission, currentUser } }
       ]
     }).compileComponents();
@@ -417,5 +427,40 @@ describe('DashboardComponent', () => {
 
     expect(ticketsStoreFake.reloadCritical).toHaveBeenCalledTimes(1);
     expect(ticketsStoreFake.load).not.toHaveBeenCalled();
+  });
+
+  describe('seus chamados', () => {
+    it('mostra os próprios chamados por situação, ligando a Meus Chamados, pra quem abre chamados e não atende a fila', async () => {
+      hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+
+      const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
+      expect(section.querySelector('h2')?.textContent).toContain('Seus chamados');
+      const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
+      expect(values).toEqual(['2', '1', '5']);
+      expect(section.querySelector('a.stretched-link')?.getAttribute('href')).toBe('/tickets');
+      expect(fixture.nativeElement.textContent).toContain('Toda a empresa');
+    });
+
+    it('não mostra o bloco pra quem atende a fila', async () => {
+      hasPermission.and.callFake((code: string) => code === 'tickets:view-own' || code === 'tickets:manage');
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]')).toBeNull();
+    });
+
+    it('mostra "—" e "Tentar novamente" quando o resumo falha', async () => {
+      hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
+      myTicketsFake.failed.set(true);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      await fixture.whenStable();
+
+      const retry = Array.from(fixture.nativeElement.querySelectorAll('section button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Tentar novamente'));
+      retry!.click();
+      expect(myTicketsFake.reload).toHaveBeenCalled();
+    });
   });
 });

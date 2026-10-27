@@ -21,6 +21,7 @@ import { PaginationComponent } from '../../shared/ui/pagination/pagination.compo
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
+import { UserListInsightsComponent } from './user-list-insights.component';
 
 const DEFAULT_STATUS: UserStatus = 'All';
 const DEFAULT_PAGE = 1;
@@ -59,7 +60,7 @@ function parsePageSizeParam(value: string | null): number {
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
     selector: 'app-user-list',
-    imports: [ReactiveFormsModule, DatePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent],
+    imports: [ReactiveFormsModule, DatePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, UserListInsightsComponent],
     templateUrl: './user-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-list.component.css'

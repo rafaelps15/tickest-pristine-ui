@@ -1,0 +1,14 @@
+<app-summary-card [loading]="loading()" [failed]="failed()">
+  <div class="insights-section mb-0">
+    <div class="d-flex gap-4">
+      <div>
+        <div class="insights-stat">{{ activeCount() }}</div>
+        <p class="text-muted small mb-0">{{ activeCount() === 1 ? 'usuário ativo' : 'usuários ativos' }}</p>
+      </div>
+      <div>
+        <div class="insights-stat">{{ inactiveCount() }}</div>
+        <p class="text-muted small mb-0">{{ inactiveCount() === 1 ? 'inativo (login bloqueado)' : 'inativos (login bloqueado)' }}</p>
+      </div>
+    </div>
+  </div>
+</app-summary-card>

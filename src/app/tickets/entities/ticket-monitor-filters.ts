@@ -12,6 +12,8 @@ export interface TicketMonitorFilters {
   search?: string;
   /** Mostra só chamados sem responsável atribuído. */
   unassignedOnly?: boolean;
+  /** Mostra só chamados atribuídos a este usuário (a fila "Atribuídos a mim"); exclusivo com `unassignedOnly`. */
+  assignedToUserId?: string;
   sort: TicketSortOrder;
   page: number;
   pageSize: number;

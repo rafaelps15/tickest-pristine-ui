@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } from 'rxjs';
+import { finalize, forkJoin, from, mergeMap, toArray, of, catchError, map, switchMap } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
@@ -45,6 +45,17 @@ export const UsersStore = signalStore(
     _listResource: rxResource({
       params: () => store.filters(),
       stream: ({ params }) => store._userDataService.getAll(params)
+    }),
+    /**
+     * Totais de ativos e inativos da empresa inteira, pro card "Resumo" — não dá pra somar a
+     * página atual (a lista é paginada e filtrada). Sem endpoint de contagem, usa o `totalCount`
+     * de duas consultas de 1 item cada; recarrega só nas ações que mudam esses totais.
+     */
+    _summaryResource: rxResource({
+      stream: () => forkJoin({
+        active: store._userDataService.getAll({ status: 'Active', page: 1, pageSize: 1 }),
+        inactive: store._userDataService.getAll({ status: 'Inactive', page: 1, pageSize: 1 })
+      }).pipe(map(({ active, inactive }) => ({ activeCount: active.totalCount, inactiveCount: inactive.totalCount })))
     })
   })),
   withComputed((store) => ({
@@ -82,7 +93,15 @@ export const UsersStore = signalStore(
     /** Indica se existe uma página anterior à atual. */
     hasPreviousPage: computed(() => store.usersPage()?.hasPreviousPage ?? false),
     /** Indica se existe uma página seguinte à atual. */
-    hasNextPage: computed(() => store.usersPage()?.hasNextPage ?? false)
+    hasNextPage: computed(() => store.usersPage()?.hasNextPage ?? false),
+    /** Total de usuários ativos na empresa (`null` enquanto não há resposta, inclusive em erro). */
+    activeCount: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value().activeCount : null),
+    /** Total de usuários inativos na empresa (`null` enquanto não há resposta, inclusive em erro). */
+    inactiveCount: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value().inactiveCount : null),
+    /** Os totais do Resumo estão carregando pela primeira vez. */
+    summaryLoading: computed(() => store._summaryResource.isLoading() && !store._summaryResource.hasValue()),
+    /** Os totais do Resumo falharam. */
+    summaryFailed: computed(() => !!store._summaryResource.error())
   })),
   withMethods((store) => ({
     /**
@@ -134,6 +153,7 @@ export const UsersStore = signalStore(
         next: ({ userId, rolesFailed }) => {
           patchState(store, { success: true, createdUserId: userId, createRolesFailed: rolesFailed });
           store._listResource.reload();
+          store._summaryResource.reload();
         },
         error: (err: HttpErrorResponse) => {
           // POST /users/register exige autenticação + a permissão de criar usuários — hoje não
@@ -159,6 +179,7 @@ export const UsersStore = signalStore(
     loadAll(): void {
       patchState(store, { listMutationError: null });
       store._listResource.reload();
+      store._summaryResource.reload();
     },
 
     /** Limpa os erros dos modais de edição de cadastro e de atribuição de funções — chamado ao abrir um deles, pra não mostrar o erro de uma tentativa anterior. */
@@ -261,6 +282,7 @@ export const UsersStore = signalStore(
         next: () => {
           patchState(store, { listMutationError: null });
           store._listResource.reload();
+          store._summaryResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
@@ -317,6 +339,7 @@ export const UsersStore = signalStore(
 
         if (succeededIds.length > 0) {
           store._listResource.reload();
+          store._summaryResource.reload();
         }
 
         onDone?.(succeededIds.length, failedIds.length);
@@ -333,6 +356,7 @@ export const UsersStore = signalStore(
         next: () => {
           patchState(store, { listMutationError: null });
           store._listResource.reload();
+          store._summaryResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {

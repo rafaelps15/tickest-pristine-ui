@@ -58,6 +58,7 @@ describe('TicketMonitorComponent', () => {
       setSlaStatus: jasmine.createSpy('setSlaStatus'),
       setSearch: jasmine.createSpy('setSearch'),
       setUnassignedOnly: jasmine.createSpy('setUnassignedOnly'),
+      setAssignedToUserId: jasmine.createSpy('setAssignedToUserId'),
       setSort: jasmine.createSpy('setSort'),
       goToPage: jasmine.createSpy('goToPage'),
       setPageSize: jasmine.createSpy('setPageSize'),
@@ -135,7 +136,7 @@ describe('TicketMonitorComponent', () => {
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
       status: TicketStatus.Open, priority: TicketPriority.High, sectorId: 's1',
-      slaStatus: TicketSlaStatus.AtRisk, unassignedOnly: true,
+      slaStatus: TicketSlaStatus.AtRisk, unassignedOnly: true, assignedToUserId: undefined,
       sort: TicketSortOrder.DueDate, page: 3, pageSize: 50
     });
   });
@@ -155,8 +156,20 @@ describe('TicketMonitorComponent', () => {
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
       status: undefined, priority: undefined, sectorId: undefined, slaStatus: undefined,
-      unassignedOnly: undefined, sort: TicketSortOrder.Newest, page: 1, pageSize: 20
+      unassignedOnly: undefined, assignedToUserId: undefined, sort: TicketSortOrder.Newest, page: 1, pageSize: 20
     });
+  });
+
+  it('"?assignedToMe=true" (atalho do Início) vira o filtro de quem está logado, sem o id na URL', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ assignedToMe: 'true' }) } }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith(jasmine.objectContaining({ assignedToUserId: 'u-current' }));
   });
 
   it('restaura o chamado selecionado a partir do "ticketId" da query string ao inicializar', async () => {
@@ -506,8 +519,8 @@ describe('TicketMonitorComponent', () => {
     expect(sector.closest('app-filter-bar')).toBeNull();
   });
 
-  it('recolhe Prioridade, Ordenar e "Só sem responsável" em "Mais filtros", com a contagem dos aplicados', async () => {
-    storeFake.filters.set({ ...storeFake.filters(), priority: 3, unassignedOnly: true });
+  it('recolhe Prioridade e Ordenar em "Mais filtros", com a contagem dos aplicados', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), priority: 3, sort: TicketSortOrder.DueDate });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -632,15 +645,24 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setStatus).toHaveBeenCalledWith(TicketStatus.Open);
   });
 
-  it('alterna o filtro "Só sem responsável"', async () => {
+  it('o filtro "Responsável" aplica "Atribuídos a mim" (com o id de quem está logado), "Sem responsável" e "Qualquer um"', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
+    const select = fixture.nativeElement.querySelector('#monitorResponsible') as HTMLSelectElement;
+    expect(select.closest('#monitorMoreFilters')).toBeNull();
 
-    const toggle = fixture.nativeElement.querySelector('#monitorUnassignedOnly') as HTMLInputElement;
-    toggle.checked = true;
-    toggle.dispatchEvent(new Event('change'));
+    select.value = 'me';
+    select.dispatchEvent(new Event('change'));
+    expect(storeFake.setAssignedToUserId).toHaveBeenCalledWith('u-current');
 
+    select.value = 'none';
+    select.dispatchEvent(new Event('change'));
     expect(storeFake.setUnassignedOnly).toHaveBeenCalledWith(true);
+
+    select.value = 'any';
+    select.dispatchEvent(new Event('change'));
+    expect(storeFake.setUnassignedOnly).toHaveBeenCalledWith(false);
+    expect(storeFake.setAssignedToUserId).toHaveBeenCalledWith(undefined);
   });
 
   it('anuncia o carregamento da tabela por leitor de tela e tem uma legenda acessível', async () => {

@@ -133,9 +133,20 @@ export const TicketMonitorStore = signalStore(
       patchState(store, { filters: { ...store.filters(), search: search || undefined, page: 1 } });
     },
 
-    /** Alterna o filtro "só sem responsável" e volta para a primeira página. */
+    /** Alterna o filtro "só sem responsável" e volta para a primeira página (desliga "atribuídos a"). */
     setUnassignedOnly(unassignedOnly: boolean): void {
-      patchState(store, { filters: { ...store.filters(), unassignedOnly, page: 1 } });
+      const assignedToUserId = unassignedOnly ? undefined : store.filters().assignedToUserId;
+      patchState(store, { filters: { ...store.filters(), unassignedOnly, assignedToUserId, page: 1 } });
+    },
+
+    /**
+     * Filtra pelos chamados atribuídos a um usuário (a fila "Atribuídos a mim" passa o id de quem
+     * está logado) e volta para a primeira página; `undefined` tira o filtro. Desliga "só sem
+     * responsável", que é o oposto.
+     */
+    setAssignedToUserId(assignedToUserId: string | undefined): void {
+      const unassignedOnly = assignedToUserId ? undefined : store.filters().unassignedOnly;
+      patchState(store, { filters: { ...store.filters(), assignedToUserId, unassignedOnly, page: 1 } });
     },
 
     /** Muda a ordenação e volta para a primeira página. */

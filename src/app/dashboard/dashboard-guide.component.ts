@@ -15,4 +15,6 @@ import { GuideSectionComponent, ScreenGuideComponent } from '../shared/ui/screen
 export class DashboardGuideComponent {
   /** Mostra a seção "Alertas de SLA" — só pra quem vê o card (permissão `tickets:manage`). */
   readonly showSla = input(false);
+  /** Mostra a seção "Seus chamados" — só pra quem vê esse bloco (abre chamados e não atende a fila). */
+  readonly showMine = input(false);
 }

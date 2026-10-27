@@ -26,7 +26,7 @@ const MAX_VISIBLE_PERMISSION_BADGES = 2;
 })
 export class RoleListComponent implements OnInit {
     /** Diálogo aberto agora (renderizado com `@if`, via `<app-dialog>`), ou `null`. */
-    protected readonly openDialog = signal<'create' | 'permissions' | null>(null);
+    protected readonly openDialog = signal<'create' | 'permissions' | 'color' | null>(null);
 
     /** Fecha o diálogo aberto (X, Esc, clique fora, "Cancelar" ou depois de salvar). */
     closeDialog(): void {
@@ -115,6 +115,26 @@ export class RoleListComponent implements OnInit {
         this.colorContrastWarning.set(null);
         setRoleColor(roleName, hex);
         this.roleColorVersion.update(v => v + 1);
+    }
+
+    /** Cor em edição no diálogo "Cor do badge", antes de salvar. */
+    readonly colorDraft = signal(DEFAULT_ROLE_COLOR);
+
+    /** Abre o diálogo "Cor do badge" da função, partindo da cor atual (ou do acento padrão). */
+    openColorModal(role: Role): void {
+        this.selectedRole.set(role);
+        this.colorDraft.set(this.roleColor(role.name) ?? DEFAULT_ROLE_COLOR);
+        this.colorContrastWarning.set(null);
+        this.openDialog.set('color');
+    }
+
+    /** Salva a cor escolhida no diálogo; fica aberto com o aviso se ela deixaria o badge ilegível. */
+    onSaveColor(): void {
+        const role = this.selectedRole();
+        if (!role) return;
+
+        this.onPickColor(role.name, this.colorDraft());
+        if (!this.colorContrastWarning()) this.closeDialog();
     }
 
     /** Remove a cor customizada de uma função, voltando ao acento padrão. */

@@ -842,6 +842,15 @@ router-outlet + * {
   line-height: 1.2;
 }
 
+/* Rótulo de um grupo de cards na tela (ex.: "Seus chamados", "Toda a empresa"): versalete discreto, passo Label. */
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tk-text-secondary);
+}
+
 /* Card do Guia: borda fina e sem sombra — apoio da tela, mais discreto que a tabela/conteúdo. */
 .guide-card {
   box-shadow: none;

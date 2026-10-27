@@ -7,6 +7,7 @@ import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketStatusCounts } from '../entities/ticket-status-counts';
+import { OwnTicketCount } from '../entities/own-ticket-count';
 import { TicketVolumeGrouping, TicketVolumePoint } from '../entities/ticket-volume';
 import { TicketHistoryEntry } from '../entities/ticket-history';
 import { CursorPage, PageCursor, PagedResponse } from '../../shared';
@@ -132,6 +133,8 @@ export class TicketDataService {
     }
     if (filters.unassignedOnly) {
       params = params.set('unassignedOnly', filters.unassignedOnly);
+    } else if (filters.assignedToUserId) {
+      params = params.set('assignedToUserId', filters.assignedToUserId);
     }
 
     return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params });
@@ -141,6 +144,11 @@ export class TicketDataService {
   getSlaSummary(sectorId?: string): Observable<TicketSlaSummary> {
     const params = sectorId ? new HttpParams().set('sectorId', sectorId) : undefined;
     return this.http.get<TicketSlaSummary>(`${this.apiUrl}/sla-summary`, { params });
+  }
+
+  /** Busca quantos chamados do usuário logado há em cada status e prioridade (GET /tickets/mine/summary). */
+  getMineSummary(): Observable<OwnTicketCount[]> {
+    return this.http.get<OwnTicketCount[]>(`${this.apiUrl}/mine/summary`);
   }
 
   /** Busca os totais de tickets por status de toda a empresa, para qualquer usuário logado (GET /tickets/stats/status). */

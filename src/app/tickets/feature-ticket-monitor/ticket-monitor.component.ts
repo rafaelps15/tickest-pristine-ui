@@ -99,13 +99,32 @@ export class TicketMonitorComponent implements OnInit {
     readonly secondaryFilterCount = computed(() => {
         const filters = this.store.filters();
         return (filters.priority !== undefined ? 1 : 0)
-            + (filters.sort !== TicketSortOrder.Newest ? 1 : 0)
-            + (filters.unassignedOnly ? 1 : 0);
+            + (filters.sort !== TicketSortOrder.Newest ? 1 : 0);
     });
 
     /** Contagem de um card de SLA no resumo carregado (`null` enquanto não há resumo). */
     slaCount(count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'): number | null {
         return this.store.slaSummary()?.[count] ?? null;
+    }
+
+    /** Valor do filtro "Responsável": qualquer um, só os atribuídos a quem está logado, ou só os sem responsável. */
+    readonly responsibleFilter = computed<'any' | 'me' | 'none'>(() => {
+        const filters = this.store.filters();
+        if (filters.unassignedOnly) return 'none';
+        if (filters.assignedToUserId && filters.assignedToUserId === this.sessionService.currentUser()?.id) return 'me';
+        return 'any';
+    });
+
+    /** Aplica o filtro "Responsável" escolhido. */
+    onResponsibleFilterChange(value: 'any' | 'me' | 'none'): void {
+        if (value === 'none') {
+            this.store.setUnassignedOnly(true);
+        } else if (value === 'me') {
+            this.store.setAssignedToUserId(this.sessionService.currentUser()?.id);
+        } else {
+            this.store.setUnassignedOnly(false);
+            this.store.setAssignedToUserId(undefined);
+        }
     }
 
     /** Abre ou fecha a linha "Mais filtros". */
@@ -198,7 +217,7 @@ export class TicketMonitorComponent implements OnInit {
      * Restaura busca, filtros, ordenação, página e tamanho da página a partir da query string
      * (RF-28) — recarregar, voltar ou compartilhar o link reproduz o mesmo estado. Parâmetro
      * ausente ou inválido (fora do enum, não-numérico etc.) volta ao padrão, nunca quebra a tela.
-     * Cobre também o `?status=`/`?unassignedOnly=` vindo dos cards/atalhos do Dashboard — são só
+     * Cobre também o `?status=`/`?unassignedOnly=`/`?assignedToMe=` vindo dos cards/atalhos do Início — são só
      * casos particulares do mesmo mecanismo, não um caminho separado.
      *
      * O termo de busca livre fica de fora de propósito: incluir texto livre na URL colidiria com
@@ -218,6 +237,10 @@ export class TicketMonitorComponent implements OnInit {
             sectorId: params.get('sectorId') || undefined,
             slaStatus: parseEnumParam(params.get('slaStatus'), [...this.liveSlaStatusOptions, ...this.resolvedSlaStatusOptions]),
             unassignedOnly: params.get('unassignedOnly') === 'true' ? true : undefined,
+            // "?assignedToMe=true" (atalho do Início) vira o id de quem está logado — o id não vai pra URL.
+            assignedToUserId: params.get('assignedToMe') === 'true' && params.get('unassignedOnly') !== 'true'
+                ? this.sessionService.currentUser()?.id
+                : undefined,
             sort: parseEnumParam(params.get('sort'), this.sortOptions) ?? DEFAULT_SORT,
             page: parsePageParam(params.get('page')),
             pageSize: parsePageSizeParam(params.get('pageSize'))
@@ -281,6 +304,7 @@ export class TicketMonitorComponent implements OnInit {
             sectorId: filters.sectorId ?? null,
             slaStatus: filters.slaStatus ?? null,
             unassignedOnly: filters.unassignedOnly ? 'true' : null,
+            assignedToMe: filters.assignedToUserId ? 'true' : null,
             sort: filters.sort === DEFAULT_SORT ? null : filters.sort,
             page: filters.page === DEFAULT_PAGE ? null : filters.page,
             pageSize: filters.pageSize === DEFAULT_PAGE_SIZE ? null : filters.pageSize

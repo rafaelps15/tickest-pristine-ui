@@ -13,11 +13,12 @@ import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-r
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { TicketListGuideComponent } from './ticket-list-guide.component';
 
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
     selector: 'app-ticket-list',
-    imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent],
+    imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, TicketListGuideComponent],
     templateUrl: './ticket-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-list.component.css'

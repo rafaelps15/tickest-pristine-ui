@@ -160,6 +160,15 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ unassignedOnly: true, page: 1 }));
   });
 
+  it('filtra pelos chamados de um responsável, desligando "só sem responsável" (e vice-versa)', () => {
+    store.setUnassignedOnly(true);
+    store.setAssignedToUserId('u1');
+    expect(store.filters()).toEqual(jasmine.objectContaining({ assignedToUserId: 'u1', unassignedOnly: undefined, page: 1 }));
+
+    store.setUnassignedOnly(true);
+    expect(store.filters()).toEqual(jasmine.objectContaining({ assignedToUserId: undefined, unassignedOnly: true }));
+  });
+
   it('muda a ordenação', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 

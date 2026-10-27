@@ -1,4 +1,10 @@
 <app-screen-guide storageKey="tickest.dashboardGuide.open">
+  @if (showMine()) {
+    <app-guide-section title="Seus chamados">
+      <p class="small text-muted mb-0">Os chamados que você abriu, por situação. Clique em um card pra ver a lista em Meus Chamados.</p>
+    </app-guide-section>
+  }
+
   <app-guide-section title="Cards de estatística">
     <p class="small text-muted mb-2"><strong>Total de Chamados:</strong> todos os chamados da empresa, incluindo fechados e cancelados.</p>
     <p class="small text-muted mb-2"><strong>Em Aberto:</strong> aguardando atendimento.</p>

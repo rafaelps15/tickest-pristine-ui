@@ -2,7 +2,7 @@ import { Component, inject, Injector, OnInit, OnDestroy, ElementRef, PLATFORM_ID
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
-import { TicketSummaryStore, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
 import { SessionService, loadChart } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
@@ -56,6 +56,8 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   protected readonly store = inject(TicketSummaryStore);
+  /** Resumo dos chamados que o próprio usuário abriu (bloco "Seus chamados"). */
+  protected readonly myTickets = inject(MyTicketsSummaryStore);
   protected readonly sessionService = inject(SessionService);
 
   /**
@@ -99,6 +101,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * sozinho não bastaria, porque o Atendente também tem essa permissão e, pra ele, os dois atalhos
    * continuam fazendo sentido.
    */
+  /** Mostra "Seus chamados": pra quem abre chamados e não atende a fila (quem atende tem os atalhos da fila). */
+  protected readonly showMyTickets = computed(() =>
+      this.sessionService.hasPermission('tickets:view-own') && !this.sessionService.hasPermission('tickets:manage'));
+
+  /** Os 3 cards de "Seus chamados", com as contagens do próprio usuário. */
+  protected readonly myTicketCards = computed(() => [
+    { label: 'Em aberto', icon: 'bx-error-circle', tone: 'warning' as StatTone, value: this.myTickets.openCount(), ariaNoun: 'chamados seus em aberto' },
+    { label: 'Em andamento', icon: 'bx-time-five', tone: 'info' as StatTone, value: this.myTickets.inProgressCount(), ariaNoun: 'chamados seus em andamento' },
+    { label: 'Resolvidos', icon: 'bx-check-double', tone: 'success' as StatTone, value: this.myTickets.resolvedCount(), ariaNoun: 'chamados seus resolvidos' }
+  ]);
+
   protected readonly isAdministrative = computed(() =>
       this.sessionService.hasPermission('users:read') ||
       this.sessionService.hasPermission('roles:manage') ||

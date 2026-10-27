@@ -16,9 +16,6 @@
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
   </div>
 }
-@if (colorContrastWarning(); as warning) {
-  <div class="alert alert-warning border-0 shadow-sm" role="alert">{{ warning }}</div>
-}
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
@@ -50,9 +47,8 @@
             <tr>
               <td class="fw-semibold">
                 <div class="d-flex align-items-center gap-2">
-                  <input type="color" class="role-color-input" [value]="roleColor(role.name) ?? '#696cff'"
-                         (change)="onPickColor(role.name, $any($event.target).value)"
-                         [attr.aria-label]="'Cor da função ' + role.name + ' (prévia só neste navegador)'" />
+                  <!-- Só a amostra da cor; escolher fica no "⋮" (era um seletor em toda linha, pra uma prévia local). -->
+                  <span class="role-color-swatch" [style.background-color]="roleColor(role.name) ?? 'var(--tk-primary)'" aria-hidden="true"></span>
                   <span>{{ role.name }}</span>
                 </div>
                 @if (role.isDefault) {
@@ -80,6 +76,11 @@
                     <button type="button" class="dropdown-item" (click)="openPermissionsModal(role)" [disabled]="role.isAdministrator"
                             [title]="role.isAdministrator ? 'As permissões do administrador são gerenciadas pelo sistema' : ''">
                       <i class="bx bx-lock-alt me-2" aria-hidden="true"></i>Permissões
+                    </button>
+                  </li>
+                  <li>
+                    <button type="button" class="dropdown-item" (click)="openColorModal(role)">
+                      <i class="bx bx-palette me-2" aria-hidden="true"></i>Cor do badge…
                     </button>
                   </li>
                   @if (roleColor(role.name)) {
@@ -173,6 +174,30 @@
         }
         Salvar
       </button>
+    </div>
+  </div>
+</app-dialog>
+}
+
+@if (openDialog() === 'color') {
+<app-dialog id="roleColorModal" title="Cor do badge" [subtitle]="selectedRole()?.name ?? null" (closed)="closeDialog()">
+  <div dialogContent class="dialog-content">
+    <div class="modal-body">
+      <label class="form-label" for="roleColorInput">Cor</label>
+      <div class="d-flex align-items-center gap-3">
+        <input id="roleColorInput" type="color" class="role-color-input role-color-input-lg" data-dialog-focus
+               [value]="colorDraft()" (input)="colorDraft.set($any($event.target).value)"
+               [attr.aria-invalid]="!!colorContrastWarning()" [attr.aria-describedby]="colorContrastWarning() ? 'roleColor-error' : 'roleColor-hint'" />
+        <span class="badge badge-role-custom" [style.--role-color]="colorDraft()">{{ selectedRole()?.name }}</span>
+      </div>
+      @if (colorContrastWarning(); as warning) {
+        <div class="invalid-feedback d-block" id="roleColor-error">{{ warning }}</div>
+      }
+      <div id="roleColor-hint" class="form-text">Prévia só neste navegador — o back-end ainda não guarda cor de função.</div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="onSaveColor()">Salvar cor</button>
     </div>
   </div>
 </app-dialog>

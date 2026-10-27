@@ -18,6 +18,11 @@ function buildPage(items: UserSummary[], page = 1, pageSize = 20, totalCount = i
 }
 
 describe('UsersStore', () => {
+  /** Chamadas de `getAll` feitas pela lista — as do card Resumo pedem 1 item por status e ficam de fora. */
+  function listCalls(): number {
+    return userDataService.getAll.calls.allArgs().filter(([filters]) => filters.pageSize !== 1).length;
+  }
+
   const user: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva', roles: [],
     isActive: true, createdAtUtc: '2026-01-01T00:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
@@ -185,7 +190,7 @@ describe('UsersStore', () => {
 
     expect(authDataService.register).toHaveBeenCalled();
     expect(store.success()).toBeTrue();
-    expect(userDataService.getAll).toHaveBeenCalledTimes(2);
+    expect(listCalls()).toBe(2);
   });
 
   it('expõe a mensagem de erro quando a criação falhar com e-mail duplicado', async () => {
@@ -401,7 +406,7 @@ describe('UsersStore', () => {
     expect(onDone).toHaveBeenCalledWith(2, 0);
     expect(store.listState().error).toBeNull();
     expect(store.deactivatingIds()).toEqual([]);
-    expect(userDataService.getAll).toHaveBeenCalledTimes(2);
+    expect(listCalls()).toBe(2);
   });
 
   it('reporta falha parcial com o nome de quem falhou, sem desfazer quem teve sucesso', async () => {
@@ -485,5 +490,33 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.deactivatingIds()).toEqual([]);
+  });
+
+  it('expõe os totais de ativos e inativos da empresa (do totalCount, não da página) e recarrega ao desativar', async () => {
+    userDataService.getAll.and.callFake((filters: { status: string; pageSize: number }) => of({
+      ...buildPage([user]), totalCount: filters.status === 'Active' ? 42 : filters.status === 'Inactive' ? 3 : 1
+    }));
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.activeCount()).toBe(42);
+    expect(store.inactiveCount()).toBe(3);
+
+    const summaryCallsBefore = userDataService.getAll.calls.allArgs().filter(([filters]) => filters.pageSize === 1).length;
+    userDataService.deactivate.and.returnValue(of(void 0));
+    store.deactivate('u1');
+    await TestBed.inject(ApplicationRef).whenStable();
+    const summaryCallsAfter = userDataService.getAll.calls.allArgs().filter(([filters]) => filters.pageSize === 1).length;
+    expect(summaryCallsAfter).toBeGreaterThan(summaryCallsBefore);
+  });
+
+  it('marca o Resumo como falho, sem inventar 0, quando os totais não carregam', async () => {
+    userDataService.getAll.and.callFake((filters: { pageSize: number }) =>
+      filters.pageSize === 1 ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(buildPage([user])));
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.summaryFailed()).toBeTrue();
+    expect(store.activeCount()).toBeNull();
   });
 });

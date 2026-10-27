@@ -430,6 +430,13 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
   carrega ou quando falhou, o card mostra "—" e o motivo por contrato — nunca `0`, nunca uma
   afirmação ("todas têm permissão") sobre uma lista que não chegou.
 
+### Seus chamados (Início)
+Pra quem abre chamados e não atende a fila (`tickets:view-own` sem `tickets:manage`), o Início
+mostra primeiro "Seus chamados" — em aberto, em andamento e resolvidos, do próprio usuário
+(`MyTicketsSummaryStore`, GET /tickets/mine/summary), cada card levando a Meus Chamados — e só
+depois "Toda a empresa", com os números de sempre, iguais pra todo papel. Os grupos ganham um
+rótulo em versalete (`.section-label`).
+
 ### Cards de estatística (`<app-stat-card>`, `shared/ui/stat-card`)
 Rótulo, número (`div.stat-value`, nunca heading), legenda e ícone em `.icon-tile` no tom semântico.
 Carregando: spinner no lugar do número; falhou: "—". Interação sempre no card inteiro: `[pressed]`
@@ -443,6 +450,9 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
   campos visíveis; os de uso raro vão numa linha "Mais filtros (n)" recolhida (Monitorar).
 - **Escopo da tela:** um filtro que muda *também* os números do topo (o Setor do Monitorar) fica
   acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta.
+- **Responsável (Monitorar):** "Qualquer um", "Atribuídos a mim" (a fila pessoal de quem atende) ou
+  "Sem responsável" — um select visível ao lado de Status e SLA, não um switch escondido. O Início
+  leva direto pra "Atribuídos a mim" (`?assignedToMe=true`; o id de quem está logado não vai pra URL).
 - **Paginação (`<app-pagination>`, `shared/ui/pagination`):** rodapé do card da tabela — "Exibindo
   X–Y de N {itens}", Anterior/números/Próxima (no celular só "Página X de Y") e "Por página".
 
@@ -477,6 +487,14 @@ e `.modal-footer`. Cancelar fica à esquerda do primário no rodapé.
 Igual no detalhe e no Monitorar: busca com debounce, candidatos como listbox navegável por setas,
 marca um e só atribui no botão "Atribuir"/"Reatribuir" — com o aviso "Isso substitui X por Y"
 quando já há responsável. Nunca atribuir no primeiro clique.
+
+### Detalhe do chamado
+De `lg` pra cima, duas colunas: à esquerda o trabalho (resumo com as ações, conversa e anexos); à
+direita, num `<aside>`, o apoio (SLA e histórico). Abaixo disso, coluna única nessa mesma ordem.
+
+### Cor da função
+A cor do badge (prévia só neste navegador) se escolhe no diálogo "Cor do badge…" do "⋮" da linha,
+com prévia ao vivo e a checagem de contraste; a linha da tabela mostra só a amostra da cor.
 
 ### Confirm Dialog
 Toda confirmação de ação sensível (excluir, desativar, reativar) usa o modal de confirmação

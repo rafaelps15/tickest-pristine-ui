@@ -288,18 +288,40 @@ describe('RoleListComponent', () => {
     expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
   });
 
-  it('mostra o seletor de cor com a cor escolhida, e o botão "Remover cor" só quando há uma cor customizada', async () => {
+  it('escolhe a cor no diálogo "Cor do badge", com prévia, e só mostra "Remover cor" quando há uma cor customizada', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
-    let colorInput = fixture.nativeElement.querySelector('input[type="color"].role-color-input') as HTMLInputElement;
-    expect(colorInput).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('tbody input[type="color"]')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Remover cor');
 
-    fixture.componentInstance.onPickColor('Admin', '#ff3e1d');
-    fixture.detectChanges();
+    fixture.componentInstance.openColorModal(agentRole);
+    await fixture.whenStable();
+    const input = fixture.nativeElement.querySelector('#roleColorInput') as HTMLInputElement;
+    input.value = '#2e7d14';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect((fixture.nativeElement.querySelector('#roleColorModal .badge-role-custom') as HTMLElement).style.getPropertyValue('--role-color')).toBe('#2e7d14');
 
+    fixture.componentInstance.onSaveColor();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.roleColor('Agent')).toBe('#2e7d14');
+    expect(fixture.nativeElement.querySelector('#roleColorModal')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Remover cor');
+  });
+
+  it('mantém o diálogo de cor aberto, com o aviso dentro dele, quando a cor deixaria o badge ilegível', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    fixture.componentInstance.openColorModal(agentRole);
+    fixture.componentInstance.colorDraft.set('#ffffff');
+    await fixture.whenStable();
+
+    fixture.componentInstance.onSaveColor();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('#roleColorModal')?.textContent).toContain('contraste');
+    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
   });
 
   it('na Nova Função, "Criar" fica habilitado e um envio vazio diz o que falta', async () => {

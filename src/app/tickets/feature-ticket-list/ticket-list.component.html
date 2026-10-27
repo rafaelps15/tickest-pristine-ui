@@ -5,6 +5,8 @@
   </a>
 </app-page-header>
 
+<app-ticket-list-guide />
+
 @if (store.loadError()) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.loadError() }}</span>
