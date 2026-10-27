@@ -10,6 +10,9 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla } from '../entities/ticket-sla';
 
+/** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
+const FAR_FUTURE = '2999-01-01T00:00:00Z';
+
 describe('TicketMonitorInfoPanelComponent', () => {
   const sla: TicketSla = { serverNowUtc: '2026-01-01T12:00:00Z', plan: { policyId: null, policyName: '', policyVersion: 1, calendarId: '', calendarName: '', isLegacy: false }, objectives: [] };
   const ticket: TicketMonitorItem = {
@@ -142,7 +145,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     quickInfoStoreFake.ticket.set({
       id: 't1', title: ticket.title, description: 'Fumaça saindo da impressora.',
       priority: ticket.priority, status: ticket.status,
-      openedByUserId: 'u1', openedByName: 'Maria Silva', assignedToUserId: null, assignedToName: null,
+      openedByUserId: 'u1', openedByName: 'Maria Silva', canCancel: true, ownerCancelDeadlineUtc: FAR_FUTURE, assignedToUserId: null, assignedToName: null,
       sectorId: 's1', sectorName: 'Suporte',
       createdAtUtc: ticket.createdAtUtc, dueAtUtc: ticket.dueAtUtc, slaWarningAtUtc: ticket.slaWarningAtUtc,
       resolvedAtUtc: null, slaStatus: ticket.slaStatus, sla

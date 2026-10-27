@@ -4,7 +4,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, Subject } from 'rxjs';
 import { TicketsStore } from './tickets.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { TicketMessageDataService } from '../infrastructure/ticket-message.data.service';
 import { Ticket } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
@@ -18,7 +17,7 @@ describe('TicketsStore', () => {
     priority: TicketPriority.Medium, status: TicketStatus.Open,
     openedByUserId: 'u1', assignedToUserId: null, assignedToName: null, sectorId: 's1', sectorName: 'Helpdesk',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaStatus: TicketSlaStatus.OnTime,
-    lastActivityAtUtc: '2026-01-01T12:00:00Z'
+    lastActivityAtUtc: '2026-01-01T12:00:00Z', canCancel: true, ownerCancelDeadlineUtc: '2026-01-01T12:15:00Z'
   };
 
   /** Monta uma página paginada por offset com os tickets informados. */
@@ -32,19 +31,16 @@ describe('TicketsStore', () => {
 
   let store: InstanceType<typeof TicketsStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
-  let messageDataService: jasmine.SpyObj<TicketMessageDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'create', 'update', 'reopen', 'delete']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'create', 'update', 'reopen']);
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 1)));
-    messageDataService = jasmine.createSpyObj('TicketMessageDataService', ['post']);
 
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         TicketsStore,
         { provide: TicketDataService, useValue: dataService },
-        { provide: TicketMessageDataService, useValue: messageDataService },
         { provide: SessionService, useValue: { userId: signal('u1') } }
       ]
     });
@@ -89,19 +85,6 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getMine).toHaveBeenCalledWith(1, 50, TicketStatusGroup.Active, '');
-  });
-
-  it('volta uma página ao excluir o último chamado de uma página que não é a primeira', async () => {
-    dataService.getMine.and.returnValues(of(pageOf([ticket], 1, 21)), of(pageOf([ticket], 2, 21)), of(pageOf([ticket], 1, 20)));
-    dataService.delete.and.returnValue(of(undefined));
-    await TestBed.inject(ApplicationRef).whenStable();
-    store.goToPage(2);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.remove('t1');
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(dataService.getMine.calls.mostRecent().args).toEqual([1, 20, TicketStatusGroup.Active, '']);
   });
 
   it('cria um chamado, volta para a primeira página e recarrega a listagem', async () => {
@@ -212,7 +195,7 @@ describe('TicketsStore', () => {
     store.reopen('t1', null);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.reopen).toHaveBeenCalledWith('t1');
+    expect(dataService.reopen).toHaveBeenCalledWith('t1', null);
     expect(dataService.getMine).toHaveBeenCalledTimes(2);
     expect(store.state().error).toBeNull();
   });
@@ -225,16 +208,6 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.state().error).toBe('Erro ao reabrir o chamado');
-  });
-
-  it('expõe mensagem de erro quando a exclusão falhar', async () => {
-    dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.remove('t1');
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.state().error).toBe('Erro ao excluir o chamado');
   });
 
   it('marca o chamado como pendente durante a reabertura, e libera ao terminar', async () => {
@@ -252,85 +225,18 @@ describe('TicketsStore', () => {
     expect(store.pendingTicketIds()).toEqual([]);
   });
 
-  it('libera o chamado pendente mesmo quando a exclusão falha', async () => {
-    const subject = new Subject<void>();
-    dataService.delete.and.returnValue(subject);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.remove('t1');
-    expect(store.pendingTicketIds()).toEqual(['t1']);
-
-    subject.error(new HttpErrorResponse({ status: 500 }));
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.pendingTicketIds()).toEqual([]);
-  });
-
   it('separa o erro de mutação do erro de leitura, e descarta o de mutação sob pedido', async () => {
-    dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.remove('t1');
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.loadError()).toBeNull();
-    expect(store.mutationError()).toBe('Erro ao excluir o chamado');
-
-    store.clearMutationError();
-    expect(store.mutationError()).toBeNull();
-  });
-
-  it('chama onSuccess ao reabrir e ao excluir um chamado com sucesso', async () => {
-    dataService.reopen.and.returnValue(of(undefined));
-    dataService.delete.and.returnValue(of(undefined));
-    await TestBed.inject(ApplicationRef).whenStable();
-    const onReopened = jasmine.createSpy('onReopened');
-    const onRemoved = jasmine.createSpy('onRemoved');
-
-    store.reopen('t1', null, onReopened);
-    store.remove('t2', onRemoved);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(onReopened).toHaveBeenCalled();
-    expect(onRemoved).toHaveBeenCalled();
-  });
-
-  it('publica o motivo como mensagem depois de reabrir, quando informado', async () => {
-    dataService.reopen.and.returnValue(of(undefined));
-    messageDataService.post.and.returnValue(of('m1'));
-    await TestBed.inject(ApplicationRef).whenStable();
-    const onSuccess = jasmine.createSpy('onSuccess');
-
-    store.reopen('t1', 'O problema voltou depois da atualização.', onSuccess);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(messageDataService.post).toHaveBeenCalledWith('t1', 'O problema voltou depois da atualização.');
-    expect(onSuccess).toHaveBeenCalled();
-    expect(store.mutationError()).toBeNull();
-  });
-
-  it('não publica mensagem ao reabrir sem motivo', async () => {
-    dataService.reopen.and.returnValue(of(undefined));
+    dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.reopen('t1', null);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(messageDataService.post).not.toHaveBeenCalled();
-  });
+    expect(store.loadError()).toBeNull();
+    expect(store.mutationError()).toBe('Erro ao reabrir o chamado');
 
-  it('mantém o chamado reaberto e avisa quando só a publicação do motivo falha', async () => {
-    dataService.reopen.and.returnValue(of(undefined));
-    messageDataService.post.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-    await TestBed.inject(ApplicationRef).whenStable();
-    const onSuccess = jasmine.createSpy('onSuccess');
-
-    store.reopen('t1', 'Motivo qualquer.', onSuccess);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(onSuccess).toHaveBeenCalled();
-    expect(store.mutationError()).toContain('o motivo não foi publicado');
-    expect(store.pendingTicketIds()).toEqual([]);
+    store.clearMutationError();
+    expect(store.mutationError()).toBeNull();
   });
 
   it('começa em "Em aberto" e sem busca, e volta para a primeira página ao trocar o grupo ou a busca', async () => {
@@ -405,5 +311,29 @@ describe('TicketsStore', () => {
     expect(store.total()).toBe(0);
     expect(store.hasAnyTicket()).toBeNull();
     expect(store.loadError()).toBe('Erro ao carregar chamados');
+  });
+
+  it('reabre mandando o motivo no próprio reopen (uma chamada só), e chama onSuccess', async () => {
+    dataService.reopen.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.reopen('t1', 'O problema voltou depois da atualização.', onSuccess);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.reopen).toHaveBeenCalledWith('t1', 'O problema voltou depois da atualização.');
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('mostra a mensagem do back-end quando a reabertura é recusada', async () => {
+    dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({
+      status: 403, error: { detail: 'Você não tem permissão para reabrir este chamado.' }
+    })));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.reopen('t1', 'motivo');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutationError()).toBe('Você não tem permissão para reabrir este chamado.');
   });
 });

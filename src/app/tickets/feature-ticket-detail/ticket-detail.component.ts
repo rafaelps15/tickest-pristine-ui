@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef, DestroyRef, afterNextRender } from '@angular/core';
 import { DatePipe, NgClass } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TicketDetailStore } from '../application/ticket-detail.store';
@@ -25,6 +25,7 @@ import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketAttachment } from '../entities/ticket-attachment';
+import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
@@ -42,6 +43,10 @@ export class TicketDetailComponent implements OnInit {
     protected readonly historyStore = inject(TicketHistoryStore);
     protected readonly messagesStore = inject(TicketMessagesStore);
     protected readonly sessionService = inject(SessionService);
+    private readonly destroyRef = inject(DestroyRef);
+
+    /** Hora atual do navegador, atualizada a cada 30 s, pra janela de cancelamento do dono vencer com a tela aberta. */
+    protected readonly now = signal(Date.now());
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
 
@@ -161,6 +166,14 @@ export class TicketDetailComponent implements OnInit {
     protected readonly ticket = this.detailStore.ticket;
 
     /** Carrega o detalhe do ticket, o histórico, os anexos e as mensagens ao inicializar a tela. */
+    constructor() {
+        // O relógio da janela de cancelamento só roda no navegador (o prerender não pode ficar preso num intervalo).
+        afterNextRender(() => {
+            const timer = setInterval(() => this.now.set(Date.now()), 30_000);
+            this.destroyRef.onDestroy(() => clearInterval(timer));
+        });
+    }
+
     ngOnInit(): void {
         this.detailStore.loadTicket(this.ticketId);
         this.historyStore.loadForTicket(this.ticketId);
@@ -342,14 +355,31 @@ export class TicketDetailComponent implements OnInit {
         return (this.isOwner(t) || this.sessionService.hasPermission('tickets:manage')) && TICKET_ACTIVE_STATUSES.has(t.status);
     }
 
+    /** Se quem está logado cancela qualquer chamado, sem prazo (`tickets:cancel`). */
+    private canCancelAny(): boolean {
+        return this.sessionService.hasPermission(TICKETS_CANCEL_PERMISSION);
+    }
+
     /**
-     * Indica se o botão dedicado "Cancelar chamado" deve aparecer pra quem abriu o chamado — só
-     * quando a pessoa NÃO já vê essa opção pelo fluxo de transição de status de quem administra
-     * (`nextStatusOptions`, que já inclui Cancelar), pra não duplicar o botão quando as duas
-     * condições coincidirem.
+     * Se dá pra cancelar agora: o back-end permite (`canCancel` — dono nos 15 min após abrir, ou
+     * `tickets:cancel`) e, pro dono sem a permissão, a janela ainda não venceu no relógio do navegador.
      */
-    protected canCancelAsOwner(t: TicketDetail): boolean {
-        return !this.canChangeStatus() && this.isOwner(t) && TICKET_ACTIVE_STATUSES.has(t.status);
+    protected canCancelNow(t: TicketDetail): boolean {
+        return TICKET_ACTIVE_STATUSES.has(t.status) && isCancelAvailable(t, this.now(), this.canCancelAny());
+    }
+
+    /** Tempo restante pro dono cancelar ("por mais 8 min"), ou null pra quem cancela sem prazo. */
+    protected cancelHint(t: TicketDetail): string | null {
+        return ownerCancelHint(t, this.now(), this.canCancelAny());
+    }
+
+    /**
+     * Indica se o botão dedicado "Cancelar chamado" deve aparecer — quando dá pra cancelar e a pessoa
+     * NÃO já vê essa opção nas transições de status de quem atende (`nextStatusOptions`), pra não
+     * duplicar o botão.
+     */
+    protected canCancelSeparately(t: TicketDetail): boolean {
+        return this.canCancelNow(t) && !this.nextStatusOptions(t).includes(TicketStatus.Canceled);
     }
 
     /** Abre o modal de edição da descrição, limpando o erro de uma mutação anterior. */
@@ -407,9 +437,13 @@ export class TicketDetailComponent implements OnInit {
         return this.sessionService.hasPermission('tickets:manage');
     }
 
-    /** Próximos status válidos a partir do status atual, pra quem administra chamados. */
-    protected nextStatusOptions(status: TicketStatus): TicketStatus[] {
-        return this.canChangeStatus() ? TICKET_STATUS_TRANSITIONS[status] : [];
+    /**
+     * Próximos status válidos a partir do status atual, pra quem administra chamados. Cancelar só
+     * entra se dá pra cancelar agora: com a spec 016 do back-end, `tickets:manage` sozinho não cancela.
+     */
+    protected nextStatusOptions(t: TicketDetail): TicketStatus[] {
+        if (!this.canChangeStatus()) return [];
+        return TICKET_STATUS_TRANSITIONS[t.status].filter(status => status !== TicketStatus.Canceled || this.canCancelNow(t));
     }
 
     /** Indica se o botão "Reabrir chamado" deve aparecer: o chamado precisa estar inativo (Resolvido/Fechado/Cancelado). */
@@ -480,21 +514,15 @@ export class TicketDetailComponent implements OnInit {
     }
 
     /**
-     * Reabre o chamado e, se veio um motivo, publica-o como mensagem do solicitante logo depois
-     * (na ordem certa no histórico). Se só a mensagem falhar, o erro aparece no campo de mensagem,
-     * como qualquer envio — o chamado continua reaberto.
+     * Reabre o chamado com o motivo opcional, numa chamada só: o back-end grava a reabertura e a
+     * mensagem juntas. Com motivo, a conversa é recarregada pra mensagem nova aparecer.
      */
     protected onReopenConfirm(reason: string | null): void {
-        this.detailStore.reopen(this.ticketId, () => {
+        this.detailStore.reopen(this.ticketId, reason, () => {
             this.toastService.show('Chamado reaberto.');
             this.historyStore.reload();
             this.reopenDialogOpen.set(false);
-            if (reason) {
-                this.messagesStore.post(this.ticketId, reason, () => {
-                    this.historyStore.reload();
-                    this.detailStore.refreshSla();
-                });
-            }
+            if (reason) this.messagesStore.loadForTicket(this.ticketId);
         });
     }
 

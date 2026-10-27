@@ -2,17 +2,16 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, switchMap, of, map, catchError } from 'rxjs';
+import { finalize } from 'rxjs';
 import { CreateTicketData, Ticket, UpdateTicketData } from '../entities/ticket';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { TicketMessageDataService } from '../infrastructure/ticket-message.data.service';
 import { SessionService, extractErrorMessage } from '../../shared';
 
 /** Tamanho padrão da página de "Meus Tickets", o mesmo padrão do back-end. */
 export const TICKETS_PAGE_SIZE = 20;
 
-/** Store de tickets do usuário logado: listagem paginada, criação, atualização, reabertura e exclusão. */
+/** Store de tickets do usuário logado: listagem paginada, criação, atualização e reabertura. */
 export const TicketsStore = signalStore(
   { providedIn: 'root' },
   withState({
@@ -23,14 +22,13 @@ export const TicketsStore = signalStore(
     statusGroup: TicketStatusGroup.Active as TicketStatusGroup | null,
     /** Trecho do título buscado (vazio = sem busca). */
     search: '',
-    /** Ids de tickets com reabertura ou exclusão em andamento — trava o botão da linha e evita duplo-envio. */
+    /** Ids de tickets com edição, cancelamento ou reabertura em andamento — trava o botão da linha e evita duplo-envio. */
     pendingTicketIds: [] as string[],
     /** Criação de ticket em andamento — trava o botão de envio e evita duplo-envio. */
     creating: false
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
-    _ticketMessageDataService: inject(TicketMessageDataService),
     _session: inject(SessionService)
   })),
   withProps((store) => ({
@@ -147,7 +145,7 @@ export const TicketsStore = signalStore(
       patchState(store, { search: term, page: 1 });
     },
 
-    /** Descarta a mensagem de erro da última mutação (editar, cancelar, reabrir ou excluir). */
+    /** Descarta a mensagem de erro da última mutação (editar, cancelar ou reabrir). */
     clearMutationError(): void {
       patchState(store, { mutationError: null });
     },
@@ -209,64 +207,24 @@ export const TicketsStore = signalStore(
     },
 
     /**
-     * Reabre um ticket inativo e, se veio um motivo, publica-o como mensagem do solicitante no
-     * ticket (depois da reabertura, pra aparecer na ordem certa no histórico). Recarrega a listagem
-     * em caso de sucesso. Se a reabertura der certo e só a mensagem falhar, o ticket continua
-     * reaberto: chama `onSuccess` e avisa em `mutationError` que o motivo não foi publicado. Marca o
-     * id como pendente durante a chamada, pra travar o botão da linha e evitar duplo-envio.
+     * Reabre um ticket inativo, com o motivo opcional (o back-end o grava como mensagem de quem
+     * reabriu, na mesma transação), e recarrega a listagem em caso de sucesso. Marca o id como
+     * pendente durante a chamada, pra travar o botão da linha e evitar duplo-envio.
      */
     reopen(ticketId: string, reason: string | null, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
 
-      store._ticketDataService.reopen(ticketId).pipe(
-        switchMap(() => reason
-          ? store._ticketMessageDataService.post(ticketId, reason).pipe(
-              map(() => true),
-              catchError(() => of(false))
-            )
-          : of(true)),
-        finalize(() => patchState(store, {
-          pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
-        }))
-      ).subscribe({
-        next: (reasonPublished) => {
-          store._listResource.reload();
-          if (!reasonPublished) {
-            patchState(store, {
-              mutationError: 'O chamado foi reaberto, mas o motivo não foi publicado — envie-o como mensagem.'
-            });
-          }
-          onSuccess?.();
-        },
-        error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao reabrir o chamado') });
-        }
-      });
-    },
-
-    /**
-     * Exclui (soft-delete) um ticket e recarrega a listagem em caso de sucesso. Se era o último item de uma
-     * página que não é a primeira, volta uma página para a tela não ficar vazia. Marca o id como pendente
-     * durante a chamada, pra travar o botão da linha e evitar duplo-envio num duplo-clique.
-     */
-    remove(ticketId: string, onSuccess?: () => void): void {
-      patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
-
-      store._ticketDataService.delete(ticketId).pipe(
+      store._ticketDataService.reopen(ticketId, reason).pipe(
         finalize(() => patchState(store, {
           pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
         }))
       ).subscribe({
         next: () => {
-          if (store.tickets().length === 1 && store.page() > 1) {
-            patchState(store, { page: store.page() - 1 });
-          } else {
-            store._listResource.reload();
-          }
+          store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir o chamado') });
+          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao reabrir o chamado') });
         }
       });
     }

@@ -221,11 +221,14 @@ export const TicketDetailStore = signalStore(
       });
     },
 
-    /** Reabre um ticket inativo (Resolvido/Fechado/Cancelado) e recarrega o detalhe em caso de sucesso. */
-    reopen(ticketId: string, onSuccess?: () => void): void {
+    /**
+     * Reabre um ticket inativo (Resolvido/Fechado/Cancelado), com o motivo opcional (o back-end o grava
+     * como mensagem de quem reabriu, na mesma transação), e recarrega o detalhe em caso de sucesso.
+     */
+    reopen(ticketId: string, reason: string | null, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, reopening: true, _slaOverride: null });
 
-      store._ticketDataService.reopen(ticketId).pipe(
+      store._ticketDataService.reopen(ticketId, reason).pipe(
         finalize(() => patchState(store, { reopening: false }))
       ).subscribe({
         next: () => {

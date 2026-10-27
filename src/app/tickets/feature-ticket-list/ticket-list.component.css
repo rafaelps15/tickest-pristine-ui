@@ -198,3 +198,10 @@
     padding: 2rem 1rem;
   }
 }
+
+/* Tempo restante pro dono cancelar, ao lado da ação no "⋮": informação, não alerta (cor de texto secundário). */
+.cancel-hint {
+  margin-left: 0.5rem;
+  color: var(--tk-text-secondary);
+  font-variant-numeric: tabular-nums;
+}

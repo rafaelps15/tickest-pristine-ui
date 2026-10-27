@@ -13,3 +13,9 @@
   padding-top: 1rem;
   border-top: 1px solid var(--tk-border);
 }
+
+/* Prazo do dono pra cancelar ("Dá pra cancelar por mais 8 min."): informação, não alerta. */
+.cancel-window {
+  color: var(--tk-text-secondary);
+  font-variant-numeric: tabular-nums;
+}

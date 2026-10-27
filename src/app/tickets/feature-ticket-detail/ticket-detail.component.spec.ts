@@ -20,6 +20,9 @@ import { UserSummary } from '../../users';
 import { By } from '@angular/platform-browser';
 import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
+/** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
+const FAR_FUTURE = '2999-01-01T00:00:00Z';
+
 const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('TicketDetailComponent', () => {
@@ -45,7 +48,7 @@ describe('TicketDetailComponent', () => {
   const ticket: TicketDetail = {
     id: 't1', title: 'Impressora não funciona', description: 'A impressora do 3º andar não imprime.',
     priority: TicketPriority.Medium, status: TicketStatus.Open,
-    openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null,
+    openedByUserId: 'u1', openedByName: 'Maria Souza', canCancel: true, ownerCancelDeadlineUtc: FAR_FUTURE, assignedToUserId: null, assignedToName: null,
     sectorId: 's1', sectorName: 'Suporte',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime, sla
@@ -725,7 +728,8 @@ describe('TicketDetailComponent', () => {
 
     it('não mostra nenhum botão de transição sem a permissão tickets:manage', async () => {
       sessionServiceFake.hasPermission.and.returnValue(false);
-      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      // Quem não é dono nem tem tickets:cancel recebe canCancel = false do back-end.
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -814,7 +818,7 @@ describe('TicketDetailComponent', () => {
 
     it('reabre o chamado, mostra um toast e recarrega o histórico em caso de sucesso', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
-      detailStoreFake.reopen.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+      detailStoreFake.reopen.and.callFake((_id: string, _reason: string | null, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -824,23 +828,26 @@ describe('TicketDetailComponent', () => {
 
       (fixture.nativeElement.querySelector('app-ticket-reopen-dialog button[type="submit"]') as HTMLButtonElement).click();
 
-      expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', jasmine.any(Function));
+      expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', null, jasmine.any(Function));
       expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto.');
       expect(historyStoreFake.reload).toHaveBeenCalled();
       expect(messagesStoreFake.post).not.toHaveBeenCalled();
     });
 
-    it('publica o motivo da reabertura como mensagem, quando informado', async () => {
+    it('manda o motivo no próprio reopen e recarrega a conversa, sem publicar a mensagem à parte', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
-      detailStoreFake.reopen.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
+      detailStoreFake.reopen.and.callFake((_id: string, _reason: string | null, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
       findReopenButton(fixture)!.click();
       await fixture.whenStable();
+      messagesStoreFake.loadForTicket.calls.reset();
       fixture.debugElement.componentInstance['onReopenConfirm']('A impressora parou de novo.');
 
-      expect(messagesStoreFake.post).toHaveBeenCalledWith('t1', 'A impressora parou de novo.', jasmine.any(Function));
+      expect(detailStoreFake.reopen).toHaveBeenCalledWith('t1', 'A impressora parou de novo.', jasmine.any(Function));
+      expect(messagesStoreFake.post).not.toHaveBeenCalled();
+      expect(messagesStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
     });
   });
 
@@ -872,7 +879,7 @@ describe('TicketDetailComponent', () => {
     it('não mostra "Editar" pra quem não é dono nem administra chamados', async () => {
       sessionServiceFake.userId.set('outro-usuario');
       sessionServiceFake.hasPermission.and.returnValue(false);
-      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -943,13 +950,68 @@ describe('TicketDetailComponent', () => {
     it('não mostra "Cancelar chamado" pra quem não é dono nem administra chamados', async () => {
       sessionServiceFake.userId.set('outro-usuario');
       sessionServiceFake.hasPermission.and.returnValue(false);
-      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
       const cancelButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
         .find(b => b.textContent?.includes('Cancelar chamado'));
       expect(cancelButton).toBeFalsy();
+    });
+  });
+
+  describe('janela de cancelamento (spec 016)', () => {
+    /** Data UTC a N minutos de agora. */
+    function minutesFromNow(minutes: number): string {
+      return new Date(Date.now() + minutes * 60_000).toISOString();
+    }
+
+    /** Primeiro botão da tela com o texto informado. */
+    function findButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>, text: string): HTMLButtonElement | undefined {
+      return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes(text));
+    }
+
+    it('mostra ao dono quanto tempo ainda dá pra cancelar', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, ownerCancelDeadlineUtc: minutesFromNow(8) });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.cancel-window')?.textContent?.trim()).toBe('Dá pra cancelar por mais 8 min.');
+    });
+
+    it('esconde o Cancelar do dono quando a janela já venceu', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, ownerCancelDeadlineUtc: minutesFromNow(-1) });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      const cancelButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Cancelar chamado'));
+      expect(cancelButton).toBeFalsy();
+      expect(fixture.nativeElement.querySelector('.cancel-window')).toBeNull();
+    });
+
+    it('com tickets:manage mas sem tickets:cancel, as transições não trazem Cancelar', async () => {
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findButton(fixture, 'Iniciar atendimento')).toBeTruthy();
+      expect(findButton(fixture, 'Cancelar chamado')).toBeFalsy();
+    });
+
+    it('com tickets:cancel, cancela sem prazo e sem contagem', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, ownerCancelDeadlineUtc: minutesFromNow(-60) });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findButton(fixture, 'Cancelar chamado')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('.cancel-window')).toBeNull();
     });
   });
 

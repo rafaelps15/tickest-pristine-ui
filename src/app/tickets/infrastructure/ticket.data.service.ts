@@ -34,9 +34,12 @@ export class TicketDataService {
     return this.http.put<void>(`${this.apiUrl}/${ticketId}`, data);
   }
 
-  /** Reabre um ticket inativo (POST /tickets/{id}/reopen). */
-  reopen(ticketId: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${ticketId}/reopen`, null);
+  /**
+   * Reabre um ticket inativo (POST /tickets/{id}/reopen). Com motivo, o back-end grava também a
+   * mensagem de quem reabriu, na mesma transação; sem motivo, vai sem corpo.
+   */
+  reopen(ticketId: string, reason: string | null = null): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${ticketId}/reopen`, reason ? { reason } : null);
   }
 
   /** Exclui (soft-delete) um ticket (DELETE /tickets/{id}). */

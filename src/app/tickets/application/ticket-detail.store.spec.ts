@@ -11,6 +11,9 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { UserDataService, UserSummary } from '../../users';
 
+/** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
+const FAR_FUTURE = '2999-01-01T00:00:00Z';
+
 describe('TicketDetailStore', () => {
   const sla: TicketSla = {
     serverNowUtc: '2026-01-01T13:00:00Z',
@@ -31,7 +34,7 @@ describe('TicketDetailStore', () => {
   const ticket: TicketDetail = {
     id: 't1', title: 'Impressora não funciona', description: 'Não imprime.',
     priority: TicketPriority.Medium, status: TicketStatus.Open,
-    openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null,
+    openedByUserId: 'u1', openedByName: 'Maria Souza', canCancel: true, ownerCancelDeadlineUtc: FAR_FUTURE, assignedToUserId: null, assignedToName: null,
     sectorId: 's1', sectorName: 'Suporte',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime, sla
@@ -316,10 +319,10 @@ describe('TicketDetailStore', () => {
     it('reabre o chamado, recarrega o detalhe e chama onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
-      store.reopen('t1', onSuccess);
+      store.reopen('t1', null, onSuccess);
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(dataService.reopen).toHaveBeenCalledWith('t1');
+      expect(dataService.reopen).toHaveBeenCalledWith('t1', null);
       expect(dataService.getById).toHaveBeenCalledTimes(2);
       expect(onSuccess).toHaveBeenCalled();
       expect(store.mutationError()).toBeNull();
@@ -328,7 +331,7 @@ describe('TicketDetailStore', () => {
     it('expõe mensagem própria quando falta permissão (403)', async () => {
       dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
-      store.reopen('t1');
+      store.reopen('t1', null);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.mutationError()).toBe('Você não tem permissão para reabrir este chamado.');
@@ -337,7 +340,7 @@ describe('TicketDetailStore', () => {
     it('volta reopening pra false depois do erro', async () => {
       dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-      store.reopen('t1');
+      store.reopen('t1', null);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.reopening()).toBeFalse();
@@ -395,7 +398,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
       expect(store.sla()).toEqual(refreshedSla);
 
-      store.reopen('t1');
+      store.reopen('t1', null);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.sla()).toEqual(sla);

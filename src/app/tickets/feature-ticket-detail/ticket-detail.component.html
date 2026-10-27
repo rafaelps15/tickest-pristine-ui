@@ -29,10 +29,10 @@
             }
           </p>
 
-          @if (nextStatusOptions(t.status).length > 0 || canReopenTicket(t.status) || canCancelAsOwner(t)) {
+          @if (nextStatusOptions(t).length > 0 || canReopenTicket(t.status) || canCancelSeparately(t)) {
             <!-- Uma ação principal por vez: a próxima etapa natural é o primário; Cancelar fica no fim, separado. -->
             <div class="ticket-actions d-flex gap-2 flex-wrap mb-4">
-              @for (nextStatus of nextStatusOptions(t.status); track nextStatus) {
+              @for (nextStatus of nextStatusOptions(t); track nextStatus) {
                 <button type="button" class="btn btn-sm"
                         [class.btn-outline-danger]="nextStatus === TicketStatus.Canceled"
                         [class.btn-primary]="nextStatus !== TicketStatus.Canceled"
@@ -47,21 +47,25 @@
               @if (canReopenTicket(t.status)) {
                 <!-- Resolvido ainda tem "Fechar" como próxima etapa: aí Reabrir é secundário (um primário por vez). -->
                 <button #reopenButton type="button" class="btn btn-sm"
-                        [class.btn-primary]="nextStatusOptions(t.status).length === 0"
-                        [class.btn-outline-primary]="nextStatusOptions(t.status).length > 0" [disabled]="detailStore.reopening()" (click)="onReopen()">
+                        [class.btn-primary]="nextStatusOptions(t).length === 0"
+                        [class.btn-outline-primary]="nextStatusOptions(t).length > 0" [disabled]="detailStore.reopening()" (click)="onReopen()">
                   @if (detailStore.reopening()) {
                     <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                   }
                   Reabrir chamado
                 </button>
               }
-              @if (canCancelAsOwner(t)) {
+              @if (canCancelSeparately(t)) {
                 <button type="button" class="btn btn-sm btn-outline-danger ms-sm-auto" [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(TicketStatus.Canceled, t.description)">
                   @if (detailStore.updatingStatus() && pendingStatus() === TicketStatus.Canceled) {
                     <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                   }
                   Cancelar chamado
                 </button>
+              }
+              @if (canCancelNow(t) && cancelHint(t); as hint) {
+                <!-- O dono só cancela nos 15 min após abrir: o prazo fica à vista, em vez de o botão sumir sem aviso. -->
+                <p class="cancel-window small mb-0 w-100 text-sm-end">Dá pra cancelar {{ hint }}.</p>
               }
             </div>
           }

@@ -153,11 +153,16 @@
                         <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar descrição
                       </button>
                     </li>
-                    <li>
-                      <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
-                        <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar chamado
-                      </button>
-                    </li>
+                    @if (canCancel(ticket)) {
+                      <li>
+                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
+                          <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar chamado
+                          @if (cancelHint(ticket); as hint) {
+                            <span class="cancel-hint small">{{ hint }}</span>
+                          }
+                        </button>
+                      </li>
+                    }
                   } @else if (canReopen(ticket)) {
                     <li>
                       <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)">

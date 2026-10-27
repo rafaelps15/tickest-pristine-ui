@@ -32,6 +32,7 @@ describe('TicketListGuideComponent', () => {
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('editar a descrição');
+    expect(text).toContain('15 primeiros minutos');
     expect(text).toContain('reabrir');
   });
 });

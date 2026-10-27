@@ -8,7 +8,8 @@ import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
-import { ConfirmDialogService, ToastService } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
+import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
 import { DepartmentsStore } from '../../departments';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
@@ -54,6 +55,7 @@ export class TicketListComponent implements OnInit {
     protected readonly store = inject(TicketsStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
+    private readonly sessionService = inject(SessionService);
     private readonly departmentsStore = inject(DepartmentsStore);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly injector = inject(Injector);
@@ -177,6 +179,21 @@ export class TicketListComponent implements OnInit {
         this.searchInput.set('');
         this.store.setSearch('');
         this.store.setStatusGroup(TicketStatusGroup.Active);
+    }
+
+    /** Se quem está logado cancela qualquer chamado, sem prazo (`tickets:cancel`). */
+    private canCancelAny(): boolean {
+        return this.sessionService.hasPermission(TICKETS_CANCEL_PERMISSION);
+    }
+
+    /** Se o "Cancelar chamado" aparece no "⋮": o back-end permite e, pro dono, a janela de 15 min ainda não venceu. */
+    canCancel(ticket: Ticket): boolean {
+        return this.isActive(ticket) && isCancelAvailable(ticket, this.now(), this.canCancelAny());
+    }
+
+    /** Tempo restante pro dono cancelar ("por mais 8 min"), ou null pra quem cancela sem prazo. */
+    cancelHint(ticket: Ticket): string | null {
+        return ownerCancelHint(ticket, this.now(), this.canCancelAny());
     }
 
     /** "atualizado há X" da linha, relativo à hora atual do navegador. */
