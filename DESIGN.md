@@ -343,9 +343,12 @@ uso).
 
 ### Alertas de SLA (assinatura do produto)
 O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
-- Lista vencidos **e** em risco, do prazo mais antigo pro mais novo (o vencido há mais tempo
-  primeiro); os totais da empresa ficam no topo, com o mesmo número grande dos KPIs, cada um
-  levando à fila de Monitorar já filtrada.
+- Lista vencidos **e** em risco em 5 vagas: até 3 vencidos (o vencido há mais tempo primeiro) e até
+  2 em risco (o que vence primeiro), e a sobra de um grupo vai pro outro — só por prazo, muitos
+  vencidos escondiam os em risco, os únicos que ainda dá pra salvar. Os totais da empresa ficam no
+  topo, com o mesmo número grande dos KPIs, cada um levando à fila de Monitorar já filtrada.
+- O card mostra "Atualizado às HH:mm" e tem um botão "Atualizar" que recarrega só os alertas; ao
+  voltar pra aba com uma lista de mais de 5 minutos, recarrega sozinho (não é polling).
 - Cada item tem etiqueta "Vencido"/"Em risco" em texto **e** cor, e o prazo relativo vivo ("vence
   em 2h 14min" / "venceu há 35 min"), recalculado a cada 30s com a aba visível e ancorado na hora
   do servidor (`serverNowUtc`), nunca no relógio da máquina.

@@ -153,19 +153,37 @@ describe('TicketSummaryStore', () => {
     expect(store.atRiskCount()).toBe(1);
   });
 
-  it('limita a lista a 5 chamados no total, somando vencidos e em risco', async () => {
-    const many = (prefix: string, status: TicketSlaStatus) => Array.from({ length: 5 }, (_, i) => ({
-      ...criticalTicket, id: `${prefix}${i}`, slaStatus: status, dueAtUtc: `2026-01-0${i + 1}T12:00:00Z`
-    }));
-    dataService.getAll.and.callFake(filters => of({
-      items: many(filters.slaStatus === TicketSlaStatus.Breached ? 'b' : 'r', filters.slaStatus!),
-      page: 1, pageSize: 5, totalCount: 5, totalPages: 1, hasPreviousPage: false, hasNextPage: false
-    }));
+  describe('vagas da lista (5: até 3 vencidos + até 2 em risco)', () => {
+    /** Faz a API devolver `breached` vencidos e `atRisk` em risco, ids b0.. / r0.., já ordenados por prazo. */
+    async function respondWith(breached: number, atRisk: number): Promise<string[]> {
+      const many = (prefix: string, count: number, status: TicketSlaStatus) => Array.from({ length: count }, (_, i) => ({
+        ...criticalTicket, id: `${prefix}${i}`, slaStatus: status, dueAtUtc: `2026-01-0${i + 1}T12:00:00Z`
+      }));
+      dataService.getAll.and.callFake(filters => {
+        const isBreached = filters.slaStatus === TicketSlaStatus.Breached;
+        const items = isBreached ? many('b', breached, TicketSlaStatus.Breached) : many('r', atRisk, TicketSlaStatus.AtRisk);
+        return of({ items, page: 1, pageSize: 5, totalCount: items.length, totalPages: 1, hasPreviousPage: false, hasNextPage: false });
+      });
+      store.load();
+      await TestBed.inject(ApplicationRef).whenStable();
+      return store.criticalTickets().map(t => t.id);
+    }
 
-    store.load();
-    await TestBed.inject(ApplicationRef).whenStable();
+    it('com muitos dos dois, reserva 3 vagas pros vencidos e 2 pros em risco (que ainda dão pra salvar)', async () => {
+      expect(await respondWith(5, 5)).toEqual(['b0', 'b1', 'b2', 'r0', 'r1']);
+    });
 
-    expect(store.criticalTickets().length).toBe(5);
+    it('sem em risco, os vencidos ocupam as 5 vagas', async () => {
+      expect(await respondWith(5, 0)).toEqual(['b0', 'b1', 'b2', 'b3', 'b4']);
+    });
+
+    it('com poucos vencidos, os em risco ocupam a sobra', async () => {
+      expect(await respondWith(1, 5)).toEqual(['b0', 'r0', 'r1', 'r2', 'r3']);
+    });
+
+    it('com só 1 em risco, a vaga que sobra volta pros vencidos', async () => {
+      expect(await respondWith(5, 1)).toEqual(['b0', 'b1', 'b2', 'b3', 'r0']);
+    });
   });
 
   it('recarrega só os alertas de SLA com reloadCritical(), sem refazer totais nem volume', async () => {

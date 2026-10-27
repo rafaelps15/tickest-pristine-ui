@@ -22,6 +22,9 @@ function valueOf<T>(resource: { hasValue(): boolean; value(): T }): T | undefine
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
 const CRITICAL_TICKETS_LIMIT = 5;
 
+/** Vagas reservadas pros vencidos na lista — as outras ficam pros em risco (se houver), ainda salváveis. */
+const BREACHED_RESERVED_SLOTS = 3;
+
 /**
  * Store do resumo de tickets de toda a empresa, para o dashboard — totais por status e volume de
  * chamados abertos por período (dia/semana/mês). Não filtra por quem abriu: todo usuário logado
@@ -103,15 +106,21 @@ export const TicketSummaryStore = signalStore(
     /** Quantidade de tickets com status Cancelado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
     canceledCount: computed(() => valueOf(store._statusCountsResource)?.canceledCount ?? 0),
     /**
-     * Chamados com SLA vencido ou em risco (até 5), do prazo mais antigo pro mais novo — o vencido há
-     * mais tempo primeiro — vazio para quem não tem `tickets:manage`.
+     * Chamados com SLA vencido ou em risco (até 5: até 3 vencidos, do mais antigo, e até 2 em risco, do
+     * mais urgente; a sobra de um grupo vai pro outro) — vazio para quem não tem `tickets:manage`.
      */
     criticalTickets: computed(() => {
       const value = valueOf(store._criticalTicketsResource);
       if (!value) return [];
-      return [...value.breached.items, ...value.atRisk.items]
-        .sort((a, b) => a.dueAtUtc.localeCompare(b.dueAtUtc))
-        .slice(0, CRITICAL_TICKETS_LIMIT);
+      // Vagas reservadas: até 3 vencidos e até 2 em risco, e a sobra de um grupo vai pro outro. Só
+      // por prazo, 5+ vencidos ocupavam a lista toda e o "vence em 1 min" — o único que ainda dá pra
+      // salvar — sumia. A API já devolve cada grupo ordenado por prazo.
+      const { items: breached } = value.breached;
+      const { items: atRisk } = value.atRisk;
+      let breachedSlots = Math.min(breached.length, BREACHED_RESERVED_SLOTS);
+      const atRiskSlots = Math.min(atRisk.length, CRITICAL_TICKETS_LIMIT - breachedSlots);
+      breachedSlots = Math.min(breached.length, CRITICAL_TICKETS_LIMIT - atRiskSlots);
+      return [...breached.slice(0, breachedSlots), ...atRisk.slice(0, atRiskSlots)];
     }),
     /** Total de chamados ativos com SLA vencido em toda a empresa (não só os 5 listados). */
     breachedCount: computed(() => valueOf(store._criticalTicketsResource)?.breached.totalCount ?? 0),
