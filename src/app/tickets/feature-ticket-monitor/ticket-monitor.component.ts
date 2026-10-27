@@ -204,14 +204,18 @@ export class TicketMonitorComponent implements OnInit {
      */
     private lastFocusedElement: HTMLElement | null = null;
 
-    /** Seleciona o ticket clicado/ativado; clicar de novo no já selecionado desseleciona. */
-    selectTicket(ticketId: string): void {
+    /**
+     * Seleciona o ticket clicado/ativado; clicar de novo no já selecionado desseleciona. `focusReturn`
+     * é o botão do título da linha — recebe o foco ao fechar o painel mesmo quando a abertura foi um
+     * clique de mouse na linha (que não deixa nenhum elemento focado).
+     */
+    selectTicket(ticketId: string, focusReturn?: HTMLElement): void {
         if (this.selectedTicketId() === ticketId) {
             this.closeInfoPanel();
             return;
         }
 
-        this.lastFocusedElement = document.activeElement as HTMLElement;
+        this.lastFocusedElement = focusReturn ?? document.activeElement as HTMLElement;
         this.selectedTicketId.set(ticketId);
     }
 

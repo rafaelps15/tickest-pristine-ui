@@ -242,7 +242,7 @@
         @for (message of messagesStore.messages(); track message.id) {
           <li class="list-group-item px-0">
             @if (editingMessageId() === message.id) {
-              <textarea class="form-control mb-2" rows="3" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
+              <textarea class="form-control mb-2" rows="3" aria-label="Editar mensagem" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
                         [value]="editMessageContent()" (input)="editMessageContent.set($any($event.target).value)"></textarea>
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onCancelEdit()">Cancelar</button>

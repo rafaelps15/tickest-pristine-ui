@@ -193,6 +193,22 @@ describe('TicketCreateComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Ticket aberto com sucesso.');
   });
 
+  it('deixa o envio habilitado com o formulário vazio e, ao enviar, mostra os erros sem abrir o chamado', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    const submitButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(submitButton.disabled).toBeFalse();
+
+    submitButton.click();
+    await fixture.whenStable();
+
+    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('O título é obrigatório.');
+    expect(fixture.nativeElement.textContent).toContain('A descrição é obrigatória.');
+    expect(fixture.nativeElement.textContent).toContain('Selecione o departamento.');
+  });
+
   it('desabilita e mostra um spinner no botão de envio enquanto o ticket está sendo criado', async () => {
     ticketsStoreFake.creating.set(true);
     const fixture = TestBed.createComponent(TicketCreateComponent);

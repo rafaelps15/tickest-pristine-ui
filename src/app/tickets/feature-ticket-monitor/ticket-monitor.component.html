@@ -230,13 +230,17 @@
           </tr>
         } @else {
           @for (ticket of store.tickets(); track ticket.id) {
-            <tr tabindex="0" role="button" class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id"
-                [attr.aria-pressed]="selectedTicketId() === ticket.id"
-                [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do ticket ' : 'Ver informações do ticket ') + ticket.title"
-                (click)="selectTicket(ticket.id)"
-                (keydown.enter)="selectTicket(ticket.id)"
-                (keydown.space)="selectTicket(ticket.id); $event.preventDefault()">
-              <td class="fw-semibold">{{ ticket.title }}</td>
+            <!-- A linha inteira é clicável com o mouse; pro teclado/leitor de tela, o botão de verdade é o título
+                 (uma linha com role="button" escondia as colunas e o "⋮" de dentro dela). -->
+            <tr class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id" (click)="selectTicket(ticket.id, selectButton)">
+              <td>
+                <button #selectButton type="button" class="ticket-select fw-semibold text-start text-break"
+                        [attr.aria-pressed]="selectedTicketId() === ticket.id"
+                        [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do ticket ' : 'Ver informações do ticket ') + ticket.title"
+                        (click)="selectTicket(ticket.id, selectButton); $event.stopPropagation()">
+                  {{ ticket.title }}
+                </button>
+              </td>
               <td>
                 <div>{{ ticket.requesterName }}</div>
                 <div class="text-muted small">{{ ticket.requesterEmail }}</div>
@@ -266,7 +270,7 @@
                 }
                 {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
               </td>
-              <td class="text-end" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+              <td class="text-end" (click)="$event.stopPropagation()">
                 <div class="dropdown">
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle"
                           data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition

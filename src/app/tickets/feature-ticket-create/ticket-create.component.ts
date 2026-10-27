@@ -65,6 +65,10 @@ export class TicketCreateComponent implements OnInit {
         return control.invalid && (control.dirty || control.touched);
     }
 
+    /**
+     * Abre o chamado; com o formulário inválido, só marca os campos como tocados pra mostrar os erros
+     * (o botão fica habilitado de propósito — desabilitado, quem clica não descobre o que falta).
+     */
     onSubmit(): void {
         if (this.form.invalid) {
             this.form.markAllAsTouched();

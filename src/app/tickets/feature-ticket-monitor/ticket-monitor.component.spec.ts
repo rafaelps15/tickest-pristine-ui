@@ -258,28 +258,32 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    const selectButton = row.querySelector('.ticket-select') as HTMLButtonElement;
+    expect(selectButton.getAttribute('aria-pressed')).toBe('false');
 
     row.click();
     await fixture.whenStable();
-    expect(row.getAttribute('aria-pressed')).toBe('true');
+    expect(selectButton.getAttribute('aria-pressed')).toBe('true');
     expect(row.classList).toContain('table-active');
 
     row.click();
     await fixture.whenStable();
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(selectButton.getAttribute('aria-pressed')).toBe('false');
     expect(row.classList).not.toContain('table-active');
   });
 
-  it('seleciona a linha focada com Enter ou Espaço', async () => {
+  it('seleciona pelo botão do título (teclado/leitor de tela) sem alternar duas vezes pelo clique da linha', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    const selectButton = row.querySelector('.ticket-select') as HTMLButtonElement;
+    selectButton.click();
     await fixture.whenStable();
 
-    expect(row.getAttribute('aria-pressed')).toBe('true');
+    expect(selectButton.getAttribute('aria-pressed')).toBe('true');
+    expect(row.hasAttribute('role')).toBeFalse();
+    expect(row.hasAttribute('tabindex')).toBeFalse();
   });
 
   it('não alterna a seleção da linha ao clicar no botão de ação "Atribuir a mim"', async () => {
@@ -291,7 +295,7 @@ describe('TicketMonitorComponent', () => {
     assignButton.click();
     await fixture.whenStable();
 
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(row.querySelector('.ticket-select')!.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('mostra o painel "Informações do Ticket" ao selecionar um ticket, e repassa a seleção pro TicketQuickInfoStore', async () => {
@@ -340,7 +344,6 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    row.focus();
     row.click();
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeTruthy();
@@ -349,7 +352,7 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeNull();
-    expect(document.activeElement).toBe(row);
+    expect(document.activeElement).toBe(row.querySelector('.ticket-select'));
   });
 
   it('não faz nada ao apertar Esc sem nenhum painel aberto', async () => {
@@ -365,7 +368,6 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    row.focus();
     row.click();
     await fixture.whenStable();
 
@@ -376,7 +378,7 @@ describe('TicketMonitorComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeNull();
     expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
-    expect(document.activeElement).toBe(row);
+    expect(document.activeElement).toBe(row.querySelector('.ticket-select'));
   });
 
   it('mostra o Guia da Tela dentro da mesma coluna da tabela, depois do resumo de SLA e dos filtros', async () => {

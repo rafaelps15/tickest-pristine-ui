@@ -102,7 +102,7 @@
         </div>
 
         <div class="mt-5">
-          <button type="submit" class="btn btn-primary w-100" [disabled]="form.invalid || store.creating()">
+          <button type="submit" class="btn btn-primary w-100" [disabled]="store.creating()">
             @if (store.creating()) {
               <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             } @else {
