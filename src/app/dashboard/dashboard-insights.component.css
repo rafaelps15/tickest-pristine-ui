@@ -16,19 +16,11 @@
   margin-bottom: 1rem;
 }
 
-.sla-band-list {
-  margin-top: 1rem;
-}
-
 @media (min-width: 992px) {
   .sla-band:not(.sla-band-quiet) {
     display: grid;
     grid-template-columns: minmax(16rem, 1fr) 2fr;
     gap: 2rem;
-  }
-
-  .sla-band-list {
-    margin-top: 0;
   }
 
   .sla-band-quiet .sla-band-summary {
@@ -39,11 +31,6 @@
 
   .sla-band-quiet .sla-band-header {
     margin-bottom: 0;
-  }
-
-  /* Na linha compacta o botão de atualizar fica junto do título, não empurrado pra borda. */
-  .sla-band-quiet .sla-band-header .btn {
-    margin-left: 0.5rem !important;
   }
 }
 
@@ -80,10 +67,6 @@
   outline-offset: 2px;
 }
 
-.stat-value {
-  font-weight: 600;
-  line-height: 1.2;
-}
 
 .critical-ticket-item {
   display: flex;
@@ -106,7 +89,6 @@
  * um pouco pras laterais pra o realce de hover não encostar no texto.
  */
 .critical-ticket-link {
-  display: block;
   min-height: 2.75rem;
   margin: 0 -0.5rem;
   padding: 0.5rem;
@@ -139,7 +121,6 @@
 
 .critical-ticket-link:focus-visible {
   outline: 2px solid var(--tk-primary);
-  outline-offset: 0;
 }
 
 /*

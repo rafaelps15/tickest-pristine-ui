@@ -65,7 +65,7 @@
     </div>
 
     @if (hasAlerts()) {
-      <div class="sla-band-list">
+      <div class="sla-band-list mt-3 mt-lg-0">
         <ul class="list-unstyled mb-0 critical-ticket-list">
           @for (item of items(); track item.ticket.id) {
             <li class="critical-ticket-item">
