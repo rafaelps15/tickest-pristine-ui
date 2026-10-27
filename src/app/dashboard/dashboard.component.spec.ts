@@ -323,6 +323,8 @@ describe('DashboardComponent', () => {
     expect(text).toContain('Quantidade de tickets criados por período');
     expect(text).toContain('05/01');
     expect(text).toContain('5');
+    // O foco vai pra tabela, pro leitor de tela anunciar a troca (antes o conteúdo mudava em silêncio).
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('table'));
   });
 
   it('mostra Novo Ticket, Meus Tickets E Tickets sem responsável pra quem não é administrativo mas tem tickets:manage (ex. Atendente)', async () => {

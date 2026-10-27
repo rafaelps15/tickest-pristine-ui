@@ -10,7 +10,7 @@
   </div>
 </div>
 
-<app-dashboard-guide class="guide-rail" />
+<app-dashboard-guide class="guide-rail" [showSla]="sessionService.hasPermission('tickets:manage')" />
 
 @if (store.summaryError()) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
@@ -220,7 +220,7 @@
 
         @if (showTable()) {
           <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0">
+            <table #volumeTable tabindex="-1" class="table table-sm table-bordered align-middle mb-0">
               <caption class="visually-hidden">Quantidade de tickets criados por período</caption>
               <thead>
                 <tr>

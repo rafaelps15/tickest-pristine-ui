@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, ElementRef, PLATFORM_ID, ChangeDetectionStrategy, signal, computed, effect, viewChild } from '@angular/core';
+import { Component, inject, Injector, OnInit, OnDestroy, ElementRef, PLATFORM_ID, ChangeDetectionStrategy, signal, computed, effect, viewChild, afterNextRender } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
@@ -128,6 +128,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Query de view como signal (Angular 17.3+) — substitui @ViewChild, sem `!` nem ngAfterViewInit. */
   private readonly volumeChartCanvas = viewChild<ElementRef<HTMLCanvasElement>>('volumeChart');
 
+  /** Tabela acessível do volume — recebe o foco quando o usuário troca o gráfico pela tabela. */
+  private readonly volumeTable = viewChild<ElementRef<HTMLTableElement>>('volumeTable');
+
+  /** Injector pro `afterNextRender` do foco na tabela (chamado fora do contexto de injeção). */
+  private readonly injector = inject(Injector);
+
   private chart: ChartInstance | null = null;
 
   /**
@@ -190,6 +196,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Alterna entre exibir o gráfico e a tabela acessível equivalente. */
   toggleTable(): void {
     this.showTable.update(show => !show);
+    // Ao abrir a tabela, o foco vai pra ela: o leitor de tela anuncia a legenda e quem usa teclado
+    // já está nos dados, em vez de o conteúdo trocar em silêncio abaixo do botão.
+    if (this.showTable()) {
+      afterNextRender(() => this.volumeTable()?.nativeElement.focus(), { injector: this.injector });
+    }
   }
 
   /** Muda o agrupamento do gráfico de volume (dia/semana/mês). */

@@ -128,7 +128,7 @@
 
 /*
  * Número do card de estatística — não é um h3 (não é título de seção; os títulos reais da tela
- * são h5, ex. "Tickets Abertos por Período"). Achado no audit de 2026-10-26: usar h3 aqui invertia
+ * são h2 com visual de h5, ex. "Tickets criados"). Achado no audit de 2026-10-26: usar h3 aqui invertia
  * a hierarquia de heading (nível maior num dado, antes de títulos de seção com nível menor).
  */
 .stat-value {

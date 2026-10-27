@@ -30,11 +30,32 @@ describe('DashboardGuideComponent', () => {
     expect(text).toContain('Dia, Semana ou Mês');
   });
 
+  it('mantém o corpo no DOM (só escondido), pro aria-controls do botão apontar pra algo que existe', async () => {
+    const fixture = TestBed.createComponent(DashboardGuideComponent);
+    await fixture.whenStable();
+
+    const controls = (fixture.nativeElement.querySelector('.guide-toggle') as HTMLElement).getAttribute('aria-controls');
+    expect(fixture.nativeElement.querySelector(`#${controls}`)).not.toBeNull();
+  });
+
+  it('explica "em risco" e "vencido" só pra quem vê os Alertas de SLA', async () => {
+    const fixture = TestBed.createComponent(DashboardGuideComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).not.toContain('Alertas de SLA');
+
+    fixture.componentRef.setInput('showSla', true);
+    await fixture.whenStable();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Alertas de SLA');
+    expect(text).toContain('Em risco:');
+    expect(text).toContain('Vencido:');
+  });
+
   it('começa fechado quando não há preferência salva (tela mais visitada do sistema)', async () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect((fixture.nativeElement.querySelector('#dashboardGuideBody') as HTMLElement).hidden).toBeTrue();
     expect(fixture.nativeElement.querySelector('button[aria-expanded="false"]')).toBeTruthy();
   });
 
@@ -46,14 +67,14 @@ describe('DashboardGuideComponent', () => {
     toggleButton.click();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
+    expect((fixture.nativeElement.querySelector('#dashboardGuideBody') as HTMLElement).hidden).toBeFalse();
     expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
     expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
 
     toggleButton.click();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect((fixture.nativeElement.querySelector('#dashboardGuideBody') as HTMLElement).hidden).toBeTrue();
     expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
   });
 
@@ -63,7 +84,7 @@ describe('DashboardGuideComponent', () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
+    expect((fixture.nativeElement.querySelector('#dashboardGuideBody') as HTMLElement).hidden).toBeFalse();
   });
 
   it('começa fechado mesmo que a leitura do localStorage falhe', async () => {
@@ -72,7 +93,7 @@ describe('DashboardGuideComponent', () => {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeNull();
+    expect((fixture.nativeElement.querySelector('#dashboardGuideBody') as HTMLElement).hidden).toBeTrue();
   });
 
   it('não quebra ao alternar quando a escrita no localStorage falha', async () => {
@@ -84,6 +105,6 @@ describe('DashboardGuideComponent', () => {
     expect(() => toggleButton.click()).not.toThrow();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#dashboardGuideBody')).toBeTruthy();
+    expect((fixture.nativeElement.querySelector('#dashboardGuideBody') as HTMLElement).hidden).toBeFalse();
   });
 });

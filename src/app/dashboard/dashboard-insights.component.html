@@ -1,13 +1,18 @@
 <div class="card insights-card mb-3">
   <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <i class="bx bx-error fs-5 text-warning" aria-hidden="true"></i>
-      <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
-      <!-- A idade da lista à vista: o prazo relativo anda sozinho, mas a lista é a da última carga. -->
-      @if (loadedAtMs(); as loadedAt) {
-        <span class="ms-auto text-muted small text-nowrap">Atualizado às {{ loadedAt | date:'HH:mm' }}</span>
-      }
-      <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0" [class.ms-auto]="!loadedAtMs()"
+    <div class="d-flex align-items-start gap-2 mb-3">
+      <!-- Âmbar de alerta só quando há alerta; com a fila em dia (ou sem dados), um ícone neutro. -->
+      <i class="bx fs-5 mt-1" aria-hidden="true"
+         [class.bx-error]="criticalTickets().length > 0" [class.text-warning]="criticalTickets().length > 0"
+         [class.bx-time-five]="criticalTickets().length === 0" [class.text-muted]="criticalTickets().length === 0"></i>
+      <div>
+        <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
+        <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
+        @if (loadedAtMs(); as loadedAt) {
+          <p class="text-muted small mb-0">Atualizado às {{ loadedAt | date:'HH:mm' }}</p>
+        }
+      </div>
+      <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
               [disabled]="loading() || refreshing()" aria-label="Atualizar alertas de SLA" (click)="refresh.emit()">
         @if (refreshing()) {
           <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -41,12 +46,12 @@
         <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
            [attr.aria-label]="shownBreachedCount() + ' tickets com SLA vencido — ver na fila'">
           <span class="stat-value fs-3 text-danger">{{ shownBreachedCount() }}</span>
-          <span class="small">{{ shownBreachedCount() === 1 ? 'vencido' : 'vencidos' }}</span>
+          <span class="small">{{ shownBreachedCount() === 1 ? 'vencido' : 'vencidos' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
         </a>
         <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
            [attr.aria-label]="shownAtRiskCount() + ' tickets com SLA em risco — ver na fila'">
           <span class="stat-value fs-3 text-warning">{{ shownAtRiskCount() }}</span>
-          <span class="small">em risco</span>
+          <span class="small">em risco <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
         </a>
       </div>
 

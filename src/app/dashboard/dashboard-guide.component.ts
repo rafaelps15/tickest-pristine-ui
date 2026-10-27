@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 import { createPersistedToggle, writePersistedToggle } from '../shared';
 
 /** Chave usada para lembrar se o Guia da Tela ficou aberto ou fechado, entre sessões. */
@@ -15,6 +15,9 @@ const GUIDE_OPEN_STORAGE_KEY = 'tickest.dashboardGuide.open';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardGuideComponent {
+  /** Mostra a seção "Alertas de SLA" — só pra quem vê o card (permissão `tickets:manage`). */
+  readonly showSla = input(false);
+
   /**
    * Se o painel está aberto — restaurado do localStorage, `false` (fechado) se não houver nada
    * salvo: o Dashboard é a tela mais visitada do sistema, então o painel explicativo não deveria
