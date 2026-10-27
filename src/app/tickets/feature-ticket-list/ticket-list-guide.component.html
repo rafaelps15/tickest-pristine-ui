@@ -15,11 +15,13 @@
     <p class="small text-muted mb-0">Depois de resolvido, fechado ou cancelado, dá pra <strong>reabrir</strong> e dizer o que faltou — o prazo de atendimento recomeça.</p>
   </app-guide-section>
 
-  <app-guide-section title="Prioridade">
-    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0">
-      @for (priority of priorityOptions; track priority) {
-        <li><span class="badge" [ngClass]="priorityBadgeClass[priority]">{{ priorityLabels[priority] }}</span></li>
+  <app-guide-section title="Prazo">
+    <p class="small text-muted mb-2">Cada chamado tem um prazo de atendimento, contado em horário útil. A etiqueta diz como ele está:</p>
+    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-2">
+      @for (sla of slaOptions; track sla) {
+        <li><span class="badge" [ngClass]="slaBadgeClass[sla]">{{ slaLabels[sla] }}</span></li>
       }
     </ul>
+    <p class="small text-muted mb-0"><strong>Atualizado</strong> mostra há quanto tempo foi a última movimentação: mensagem, troca de status, responsável ou anexo.</p>
   </app-guide-section>
 </app-screen-guide>

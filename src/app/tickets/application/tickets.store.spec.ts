@@ -8,13 +8,17 @@ import { TicketMessageDataService } from '../infrastructure/ticket-message.data.
 import { Ticket } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
+import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { PagedResponse, SessionService } from '../../shared';
 
 describe('TicketsStore', () => {
   const ticket: Ticket = {
     id: 't1', title: 'Impressora não funciona', description: 'Não imprime.',
     priority: TicketPriority.Medium, status: TicketStatus.Open,
-    openedByUserId: 'u1', assignedToUserId: null, createdAtUtc: '2026-01-01T12:00:00Z'
+    openedByUserId: 'u1', assignedToUserId: null, assignedToName: null, sectorId: 's1', sectorName: 'Helpdesk',
+    createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaStatus: TicketSlaStatus.OnTime,
+    lastActivityAtUtc: '2026-01-01T12:00:00Z'
   };
 
   /** Monta uma página paginada por offset com os tickets informados. */
@@ -50,7 +54,7 @@ describe('TicketsStore', () => {
   it('carrega a primeira página dos chamados do usuário logado', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getMine).toHaveBeenCalledWith(1, 20);
+    expect(dataService.getMine).toHaveBeenCalledWith(1, 20, TicketStatusGroup.Active, '');
     expect(store.tickets()).toEqual([ticket]);
     expect(store.total()).toBe(1);
   });
@@ -62,7 +66,7 @@ describe('TicketsStore', () => {
     store.goToPage(2);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getMine).toHaveBeenCalledWith(2, 20);
+    expect(dataService.getMine).toHaveBeenCalledWith(2, 20, TicketStatusGroup.Active, '');
   });
 
   it('ignora páginas fora do intervalo', async () => {
@@ -84,7 +88,7 @@ describe('TicketsStore', () => {
     store.setPageSize(50);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getMine).toHaveBeenCalledWith(1, 50);
+    expect(dataService.getMine).toHaveBeenCalledWith(1, 50, TicketStatusGroup.Active, '');
   });
 
   it('volta uma página ao excluir o último chamado de uma página que não é a primeira', async () => {
@@ -97,7 +101,7 @@ describe('TicketsStore', () => {
     store.remove('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getMine.calls.mostRecent().args).toEqual([1, 20]);
+    expect(dataService.getMine.calls.mostRecent().args).toEqual([1, 20, TicketStatusGroup.Active, '']);
   });
 
   it('cria um chamado, volta para a primeira página e recarrega a listagem', async () => {
@@ -327,5 +331,79 @@ describe('TicketsStore', () => {
     expect(onSuccess).toHaveBeenCalled();
     expect(store.mutationError()).toContain('o motivo não foi publicado');
     expect(store.pendingTicketIds()).toEqual([]);
+  });
+
+  it('começa em "Em aberto" e sem busca, e volta para a primeira página ao trocar o grupo ou a busca', async () => {
+    dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 45)));
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.statusGroup()).toBe(TicketStatusGroup.Active);
+    store.goToPage(2);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.setStatusGroup(TicketStatusGroup.Finished);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(dataService.getMine).toHaveBeenCalledWith(1, 20, TicketStatusGroup.Finished, '');
+
+    store.setStatusGroup(null);
+    store.setSearch('  impressora  ');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(dataService.getMine.calls.mostRecent().args).toEqual([1, 20, null, 'impressora']);
+    expect(store.isFiltered()).toBeTrue();
+  });
+
+  it('não refaz a busca quando o grupo ou o termo não mudam', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+    const calls = dataService.getMine.calls.count();
+
+    store.setStatusGroup(TicketStatusGroup.Active);
+    store.setSearch('   ');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getMine.calls.count()).toBe(calls);
+  });
+
+  it('com a lista filtrada vazia, sonda sem filtro se a pessoa tem algum chamado', async () => {
+    dataService.getMine.and.callFake((page: number, pageSize: number, statusGroup?: TicketStatusGroup | null) =>
+      of(statusGroup === undefined ? pageOf([ticket], 1, 3, 1) : pageOf([], 1, 0)));
+    await TestBed.inject(ApplicationRef).whenStable();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getMine).toHaveBeenCalledWith(1, 1);
+    expect(store.tickets()).toEqual([]);
+    expect(store.hasAnyTicket()).toBeTrue();
+  });
+
+  it('sabe que é o primeiro uso quando nem a sondagem acha chamado', async () => {
+    dataService.getMine.and.returnValue(of(pageOf([], 1, 0)));
+    await TestBed.inject(ApplicationRef).whenStable();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.hasAnyTicket()).toBeFalse();
+  });
+
+  it('com a sondagem em erro, assume que há chamados em vez de carregar pra sempre', async () => {
+    dataService.getMine.and.callFake((page: number, pageSize: number, statusGroup?: TicketStatusGroup | null) =>
+      statusGroup === undefined ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(pageOf([], 1, 0)));
+    await TestBed.inject(ApplicationRef).whenStable();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.hasAnyTicket()).toBeTrue();
+  });
+
+  it('não sonda quando a lista filtrada tem chamados', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getMine).not.toHaveBeenCalledWith(1, 1);
+    expect(store.hasAnyTicket()).toBeTrue();
+  });
+
+  it('com a leitura em erro, expõe a lista vazia e o erro, sem lançar exceção', async () => {
+    dataService.getMine.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.tickets()).toEqual([]);
+    expect(store.total()).toBe(0);
+    expect(store.hasAnyTicket()).toBeNull();
+    expect(store.loadError()).toBe('Erro ao carregar chamados');
   });
 });

@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
+import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { TicketSla } from '../entities/ticket-sla';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
@@ -44,13 +45,18 @@ export class TicketDataService {
   }
 
   /**
-   * Busca uma página dos tickets abertos pelo usuário logado, do mais novo para o mais antigo (GET /tickets/mine).
-   * O back-end identifica o usuário pelo token, por isso nenhum id vai na URL.
+   * Busca uma página dos tickets do usuário logado (GET /tickets/mine), opcionalmente só de um
+   * grupo de status e/ou com um trecho do título. O back-end identifica o usuário pelo token, por
+   * isso nenhum id vai na URL.
    */
-  getMine(page: number, pageSize: number): Observable<PagedResponse<Ticket>> {
-    const params = new HttpParams()
+  getMine(page: number, pageSize: number, statusGroup: TicketStatusGroup | null = null, search = ''): Observable<PagedResponse<Ticket>> {
+    let params = new HttpParams()
       .set('page', page)
       .set('pageSize', pageSize);
+
+    if (statusGroup !== null) params = params.set('status', statusGroup);
+    const term = search.trim();
+    if (term) params = params.set('search', term);
 
     return this.http.get<PagedResponse<Ticket>>(`${this.apiUrl}/mine`, { params });
   }

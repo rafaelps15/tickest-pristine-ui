@@ -12,7 +12,19 @@ export interface Ticket {
   status: TicketStatus;
   openedByUserId: string;
   assignedToUserId: string | null;
+  /** Nome completo de quem atende, ou null enquanto ninguém assumiu. */
+  assignedToName: string | null;
+  /** Setor de destino do chamado. */
+  sectorId: string;
+  /** Nome do setor de destino. */
+  sectorName: string;
   createdAtUtc: string;
+  /** Prazo atual de resolução (UTC). */
+  dueAtUtc: string;
+  /** Situação do chamado em relação ao prazo, pela mesma regra do Monitor. */
+  slaStatus: TicketSlaStatus;
+  /** Data da ação mais recente registrada no histórico do chamado (UTC). */
+  lastActivityAtUtc: string;
 }
 
 /** Detalhe de um ticket, conforme retornado por GET /tickets/{id}. */

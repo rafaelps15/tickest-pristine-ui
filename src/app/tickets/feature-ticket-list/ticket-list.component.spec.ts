@@ -1,12 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
-import { TicketListComponent } from './ticket-list.component';
+import { TicketListComponent, formatLastActivity } from './ticket-list.component';
 import { TicketsStore } from '../application/tickets.store';
 import { Ticket } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
+import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { ConfirmDialogService, ToastService } from '../../shared';
 import { DepartmentsStore } from '../../departments';
 
@@ -14,17 +16,26 @@ describe('TicketListComponent', () => {
   const openTicket: Ticket = {
     id: 't1', title: 'Impressora não funciona', description: 'A impressora do 3º andar não imprime.',
     priority: TicketPriority.High, status: TicketStatus.Open, openedByUserId: 'u1', assignedToUserId: null,
-    createdAtUtc: '2026-01-01T12:00:00Z'
+    assignedToName: null, sectorId: 's1', sectorName: 'Helpdesk', createdAtUtc: '2026-01-01T12:00:00Z',
+    dueAtUtc: '2026-01-02T12:00:00Z', slaStatus: TicketSlaStatus.OnTime, lastActivityAtUtc: '2026-01-01T12:00:00Z'
   };
   const resolvedTicket: Ticket = {
     id: 't2', title: 'Monitor com defeito', description: 'Tela piscando.',
     priority: TicketPriority.Low, status: TicketStatus.Resolved, openedByUserId: 'u1', assignedToUserId: 'u2',
-    createdAtUtc: '2026-01-02T12:00:00Z'
+    assignedToName: 'Ana Souza', sectorId: 's2', sectorName: 'Infraestrutura', createdAtUtc: '2026-01-02T12:00:00Z',
+    dueAtUtc: '2026-01-03T12:00:00Z', slaStatus: TicketSlaStatus.Met, lastActivityAtUtc: '2026-01-02T15:00:00Z'
   };
 
   /** Cria um store falso com signals reais, para o template reagir como no store verdadeiro. */
   function createStoreFake() {
+    const statusGroup = signal<TicketStatusGroup | null>(TicketStatusGroup.Active);
+    const search = signal('');
     return {
+      statusGroup,
+      search,
+      hasAnyTicket: signal<boolean | null>(true),
+      setStatusGroup: jasmine.createSpy('setStatusGroup').and.callFake((value: TicketStatusGroup | null) => statusGroup.set(value)),
+      setSearch: jasmine.createSpy('setSearch').and.callFake((value: string) => search.set(value.trim())),
       tickets: signal<Ticket[]>([openTicket]),
       state: signal({ data: [openTicket], loading: false, error: null as string | null }),
       currentPage: signal(1),
@@ -76,14 +87,31 @@ describe('TicketListComponent', () => {
     expect(storeFake.loadForCurrentUser).toHaveBeenCalled();
   });
 
-  it('renderiza os chamados carregados, com prioridade e status', async () => {
+  it('renderiza cada chamado com quem atende, setor, prazo com SLA, status e última atividade — sem a prioridade', async () => {
+    storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Impressora não funciona');
-    expect(text).toContain('Alta');
+    expect(text).toContain('Aguardando atendimento');
+    expect(text).toContain('Helpdesk');
+    expect(text).toContain('Ana Souza');
+    expect(text).toContain('No prazo');
+    expect(text).toContain('Cumprido');
     expect(text).toContain('Aberto');
+    expect(text).not.toContain('Alta');
+    const time = fixture.nativeElement.querySelector('time') as HTMLTimeElement;
+    expect(time.getAttribute('datetime')).toBe(openTicket.lastActivityAtUtc);
+  });
+
+  it('diz "Sem responsável" (e não "Aguardando atendimento") num chamado encerrado que ninguém assumiu', async () => {
+    storeFake.tickets.set([{ ...resolvedTicket, assignedToName: null }]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Sem responsável');
+    expect(fixture.nativeElement.textContent).not.toContain('Aguardando atendimento');
   });
 
   it('mostra o spinner enquanto carrega', async () => {
@@ -95,8 +123,9 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
   });
 
-  it('mostra o estado vazio quando não há chamados', async () => {
+  it('mostra o estado vazio de primeiro uso quando a pessoa não tem nenhum chamado', async () => {
     storeFake.tickets.set([]);
+    storeFake.hasAnyTicket.set(false);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -107,6 +136,7 @@ describe('TicketListComponent', () => {
 
   it('lista no estado vazio só os departamentos que têm setor para atender', async () => {
     storeFake.tickets.set([]);
+    storeFake.hasAnyTicket.set(false);
     departmentsStoreFake.departments.set([
       { name: 'TI', sectors: [{}] },
       { name: 'RH', sectors: [{}] },
@@ -384,5 +414,105 @@ describe('TicketListComponent', () => {
     const badge = Array.from(fixture.nativeElement.querySelectorAll('.badge') as NodeListOf<HTMLElement>)
       .find(b => b.textContent?.trim() === 'Cancelado');
     expect(badge?.classList).toContain('bg-label-secondary');
+  });
+
+  it('mostra "Nada pendente" com atalho pros encerrados quando só "Em aberto" está vazio', async () => {
+    storeFake.tickets.set([]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nada pendente');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado aberto ainda');
+    const button = Array.from(fixture.nativeElement.querySelectorAll('.filtered-empty button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Ver encerrados'))!;
+    button.click();
+    expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Finished);
+  });
+
+  it('mostra a busca sem resultado com "Limpar busca", que volta ao padrão', async () => {
+    storeFake.tickets.set([]);
+    // A busca vem da URL (a tela a aplica ao abrir), como quando a pessoa volta pelo navegador.
+    await TestBed.inject(Router).navigateByUrl('/?q=impressora');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado com “impressora” no título');
+    const button = Array.from(fixture.nativeElement.querySelectorAll('.filtered-empty button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Limpar busca'))!;
+    button.click();
+    expect(storeFake.setSearch).toHaveBeenCalledWith('');
+    expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Active);
+  });
+
+  it('mostra "Carregando…" enquanto a sondagem decide entre primeiro uso e nada pendente', async () => {
+    storeFake.tickets.set([]);
+    storeFake.hasAnyTicket.set(null);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Carregando chamados…');
+    expect(fixture.nativeElement.textContent).not.toContain('Nada pendente');
+  });
+
+  it('troca o grupo pelo seletor e só mostra "Limpar filtros" fora do padrão', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.btn-clear-filters')).toBeNull();
+
+    const finished = fixture.nativeElement.querySelector('#ticketStatusGroup-finished') as HTMLInputElement;
+    finished.click();
+    await fixture.whenStable();
+
+    expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Finished);
+    expect(fixture.nativeElement.querySelector('.btn-clear-filters')).not.toBeNull();
+  });
+
+  it('aplica o grupo e a busca vindos da URL ao abrir a tela', async () => {
+    await TestBed.inject(Router).navigateByUrl('/?status=finished&q=monitor');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Finished);
+    expect(storeFake.setSearch).toHaveBeenCalledWith('monitor');
+    expect((fixture.nativeElement.querySelector('#ticketSearch') as HTMLInputElement).value).toBe('monitor');
+  });
+
+  it('leva o filtro aplicado pra URL, sem o padrão (Em aberto, sem busca)', async () => {
+    const router = TestBed.inject(Router);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+    expect(router.url).toBe('/');
+
+    storeFake.statusGroup.set(null);
+    storeFake.search.set('monitor');
+    await fixture.whenStable();
+
+    expect(router.url).toBe('/?status=all&q=monitor');
+  });
+
+  it('busca pelo título só depois de a pessoa parar de digitar', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+    storeFake.setSearch.calls.reset();
+    const input = fixture.nativeElement.querySelector('#ticketSearch') as HTMLInputElement;
+
+    input.value = 'impr';
+    input.dispatchEvent(new Event('input'));
+    expect(storeFake.setSearch).not.toHaveBeenCalled();
+
+    await new Promise(resolve => setTimeout(resolve, 350));
+    expect(storeFake.setSearch).toHaveBeenCalledWith('impr');
+  });
+
+  it('formata a última atividade em tempo relativo curto, e em data depois de uma semana', () => {
+    const now = new Date('2026-01-10T12:00:00Z').getTime();
+
+    expect(formatLastActivity('2026-01-10T11:59:40Z', now)).toBe('agora há pouco');
+    expect(formatLastActivity('2026-01-10T12:00:30Z', now)).toBe('agora há pouco');
+    expect(formatLastActivity('2026-01-10T11:25:00Z', now)).toBe('há 35 min');
+    expect(formatLastActivity('2026-01-10T10:00:00Z', now)).toBe('há 2 h');
+    expect(formatLastActivity('2026-01-09T10:00:00Z', now)).toBe('ontem');
+    expect(formatLastActivity('2026-01-07T12:00:00Z', now)).toBe('há 3 dias');
+    expect(formatLastActivity('2026-01-01T12:00:00Z', now)).toBe(new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date('2026-01-01T12:00:00Z')));
   });
 });

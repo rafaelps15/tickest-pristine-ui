@@ -1,10 +1,13 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, ElementRef, Injector, afterNextRender, viewChild } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, ElementRef, Injector, DestroyRef, afterNextRender, viewChild } from '@angular/core';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
-import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
+import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
 import { ConfirmDialogService, ToastService } from '../../shared';
 import { DepartmentsStore } from '../../departments';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
@@ -12,13 +15,37 @@ import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
-import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { TicketListGuideComponent } from './ticket-list-guide.component';
+
+/** Formato da data completa da última atividade, para o leitor de tela e o tooltip. */
+const FULL_DATE_FORMAT = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+/** Formato da data curta, para atividades de mais de uma semana. */
+const SHORT_DATE_FORMAT = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
+
+/**
+ * Tempo desde a última atividade, em pt-BR curto: "agora há pouco", "há 35 min", "há 2 h",
+ * "ontem", "há 3 dias" e, a partir de uma semana, a data ("12/09/2026"). Relógio do navegador
+ * contra a data UTC da API; diferença negativa (relógio adiantado no servidor) vira "agora há pouco".
+ */
+export function formatLastActivity(isoUtc: string, nowMs: number): string {
+    const diffMinutes = Math.floor((nowMs - new Date(isoUtc).getTime()) / 60_000);
+    if (diffMinutes < 1) return 'agora há pouco';
+    if (diffMinutes < 60) return `há ${diffMinutes} min`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `há ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 2) return 'ontem';
+    if (diffDays < 7) return `há ${diffDays} dias`;
+    return SHORT_DATE_FORMAT.format(new Date(isoUtc));
+}
 
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
     selector: 'app-ticket-list',
-    imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, TicketListGuideComponent],
+    imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, EmptyStateComponent, FilterBarComponent, TicketListGuideComponent],
     templateUrl: './ticket-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-list.component.css'
@@ -30,13 +57,45 @@ export class TicketListComponent implements OnInit {
     private readonly departmentsStore = inject(DepartmentsStore);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly injector = inject(Injector);
+    private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
+    private readonly destroyRef = inject(DestroyRef);
     /** Cabeçalho da tela — recebe o foco quando o \"⋮\" de origem não existe mais. */
     private readonly pageHeader = viewChild(PageHeaderComponent);
 
     readonly statusLabels = TICKET_STATUS_LABELS;
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
-    readonly priorityLabels = TICKET_PRIORITY_LABELS;
-    readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
+    readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
+    readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+
+    /** Opções do seletor de grupo, na ordem da tela; "Em aberto" é o padrão. */
+    readonly statusGroupOptions: { key: keyof typeof TICKET_STATUS_GROUP_URL_VALUES; label: string; value: TicketStatusGroup | null }[] = [
+        { key: 'active', label: 'Em aberto', value: TicketStatusGroup.Active },
+        { key: 'finished', label: 'Encerrados', value: TicketStatusGroup.Finished },
+        { key: 'all', label: 'Todos', value: null }
+    ];
+
+    /** Enum exposto ao template, pras saídas dos estados vazios ("Ver encerrados", "Ver em aberto"). */
+    readonly statusGroup = TicketStatusGroup;
+
+    /**
+     * Mostra "Carregando…" na primeira carga e enquanto a sondagem decide entre primeiro uso e
+     * "nada pendente" — sem isso, o estado vazio errado piscava antes do certo.
+     */
+    readonly isLoadingList = computed(() => {
+        if (this.store.tickets().length > 0 || this.store.loadError()) return false;
+        return this.store.state().loading || this.store.hasAnyTicket() === null;
+    });
+
+    /** Texto digitado na busca por título, antes do debounce. */
+    readonly searchInput = signal('');
+
+    /** Hora atual do navegador, atualizada a cada minuto, pro "atualizado há X" andar sozinho. */
+    readonly now = signal(Date.now());
+
+    /** Indica se o filtro está fora do padrão (Em aberto, sem busca) — mostra o "Limpar filtros". */
+    readonly hasCustomFilters = computed(() =>
+        this.store.statusGroup() !== TicketStatusGroup.Active || this.store.search() !== '');
 
     /**
      * Departamentos que atendem tickets (os que têm setor), em lista por extenso ("TI, RH e
@@ -58,9 +117,76 @@ export class TicketListComponent implements OnInit {
     /** Ticket em reabertura no modal de motivo (null quando o modal está fechado). */
     reopeningTicket = signal<Ticket | null>(null);
 
-    /** Carrega os tickets do usuário logado ao inicializar a tela. */
+    constructor() {
+        // Busca com debounce, como no Monitor: só pergunta à API quando a pessoa para de digitar.
+        toObservable(this.searchInput).pipe(
+            debounceTime(300),
+            distinctUntilChanged(),
+            takeUntilDestroyed()
+        ).subscribe(search => this.store.setSearch(search));
+
+        // Filtro e busca aplicados vão pra URL (sem empilhar histórico a cada tecla), pra o link e o
+        // "voltar" do navegador reabrirem a tela no mesmo recorte.
+        effect(() => {
+            const queryParams = this.filtersToQueryParams();
+            const current = this.route.snapshot.queryParamMap;
+            if ((current.get('status') ?? null) === queryParams.status && (current.get('q') ?? null) === queryParams.q) return;
+            this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
+        });
+
+        // O relógio do "atualizado há X" só roda no navegador (o prerender do servidor não pode ficar preso num intervalo).
+        afterNextRender(() => {
+            const timer = setInterval(() => this.now.set(Date.now()), 60_000);
+            this.destroyRef.onDestroy(() => clearInterval(timer));
+        });
+    }
+
+    /** Aplica o filtro e a busca da URL (voltar/avançar do navegador e links) e carrega os tickets do usuário logado. */
     ngOnInit(): void {
+        this.applyQueryParams(this.route.snapshot.queryParamMap);
+        this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => this.applyQueryParams(params));
         this.store.loadForCurrentUser();
+    }
+
+    /** Lê `?status=` (finished/all; ausente ou inválido = Em aberto) e `?q=` e aplica no Store e no campo de busca. */
+    private applyQueryParams(params: ParamMap): void {
+        const status = params.get('status');
+        const statusGroup = status === 'finished' || status === 'all' ? TICKET_STATUS_GROUP_URL_VALUES[status] : TicketStatusGroup.Active;
+        const search = params.get('q') ?? '';
+        this.store.setStatusGroup(statusGroup);
+        this.store.setSearch(search);
+        if (this.searchInput().trim() !== search.trim()) this.searchInput.set(search);
+    }
+
+    /** Filtro atual em query params — o padrão (Em aberto, sem busca) não aparece na URL. */
+    private filtersToQueryParams(): { status: string | null; q: string | null } {
+        const option = this.statusGroupOptions.find(o => o.value === this.store.statusGroup());
+        return {
+            status: option && option.key !== 'active' ? option.key : null,
+            q: this.store.search() || null
+        };
+    }
+
+    /** Troca o grupo de status pelo seletor. */
+    onStatusGroupChange(statusGroup: TicketStatusGroup | null): void {
+        this.store.setStatusGroup(statusGroup);
+    }
+
+    /** Volta ao padrão: Em aberto, sem busca (inclusive o texto ainda no debounce). */
+    onClearFilters(): void {
+        this.searchInput.set('');
+        this.store.setSearch('');
+        this.store.setStatusGroup(TicketStatusGroup.Active);
+    }
+
+    /** "atualizado há X" da linha, relativo à hora atual do navegador. */
+    lastActivityLabel(ticket: Ticket): string {
+        return formatLastActivity(ticket.lastActivityAtUtc, this.now());
+    }
+
+    /** Data e hora completas da última atividade, pro leitor de tela e o tooltip. */
+    lastActivityFull(ticket: Ticket): string {
+        return FULL_DATE_FORMAT.format(new Date(ticket.lastActivityAtUtc));
     }
 
     /** Troca a quantidade de itens por página, voltando para a primeira. */

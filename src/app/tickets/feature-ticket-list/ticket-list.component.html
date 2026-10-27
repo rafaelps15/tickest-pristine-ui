@@ -1,4 +1,4 @@
-<app-page-header title="Meus Chamados" subtitle="Os chamados que você abriu, com prioridade e status atuais."
+<app-page-header title="Meus Chamados" subtitle="Os chamados que você abriu: quem está atendendo, até quando e a última movimentação."
                  [crumbs]="[{ label: 'Início', link: '/dashboard' }]">
   <a pageActions routerLink="/tickets/novo" class="btn btn-primary">
     <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
@@ -6,6 +6,28 @@
 </app-page-header>
 
 <app-ticket-list-guide />
+
+<!-- Recorte da lista: grupo de status (Em aberto é o padrão) e busca pelo título, os dois na URL. -->
+<app-filter-bar [clearable]="hasCustomFilters()" (clear)="onClearFilters()">
+  <div class="col-12 col-md-auto">
+    <span class="form-label small d-block" id="ticketStatusGroupLabel">Mostrar</span>
+    <div class="btn-group status-group" role="radiogroup" aria-labelledby="ticketStatusGroupLabel">
+      @for (option of statusGroupOptions; track option.key) {
+        <input type="radio" class="btn-check" name="ticketStatusGroup" [id]="'ticketStatusGroup-' + option.key"
+               [checked]="store.statusGroup() === option.value" (change)="onStatusGroupChange(option.value)" />
+        <label class="btn btn-outline-secondary" [for]="'ticketStatusGroup-' + option.key">{{ option.label }}</label>
+      }
+    </div>
+  </div>
+  <div class="col-12 col-md">
+    <label class="form-label small" for="ticketSearch">Buscar</label>
+    <div class="input-group">
+      <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+      <input id="ticketSearch" type="search" class="form-control" placeholder="Título do chamado"
+             [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
+    </div>
+  </div>
+</app-filter-bar>
 
 @if (store.loadError()) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
@@ -26,23 +48,24 @@
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.state().loading && store.tickets().length > 0">
-      <caption class="visually-hidden">Chamados que você abriu, do mais novo para o mais antigo</caption>
+      <caption class="visually-hidden">Chamados que você abriu, do que teve movimentação mais recente para o mais antigo</caption>
       <thead>
         <tr>
-          <th scope="col">Título</th>
-          <th scope="col">Abertura</th>
-          <th scope="col">Prioridade</th>
+          <th scope="col">Chamado</th>
+          <th scope="col">Atendimento</th>
+          <th scope="col">Prazo</th>
           <th scope="col">Status</th>
+          <th scope="col">Atualizado</th>
           <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
-        @if (store.state().loading && store.tickets().length === 0) {
-          <tr><td colspan="5"><app-loading-state label="Carregando chamados…" /></td></tr>
-        } @else if (store.tickets().length === 0) {
-          <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro ticket. -->
+        @if (isLoadingList()) {
+          <tr><td colspan="6"><app-loading-state label="Carregando chamados…" /></td></tr>
+        } @else if (store.tickets().length === 0 && store.hasAnyTicket() === false) {
+          <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro chamado. -->
           <tr>
-            <td colspan="5" class="first-use py-5">
+            <td colspan="6" class="first-use py-5">
               <div class="first-use-body">
                 <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
                 <h2 class="h5 fw-bold mb-2">Nenhum chamado aberto ainda</h2>
@@ -64,6 +87,33 @@
               </div>
             </td>
           </tr>
+        } @else if (store.tickets().length === 0 && store.search()) {
+          <tr>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-search" [title]="'Nenhum chamado com “' + store.search() + '” no título'"
+                               hint="Confira o termo ou busque em todos os seus chamados.">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">Limpar busca</button>
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else if (store.tickets().length === 0 && store.statusGroup() === statusGroup.Active) {
+          <tr>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-check-circle" title="Nada pendente"
+                               hint="Nenhum chamado seu está aberto ou em andamento agora.">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onStatusGroupChange(statusGroup.Finished)">Ver encerrados</button>
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else if (store.tickets().length === 0) {
+          <tr>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-archive" title="Nenhum chamado encerrado ainda"
+                               hint="Os chamados resolvidos, fechados ou cancelados aparecem aqui.">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onStatusGroupChange(statusGroup.Active)">Ver em aberto</button>
+              </app-empty-state>
+            </td>
+          </tr>
         } @else {
           @for (ticket of store.tickets(); track ticket.id) {
             <tr>
@@ -71,9 +121,30 @@
                 <a [routerLink]="['/tickets', ticket.id]" class="ticket-title fw-semibold">{{ ticket.title }}</a>
                 <div class="ticket-summary text-muted small text-truncate" [title]="ticket.description">{{ ticket.description }}</div>
               </td>
-              <td class="text-nowrap small" data-label="Abertura">{{ ticket.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
+              <td data-label="Atendimento">
+                <div class="assignment">
+                  @if (ticket.assignedToName) {
+                    <span class="assignment-person">{{ ticket.assignedToName }}</span>
+                  } @else if (isActive(ticket)) {
+                    <span class="assignment-person assignment-waiting">Aguardando atendimento</span>
+                  } @else {
+                    <span class="assignment-person assignment-waiting">Sem responsável</span>
+                  }
+                  <span class="assignment-sector small">{{ ticket.sectorName }}</span>
+                </div>
+              </td>
+              <td data-label="Prazo">
+                <div class="due">
+                  <span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span>
+                  <span class="due-date small num">{{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              </td>
               <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
+              <td class="text-nowrap small" data-label="Atualizado">
+                <time class="num" [attr.datetime]="ticket.lastActivityAtUtc" [title]="lastActivityFull(ticket)">
+                  {{ lastActivityLabel(ticket) }}<span class="visually-hidden"> ({{ lastActivityFull(ticket) }})</span>
+                </time>
+              </td>
               <td class="text-end table-stack-actions">
                 <app-row-actions [label]="'Ações para o chamado ' + ticket.title" [busy]="isPending(ticket)" [rowKey]="ticket.id">
                   @if (isActive(ticket)) {

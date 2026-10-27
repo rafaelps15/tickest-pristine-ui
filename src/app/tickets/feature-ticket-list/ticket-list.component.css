@@ -49,7 +49,11 @@
     z-index: 2;
   }
 
-  /* Status logo abaixo do título: é a primeira coisa que quem abriu o chamado procura no card. */
+  /*
+   * Ordem do card: título → status → quem atende → prazo → atualizado. O status vem logo abaixo do
+   * título porque é a primeira coisa que quem abriu o chamado procura; no desktop a coluna segue a
+   * ordem do cabeçalho, com o atendimento antes (lido da esquerda pra direita junto do título).
+   */
   .table-stack tr {
     display: flex;
     flex-direction: column;
@@ -59,9 +63,82 @@
     order: 1;
   }
 
-  .table-stack td[data-label="Abertura"],
-  .table-stack td[data-label="Prioridade"] {
+  .table-stack td[data-label="Atendimento"] {
     order: 2;
+  }
+
+  .table-stack td[data-label="Prazo"] {
+    order: 3;
+  }
+
+  .table-stack td[data-label="Atualizado"] {
+    order: 4;
+  }
+
+  /*
+   * No card, responsável/setor e SLA/data ficam empilhados à direita do rótulo, como os outros
+   * valores. `.table-stack` na frente pra vencer as regras base de `.assignment`/`.due` abaixo.
+   */
+  .table-stack .assignment,
+  .table-stack .due {
+    align-items: flex-end;
+    text-align: end;
+  }
+
+  /* Seletor de grupo ocupa a largura toda, com os três botões do mesmo tamanho (alvo de toque cheio). */
+  .status-group {
+    display: flex;
+    width: 100%;
+  }
+
+  .status-group .btn {
+    flex: 1 1 0;
+  }
+}
+
+/* Atendimento: quem atende em destaque (é o que o solicitante procura), o setor logo abaixo, mais discreto. */
+.assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.assignment-person {
+  color: var(--tk-text-primary);
+}
+
+/* Sem responsável é um estado, não um alerta: neutro e em itálico, nunca na cor de erro. */
+.assignment-waiting {
+  color: var(--tk-text-secondary);
+  font-style: italic;
+}
+
+.assignment-sector {
+  color: var(--tk-text-muted);
+}
+
+/* Prazo: a situação do SLA lidera (dá pra ler sem decifrar a data); a data vem abaixo. */
+.due {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.due-date {
+  color: var(--tk-text-secondary);
+  white-space: nowrap;
+}
+
+/* Datas e horas em algarismos de largura fixa, pra colunas de tempo alinharem de linha em linha. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Estados vazios de filtro dentro da tabela: sem o espaço à direita reservado pro "⋮" no celular. */
+@media (max-width: 767.98px) {
+  .table-stack td.filtered-empty {
+    padding-right: 0;
   }
 }
 
