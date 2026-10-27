@@ -27,11 +27,6 @@ export const routes: Routes = [
         loadComponent: () => import('../../shared/feature-activate-account/activate-account.component')
           .then(m => m.ActivateAccountComponent)
       },
-      {
-        path: 'register',
-        loadComponent: () => import('../../users/feature-register/register.component')
-          .then(m => m.RegisterComponent)
-      },
       { path: '', redirectTo: 'login', pathMatch: 'full' }
     ]
   },

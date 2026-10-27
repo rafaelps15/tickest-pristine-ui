@@ -498,7 +498,7 @@ confirmação abria (corrigido em 2026-10-27).
 
 ### Convite e ativação de conta
 Ninguém define a senha de outra pessoa (spec 008 do back-end):
-- **Cadastro** (modal "Novo Usuário" e `/register`): só nome, sobrenome, e-mail e funções. O modal
+- **Cadastro** (só pelo modal "Novo Usuário"; não existe cadastro público — o login orienta a pedir convite ao administrador): só nome, sobrenome, e-mail e funções. O modal
   diz que um convite vai pro e-mail, com validade de 72 horas. Botões "Enviar convite" e "Convidar
   e cadastrar outro"; o toast confirma "Convite enviado para {e-mail}".
 - **Ativação** (`/ativar-conta`, pública, visual do login): o token vem no fragmento `#token=` e
@@ -526,7 +526,7 @@ segunda força recálculo de layout a cada quadro.
 - **Título da tela = item do menu** ("Usuários", não "Gestão de Usuários").
 - **Botões de criar** em caixa de título: "Novo Chamado", "Novo Usuário", "Nova Função", "Novo Departamento".
 - **Formulário:** Cancelar à esquerda do primário, alinhados à direita no rodapé; erro de envio logo
-  acima do botão de enviar (login, criar conta e primeiro acesso iguais).
+  acima do botão de enviar (login, ativar conta e primeiro acesso iguais).
 
 ## Do's and Don'ts
 
