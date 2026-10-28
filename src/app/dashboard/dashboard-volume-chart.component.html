@@ -54,8 +54,8 @@
         </div>
       } @else if (points().length === 0) {
         <app-empty-state class="h-100 d-flex flex-column justify-content-center" icon="bx-bar-chart-alt-2"
-                         title="Nenhum chamado aberto neste período ainda."
-                         hint="Troque o período em Dia, Semana ou Mês pra ver um intervalo maior." />
+                         [title]="filtered() ? 'Nenhum chamado criado neste período com estes filtros.' : 'Nenhum chamado aberto neste período ainda.'"
+                         [hint]="filtered() ? 'Ajuste os filtros acima ou troque o agrupamento em Dia, Semana ou Mês.' : 'Troque o período em Dia, Semana ou Mês pra ver um intervalo maior.'" />
       } @else {
         @defer (on idle) {
           <canvas #volumeChart aria-hidden="true"></canvas>

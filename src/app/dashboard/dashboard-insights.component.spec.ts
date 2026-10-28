@@ -144,7 +144,7 @@ describe('DashboardInsightsComponent', () => {
       const band = fixture.nativeElement.querySelector('.sla-band') as HTMLElement;
       expect(band.classList).not.toContain('sla-band-quiet');
       expect(band.querySelector('.sla-band-list .critical-ticket-link')).not.toBeNull();
-      expect(band.querySelector('.sla-band-summary')!.textContent).toContain('Em risco: passou do ponto de alerta');
+      expect(band.querySelector('.sla-band-summary')!.textContent).toContain('Em risco: a partir de 75% do prazo');
     });
   });
 
@@ -156,7 +156,7 @@ describe('DashboardInsightsComponent', () => {
       fixture.componentInstance.refresh.subscribe(refresh);
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.textContent).toContain('Atualizado às 14:32');
+      expect(fixture.nativeElement.textContent).toContain('Toda a empresa, sem os filtros · atualizado às 14:32');
       (fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement).click();
       expect(refresh).toHaveBeenCalledTimes(1);
     });

@@ -9,12 +9,12 @@
 
   @if (showSla()) {
     <app-guide-section title="Como ler a operação">
-      <p class="small text-muted mb-2"><strong>Filtros:</strong> período de abertura, departamento (todos os setores dele), setor, prioridade e responsável valem pra todos os números e pro gráfico, e ficam no endereço da página — dá pra compartilhar o link.</p>
+      <p class="small text-muted mb-2"><strong>Filtros:</strong> período de abertura, departamento (todos os setores dele), setor, prioridade e responsável valem pra Central de atenção, Volume, SLA, tempos de atendimento e gráfico, e ficam no endereço da página — dá pra compartilhar o link. Os Alertas de SLA, no topo, são sempre da empresa toda.</p>
       <p class="small text-muted mb-2"><strong>Central de atenção:</strong> atrasados, críticos (urgentes ainda ativos), sem responsável e, quando disponível, os que esperam a equipe ou o solicitante (pela última mensagem), do mais grave ao menos grave.</p>
-      <p class="small text-muted mb-2"><strong>Volume:</strong> o backlog é tudo que está aberto ou em andamento.</p>
-      <p class="small text-muted mb-2"><strong>SLA:</strong> "vencem em breve" são os que já usaram 75% do prazo; "cumpridos" e "resolvidos com atraso" contam os chamados abertos no período (ou desde o início, sem período).</p>
-      <p class="small text-muted mb-2"><strong>Tempos médios:</strong> mediana e média da primeira resposta e da resolução, em minutos úteis, das conclusões no período. Com menos chamados que o mínimo, aparece "Dados insuficientes".</p>
-      <p class="small text-muted mb-0">Cada card abre a fila de monitoramento com o mesmo recorte.</p>
+      <p class="small text-muted mb-2"><strong>Volume:</strong> "na fila" é tudo que está aberto ou em andamento.</p>
+      <p class="small text-muted mb-2"><strong>SLA:</strong> "em risco" são os que já usaram 75% do prazo; "cumpridos" e "resolvidos com atraso" contam os chamados abertos no período (ou desde o início, sem período).</p>
+      <p class="small text-muted mb-2"><strong>Tempos de atendimento:</strong> mediana (o número grande) e média da primeira resposta e da resolução, em horário útil, das conclusões no período. Com menos chamados que o mínimo, aparece "Dados insuficientes".</p>
+      <p class="small text-muted mb-0">Cada card abre a fila de monitoramento com os mesmos filtros.</p>
     </app-guide-section>
   } @else {
   <app-guide-section title="Como ler os números da empresa">
@@ -36,7 +36,7 @@
 
   @if (showSla()) {
     <app-guide-section title="Como ler os alertas de SLA">
-      <p class="small text-muted mb-2"><strong>Em risco:</strong> já passou do ponto de alerta do SLA, mas ainda está dentro do prazo. Ainda dá pra salvar.</p>
+      <p class="small text-muted mb-2"><strong>Em risco:</strong> já usou 75% do prazo, mas ainda está dentro dele. Ainda dá pra salvar.</p>
       <p class="small text-muted mb-2"><strong>Atrasado:</strong> passou do prazo de atendimento.</p>
       <p class="small text-muted mb-0">A lista mostra até 3 atrasados e 2 em risco; os números do topo levam à fila completa. O prazo de cada um anda sozinho, e "Atualizado às" diz de quando é a lista.</p>
     </app-guide-section>

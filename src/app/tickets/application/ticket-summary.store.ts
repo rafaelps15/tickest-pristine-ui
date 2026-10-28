@@ -43,11 +43,14 @@ export const TicketSummaryStore = signalStore(
     _userDataService: inject(UserDataService)
   })),
   withProps((store) => ({
+    // Quem atende a fila (`tickets:manage`) vê o volume e os totais com o recorte do Início
+    // (TicketDashboardStore): pra esse papel, os números da empresa toda não são pedidos à API.
     _statusCountsResource: rxResource({
+      params: () => (store._sessionService.hasPermission('tickets:manage') ? undefined : true),
       stream: () => store._ticketDataService.getStatusCounts()
     }),
     _volumeResource: rxResource({
-      params: () => store.groupBy(),
+      params: () => (store._sessionService.hasPermission('tickets:manage') ? undefined : store.groupBy()),
       stream: ({ params }) => store._ticketDataService.getVolume(params)
     }),
     /**

@@ -67,7 +67,32 @@ export interface DashboardMetric {
         </div>
       } @else if (isEmpty()) {
         <div class="card">
-          <app-empty-state icon="bx-filter-alt" [title]="emptyTitle()" [hint]="emptyHint()" />
+          <app-empty-state [icon]="emptyIcon()" [title]="emptyTitle()" [hint]="emptyHint()" />
+        </div>
+      } @else if (variant() === 'strip') {
+        <!-- Faixa: números de contexto numa linha só, sem ícone nem card por número — menos peso que os grupos de ação. -->
+        <div class="card metric-strip-card" [class.metric-refreshing]="loading()">
+          <ul class="list-unstyled d-flex flex-wrap mb-0 metric-strip">
+            @for (metric of metrics(); track metric.key) {
+              <li class="metric-strip-item">
+                @if (metric.queryParams !== null) {
+                  <a class="metric-strip-link" routerLink="/tickets/monitorar" [queryParams]="metric.queryParams"
+                     [attr.aria-label]="'Ver ' + (metric.value ?? '') + ' ' + metric.ariaNoun + ' na fila de monitoramento'">
+                    <span class="text-muted small">{{ metric.label }}</span>
+                    <span class="fs-4 stat-value">{{ metric.value ?? '—' }}</span>
+                    @if (metric.hint) {
+                      <span class="text-muted small">{{ metric.hint }}</span>
+                    }
+                  </a>
+                } @else {
+                  <span class="metric-strip-link">
+                    <span class="text-muted small">{{ metric.label }}</span>
+                    <span class="fs-4 stat-value">{{ metric.value ?? '—' }}</span>
+                  </span>
+                }
+              </li>
+            }
+          </ul>
         </div>
       } @else {
         <div class="row g-3" [class.metric-refreshing]="loading()">
@@ -130,6 +155,48 @@ export interface DashboardMetric {
     }
 
     /* Recarga com números na tela (troca de filtro): esmaece em vez de piscar o esqueleto. */
+    .metric-strip-item {
+      flex: 1 1 9rem;
+      min-width: 0;
+    }
+
+    .metric-strip-item + .metric-strip-item {
+      border-left: 1px solid var(--tk-border);
+    }
+
+    .metric-strip-link {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      min-height: 2.75rem;
+      height: 100%;
+      padding: 0.875rem 1.25rem;
+      color: var(--tk-text-primary);
+      text-decoration: none;
+      transition: background-color var(--tk-transition);
+    }
+
+    a.metric-strip-link:hover,
+    a.metric-strip-link:focus-visible {
+      background-color: rgba(var(--tk-primary-rgb), 0.06);
+    }
+
+    a.metric-strip-link:focus-visible {
+      outline: 2px solid var(--tk-primary);
+      outline-offset: -2px;
+    }
+
+    /* Celular: dois por linha, com o fio entre colunas só onde há vizinho à esquerda. */
+    @media (max-width: 575.98px) {
+      .metric-strip-item {
+        flex-basis: 50%;
+      }
+
+      .metric-strip-item:nth-child(odd) {
+        border-left: 0;
+      }
+    }
+
     .metric-refreshing {
       opacity: 0.6;
       transition: opacity 150ms ease;
@@ -152,10 +219,17 @@ export class DashboardMetricGroupComponent {
    * grupos vindos da mesma leitura) — aqui fica só uma linha neutra, sem repetir o alerta.
    */
   readonly unavailable = input(false);
+  /**
+   * Forma do grupo: `cards` (um stat-card por número, pros grupos de ação) ou `strip` (uma faixa
+   * compacta, pros números de contexto como o Volume — menos peso visual, mesmo drill-down).
+   */
+  readonly variant = input<'cards' | 'strip'>('cards');
   /** Título do estado vazio (todos os indicadores zerados). */
-  readonly emptyTitle = input('Nenhum chamado neste recorte.');
+  readonly emptyTitle = input('Nenhum chamado com estes filtros.');
   /** Dica do estado vazio. */
   readonly emptyHint = input('Ajuste ou limpe os filtros acima para ver mais chamados.');
+  /** Ícone do estado vazio: funil quando a culpa é do filtro; outro desenho quando o vazio é uma boa notícia. */
+  readonly emptyIcon = input('bx-filter-alt');
   /** Classe da coluna de cada card (o grid se reorganiza por tamanho de tela). */
   readonly columnClass = input('col-12 col-sm-6 col-xl-4');
 
@@ -171,7 +245,7 @@ export class DashboardMetricGroupComponent {
   /** Vazio: todos os números chegaram e são zero. */
   readonly isEmpty = computed(() => this.hasValues() && this.metrics().every(metric => metric.value === 0));
 
-  /** Frase lida pelo leitor de tela quando os números chegam ("Volume: 12 no total, 5 no backlog."). */
+  /** Frase lida pelo leitor de tela quando os números chegam ("Volume: 12 no total, 5 na fila."). */
   readonly liveSummary = computed(() => {
     if (!this.hasValues() || this.loading() || this.error() || this.unavailable()) return '';
     return `${this.title()}: ` + this.metrics().map(metric => `${metric.value} ${metric.ariaNoun}`).join(', ') + '.';

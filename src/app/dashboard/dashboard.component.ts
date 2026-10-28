@@ -68,33 +68,39 @@ export class DashboardComponent implements OnInit {
   protected readonly scope = computed(() => resolveDashboardScope(
     this.filters.filters(), this.departmentsStore.departments(), this.departmentsStore.listState().loading, this.today));
 
+  /** Vazio do Volume e do SLA: com filtro, a culpa é do filtro; sem filtro, a operação ainda não tem chamados. */
+  protected readonly emptyTitle = computed(() => this.filters.active() ? 'Nenhum chamado com estes filtros.' : 'Nenhum chamado ainda.');
+  /** Dica do vazio, com a próxima ação de cada caso. */
+  protected readonly emptyHint = computed(() => this.filters.active()
+    ? 'Ajuste ou limpe os filtros acima para ver mais chamados.'
+    : 'Quando o primeiro chamado for aberto, os números aparecem aqui.');
+
   /** Se há período escolhido (muda os textos de apoio de SLA, tempos e gráfico). */
   protected readonly hasPeriod = computed(() => !!(this.scope()?.from || this.scope()?.to));
 
   /** Mostra os widgets operacionais filtráveis: só pra quem atende a fila (a API exige `tickets:manage`). */
   protected readonly showOperation = computed(() => this.sessionService.hasPermission('tickets:manage'));
 
-  /** Volume do recorte; cada card leva ao Monitor com o mesmo recorte e o status do card. */
+  /** Volume com os filtros; cada card leva ao Monitor com os mesmos filtros e o status do card. */
   protected readonly volumeMetrics = computed((): DashboardMetric[] => {
     const scope = this.scope() ?? {};
     const volume = this.operation.volume();
     return [
       { key: 'total', label: 'Total', icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, ariaNoun: 'chamados no total', hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
-      { key: 'backlog', label: 'Backlog', icon: 'bx-error-circle', tone: 'warning', value: volume?.backlog ?? null, ariaNoun: 'chamados no backlog', hint: 'Aberto ou em andamento', queryParams: toMonitorQueryParams(scope, { status: 'active' }) },
+      { key: 'backlog', label: 'Na fila', icon: 'bx-error-circle', tone: 'warning', value: volume?.backlog ?? null, ariaNoun: 'chamados abertos ou em andamento', hint: 'Aberto ou em andamento', queryParams: toMonitorQueryParams(scope, { status: 'active' }) },
       { key: 'inProgress', label: 'Em andamento', icon: 'bx-time-five', tone: 'info', value: volume?.inProgress ?? null, ariaNoun: 'chamados em andamento', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.InProgress }) },
       { key: 'resolved', label: 'Resolvidos', icon: 'bx-check-double', tone: 'success', value: volume?.resolved ?? null, ariaNoun: 'chamados resolvidos', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Resolved }) },
       { key: 'closed', label: 'Fechados', icon: 'bx-lock-alt', tone: 'primary', value: volume?.closed ?? null, ariaNoun: 'chamados fechados', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Closed }) }
     ];
   });
 
-  /** SLA do recorte, do mais grave ao cumprido. */
+  /** SLA com os filtros, do mais grave ao cumprido; os atrasados ficam só na Central de atenção, pra não repetir o número. */
   protected readonly slaMetrics = computed((): DashboardMetric[] => {
     const scope = this.scope() ?? {};
     const sla = this.operation.sla();
     const since = this.hasPeriod() ? 'abertos no período' : 'desde o início';
     return [
-      { key: 'breached', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: sla?.breached ?? null, ariaNoun: 'chamados com o prazo vencido', hint: 'Prazo vencido, ainda ativos', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
-      { key: 'atRisk', label: 'Vencem em breve', icon: 'bx-time', tone: 'warning', value: sla?.atRisk ?? null, ariaNoun: 'chamados perto de vencer', hint: 'Já usaram 75% do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.AtRisk }) },
+      { key: 'atRisk', label: 'Em risco', icon: 'bx-time', tone: 'warning', value: sla?.atRisk ?? null, ariaNoun: 'chamados em risco', hint: 'A partir de 75% do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.AtRisk }) },
       { key: 'onTime', label: 'No prazo', icon: 'bx-timer', tone: 'info', value: sla?.onTime ?? null, ariaNoun: 'chamados ativos dentro do prazo', hint: 'Ativos, com folga', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.OnTime }) },
       { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: sla?.met ?? null, ariaNoun: 'chamados resolvidos no prazo', hint: `Resolvidos no prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Met }) },
       { key: 'missed', label: 'Resolvidos com atraso', icon: 'bx-calendar-x', tone: 'danger', value: sla?.missed ?? null, ariaNoun: 'chamados resolvidos depois do prazo', hint: `Fora do prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Missed }) }
@@ -116,7 +122,7 @@ export class DashboardComponent implements OnInit {
       awaiting.push({ key: 'awaitingRequester', label: 'Aguardando o solicitante', icon: 'bx-user-voice', tone: 'info', value: attention.awaitingRequester, ariaNoun: 'chamados esperando o solicitante', hint: 'A equipe respondeu por último', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Requester, status: 'active' }) });
     }
     return [
-      { key: 'overdue', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: attention?.overdue ?? null, ariaNoun: 'chamados atrasados', hint: 'Prazo vencido', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
+      { key: 'overdue', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: attention?.overdue ?? null, ariaNoun: 'chamados atrasados', hint: 'Passaram do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
       { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.critical ?? null, ariaNoun: 'chamados urgentes ativos', hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
       { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassigned ?? null, ariaNoun: 'chamados ativos sem responsável', hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) },
       ...awaiting
@@ -204,8 +210,10 @@ export class DashboardComponent implements OnInit {
    * Primeiro uso: os totais chegaram (sem carregar, sem erro) e a empresa não tem nenhum ticket —
    * o gráfico vazio vira um convite com a próxima ação, em vez de só "nenhum chamado".
    */
-  protected readonly isFirstUse = computed(() =>
-      !this.store.statusCountsLoading() && !this.store.statusCountsFailed() && this.store.total() === 0);
+  protected readonly isFirstUse = computed(() => this.showOperation()
+      // Quem atende a fila: o total do agregado, sem filtro nenhum (com filtro, zero não é "empresa nova").
+      ? !this.filters.active() && this.operation.volume()?.total === 0
+      : !this.store.statusCountsLoading() && !this.store.statusCountsFailed() && this.store.total() === 0);
 
   /** Quem pode cadastrar a estrutura (departamentos/setores) — no primeiro uso, é o passo que vem antes de qualquer ticket. */
   protected readonly canSetUpStructure = computed(() =>

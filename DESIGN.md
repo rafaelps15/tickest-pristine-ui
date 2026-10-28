@@ -253,8 +253,8 @@ usam `p-3`; corpo de card de conteúdo usa `p-4`; grupos de campo usam `g-3`.
 **Celular:** tabelas com várias colunas viram uma lista de cards abaixo de `md` (ver
 `.table-stack` em Components) em vez de rolar pro lado. Quando a ordem visual muda entre desktop e
 celular, a ordem do DOM segue a do celular (leitura e Tab iguais ao que se vê) e só o desktop
-reordena com `order-lg-*`. No Dashboard: o que pede ação (Alertas de SLA, Ações Rápidas) vem antes
-do volume histórico.
+reordena com `order-lg-*`. No Dashboard: o que pede ação (Alertas de SLA, Central de atenção) vem
+antes do contexto (Volume, SLA, tempos) e do volume histórico.
 
 ## Elevation & Depth
 
@@ -462,6 +462,26 @@ mostra primeiro "Seus chamados" — em aberto, em andamento e resolvidos, do pr�
 depois "Toda a empresa", com os números de sempre, iguais pra todo papel. Os grupos ganham um
 rótulo em versalete (`.section-label`).
 
+### Operação (Início, pra quem tem `tickets:manage`)
+Abaixo dos Alertas de SLA, a operação com filtros na URL (`?period=`/`from`/`to`, `departmentId`,
+`sectorId`, `priority`, `assignee`/`assignedToUserId`): Central de atenção, Volume, SLA, Tempos de
+atendimento e o gráfico Criados x Resolvidos. Todo número vem do servidor; nada é contado a partir
+de uma página de lista.
+- **Um número, um lugar:** "Atrasados" mora só na Central de atenção (o grupo SLA mostra em risco,
+  no prazo, cumpridos e resolvidos com atraso); as Ações Rápidas não repetem atalhos que a Central já
+  mostra com número.
+- **Peso por papel:** o que pede ação (Central, SLA) usa `<app-stat-card>`; o contexto (Volume) usa a
+  faixa compacta (`<app-dashboard-metric-group variant="strip">`): números numa linha, sem ícone nem
+  card por número, cada um ainda levando à fila filtrada.
+- **Escopo dito na tela:** os Alertas de SLA são sempre da empresa toda e dizem isso no subtítulo
+  ("Toda a empresa, sem os filtros"); o gráfico diz "com os filtros acima".
+- **Uma leitura, um aviso:** grupos que vêm da mesma requisição (Central, Volume e SLA do agregado)
+  falham juntos com um alerta só, acima deles; cada grupo mostra só "Indisponível no momento".
+- **Vazio honesto:** com filtro, "Nenhum chamado com estes filtros" e ícone de funil; sem filtro,
+  "Nada pedindo atenção agora" (check) ou "Nenhum chamado ainda" — nunca culpar um filtro que não existe.
+- **Tempos:** mediana em destaque (`stat-value`), média ao lado, "horário útil"; abaixo da amostra
+  mínima do back-end, "Dados insuficientes" com quantos entraram na conta.
+
 ### Cards de estatística (`<app-stat-card>`, `shared/ui/stat-card`)
 Rótulo, número (`div.stat-value`, nunca heading), legenda e ícone em `.icon-tile` no tom semântico.
 Carregando: spinner no lugar do número; falhou: "—". Interação sempre no card inteiro: `[pressed]`
@@ -472,7 +492,8 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
 - **Filtros (`<app-filter-bar (clear)>`, `shared/ui/filter-bar`):** card discreto (`.filters-card`)
   com o rótulo "Filtros", os campos numa `row g-3` (cada um traz a sua `col-*`) e um rodapé com os
   extras (`filterExtras`, ex.: um switch) à esquerda e "Limpar filtros" à direita. No máximo 3–4
-  campos visíveis; os de uso raro vão numa linha "Mais filtros (n)" recolhida (Monitorar).
+  campos visíveis; os de uso raro vão numa linha "Mais filtros (n)" recolhida (Monitorar; no Início,
+  período, departamento e setor à vista e prioridade/responsável em "Mais filtros").
 - **Escopo da tela:** um filtro que muda *também* os números do topo (o Setor do Monitorar) fica
   acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta.
 - **Responsável (Monitorar):** "Qualquer um", "Atribuídos a mim" (a fila pessoal de quem atende) ou
@@ -583,6 +604,7 @@ segunda força recálculo de layout a cada quadro.
   está aberto — inclusive por objetivo) e **"Resolvido com atraso"** (encerrado depois do prazo).
   Nunca "vencido" nem "violado".
 - **"Início"** é o nome da tela inicial — no menu, nas trilhas e nos "Voltar".
+- **"Na fila"** é aberto + em andamento (nunca "backlog"); **"com os filtros"**, nunca "recorte"; tempo de SLA é **"horário útil"**, nunca "minutos úteis".
 - **Título da tela = item do menu** ("Usuários", não "Gestão de Usuários").
 - **Botões de criar** em caixa de título: "Novo Chamado", "Novo Usuário", "Nova Função", "Novo Departamento".
 - **Formulário:** Cancelar à esquerda do primário, alinhados à direita no rodapé; erro de envio logo

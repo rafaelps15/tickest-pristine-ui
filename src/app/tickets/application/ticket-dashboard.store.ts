@@ -104,7 +104,7 @@ export const TicketDashboardStore = signalStore(
     /** Os tempos médios estão carregando. */
     timesLoading: computed(() => store._timesResource.isLoading()),
     /** Erro dos tempos médios. */
-    timesError: computed(() => widgetError(store._timesResource.error(), 'Não foi possível carregar os tempos médios.')),
+    timesError: computed(() => widgetError(store._timesResource.error(), 'Não foi possível carregar os tempos de atendimento.')),
 
     /** Pontos do gráfico Criados x Resolvidos, do mais antigo pro mais novo (vazio enquanto não há resposta). */
     trend: computed(() => store._trendResource.hasValue() ? store._trendResource.value() : []),

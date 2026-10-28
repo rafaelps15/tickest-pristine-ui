@@ -64,12 +64,24 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('button')).toBeNull();
   });
 
+  it('faixa: números numa linha só, cada um levando à fila, sem stat-card', async () => {
+    TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="Volume" variant="strip" [metrics]="metrics()" />` } });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.metrics.set(metrics(4, 2));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelectorAll('app-stat-card').length).toBe(0);
+    const link = fixture.nativeElement.querySelector('a.metric-strip-link') as HTMLAnchorElement;
+    expect(link.getAttribute('aria-label')).toBe('Ver 4 chamados atrasados na fila de monitoramento');
+    expect(fixture.nativeElement.querySelectorAll('.metric-strip-item').length).toBe(2);
+  });
+
   it('vazio (tudo zero): explica por quê, em vez de cards zerados', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(0, 0));
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado neste recorte.');
+    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado com estes filtros.');
     expect(fixture.nativeElement.querySelector('app-stat-card')).toBeNull();
   });
 

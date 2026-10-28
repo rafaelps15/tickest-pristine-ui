@@ -1,4 +1,4 @@
-<app-page-header subtitle="Veja como estão os chamados de toda a empresa.">
+<app-page-header [subtitle]="showOperation() ? 'Veja o que pede ação agora e como está a operação.' : 'Veja como estão os chamados de toda a empresa.'">
   @if (sessionService.currentUser(); as user) {
     <span pageTitle>{{ greeting }}, <span class="text-primary">{{ user.firstName }}</span>!</span>
   } @else {
@@ -82,16 +82,19 @@
 
   <app-dashboard-metric-group title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave."
                               [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
-                              emptyTitle="Nada pedindo atenção neste recorte." emptyHint="Sem chamados atrasados, críticos ou sem responsável."
+                              [emptyTitle]="filters.active() ? 'Nada pedindo atenção com estes filtros.' : 'Nada pedindo atenção agora.'"
+                              [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-check-circle'" emptyHint="Sem chamados atrasados, críticos ou sem responsável."
                               />
 
-  <app-dashboard-metric-group title="Volume" [description]="hasPeriod() ? 'Chamados abertos no período, por situação atual.' : 'Chamados do recorte, por situação.'"
-                              columnClass="col-12 col-sm-6 col-lg-4 col-xxl"
+  <app-dashboard-metric-group title="Volume" [description]="hasPeriod() ? 'Chamados abertos no período, por situação atual.' : 'Chamados com os filtros acima, por situação atual.'"
+                              variant="strip"
+                              [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
                               [metrics]="volumeMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               />
 
-  <app-dashboard-metric-group title="SLA" description="Prazo de resolução, pela regra do sistema (em risco a partir de 75% do prazo)."
-                              columnClass="col-12 col-sm-6 col-lg-4 col-xxl"
+  <app-dashboard-metric-group title="SLA" description="Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão na Central de atenção."
+                              columnClass="col-12 col-sm-6 col-xl-3"
+                              [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
                               [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               />
 
@@ -172,34 +175,7 @@
                 </a>
               </li>
             }
-
-            <!-- Urgentes ainda ativos: o mesmo recorte do card "Críticos" da Central de atenção. -->
-            @if (sessionService.hasPermission('tickets:manage')) {
-              <li>
-                <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ priority: 4, status: 'active' }">
-                  <span class="badge bg-label-danger rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-error-alt fs-5"></i></span>
-                  <span>
-                    <span class="d-block fw-semibold">Chamados críticos</span>
-                    <span class="d-block small text-muted">Urgentes ainda em aberto</span>
-                  </span>
-                  <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
-                </a>
-              </li>
-            }
-
-            <!-- Só com tickets:manage: a rota do Monitorar exige essa permissão, e o guard devolveria aqui sem aviso. -->
-            @if (sessionService.hasPermission('tickets:manage')) {
-              <li>
-                <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ unassignedOnly: true }">
-                  <span class="badge bg-label-warning rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-user-x fs-5"></i></span>
-                  <span>
-                    <span class="d-block fw-semibold">Chamados sem responsável</span>
-                    <span class="d-block small text-muted">Fila sem atendente definido</span>
-                  </span>
-                  <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
-                </a>
-              </li>
-            }
+            <!-- Críticos e sem responsável não têm atalho aqui: a Central de atenção, acima, já os mostra com número. -->
           </ul>
         </div>
       </div>

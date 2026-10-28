@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, output, signal } from '@angular/core';
 import { Department } from '../departments';
 import { TicketAssignee, TicketPriority, TICKET_PRIORITY_LABELS } from '../tickets';
 import { FilterBarComponent } from '../shared/ui/filter-bar/filter-bar.component';
@@ -30,10 +30,12 @@ const CUSTOM_PERIOD = 'custom';
   imports: [FilterBarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Cinco campos numa linha só a partir de 1400px; antes, recorte (período, departamento, setor) numa
-         linha e prioridade/responsável na outra, pra nenhum seletor ficar estreito demais pro texto. -->
+    <!--
+      Três campos à vista (período, departamento, setor: o recorte que muda a leitura da tela) e os de uso
+      menos frequente em "Mais filtros (n)", como no Monitor — DESIGN.md: no máximo 3–4 campos visíveis.
+    -->
     <app-filter-bar label="Filtrar a operação" [clearable]="chips().length > 0" (clear)="clear.emit()">
-      <div class="col-12 col-sm-6 col-lg-4 col-xxl">
+      <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardPeriod">Período de abertura</label>
         <select #periodSelect id="dashboardPeriod" class="form-select" [value]="periodValue()"
                 (change)="change.emit(toPeriod(periodSelect.value))">
@@ -44,7 +46,7 @@ const CUSTOM_PERIOD = 'custom';
           <option value="custom">Personalizado</option>
         </select>
       </div>
-      <div class="col-12 col-sm-6 col-lg-4 col-xxl">
+      <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardDepartment">Departamento</label>
         <select #departmentSelect id="dashboardDepartment" class="form-select" [value]="filters().departmentId ?? ''"
                 (change)="change.emit(toDepartment(departmentSelect.value))">
@@ -54,7 +56,7 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
-      <div class="col-12 col-sm-6 col-lg-4 col-xxl">
+      <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardSector">Setor</label>
         <select #sectorSelect id="dashboardSector" class="form-select" [value]="filters().sectorId ?? ''"
                 (change)="change.emit({ sectorId: sectorSelect.value || undefined })">
@@ -68,7 +70,9 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
-      <div class="col-6 col-lg-4 col-xxl">
+      <div id="dashboardMoreFilters" class="col-12" [hidden]="!moreFiltersOpen()">
+        <div class="row g-3">
+      <div class="col-6 col-md-4">
         <label class="form-label small" for="dashboardPriority">Prioridade</label>
         <select #prioritySelect id="dashboardPriority" class="form-select" [value]="filters().priority ?? ''"
                 (change)="change.emit({ priority: toPriority(prioritySelect.value) })">
@@ -78,7 +82,7 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
-      <div class="col-6 col-lg-4 col-xxl">
+      <div class="col-6 col-md-4">
         <label class="form-label small" for="dashboardAssignee">Responsável</label>
         <select #assigneeSelect id="dashboardAssignee" class="form-select" [value]="assigneeValue()"
                 (change)="change.emit(toAssignee(assigneeSelect.value))">
@@ -94,6 +98,8 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
+        </div>
+      </div>
 
       @if (periodValue() === 'custom') {
         <div class="col-6 col-md-3">
@@ -107,6 +113,12 @@ const CUSTOM_PERIOD = 'custom';
                  [min]="filters().from ?? ''" [max]="today()" (change)="onDateChange('to', toInput)" />
         </div>
       }
+
+      <button filterExtras type="button" class="btn btn-link btn-more-filters text-decoration-none px-0"
+              aria-controls="dashboardMoreFilters" [attr.aria-expanded]="moreFiltersOpen()" (click)="toggleMoreFilters()">
+        <i class="bx me-1" [class.bx-chevron-down]="!moreFiltersOpen()" [class.bx-chevron-up]="moreFiltersOpen()" aria-hidden="true"></i>
+        {{ moreFiltersOpen() ? 'Menos filtros' : 'Mais filtros' }}@if (secondaryFilterCount() > 0) { ({{ secondaryFilterCount() }}) }
+      </button>
 
       @if (chips().length > 0) {
         <ul filterExtras class="list-unstyled d-flex flex-wrap gap-2 mb-0 filter-chips" aria-label="Filtros aplicados">
@@ -171,6 +183,15 @@ export class DashboardFilterBarComponent {
   readonly periodOptions = Object.keys(DASHBOARD_PERIOD_DAYS) as DashboardPeriodPreset[];
   readonly periodLabels = DASHBOARD_PERIOD_LABELS;
 
+  /** Se a linha "Mais filtros" (prioridade e responsável) está aberta — estado de tela, não vai pra URL. */
+  readonly moreFiltersOpen = signal(false);
+
+  /** Quantos filtros de "Mais filtros" estão aplicados (aparece no botão, com a linha fechada ou aberta). */
+  readonly secondaryFilterCount = computed(() => {
+    const filters = this.filters();
+    return (filters.priority !== undefined ? 1 : 0) + (filters.assignee || filters.assignedToUserId ? 1 : 0);
+  });
+
   /** Só os departamentos com setores: um departamento vazio não recorta nada. */
   readonly departmentOptions = computed(() => this.departments().filter(d => d.sectors.length > 0));
 
@@ -234,6 +255,11 @@ export class DashboardFilterBarComponent {
     }
     return chips;
   });
+
+  /** Abre ou fecha a linha "Mais filtros". */
+  toggleMoreFilters(): void {
+    this.moreFiltersOpen.update(open => !open);
+  }
 
   /** Valor do seletor de período → troca: pronto, personalizado (começa nos últimos 30 dias) ou nenhum. */
   toPeriod(value: string): Partial<DashboardFilters> {

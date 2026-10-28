@@ -64,6 +64,12 @@ describe('TicketSummaryStore', () => {
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
 
+    configure();
+    store = await createStore();
+  });
+
+  /** Configura o TestBed com os falsos atuais (o store lê a permissão ao ser criado). */
+  function configure(): void {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -73,66 +79,81 @@ describe('TicketSummaryStore', () => {
         { provide: UserDataService, useValue: userDataService }
       ]
     });
-    store = await createStore();
+  }
+
+  it('quem atende a fila não pede os números da empresa toda (o Início usa os do recorte)', () => {
+    expect(dataService.getStatusCounts).not.toHaveBeenCalled();
+    expect(dataService.getVolume).not.toHaveBeenCalled();
+    expect(store.summaryError()).toBeNull();
   });
 
-  it('busca os totais por status e o volume (agrupado por dia, por padrão) de toda a empresa', () => {
-    expect(dataService.getStatusCounts).toHaveBeenCalled();
-    expect(dataService.getVolume).toHaveBeenCalledWith('Day');
-  });
+  describe('visão da empresa (quem não atende a fila)', () => {
+    beforeEach(async () => {
+      TestBed.resetTestingModule();
+      sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
+      configure();
+      store = await createStore();
+    });
 
-  it('expõe os totais dos cards a partir dos totais por status', () => {
-    expect(store.total()).toBe(10);
-    expect(store.openCount()).toBe(3);
-    expect(store.inProgressCount()).toBe(2);
-    expect(store.resolvedCount()).toBe(4);
-    expect(store.closedCount()).toBe(1);
-    expect(store.canceledCount()).toBe(0);
-  });
 
-  it('expõe os pontos de volume retornados pela API', () => {
-    expect(store.volume()).toEqual([
-      { periodStart: '2026-01-05', count: 2 },
-      { periodStart: '2026-01-06', count: 5 }
-    ]);
-  });
+    it('busca os totais por status e o volume (agrupado por dia, por padrão) de toda a empresa', () => {
+      expect(dataService.getStatusCounts).toHaveBeenCalled();
+      expect(dataService.getVolume).toHaveBeenCalledWith('Day');
+    });
 
-  it('refaz a busca do volume com o novo agrupamento ao mudar o período', async () => {
-    store.setGroupBy('Month');
-    await TestBed.inject(ApplicationRef).whenStable();
+    it('expõe os totais dos cards a partir dos totais por status', () => {
+      expect(store.total()).toBe(10);
+      expect(store.openCount()).toBe(3);
+      expect(store.inProgressCount()).toBe(2);
+      expect(store.resolvedCount()).toBe(4);
+      expect(store.closedCount()).toBe(1);
+      expect(store.canceledCount()).toBe(0);
+    });
 
-    expect(dataService.getVolume).toHaveBeenCalledWith('Month');
-  });
+    it('expõe os pontos de volume retornados pela API', () => {
+      expect(store.volume()).toEqual([
+        { periodStart: '2026-01-05', count: 2 },
+        { periodStart: '2026-01-06', count: 5 }
+      ]);
+    });
 
-  it('expõe mensagem de erro quando a busca dos totais por status falhar', async () => {
-    dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    it('refaz a busca do volume com o novo agrupamento ao mudar o período', async () => {
+      store.setGroupBy('Month');
+      await TestBed.inject(ApplicationRef).whenStable();
 
-    store.load();
-    await TestBed.inject(ApplicationRef).whenStable();
+      expect(dataService.getVolume).toHaveBeenCalledWith('Month');
+    });
 
-    expect(store.summaryError()).toBe('Erro ao carregar o resumo dos chamados');
-    expect(store.statusCountsFailed()).toBeTrue();
-    expect(store.volumeFailed()).toBeFalse();
-    // Os totais em erro não podem lançar — o template os lê sempre, mesmo mostrando "—".
-    expect(store.total()).toBe(0);
-    expect(store.closedCount()).toBe(0);
-  });
+    it('expõe mensagem de erro quando a busca dos totais por status falhar', async () => {
+      dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-  it('não marca nenhuma busca como falha quando as duas respondem', () => {
-    expect(store.statusCountsFailed()).toBeFalse();
-    expect(store.volumeFailed()).toBeFalse();
-  });
+      store.load();
+      await TestBed.inject(ApplicationRef).whenStable();
 
-  it('expõe mensagem de erro quando a busca do volume falhar', async () => {
-    dataService.getVolume.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      expect(store.summaryError()).toBe('Erro ao carregar o resumo dos chamados');
+      expect(store.statusCountsFailed()).toBeTrue();
+      expect(store.volumeFailed()).toBeFalse();
+      // Os totais em erro não podem lançar — o template os lê sempre, mesmo mostrando "—".
+      expect(store.total()).toBe(0);
+      expect(store.closedCount()).toBe(0);
+    });
 
-    store.load();
-    await TestBed.inject(ApplicationRef).whenStable();
+    it('não marca nenhuma busca como falha quando as duas respondem', () => {
+      expect(store.statusCountsFailed()).toBeFalse();
+      expect(store.volumeFailed()).toBeFalse();
+    });
 
-    expect(store.summaryError()).toBe('Erro ao carregar o volume de chamados');
-    expect(store.volumeFailed()).toBeTrue();
-    expect(store.statusCountsFailed()).toBeFalse();
-    expect(store.volume()).toEqual([]);
+    it('expõe mensagem de erro quando a busca do volume falhar', async () => {
+      dataService.getVolume.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      store.load();
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.summaryError()).toBe('Erro ao carregar o volume de chamados');
+      expect(store.volumeFailed()).toBeTrue();
+      expect(store.statusCountsFailed()).toBeFalse();
+      expect(store.volume()).toEqual([]);
+    });
   });
 
   it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem chamados:manage', () => {

@@ -159,6 +159,24 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.componentInstance.changes).toEqual([{ from: undefined, to: undefined }, { priority: undefined }]);
   });
 
+  it('recolhe prioridade e responsável em "Mais filtros", com a contagem dos aplicados', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.filters.set({ priority: 4, assignee: 'me' });
+    await fixture.whenStable();
+
+    const more = fixture.nativeElement.querySelector('#dashboardMoreFilters') as HTMLElement;
+    const toggle = fixture.nativeElement.querySelector('.btn-more-filters') as HTMLButtonElement;
+    expect(more.hidden).toBeTrue();
+    expect(toggle.textContent).toContain('Mais filtros (2)');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    toggle.click();
+    await fixture.whenStable();
+    expect(more.hidden).toBeFalse();
+    expect(toggle.textContent).toContain('Menos filtros');
+    expect(fixture.nativeElement.querySelector('#dashboardPeriod').closest('#dashboardMoreFilters')).toBeNull();
+  });
+
   it('só oferece "Limpar filtros" com algum filtro ativo', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();

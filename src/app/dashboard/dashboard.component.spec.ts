@@ -265,20 +265,22 @@ describe('DashboardComponent', () => {
     });
   });
 
-  it('com tickets:manage, troca os cards da empresa pelo Volume filtrável, cada card levando à fila com o mesmo status', async () => {
+  it('com tickets:manage, troca os cards da empresa pelo Volume filtrável, cada número levando à fila com o mesmo status', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
     const volume = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]') as HTMLElement;
-    const links = Array.from(volume.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
+    const links = Array.from(volume.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>);
     expect(links).toHaveSize(5);
     expect(links.some(a => a.getAttribute('href')?.includes('status=active'))).toBeTrue();
     expect(links.some(a => a.getAttribute('href')?.includes('status=2'))).toBeTrue();
     const companyCards = Array.from(fixture.nativeElement.querySelectorAll('app-stat-card') as NodeListOf<HTMLElement>)
       .filter(card => card.textContent?.includes('Total de Chamados'));
     expect(companyCards.length).toBe(0);
-    expect(volume.textContent).toContain('Ver na fila');
+    // Volume é contexto: faixa compacta, sem um stat-card por número.
+    expect(volume.querySelector('.metric-strip')).not.toBeNull();
+    expect(volume.querySelectorAll('app-stat-card').length).toBe(0);
   });
 
   it('inclui a contagem atual no aria-label dos cards operacionais, pra quem usa leitor de tela saber "quantos" antes de entrar', async () => {
@@ -286,9 +288,9 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    const labels = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('aria-label'));
-    expect(labels).toContain('Ver 5 chamados no backlog na fila de monitoramento');
-    expect(labels).toContain('Ver 2 chamados com o prazo vencido na fila de monitoramento');
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('aria-label'));
+    expect(labels).toContain('Ver 5 chamados abertos ou em andamento na fila de monitoramento');
+    expect(labels).toContain('Ver 2 chamados atrasados na fila de monitoramento');
     expect(labels).toContain('Ver 3 chamados ativos sem responsável na fila de monitoramento');
   });
 
@@ -300,8 +302,8 @@ describe('DashboardComponent', () => {
 
     const scope: TicketDashboardScope = { sectorIds: ['s1'], priority: 4, assignee: 'none', assignedToUserId: undefined, from: undefined, to: undefined };
     expect(operationFake.setScope).toHaveBeenCalledWith(scope);
-    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('backlog'))!;
+    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
+      .find(a => a.getAttribute('aria-label')?.includes('abertos ou em andamento'))!;
     const href = backlog.getAttribute('href')!;
     expect(href).toContain('sectorId=s1');
     expect(href).toContain('priority=4');
@@ -340,8 +342,8 @@ describe('DashboardComponent', () => {
     expect(scope.sectorIds).toEqual(['s1', 's2']);
     expect(scope.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(scope.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('backlog'))!;
+    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
+      .find(a => a.getAttribute('aria-label')?.includes('abertos ou em andamento'))!;
     const href = backlog.getAttribute('href')!;
     expect(href).toContain('sectorId=s1&sectorId=s2');
     expect(href).toContain(`createdFrom=${scope.from}`);
@@ -369,7 +371,7 @@ describe('DashboardComponent', () => {
     const attention = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Central de atenção"]') as HTMLElement;
     expect(attention.textContent).toContain('Aguardando a equipe');
     expect(attention.textContent).toContain('Aguardando o solicitante');
-    const link = Array.from(attention.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
+    const link = Array.from(attention.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
       .find(a => a.getAttribute('aria-label')?.includes('esperando resposta da equipe'))!;
     expect(link.getAttribute('href')).toContain('awaiting=2');
   });
@@ -380,7 +382,7 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const attention = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Central de atenção"]') as HTMLElement;
-    expect(attention.querySelectorAll('a.stretched-link').length).toBe(3);
+    expect(attention.querySelectorAll('a.stretched-link, a.metric-strip-link').length).toBe(3);
   });
 
   it('com tickets:manage, o gráfico usa o Criados x Resolvidos do recorte, com a coluna de resolvidos na tabela', async () => {
@@ -421,7 +423,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelectorAll('a.stretched-link')).toHaveSize(0);
+    expect(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link')).toHaveSize(0);
     expect(fixture.nativeElement.textContent).not.toContain('Ver na fila');
   });
 
@@ -518,32 +520,33 @@ describe('DashboardComponent', () => {
     expect(document.activeElement).toBe(fixture.nativeElement.querySelector('table'));
   });
 
-  it('mostra Novo Ticket, Meus Tickets E Tickets sem responsável pra quem não é administrativo mas tem tickets:manage (ex. Atendente)', async () => {
+  it('mostra Novo Chamado, Meus Chamados e Atribuídos a mim pra quem não é administrativo mas tem tickets:manage (ex. Atendente), sem repetir a Central', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Novo Chamado');
-    expect(text).toContain('Meus Chamados');
-    expect(text).toContain('Chamados sem responsável');
+    const links = Array.from(fixture.nativeElement.querySelectorAll('.quick-link') as NodeListOf<HTMLElement>).map(a => a.textContent ?? '');
+    expect(links.some(t => t.includes('Meus Chamados'))).toBeTrue();
+    expect(links.some(t => t.includes('Atribuídos a mim'))).toBeTrue();
+    expect(links.some(t => t.includes('Chamados sem responsável') || t.includes('Chamados críticos'))).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('Novo Chamado');
   });
 
-  it('não mostra o atalho "Tickets sem responsável" pra quem não tem a permissão tickets:manage (ex. Solicitante)', async () => {
+  it('não mostra o atalho "Atribuídos a mim" pra quem não tem a permissão tickets:manage (ex. Solicitante)', async () => {
     hasPermission.and.returnValue(false);
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Chamados sem responsável');
+    expect(fixture.nativeElement.textContent).not.toContain('Atribuídos a mim');
   });
 
-  it('troca Novo Chamado/Meus Chamados por "Chamados sem responsável" pra quem é administrativo e gerencia a fila', async () => {
+  it('troca Novo Chamado/Meus Chamados por "Atribuídos a mim" pra quem é administrativo e gerencia a fila', async () => {
     hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Chamados sem responsável');
+    expect(text).toContain('Atribuídos a mim');
     expect(text).not.toContain('Novo Chamado');
     expect(text).not.toContain('Meus Chamados');
   });
@@ -671,7 +674,7 @@ describe('DashboardComponent', () => {
       expect(section.querySelector('h2')?.textContent).toContain('Seus chamados');
       const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
       expect(values).toEqual(['2', '1', '5']);
-      const links = Array.from(section.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
+      const links = Array.from(section.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
       expect(links).toEqual(['/tickets', '/tickets', '/tickets?status=finished']);
       expect(fixture.nativeElement.textContent).toContain('Toda a empresa');
     });

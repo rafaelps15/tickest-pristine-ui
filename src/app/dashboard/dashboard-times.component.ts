@@ -38,7 +38,7 @@ export function formatBusinessMinutes(minutes: number): string {
   template: `
     <section class="mb-4" aria-labelledby="dashboardTimesTitle" [attr.aria-busy]="loading() || null">
       <div class="mb-2">
-        <h2 id="dashboardTimesTitle" class="h6 section-label mb-0">Tempos médios</h2>
+        <h2 id="dashboardTimesTitle" class="h6 section-label mb-0">Tempos de atendimento</h2>
         <p class="text-muted small mb-0">{{ description() }}</p>
       </div>
 
@@ -52,7 +52,7 @@ export function formatBusinessMinutes(minutes: number): string {
         </div>
       } @else if (loading() && !times()) {
         <p class="text-muted small mb-0" role="status">
-          <span class="spinner-border spinner-border-sm text-primary me-2" aria-hidden="true"></span>Carregando os tempos médios…
+          <span class="spinner-border spinner-border-sm text-primary me-2" aria-hidden="true"></span>Carregando os tempos de atendimento…
         </p>
       } @else if (times(); as data) {
         <!-- Recarga com tempos na tela (troca de filtro): esmaece, como os grupos de números. -->
@@ -61,21 +61,26 @@ export function formatBusinessMinutes(minutes: number): string {
             <div class="col-12 col-md-6">
               <div class="card h-100">
                 <div class="card-body">
-                  <h3 class="h6 fw-semibold mb-1">{{ card.label }}</h3>
-                  <p class="text-muted small mb-2">{{ card.hint }}</p>
+                  <!-- Mesma ordem e mesmos papéis do stat-card: rótulo, número (stat-value), apoio. -->
+                  <h3 class="fs-6 fw-normal text-muted mb-0">{{ card.label }}</h3>
                   @if (card.stat.medianMinutes !== null && card.stat.averageMinutes !== null) {
-                    <p class="mb-1">
-                      <span class="fs-4 fw-bold">{{ format(card.stat.medianMinutes) }}</span>
-                      <span class="text-muted small ms-1">de mediana</span>
+                    <p class="d-flex align-items-baseline gap-2 mt-2 mb-1">
+                      <span class="fs-3 stat-value">{{ format(card.stat.medianMinutes) }}</span>
+                      <span class="text-muted small">de mediana</span>
                     </p>
-                    <p class="text-muted small mb-0">Média {{ format(card.stat.averageMinutes) }} · {{ card.stat.sampleSize }} chamados · minutos úteis</p>
+                    <p class="text-muted small mb-1">Média {{ format(card.stat.averageMinutes) }} · {{ card.stat.sampleSize }} chamados · horário útil</p>
                   } @else {
-                    <p class="fw-semibold mb-1">Dados insuficientes</p>
-                    <p class="text-muted small mb-0">
-                      {{ card.stat.sampleSize === 1 ? '1 chamado' : card.stat.sampleSize + ' chamados' }} neste recorte;
-                      o cálculo precisa de pelo menos {{ data.minimumSample }}.
+                    <p class="fs-5 stat-value mt-2 mb-1">Dados insuficientes</p>
+                    <p class="text-muted small mb-1">
+                      @if (card.stat.sampleSize === 0) {
+                        Nenhum chamado entrou na conta ainda; o cálculo precisa de pelo menos {{ data.minimumSample }}.
+                      } @else {
+                        Só {{ card.stat.sampleSize === 1 ? '1 chamado entrou' : card.stat.sampleSize + ' chamados entraram' }} na conta;
+                        o cálculo precisa de pelo menos {{ data.minimumSample }}.
+                      }
                     </p>
                   }
+                  <p class="text-muted small mb-0">{{ card.hint }}</p>
                 </div>
               </div>
             </div>
@@ -106,8 +111,8 @@ export class DashboardTimesComponent {
 
   /** O que entra na conta, conforme o período. */
   readonly description = computed(() => this.hasPeriod()
-    ? 'Chamados respondidos ou resolvidos no período, em minutos úteis do plano de SLA.'
-    : 'Todos os chamados já respondidos ou resolvidos, em minutos úteis do plano de SLA.');
+    ? 'Mediana e média dos chamados respondidos ou resolvidos no período, em horário útil do plano de SLA.'
+    : 'Mediana e média de todos os chamados já respondidos ou resolvidos, em horário útil do plano de SLA.');
 
   /** Os dois tempos, na ordem da jornada do chamado. */
   readonly cards = computed((): TimeCard[] => {
@@ -125,7 +130,7 @@ export class DashboardTimesComponent {
     const parts = this.cards().map(card => card.stat.medianMinutes !== null
       ? `${card.label.toLowerCase()}, mediana de ${formatBusinessMinutes(card.stat.medianMinutes)}`
       : `${card.label.toLowerCase()}, dados insuficientes`);
-    return parts.length ? `Tempos médios: ${parts.join('; ')}.` : '';
+    return parts.length ? `Tempos de atendimento: ${parts.join('; ')}.` : '';
   });
 
   /** Formata minutos úteis pro card. */

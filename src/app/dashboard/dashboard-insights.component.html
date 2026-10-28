@@ -13,9 +13,8 @@
         <div>
           <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
           <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
-          @if (loadedAtMs(); as loadedAt) {
-            <p class="text-muted small mb-0">Atualizado às {{ loadedAt | date:'HH:mm' }}</p>
-          }
+          <!-- A faixa é sempre da empresa toda: os filtros da operação, abaixo, não valem pra ela. -->
+          <p class="text-muted small mb-0">Toda a empresa, sem os filtros@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
         </div>
         <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
                 [disabled]="loading() || refreshing()" aria-label="Atualizar alertas de SLA" (click)="refresh.emit()">
@@ -60,7 +59,7 @@
           </a>
         </div>
         <!-- A definição no ponto de uso, não só no Guia (que no Dashboard começa fechado). -->
-        <p class="small text-muted mb-0 mt-2">Em risco: passou do ponto de alerta, mas ainda está no prazo.</p>
+        <p class="small text-muted mb-0 mt-2">Em risco: a partir de 75% do prazo, ainda dentro dele.</p>
       }
     </div>
 
