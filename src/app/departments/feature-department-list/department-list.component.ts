@@ -325,18 +325,37 @@ export class DepartmentListComponent implements OnInit {
 
     /**
      * Destaca o departamento ou setor recém-criado e rola até ele: a lista recarrega em ordem
-     * alfabética e o item novo podia nascer fora da tela, sem sinal de onde foi parar. O realce some
-     * sozinho (com `prefers-reduced-motion`, fica só o fundo, sem animação).
+     * alfabética e o item novo podia nascer fora da tela, sem sinal de onde foi parar. A rolagem e a
+     * contagem do realce esperam o item chegar na listagem recarregada (ver o efeito no construtor) —
+     * antes, rolavam pra um elemento que ainda não existia. Com `prefers-reduced-motion`, fica só o fundo.
      */
     private highlight(id: string): void {
         this.highlightedId.set(id);
+        this.pendingHighlightId.set(id);
+    }
+
+    /** Item recém-criado esperando aparecer na listagem recarregada pra receber a rolagem, ou `null`. */
+    private readonly pendingHighlightId = signal<string | null>(null);
+
+    /**
+     * Quando o item pendente já está na listagem (e ela não está recarregando), rola até ele e começa a
+     * contar o tempo do realce.
+     */
+    private readonly revealNewItem = effect(() => {
+        const id = this.pendingHighlightId();
+        if (!id || this.store.listState().loading) return;
+        const arrived = this.store.departments().some(department =>
+            department.id === id || department.sectors.some(sector => sector.id === id));
+        if (!arrived) return;
+
+        untracked(() => this.pendingHighlightId.set(null));
         afterNextRender(() => {
             document.querySelector<HTMLElement>(`[data-item-id="${id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }, { injector: this.injector });
         setTimeout(() => {
             if (this.highlightedId() === id) this.highlightedId.set(null);
         }, NEW_ITEM_HIGHLIGHT_MS);
-    }
+    });
 
     /** Devolve o foco ao botão "⋮" do departamento ou setor (o modal de confirmação o tirou dali). */
     private focusRowActions(rowKey: string): void {

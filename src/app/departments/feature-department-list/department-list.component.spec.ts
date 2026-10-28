@@ -684,6 +684,38 @@ describe('DepartmentListComponent', () => {
     }
   });
 
+  it('só rola até o departamento novo (e só conta o tempo do realce) depois que ele chega na listagem', async () => {
+    jasmine.clock().install();
+    try {
+      const scroll = spyOn(Element.prototype, 'scrollIntoView');
+      storeFake.create.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('dep-novo'));
+      const fixture = TestBed.createComponent(DepartmentListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+
+      component.openCreateModal();
+      component.form.setValue({ name: 'Jurídico', description: 'Contratos' });
+      component.onSubmit();
+      // A listagem ainda está recarregando: nada pra rolar, e o realce não pode começar a expirar.
+      storeFake.listState.set({ data: [informationTechnology, commercial], loading: true, error: null });
+      fixture.detectChanges();
+      jasmine.clock().tick(5000);
+      expect(scroll).not.toHaveBeenCalled();
+      expect(component.highlightedId()).toBe('dep-novo');
+
+      const created: Department = { id: 'dep-novo', name: 'Jurídico', description: 'Contratos', responsibleUserName: null, sectors: [] };
+      storeFake.departments.set([informationTechnology, commercial, created]);
+      storeFake.listState.set({ data: [informationTechnology, commercial, created], loading: false, error: null });
+      fixture.detectChanges();
+
+      expect(scroll).toHaveBeenCalled();
+      jasmine.clock().tick(4001);
+      expect(component.highlightedId()).toBeNull();
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
   it('destaca o setor recém-criado com o id que o store devolve', async () => {
     storeFake.createSector.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('sec-novo'));
     const fixture = TestBed.createComponent(DepartmentListComponent);
