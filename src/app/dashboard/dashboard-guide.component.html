@@ -7,16 +7,26 @@
     </app-guide-section>
   }
 
+  @if (showSla()) {
+    <app-guide-section title="Como ler a operação">
+      <p class="small text-muted mb-2"><strong>Filtros:</strong> setor, prioridade e responsável valem pra Central de atenção, Volume e SLA, e ficam no endereço da página — dá pra compartilhar o link.</p>
+      <p class="small text-muted mb-2"><strong>Central de atenção:</strong> atrasados, críticos (urgentes ainda ativos) e sem responsável, do mais grave ao menos grave.</p>
+      <p class="small text-muted mb-2"><strong>Volume:</strong> o backlog é tudo que está aberto ou em andamento.</p>
+      <p class="small text-muted mb-2"><strong>SLA:</strong> "vencem em breve" são os que já usaram 75% do prazo; "cumpridos" contam desde o início, porque ainda não há filtro por período.</p>
+      <p class="small text-muted mb-0">Cada card abre a fila de monitoramento com o mesmo recorte.</p>
+    </app-guide-section>
+  } @else {
   <app-guide-section title="Como ler os números da empresa">
     <p class="small text-muted mb-2"><strong>Total de Chamados:</strong> todos os chamados da empresa, incluindo fechados e cancelados.</p>
     <p class="small text-muted mb-2"><strong>Em Aberto:</strong> aguardando atendimento.</p>
     <p class="small text-muted mb-2"><strong>Em Andamento:</strong> já em atendimento por alguém.</p>
     <p class="small text-muted mb-0"><strong>Resolvidos:</strong> finalizados com solução.</p>
   </app-guide-section>
+  }
 
   <app-guide-section title="Como ler o gráfico">
     <p class="small text-muted mb-2">Quantos chamados foram criados em cada período, agrupados por dia, semana ou mês (botões Dia, Semana ou Mês); o intervalo coberto aparece logo abaixo do título do gráfico.</p>
-    <p class="small text-muted mb-0">Os números são de toda a empresa e iguais para qualquer papel logado. Não é uma visão pessoal.</p>
+    <p class="small text-muted mb-0">Os números são de toda a empresa e não seguem os filtros da operação. Não é uma visão pessoal.</p>
   </app-guide-section>
 
   @if (showSla()) {

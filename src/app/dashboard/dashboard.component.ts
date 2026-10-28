@@ -2,7 +2,12 @@ import { Component, inject, Injector, OnInit, OnDestroy, ElementRef, PLATFORM_ID
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketMonitorItem, TicketVolumeGrouping, TicketStatus, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketDashboardScope, TicketMonitorItem, TicketVolumeGrouping, TicketStatus, TicketSlaStatus, TicketPriority, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
+import { DepartmentsStore } from '../departments';
+import { DashboardFiltersService } from './dashboard-filters.service';
+import { toMonitorQueryParams } from './dashboard-filters';
+import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
+import { DashboardMetric, DashboardMetricGroupComponent } from './dashboard-metric-group.component';
 import { SessionService, ToastService, loadChart } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
@@ -51,9 +56,10 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent, TicketAssignDialogComponent],
+    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [DashboardFiltersService],
     styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -62,6 +68,55 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /** Resumo dos chamados que o próprio usuário abriu (bloco "Seus chamados"). */
   protected readonly myTickets = inject(MyTicketsSummaryStore);
   protected readonly sessionService = inject(SessionService);
+  /** Widgets operacionais (Volume, SLA, Central de atenção) pra quem atende a fila. */
+  protected readonly operation = inject(TicketDashboardStore);
+  /** Filtros dos widgets operacionais, com a URL como fonte da verdade. */
+  protected readonly filters = inject(DashboardFiltersService);
+  /** Departamentos e setores pra opção de setor do filtro (GET /departments, só os ativos). */
+  protected readonly departmentsStore = inject(DepartmentsStore);
+
+  /** Mostra os widgets operacionais filtráveis: só pra quem atende a fila (a API exige `tickets:manage`). */
+  protected readonly showOperation = computed(() => this.sessionService.hasPermission('tickets:manage'));
+
+  /** Volume do recorte; cada card leva ao Monitor com o mesmo recorte e o status do card. */
+  protected readonly volumeMetrics = computed((): DashboardMetric[] => {
+    const scope = this.filters.filters();
+    const volume = this.operation.volume();
+    return [
+      { key: 'total', label: 'Total', icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, ariaNoun: 'chamados no total', hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
+      { key: 'backlog', label: 'Backlog', icon: 'bx-error-circle', tone: 'warning', value: volume?.backlog ?? null, ariaNoun: 'chamados no backlog', hint: 'Aberto ou em andamento', queryParams: toMonitorQueryParams(scope, { status: 'active' }) },
+      { key: 'inProgress', label: 'Em andamento', icon: 'bx-time-five', tone: 'info', value: volume?.inProgress ?? null, ariaNoun: 'chamados em andamento', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.InProgress }) },
+      { key: 'resolved', label: 'Resolvidos', icon: 'bx-check-double', tone: 'success', value: volume?.resolved ?? null, ariaNoun: 'chamados resolvidos', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Resolved }) },
+      { key: 'closed', label: 'Fechados', icon: 'bx-lock-alt', tone: 'primary', value: volume?.closed ?? null, ariaNoun: 'chamados fechados', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Closed }) }
+    ];
+  });
+
+  /** SLA do recorte, do mais grave ao cumprido. */
+  protected readonly slaMetrics = computed((): DashboardMetric[] => {
+    const scope = this.filters.filters();
+    const sla = this.operation.sla();
+    return [
+      { key: 'breached', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: sla?.breached ?? null, ariaNoun: 'chamados com o prazo vencido', hint: 'Prazo vencido, ainda ativos', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
+      { key: 'atRisk', label: 'Vencem em breve', icon: 'bx-time', tone: 'warning', value: sla?.atRisk ?? null, ariaNoun: 'chamados perto de vencer', hint: 'Já usaram 75% do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.AtRisk }) },
+      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: sla?.met ?? null, ariaNoun: 'chamados resolvidos no prazo', hint: 'Resolvidos no prazo, desde o início', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Met }) }
+    ];
+  });
+
+  /** Central de atenção, em ordem de gravidade: atrasados, críticos e sem responsável. */
+  protected readonly attentionMetrics = computed((): DashboardMetric[] => {
+    const scope = this.filters.filters();
+    const attention = this.operation.attention();
+    return [
+      { key: 'overdue', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: attention?.overdue ?? null, ariaNoun: 'chamados atrasados', hint: 'Prazo vencido', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
+      { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.critical ?? null, ariaNoun: 'chamados urgentes ativos', hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
+      { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassigned ?? null, ariaNoun: 'chamados ativos sem responsável', hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) }
+    ];
+  });
+
+  /** Troca de um filtro na barra (grava na URL; os widgets seguem a URL). */
+  protected onFilterChange(partial: Partial<TicketDashboardScope>): void {
+    this.filters.update(partial);
+  }
   private readonly toastService = inject(ToastService);
 
   /** Chamado do alerta de SLA que está recebendo um responsável (diálogo "Atribuir" aberto), ou null. */
@@ -193,6 +248,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
+    // Os widgets operacionais seguem os filtros da URL (trocar um filtro cancela as contagens em voo).
+    effect(() => this.operation.setScope(this.filters.filters()));
+
     // Redesenha o gráfico sempre que o volume ou o agrupamento mudarem, ou o canvas for montado (@defer).
     effect(() => {
       const volume = this.store.volume();

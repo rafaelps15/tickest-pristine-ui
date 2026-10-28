@@ -233,6 +233,8 @@ export class TicketMonitorComponent implements OnInit {
 
         const filters: TicketMonitorFilters = {
             status: parseEnumParam(params.get('status'), this.statusOptions),
+            // "?status=active" é o grupo "Ativos" (Aberto + Em Andamento), vindo do backlog e dos críticos do Início.
+            activeOnly: params.get('status') === 'active' ? true : undefined,
             priority: parseEnumParam(params.get('priority'), this.priorityOptions),
             sectorId: params.get('sectorId') || undefined,
             slaStatus: parseEnumParam(params.get('slaStatus'), [...this.liveSlaStatusOptions, ...this.resolvedSlaStatusOptions]),
@@ -296,10 +298,16 @@ export class TicketMonitorComponent implements OnInit {
         }
     }
 
+    /** Troca o status pelo seletor: vazio = todos, "active" = Aberto + Em Andamento, número = um status. */
+    onStatusChange(value: string): void {
+        const status = Number(value);
+        this.store.setStatus(value === 'active' ? 'active' : this.statusOptions.includes(status) ? status : undefined);
+    }
+
     /** Converte os filtros atuais no formato aceito por `Router.navigate`, omitindo valores padrão pra manter a URL curta. */
     private filtersToQueryParams(filters: TicketMonitorFilters): Record<string, string | number | null> {
         return {
-            status: filters.status ?? null,
+            status: filters.activeOnly ? 'active' : filters.status ?? null,
             priority: filters.priority ?? null,
             sectorId: filters.sectorId ?? null,
             slaStatus: filters.slaStatus ?? null,

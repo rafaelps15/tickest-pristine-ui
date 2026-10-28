@@ -58,9 +58,10 @@
   </div>
   <div class="col-6 col-md-2">
     <label class="form-label small" for="monitorStatus">Status</label>
-    <select id="monitorStatus" class="form-select" [value]="store.filters().status ?? ''"
-            (change)="store.setStatus($any($event.target).value ? +$any($event.target).value : undefined)">
+    <select #statusSelect id="monitorStatus" class="form-select" [value]="store.filters().activeOnly ? 'active' : store.filters().status ?? ''"
+            (change)="onStatusChange(statusSelect.value)">
       <option value="">Todos</option>
+      <option value="active">Ativos (Aberto + Em andamento)</option>
       @for (status of statusOptions; track status) {
         <option [value]="status">{{ statusLabels[status] }}</option>
       }

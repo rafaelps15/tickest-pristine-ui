@@ -6,6 +6,11 @@ import { TicketSortOrder } from './ticket-sort-order';
 /** Filtros e paginação da listagem de "Monitorar Tickets" (GET /tickets). */
 export interface TicketMonitorFilters {
   status?: TicketStatus;
+  /**
+   * Só os chamados ativos (Aberto e Em Andamento) — o "backlog". Exclusivo com `status`: com um
+   * status escolhido, este fica de fora. Na URL, `?status=active`.
+   */
+  activeOnly?: boolean;
   priority?: TicketPriority;
   sectorId?: string;
   slaStatus?: TicketSlaStatus;

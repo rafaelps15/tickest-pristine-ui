@@ -108,9 +108,13 @@ export const TicketMonitorStore = signalStore(
       patchState(store, { mutationError: null });
     },
 
-    /** Muda o filtro de status e volta para a primeira página. */
-    setStatus(status: TicketStatus | undefined): void {
-      patchState(store, { filters: { ...store.filters(), status, page: 1 } });
+    /**
+     * Muda o filtro de status e volta para a primeira página. `'active'` é o grupo "Ativos" (Aberto
+     * e Em Andamento juntos); um status específico ou "Todos" desliga esse grupo.
+     */
+    setStatus(status: TicketStatus | 'active' | undefined): void {
+      const activeOnly = status === 'active' ? true : undefined;
+      patchState(store, { filters: { ...store.filters(), status: status === 'active' ? undefined : status, activeOnly, page: 1 } });
     },
 
     /** Muda o filtro de prioridade e volta para a primeira página. */

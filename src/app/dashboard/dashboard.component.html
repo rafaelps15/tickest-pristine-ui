@@ -63,7 +63,31 @@
                           (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
 }
 
-<!-- Cards de Estatísticas -->
+<!--
+  Operação filtrável, pra quem atende a fila: Central de atenção (o que pede ação), Volume e SLA,
+  todos com o recorte da barra de filtros (na URL). Cada grupo carrega e falha sozinho.
+-->
+@if (showOperation()) {
+  <app-dashboard-filter-bar [filters]="filters.filters()" [departments]="departmentsStore.departments()"
+                            (change)="onFilterChange($event)" (clear)="filters.clear()" />
+
+  <app-dashboard-metric-group title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave."
+                              [metrics]="attentionMetrics()" [loading]="operation.attentionLoading()" [error]="operation.attentionError()"
+                              emptyTitle="Nada pedindo atenção neste recorte." emptyHint="Sem chamados atrasados, críticos ou sem responsável."
+                              (retry)="operation.reloadAttention()" />
+
+  <app-dashboard-metric-group title="Volume" description="Chamados do recorte, por situação."
+                              columnClass="col-12 col-sm-6 col-lg-4 col-xxl"
+                              [metrics]="volumeMetrics()" [loading]="operation.volumeLoading()" [error]="operation.volumeError()"
+                              (retry)="operation.reloadVolume()" />
+
+  <app-dashboard-metric-group title="SLA" description="Prazo de resolução, pela regra do sistema (em risco a partir de 75% do prazo)."
+                              [metrics]="slaMetrics()" [loading]="operation.slaLoading()" [error]="operation.slaError()"
+                              (retry)="operation.reloadSla()" />
+}
+
+<!-- Cards de Estatísticas (toda a empresa) pra quem não atende a fila; quem atende vê o Volume filtrável acima. -->
+@if (!showOperation()) {
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
     <app-stat-card label="Total de Chamados" icon="bx-receipt" [value]="store.total()"
@@ -90,6 +114,8 @@
     </div>
   }
 </div>
+
+}
 
 <!-- Gráfico e Ações Rápidas -->
 <div class="row">
@@ -134,6 +160,20 @@
               </li>
             }
 
+            <!-- Urgentes ainda ativos: o mesmo recorte do card "Críticos" da Central de atenção. -->
+            @if (sessionService.hasPermission('tickets:manage')) {
+              <li>
+                <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ priority: 4, status: 'active' }">
+                  <span class="badge bg-label-danger rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-error-alt fs-5"></i></span>
+                  <span>
+                    <span class="d-block fw-semibold">Chamados críticos</span>
+                    <span class="d-block small text-muted">Urgentes ainda em aberto</span>
+                  </span>
+                  <i class="bx bx-chevron-right ms-auto" aria-hidden="true"></i>
+                </a>
+              </li>
+            }
+
             <!-- Só com tickets:manage: a rota do Monitorar exige essa permissão, e o guard devolveria aqui sem aviso. -->
             @if (sessionService.hasPermission('tickets:manage')) {
               <li>
@@ -160,7 +200,7 @@
         <div>
           <h2 class="h5 card-title m-0 fw-bold">Chamados criados</h2>
           <!-- aria-live: ao trocar Dia/Semana/Mês, o leitor de tela ouve o novo intervalo ("Últimas 12 semanas"). -->
-          <p class="text-muted small mb-0" aria-live="polite">{{ volumeRangeLabel() }}</p>
+          <p class="text-muted small mb-0" aria-live="polite">{{ volumeRangeLabel() }}@if (showOperation()) { · toda a empresa, sem os filtros acima}</p>
         </div>
         <div class="d-flex align-items-center gap-2">
           <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">

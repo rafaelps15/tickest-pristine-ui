@@ -1,8 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
+import { TicketStatus } from '../entities/ticket-status';
+import { TicketCountQuery } from '../entities/ticket-count-query';
 import { TicketSla } from '../entities/ticket-sla';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
@@ -127,6 +129,9 @@ export class TicketDataService {
 
     if (filters.status !== undefined) {
       params = params.set('status', filters.status);
+    } else if (filters.activeOnly) {
+      // O back-end aceita `status` repetido: Aberto e Em Andamento juntos.
+      params = params.append('status', TicketStatus.Open).append('status', TicketStatus.InProgress);
     }
     if (filters.priority !== undefined) {
       params = params.set('priority', filters.priority);
@@ -147,6 +152,34 @@ export class TicketDataService {
     }
 
     return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params });
+  }
+
+  /**
+   * Conta os chamados de um recorte (GET /tickets com `pageSize=1`): devolve o `totalCount` que o
+   * servidor calcula com os filtros — exige `tickets:manage`. Nunca conta itens de uma página.
+   */
+  count(query: TicketCountQuery): Observable<number> {
+    let params = new HttpParams().set('page', 1).set('pageSize', 1);
+
+    for (const status of query.statuses ?? []) {
+      params = params.append('status', status);
+    }
+    if (query.priority !== undefined) {
+      params = params.set('priority', query.priority);
+    }
+    if (query.sectorId) {
+      params = params.set('sectorId', query.sectorId);
+    }
+    if (query.slaStatus !== undefined) {
+      params = params.set('slaStatus', query.slaStatus);
+    }
+    if (query.unassignedOnly) {
+      params = params.set('unassignedOnly', true);
+    } else if (query.assignedToUserId) {
+      params = params.set('assignedToUserId', query.assignedToUserId);
+    }
+
+    return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params }).pipe(map(page => page.totalCount));
   }
 
   /** Busca as contagens de SLA dos chamados ativos, opcionalmente de um só setor (GET /tickets/sla-summary). */

@@ -1,11 +1,31 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { DashboardComponent, greetingForHour } from './dashboard.component';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketDashboardScope, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
+import { DepartmentsStore, Department } from '../departments';
 import { SessionService, ToastService } from '../shared';
 
 describe('DashboardComponent', () => {
+  /** Store falso dos widgets operacionais (Volume, SLA, Central de atenção), com signals reais. */
+  function createOperationStoreFake() {
+    return {
+      volume: signal<TicketDashboardVolume | null>({ total: 10, backlog: 5, inProgress: 2, resolved: 4, closed: 1 }),
+      volumeLoading: signal(false),
+      volumeError: signal<string | null>(null),
+      sla: signal<TicketDashboardSla | null>({ met: 7, breached: 2, atRisk: 1 }),
+      slaLoading: signal(false),
+      slaError: signal<string | null>(null),
+      attention: signal<TicketDashboardAttention | null>({ overdue: 2, critical: 1, unassigned: 3 }),
+      attentionLoading: signal(false),
+      attentionError: signal<string | null>(null),
+      setScope: jasmine.createSpy('setScope'),
+      reloadVolume: jasmine.createSpy('reloadVolume'),
+      reloadSla: jasmine.createSpy('reloadSla'),
+      reloadAttention: jasmine.createSpy('reloadAttention')
+    };
+  }
+
   /** Cria um store de resumo falso com signals reais, para o template reagir como no store verdadeiro. */
   function createTicketsStoreFake() {
     return {
@@ -50,6 +70,8 @@ describe('DashboardComponent', () => {
 
   type CurrentUserFake = { firstName: string; roles: { name: string }[] } | null;
 
+  let operationFake: ReturnType<typeof createOperationStoreFake>;
+  let departmentsFake: { departments: ReturnType<typeof signal<Department[]>> };
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
   let myTicketsFake: {
@@ -70,12 +92,16 @@ describe('DashboardComponent', () => {
     currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Colaborador' }] });
     toastServiceFake = { show: jasmine.createSpy('show') };
 
+    operationFake = createOperationStoreFake();
+    departmentsFake = { departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }] }]) };
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: TicketSummaryStore, useValue: ticketsStoreFake },
+        { provide: TicketDashboardStore, useValue: operationFake },
+        { provide: DepartmentsStore, useValue: departmentsFake },
         { provide: MyTicketsSummaryStore, useValue: myTicketsFake },
         { provide: SessionService, useValue: { hasPermission, currentUser } },
         { provide: ToastService, useValue: toastServiceFake }
@@ -225,26 +251,74 @@ describe('DashboardComponent', () => {
     });
   });
 
-  it('linka os cards de status para a fila de monitoramento, já filtrada pelo mesmo status, com a permissão tickets:manage', async () => {
+  it('com tickets:manage, troca os cards da empresa pelo Volume filtrável, cada card levando à fila com o mesmo status', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    const links = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
-    expect(links).toHaveSize(3);
-    expect(links.some(a => a.getAttribute('href')?.includes('status=1'))).toBeTrue();
-    expect(fixture.nativeElement.textContent).toContain('Ver na fila');
+    const volume = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]') as HTMLElement;
+    const links = Array.from(volume.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
+    expect(links).toHaveSize(5);
+    expect(links.some(a => a.getAttribute('href')?.includes('status=active'))).toBeTrue();
+    expect(links.some(a => a.getAttribute('href')?.includes('status=2'))).toBeTrue();
+    const companyCards = Array.from(fixture.nativeElement.querySelectorAll('app-stat-card') as NodeListOf<HTMLElement>)
+      .filter(card => card.textContent?.includes('Total de Chamados'));
+    expect(companyCards.length).toBe(0);
+    expect(volume.textContent).toContain('Ver na fila');
   });
 
-  it('inclui a contagem atual no aria-label dos cards de status, pra quem usa leitor de tela saber "quantos" antes de entrar', async () => {
+  it('inclui a contagem atual no aria-label dos cards operacionais, pra quem usa leitor de tela saber "quantos" antes de entrar', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    const links = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>);
-    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 3 chamados em aberto na fila de monitoramento')).toBeTrue();
-    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 2 chamados em andamento na fila de monitoramento')).toBeTrue();
-    expect(links.some(a => a.getAttribute('aria-label') === 'Ver 4 chamados resolvidos na fila de monitoramento')).toBeTrue();
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('aria-label'));
+    expect(labels).toContain('Ver 5 chamados no backlog na fila de monitoramento');
+    expect(labels).toContain('Ver 2 chamados com o prazo vencido na fila de monitoramento');
+    expect(labels).toContain('Ver 3 chamados ativos sem responsável na fila de monitoramento');
+  });
+
+  it('leva o recorte da URL pros widgets e pro drill-down (setor, prioridade e responsável)', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    await TestBed.inject(Router).navigateByUrl('/?sectorId=s1&priority=4&assignee=none');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const scope: TicketDashboardScope = { sectorId: 's1', priority: 4, assignee: 'none' };
+    expect(operationFake.setScope).toHaveBeenCalledWith(scope);
+    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
+      .find(a => a.getAttribute('aria-label')?.includes('backlog'))!;
+    const href = backlog.getAttribute('href')!;
+    expect(href).toContain('sectorId=s1');
+    expect(href).toContain('priority=4');
+    expect(href).toContain('unassignedOnly=true');
+    expect(href).toContain('status=active');
+    // Chip do filtro ativo, com o nome do setor.
+    expect(fixture.nativeElement.textContent).toContain('Setor: Helpdesk');
+  });
+
+  it('um widget com erro não derruba os outros, e o "Tentar novamente" recarrega só ele', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    operationFake.sla.set(null);
+    operationFake.slaError.set('Não foi possível carregar o SLA.');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const sla = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]') as HTMLElement;
+    expect(sla.textContent).toContain('Não foi possível carregar o SLA.');
+    (sla.querySelector('.alert button') as HTMLButtonElement).click();
+    expect(operationFake.reloadSla).toHaveBeenCalled();
+    expect(operationFake.reloadVolume).not.toHaveBeenCalled();
+    // Os outros grupos continuam com os números.
+    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]').textContent).toContain('Backlog');
+  });
+
+  it('sem tickets:manage, não mostra os widgets operacionais nem a barra de filtros', async () => {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group')).toBeNull();
   });
 
   it('não linka os cards de status sem a permissão tickets:manage', async () => {

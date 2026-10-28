@@ -135,7 +135,7 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
-      status: TicketStatus.Open, priority: TicketPriority.High, sectorId: 's1',
+      status: TicketStatus.Open, activeOnly: undefined, priority: TicketPriority.High, sectorId: 's1',
       slaStatus: TicketSlaStatus.AtRisk, unassignedOnly: true, assignedToUserId: undefined,
       sort: TicketSortOrder.DueDate, page: 3, pageSize: 50
     });
@@ -155,9 +155,23 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
-      status: undefined, priority: undefined, sectorId: undefined, slaStatus: undefined,
+      status: undefined, activeOnly: undefined, priority: undefined, sectorId: undefined, slaStatus: undefined,
       unassignedOnly: undefined, assignedToUserId: undefined, sort: TicketSortOrder.Newest, page: 1, pageSize: 20
     });
+  });
+
+  it('"?status=active" (backlog e críticos do Início) vira o grupo Ativos: Aberto + Em Andamento', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ status: 'active', priority: '4' }) } }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith(jasmine.objectContaining({
+      status: undefined, activeOnly: true, priority: TicketPriority.Urgent
+    }));
   });
 
   it('"?assignedToMe=true" (atalho do Início) vira o filtro de quem está logado, sem o id na URL', async () => {
