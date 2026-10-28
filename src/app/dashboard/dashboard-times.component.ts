@@ -42,6 +42,9 @@ export function formatBusinessMinutes(minutes: number): string {
         <p class="text-muted small mb-0">{{ description() }}</p>
       </div>
 
+      <!-- Resumo pro leitor de tela quando os tempos chegam ou mudam com os filtros (como nos grupos de números). -->
+      <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
+
       @if (error()) {
         <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-0" role="alert">
           <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ error() }}</span>
@@ -52,7 +55,8 @@ export function formatBusinessMinutes(minutes: number): string {
           <span class="spinner-border spinner-border-sm text-primary me-2" aria-hidden="true"></span>Carregando os tempos médios…
         </p>
       } @else if (times(); as data) {
-        <div class="row g-3">
+        <!-- Recarga com tempos na tela (troca de filtro): esmaece, como os grupos de números. -->
+        <div class="row g-3" [class.times-refreshing]="loading()">
           @for (card of cards(); track card.key) {
             <div class="col-12 col-md-6">
               <div class="card h-100">
@@ -79,6 +83,12 @@ export function formatBusinessMinutes(minutes: number): string {
         </div>
       }
     </section>
+  `,
+  styles: `
+    .times-refreshing {
+      opacity: 0.6;
+      transition: opacity 150ms ease;
+    }
   `
 })
 export class DashboardTimesComponent {
@@ -107,6 +117,15 @@ export class DashboardTimesComponent {
       { key: 'firstResponse', label: 'Primeira resposta', hint: 'Da abertura até a primeira mensagem de quem atende.', stat: times.firstResponse },
       { key: 'resolution', label: 'Resolução', hint: 'Da abertura até a primeira resolução.', stat: times.resolution }
     ];
+  });
+
+  /** Frase lida pelo leitor de tela quando os tempos chegam ("Tempos médios: primeira resposta, mediana de 1 h 15 min…"). */
+  readonly liveSummary = computed(() => {
+    if (this.loading() || this.error()) return '';
+    const parts = this.cards().map(card => card.stat.medianMinutes !== null
+      ? `${card.label.toLowerCase()}, mediana de ${formatBusinessMinutes(card.stat.medianMinutes)}`
+      : `${card.label.toLowerCase()}, dados insuficientes`);
+    return parts.length ? `Tempos médios: ${parts.join('; ')}.` : '';
   });
 
   /** Formata minutos úteis pro card. */

@@ -32,6 +32,22 @@ describe('DashboardTimesComponent', () => {
     expect(cards[1].textContent).toContain('Dados insuficientes');
     expect(cards[1].textContent).toContain('4 chamados neste recorte');
     expect(cards[1].textContent).toContain('pelo menos 5');
+    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent)
+      .toBe('Tempos médios: primeira resposta, mediana de 1 h 15 min; resolução, dados insuficientes.');
+  });
+
+  it('recarregando com tempos na tela: mantém os cards esmaecidos em vez de voltar ao carregamento', async () => {
+    const fixture = TestBed.createComponent(DashboardTimesComponent);
+    fixture.componentRef.setInput('times', {
+      firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
+      resolution: { averageMinutes: 90, medianMinutes: 60, sampleSize: 6 },
+      minimumSample: 5
+    });
+    fixture.componentRef.setInput('loading', true);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.times-refreshing')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toBe('');
   });
 
   it('mostra o erro com "Tentar novamente"', async () => {

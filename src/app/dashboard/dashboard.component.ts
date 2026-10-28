@@ -1,34 +1,21 @@
-import { Component, inject, Injector, OnInit, OnDestroy, ElementRef, PLATFORM_ID, ChangeDetectionStrategy, signal, computed, effect, viewChild, afterNextRender } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { Chart as ChartInstance } from 'chart.js';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketStatus, TicketSlaStatus, TicketPriority, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketStatus, TicketSlaStatus, TicketPriority } from '../tickets';
 import { DepartmentsStore } from '../departments';
 import { DashboardFiltersService } from './dashboard-filters.service';
 import { DashboardFilters, resolveDashboardScope, toMonitorQueryParams, todayInSaoPaulo } from './dashboard-filters';
 import { DashboardTimesComponent } from './dashboard-times.component';
+import { DashboardVolumeChartComponent } from './dashboard-volume-chart.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
 import { DashboardMetric, DashboardMetricGroupComponent } from './dashboard-metric-group.component';
-import { SessionService, ToastService, formatIsoDate, loadChart } from '../shared';
+import { SessionService, ToastService } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
-import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
 // O shell pode ligar peças de um domínio direto (como faz com as telas feature-*): o diálogo depende de
 // UserSummary (domínio users), por isso mora em tickets/ui e não em shared/ui.
 import { TicketAssignDialogComponent } from '../tickets/ui/ticket-assign-dialog/ticket-assign-dialog.component';
-
-/**
- * Paleta categórica (5 slots, validada com scripts/validate_palette.js do skill dataviz — PASS em
- * todos os checks de banda de luminosidade, piso de croma e separação CVD) — pedido explícito do
- * usuário em 2026-10-24 pra trazer de volta o colorido por barra (uma tentativa anterior de
- * "resolver" isso com um gradiente dentro do índigo, pra respeitar a One Accent Rule do
- * DESIGN.md, foi rejeitada: o usuário quer as cores de volta mesmo, laranja incluso). Reaproveitada
- * aqui puramente como ritmo visual entre as barras do volume por período — a cor não carrega
- * significado por status neste gráfico, é uma exceção deliberada à One Accent Rule.
- */
-const CATEGORICAL_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4'];
 
 /**
  * Saudação pela hora do dia (0–23) — "Bom dia"/"Boa tarde"/"Boa noite" é o que se diz em pt-BR ao
@@ -39,12 +26,6 @@ export function greetingForHour(hour: number): string {
   if (hour >= 12 && hour < 18) return 'Boa tarde';
   return 'Boa noite';
 }
-
-/** Quantos períodos o back-end devolve por agrupamento (GetTicketVolumeQueryHandler) — usado só sem dados. */
-const VOLUME_DEFAULT_POINTS: Record<TicketVolumeGrouping, number> = { Day: 30, Week: 12, Month: 12 };
-
-/** Nomes curtos dos meses em português, para rotular o gráfico quando o agrupamento é mensal. */
-const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 /**
  * Tela de dashboard: visão dos tickets de toda a empresa (não filtrada por quem está logado) —
@@ -57,14 +38,13 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent],
+    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent, DashboardVolumeChartComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DashboardFiltersService],
     styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit, OnDestroy {
-  private readonly platformId = inject(PLATFORM_ID);
+export class DashboardComponent implements OnInit {
   protected readonly store = inject(TicketSummaryStore);
   /** Resumo dos chamados que o próprio usuário abriu (bloco "Seus chamados"). */
   protected readonly myTickets = inject(MyTicketsSummaryStore);
@@ -231,54 +211,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly canSetUpStructure = computed(() =>
       this.sessionService.hasPermission('departments:manage') || this.sessionService.hasPermission('sectors:manage'));
 
-  /** Query de view como signal (Angular 17.3+) — substitui @ViewChild, sem `!` nem ngAfterViewInit. */
-  private readonly volumeChartCanvas = viewChild<ElementRef<HTMLCanvasElement>>('volumeChart');
-
-  /** Tabela acessível do volume — recebe o foco quando o usuário troca o gráfico pela tabela. */
-  private readonly volumeTable = viewChild<ElementRef<HTMLTableElement>>('volumeTable');
-
-  /** Injector pro `afterNextRender` do foco na tabela (chamado fora do contexto de injeção). */
-  private readonly injector = inject(Injector);
-
-  private chart: ChartInstance | null = null;
-
-  /**
-   * Identificador do redesenho mais recente pedido. `renderChart` é assíncrono (`await
-   * loadChart()`); se o efeito disparar de novo antes do primeiro `await` terminar, as duas
-   * chamadas ficam em voo ao mesmo tempo — sem isso, a que resolve por último vence, não a que foi
-   * pedida por último, podendo sobrescrever o gráfico com dado desatualizado.
-   */
-  private renderToken = 0;
-
-  /** Alterna a tabela acessível que espelha os dados do gráfico (relief rule para o WARN de contraste). */
-  readonly showTable = signal(false);
-
-  protected readonly groupByOptions = TICKET_VOLUME_GROUPING_OPTIONS;
-  protected readonly groupByLabels = TICKET_VOLUME_GROUPING_LABELS;
-
-  /**
-   * Intervalo coberto pelo gráfico, pra dizer no título o que antes só dava pra deduzir pelos
-   * rótulos do eixo — conta os pontos recebidos; sem dados, usa a janela padrão do back-end
-   * (30 dias, 12 semanas, 12 meses).
-   */
-  protected readonly volumeRangeLabel = computed(() => {
-      const groupBy = this.chartGroupBy();
-      const scope = this.scope();
-      if (this.showOperation() && scope?.from && scope.to) return `De ${formatIsoDate(scope.from)} a ${formatIsoDate(scope.to)}`;
-      const points = this.chartPoints().length || VOLUME_DEFAULT_POINTS[groupBy];
-      switch (groupBy) {
-          case 'Week': return `Últimas ${points} semanas`;
-          case 'Month': return `Últimos ${points} meses`;
-          default: return `Últimos ${points} dias`;
-      }
-  });
-
-  /** Rótulos formatados do período atual (um por ponto do volume), para o eixo do gráfico e a tabela acessível. */
-  protected readonly periodLabels = computed(() => {
-      const groupBy = this.chartGroupBy();
-      return this.chartPoints().map(point => this.formatPeriodLabel(point.periodStart, groupBy));
-  });
-
   /**
    * Fonte do gráfico: pra quem atende a fila, o Criados x Resolvidos com o recorte da barra
    * (TicketDashboardStore); pros demais, o volume da empresa toda (TicketSummaryStore).
@@ -290,12 +222,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly chartLoading = computed(() => this.showOperation() ? this.operation.trendLoading() : this.store.volumeLoading());
   /** O gráfico falhou. */
   protected readonly chartFailed = computed(() => this.showOperation() ? !!this.operation.trendError() : this.store.volumeFailed());
-  /** O back-end mandou os resolvidos por período (spec 028): o gráfico vira Criados x Resolvidos. */
-  protected readonly chartHasResolved = computed(() => {
-      const points = this.chartPoints();
-      return points.length > 0 && points.every(point => point.resolvedCount !== undefined);
-  });
-
   constructor() {
     // Os widgets operacionais seguem os filtros da URL (trocar um filtro cancela as requisições em voo).
     effect(() => {
@@ -303,36 +229,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       if (scope) this.operation.setScope(scope);
     });
 
-    // Redesenha o gráfico sempre que o volume ou o agrupamento mudarem, ou o canvas for montado (@defer).
-    effect(() => {
-      const points = this.chartPoints();
-      const canvasRef = this.volumeChartCanvas();
-
-      if (isPlatformBrowser(this.platformId) && canvasRef) {
-        const resolved = this.chartHasResolved() ? points.map(point => point.resolvedCount ?? 0) : null;
-        void this.renderChart(canvasRef, points.map(point => point.count), resolved, this.periodLabels());
-      }
-    });
   }
 
   /** Carrega os totais por status e o volume de tickets da empresa ao inicializar a tela. */
   ngOnInit() {
     this.store.load();
-  }
-
-  /** Libera o gráfico ao sair da tela — Chart.js não limpa sozinho ao desmontar o canvas. */
-  ngOnDestroy(): void {
-    this.chart?.destroy();
-  }
-
-  /** Alterna entre exibir o gráfico e a tabela acessível equivalente. */
-  toggleTable(): void {
-    this.showTable.update(show => !show);
-    // Ao abrir a tabela, o foco vai pra ela: o leitor de tela anuncia a legenda e quem usa teclado
-    // já está nos dados, em vez de o conteúdo trocar em silêncio abaixo do botão.
-    if (this.showTable()) {
-      afterNextRender(() => this.volumeTable()?.nativeElement.focus(), { injector: this.injector });
-    }
   }
 
   /** Abre o diálogo "Atribuir" pro chamado de um alerta de SLA sem responsável, com a busca limpa. */
@@ -396,88 +297,5 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return `Inclui ${parts.join(' e ')}`;
   }
 
-  /**
-   * Formata o início de um período (aaaa-mm-dd) para exibição — dd/mm para dia e semana (o início
-   * da semana já vem como a segunda-feira), "mês/ano" abreviado para mês.
-   */
-  protected formatPeriodLabel(periodStart: string, groupBy: TicketVolumeGrouping): string {
-    const [year, month, day] = periodStart.split('-');
-    if (groupBy === 'Month') {
-      return `${MONTH_LABELS[Number(month) - 1]}/${year.slice(2)}`;
-    }
-    return `${day}/${month}`;
-  }
 
-  /**
-   * Desenha (ou redesenha) o gráfico de barras do volume de chamados criados por período — com
-   * `resolved`, duas séries lado a lado (Criados x Resolvidos), cada uma com a sua cor e legenda.
-   * Cores de texto/borda são lidas de `data-bs-theme` no momento do desenho — se o SO mudar de
-   * tema enquanto o dashboard já está aberto, o gráfico só reflete isso no próximo redesenho
-   * (novo volume ou reabertura da tela), não ao vivo.
-   */
-  private async renderChart(canvasRef: ElementRef<HTMLCanvasElement>, counts: number[], resolved: number[] | null, labels: string[]) {
-    const token = ++this.renderToken;
-    const { Chart } = await loadChart();
-
-    // Chegou um pedido de redesenho mais novo enquanto este esperava o Chart.js carregar —
-    // descarta este (dado desatualizado) em vez de sobrescrever o gráfico já correto.
-    if (token !== this.renderToken) return;
-
-    const ctx = canvasRef.nativeElement.getContext('2d');
-    // Lê o valor computado de verdade de --tk-surface/--tk-text-secondary em vez de duplicar o
-    // hex como literal: o Chart.js não lê custom properties no config, mas o navegador já resolveu
-    // a cascata (claro/escuro) pra esse elemento — ler daqui acompanha o token automaticamente se
-    // ele mudar de valor no CSS, sem precisar lembrar de atualizar uma cópia aqui (achado no
-    // simplify de 2026-10-27).
-    const rootStyle = getComputedStyle(document.documentElement);
-    const surfaceColor = rootStyle.getPropertyValue('--tk-surface').trim();
-    const textColor = rootStyle.getPropertyValue('--tk-text-secondary').trim();
-
-    this.chart?.destroy();
-
-    this.chart = new Chart(ctx!, {
-      type: 'bar',
-      data: {
-        labels,
-        // Uma série: cor por barra (ritmo visual). Duas séries: uma cor por série, pra comparar.
-        datasets: resolved
-          ? [
-              { label: 'Criados', data: counts, backgroundColor: CATEGORICAL_COLORS[0], borderColor: surfaceColor, borderWidth: 2, borderRadius: 4 },
-              { label: 'Resolvidos', data: resolved, backgroundColor: CATEGORICAL_COLORS[2], borderColor: surfaceColor, borderWidth: 2, borderRadius: 4 }
-            ]
-          : [{
-              label: 'Chamados criados',
-              data: counts,
-              backgroundColor: counts.map((_, i) => CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]),
-              borderColor: surfaceColor,
-              borderWidth: 2,
-              borderRadius: 4
-            }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        // Entrada curta (o padrão do Chart.js, ~1s, parece lentidão numa tela de operação) e
-        // nenhuma com prefers-reduced-motion — os dados aparecem direto.
-        animation: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-          ? false
-          : { duration: 300, easing: 'easeOutQuart' },
-        color: textColor,
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: textColor }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0, color: textColor }
-          }
-        },
-        plugins: {
-          legend: { display: !!resolved, labels: { color: textColor } },
-          tooltip: { mode: 'index', intersect: false }
-        }
-      }
-    });
-  }
 }

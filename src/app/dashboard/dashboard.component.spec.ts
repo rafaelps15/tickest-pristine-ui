@@ -80,7 +80,7 @@ describe('DashboardComponent', () => {
 
   let operationFake: ReturnType<typeof createOperationStoreFake>;
   let departmentsFake: { departments: ReturnType<typeof signal<Department[]>>; listState: ReturnType<typeof signal<{ loading: boolean }>> };
-  let assigneesFake: { assignees: ReturnType<typeof signal<TicketAssignee[]>> };
+  let assigneesFake: { assignees: ReturnType<typeof signal<TicketAssignee[]>>; total: ReturnType<typeof signal<number>> };
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
   let myTicketsFake: {
@@ -106,7 +106,7 @@ describe('DashboardComponent', () => {
       departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] }]),
       listState: signal({ loading: false })
     };
-    assigneesFake = { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]) };
+    assigneesFake = { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]), total: signal(1) };
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
@@ -311,16 +311,19 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Setor: Helpdesk');
   });
 
-  it('o agregado com erro mostra "Tentar novamente" sem derrubar os tempos médios, e recarrega só ele', async () => {
+  it('o agregado com erro mostra um aviso só (não um por grupo), sem derrubar os tempos médios, e recarrega só ele', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     operationFake.sla.set(null);
     operationFake.overviewError.set('Não foi possível carregar os números da operação.');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
+    const alerts = Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>)
+      .filter(alert => alert.textContent?.includes('números da operação'));
+    expect(alerts.length).toBe(1);
     const sla = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]') as HTMLElement;
-    expect(sla.textContent).toContain('Não foi possível carregar os números da operação.');
-    (sla.querySelector('.alert button') as HTMLButtonElement).click();
+    expect(sla.textContent).toContain('Indisponível no momento');
+    (alerts[0].querySelector('button') as HTMLButtonElement).click();
     expect(operationFake.reloadOverview).toHaveBeenCalled();
     expect(operationFake.reloadTimes).not.toHaveBeenCalled();
     // Os tempos médios continuam com os números.
@@ -387,7 +390,7 @@ describe('DashboardComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Criados x Resolvidos');
     expect(fixture.nativeElement.textContent).toContain('com os filtros acima');
-    fixture.componentInstance.toggleTable();
+    (Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.includes('Ver como tabela'))!).click();
     await fixture.whenStable();
     const headers = Array.from(fixture.nativeElement.querySelectorAll('table thead th') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
     expect(headers).toEqual(['Período', 'Chamados criados', 'Resolvidos']);

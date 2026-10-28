@@ -69,23 +69,31 @@
 -->
 @if (showOperation()) {
   <app-dashboard-filter-bar [filters]="filters.filters()" [departments]="departmentsStore.departments()"
-                            [assignees]="assigneesStore.assignees()" [today]="today"
+                            [assignees]="assigneesStore.assignees()" [assigneesTotal]="assigneesStore.total()" [today]="today"
                             (change)="onFilterChange($event)" (clear)="filters.clear()" />
 
+  <!-- Central de atenção, Volume e SLA vêm da mesma leitura: um aviso só, em vez de três alertas iguais. -->
+  @if (operation.overviewError(); as overviewError) {
+    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
+      <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ overviewError }} A Central de atenção, o Volume e o SLA ficam sem números até carregar.</span>
+      <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="operation.reloadOverview()">Tentar novamente</button>
+    </div>
+  }
+
   <app-dashboard-metric-group title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave."
-                              [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()" [error]="operation.overviewError()"
+                              [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               emptyTitle="Nada pedindo atenção neste recorte." emptyHint="Sem chamados atrasados, críticos ou sem responsável."
-                              (retry)="operation.reloadOverview()" />
+                              />
 
   <app-dashboard-metric-group title="Volume" [description]="hasPeriod() ? 'Chamados abertos no período, por situação atual.' : 'Chamados do recorte, por situação.'"
                               columnClass="col-12 col-sm-6 col-lg-4 col-xxl"
-                              [metrics]="volumeMetrics()" [loading]="operation.overviewLoading()" [error]="operation.overviewError()"
-                              (retry)="operation.reloadOverview()" />
+                              [metrics]="volumeMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
+                              />
 
   <app-dashboard-metric-group title="SLA" description="Prazo de resolução, pela regra do sistema (em risco a partir de 75% do prazo)."
                               columnClass="col-12 col-sm-6 col-lg-4 col-xxl"
-                              [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [error]="operation.overviewError()"
-                              (retry)="operation.reloadOverview()" />
+                              [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
+                              />
 
   <app-dashboard-times [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesError()"
                        [hasPeriod]="hasPeriod()" (retry)="operation.reloadTimes()" />
@@ -199,112 +207,10 @@
   </div>
 
   <div class="col-12 col-lg-8 mb-4 order-lg-1">
-    <div class="card">
-      <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <!-- "Criados", não "abertos": "Em Aberto" é um status, e o gráfico conta chamados criados em cada período. -->
-        <div>
-          <h2 class="h5 card-title m-0 fw-bold">{{ chartHasResolved() ? 'Criados x Resolvidos' : 'Chamados criados' }}</h2>
-          <!-- aria-live: ao trocar Dia/Semana/Mês, o leitor de tela ouve o novo intervalo ("Últimas 12 semanas"). -->
-          <p class="text-muted small mb-0" aria-live="polite">{{ volumeRangeLabel() }}@if (showOperation()) { · com os filtros acima}</p>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-          <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
-            @for (option of groupByOptions; track option) {
-              <button type="button" class="btn"
-                      [class.btn-primary]="chartGroupBy() === option"
-                      [class.btn-outline-secondary]="chartGroupBy() !== option"
-                      [attr.aria-pressed]="chartGroupBy() === option"
-                      (click)="setGroupBy(option)">
-                {{ groupByLabels[option] }}
-              </button>
-            }
-          </div>
-          <!-- Só o rótulo muda (sem aria-pressed junto): os dois juntos anunciavam um estado contraditório. -->
-          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleTable()">
-            <i class="bx {{ showTable() ? 'bx-bar-chart-alt-2' : 'bx-table' }} me-1" aria-hidden="true"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
-          </button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="chart-container" [class.d-none]="showTable()">
-          @if (chartLoading()) {
-            <div class="d-flex align-items-center justify-content-center h-100">
-              <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando volume de chamados…</span>
-            </div>
-          } @else if (chartFailed()) {
-            <!-- Erro de verdade, não o vazio "nenhum chamado" — que diria que a empresa não abriu chamados. -->
-            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center">
-              <i class="bx bx-error-circle display-6 d-block mb-2 text-danger" aria-hidden="true"></i>
-              <p class="mb-3">Não foi possível carregar o volume de chamados.</p>
-              <button type="button" class="btn btn-sm btn-outline-danger" (click)="reloadChart()">Tentar novamente</button>
-            </div>
-          } @else if (isFirstUse()) {
-            <!-- Empresa sem nenhum chamado ainda: em vez de um gráfico vazio, a próxima ação de quem chegou. -->
-            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3">
-              <span class="badge bg-label-primary rounded-circle mb-3 icon-tile icon-tile-xl" aria-hidden="true">
-                <i class="bx bx-receipt fs-2"></i>
-              </span>
-              <p class="fw-semibold mb-1">A empresa ainda não tem nenhum chamado.</p>
-              @if (canSetUpStructure()) {
-                <p class="text-muted small mb-3">Os chamados são abertos para um setor. Comece cadastrando os departamentos e setores que atendem chamados.</p>
-                <a class="btn btn-primary" routerLink="/departamentos">Cadastrar departamentos e setores</a>
-              } @else {
-                <p class="text-muted small mb-3">Quando alguém abrir o primeiro chamado, o volume aparece aqui.</p>
-                <a class="btn btn-primary" routerLink="/tickets/novo">Abrir o primeiro chamado</a>
-              }
-            </div>
-          } @else if (chartPoints().length === 0) {
-            <app-empty-state class="h-100 d-flex flex-column justify-content-center" icon="bx-bar-chart-alt-2"
-                             title="Nenhum chamado aberto neste período ainda."
-                             hint="Troque o período em Dia, Semana ou Mês pra ver um intervalo maior." />
-          } @else {
-            @defer (on idle) {
-              <canvas #volumeChart aria-hidden="true"></canvas>
-            } @placeholder {
-              <div class="d-flex align-items-center justify-content-center h-100">
-                <span class="spinner-border text-primary" aria-hidden="true"></span>
-              </div>
-            }
-          }
-        </div>
-
-        @if (showTable()) {
-          <div class="table-responsive">
-            <table #volumeTable tabindex="-1" class="table table-sm table-bordered align-middle mb-0">
-              <caption class="visually-hidden">Quantidade de chamados criados{{ chartHasResolved() ? ' e resolvidos' : '' }} por período</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Período</th>
-                  <th scope="col" class="text-end">Chamados criados</th>
-                  @if (chartHasResolved()) {
-                    <th scope="col" class="text-end">Resolvidos</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @if (chartLoading()) {
-                  <tr><td [attr.colspan]="chartHasResolved() ? 3 : 2" class="text-center py-4"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando volume de chamados…</span></td></tr>
-                } @else if (chartFailed()) {
-                  <tr><td [attr.colspan]="chartHasResolved() ? 3 : 2" class="text-center py-4">Não foi possível carregar o volume de chamados.</td></tr>
-                } @else if (chartPoints().length === 0) {
-                  <tr><td [attr.colspan]="chartHasResolved() ? 3 : 2" class="text-center py-4 text-muted">Nenhum chamado aberto neste período ainda.</td></tr>
-                } @else {
-                  @for (point of chartPoints(); track point.periodStart; let i = $index) {
-                    <tr>
-                      <th scope="row">{{ periodLabels()[i] }}</th>
-                      <td class="text-end">{{ point.count }}</td>
-                      @if (chartHasResolved()) {
-                        <td class="text-end">{{ point.resolvedCount }}</td>
-                      }
-                    </tr>
-                  }
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </div>
-    </div>
+    <app-dashboard-volume-chart [points]="chartPoints()" [groupBy]="chartGroupBy()" [loading]="chartLoading()" [failed]="chartFailed()"
+                                [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()"
+                                [range]="showOperation() ? scope() : null" [filtered]="showOperation()"
+                                (groupByChange)="setGroupBy($event)" (retry)="reloadChart()" />
   </div>
 </div>
 

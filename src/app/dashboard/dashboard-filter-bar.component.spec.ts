@@ -6,7 +6,7 @@ import { Department } from '../departments';
 import { TicketAssignee } from '../tickets';
 
 @Component({
-  template: `<app-dashboard-filter-bar [filters]="filters()" [departments]="departments" [assignees]="assignees" today="2026-10-28"
+  template: `<app-dashboard-filter-bar [filters]="filters()" [departments]="departments" [assignees]="assignees" [assigneesTotal]="assigneesTotal" today="2026-10-28"
                                        (change)="changes.push($event)" (clear)="cleared = true" />`,
   imports: [DashboardFilterBarComponent]
 })
@@ -18,6 +18,7 @@ class HostComponent {
     { id: 'd3', name: 'Vazio', description: '', responsibleUserName: null, sectors: [] }
   ];
   assignees: TicketAssignee[] = [{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }];
+  assigneesTotal = 1;
   changes: Partial<DashboardFilters>[] = [];
   cleared = false;
 }
@@ -111,6 +112,35 @@ describe('DashboardFilterBarComponent', () => {
     from.value = '2026-10-05';
     from.dispatchEvent(new Event('change'));
     expect(fixture.componentInstance.changes).toEqual([{ from: '2026-10-05' }]);
+  });
+
+  it('apagar uma data deixa aquela ponta do período em aberto', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.filters.set({ from: '2026-10-01', to: '2026-10-10' });
+    await fixture.whenStable();
+
+    const to = fixture.nativeElement.querySelector('#dashboardTo') as HTMLInputElement;
+    to.value = '';
+    to.dispatchEvent(new Event('change'));
+
+    expect(fixture.componentInstance.changes).toEqual([{ to: undefined }]);
+  });
+
+  it('um departamento fora da lista vira o chip "não encontrado (ignorado)", não um recorte que não vale', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.filters.set({ departmentId: 'sumiu' });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.filter-chip').textContent).toContain('Departamento não encontrado (ignorado)');
+  });
+
+  it('diz quando a lista de pessoas não traz todo mundo', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.assigneesTotal = 140;
+    await fixture.whenStable();
+
+    const group = fixture.nativeElement.querySelector('#dashboardAssignee optgroup') as HTMLOptGroupElement;
+    expect(group.label).toBe('Pessoas da equipe (1 de 140, em ordem de nome)');
   });
 
   it('mostra os filtros ativos como chips, e cada chip remove só o seu filtro', async () => {

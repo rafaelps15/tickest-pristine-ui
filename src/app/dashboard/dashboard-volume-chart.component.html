@@ -1,0 +1,106 @@
+<div class="card">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <!-- "Criados", não "abertos": "Em Aberto" é um status, e o gráfico conta chamados criados em cada período. -->
+    <div>
+      <h2 class="h5 card-title m-0 fw-bold">{{ hasResolved() ? 'Criados x Resolvidos' : 'Chamados criados' }}</h2>
+      <!-- aria-live: ao trocar Dia/Semana/Mês, o leitor de tela ouve o novo intervalo ("Últimas 12 semanas"). -->
+      <p class="text-muted small mb-0" aria-live="polite">{{ rangeLabel() }}@if (filtered()) { · com os filtros acima}</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
+        @for (option of groupByOptions; track option) {
+          <button type="button" class="btn"
+                  [class.btn-primary]="groupBy() === option"
+                  [class.btn-outline-secondary]="groupBy() !== option"
+                  [attr.aria-pressed]="groupBy() === option"
+                  (click)="groupByChange.emit(option)">
+            {{ groupByLabels[option] }}
+          </button>
+        }
+      </div>
+      <!-- Só o rótulo muda (sem aria-pressed junto): os dois juntos anunciavam um estado contraditório. -->
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="toggleTable()">
+        <i class="bx {{ showTable() ? 'bx-bar-chart-alt-2' : 'bx-table' }} me-1" aria-hidden="true"></i> {{ showTable() ? 'Ver gráfico' : 'Ver como tabela' }}
+      </button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="chart-container" [class.d-none]="showTable()">
+      @if (loading()) {
+        <div class="d-flex align-items-center justify-content-center h-100">
+          <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando volume de chamados…</span>
+        </div>
+      } @else if (failed()) {
+        <!-- Erro de verdade, não o vazio "nenhum chamado" — que diria que a empresa não abriu chamados. -->
+        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center">
+          <i class="bx bx-error-circle display-6 d-block mb-2 text-danger" aria-hidden="true"></i>
+          <p class="mb-3">Não foi possível carregar o volume de chamados.</p>
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="retry.emit()">Tentar novamente</button>
+        </div>
+      } @else if (firstUse()) {
+        <!-- Empresa sem nenhum chamado ainda: em vez de um gráfico vazio, a próxima ação de quem chegou. -->
+        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-center px-3">
+          <span class="badge bg-label-primary rounded-circle mb-3 icon-tile icon-tile-xl" aria-hidden="true">
+            <i class="bx bx-receipt fs-2"></i>
+          </span>
+          <p class="fw-semibold mb-1">A empresa ainda não tem nenhum chamado.</p>
+          @if (canSetUpStructure()) {
+            <p class="text-muted small mb-3">Os chamados são abertos para um setor. Comece cadastrando os departamentos e setores que atendem chamados.</p>
+            <a class="btn btn-primary" routerLink="/departamentos">Cadastrar departamentos e setores</a>
+          } @else {
+            <p class="text-muted small mb-3">Quando alguém abrir o primeiro chamado, o volume aparece aqui.</p>
+            <a class="btn btn-primary" routerLink="/tickets/novo">Abrir o primeiro chamado</a>
+          }
+        </div>
+      } @else if (points().length === 0) {
+        <app-empty-state class="h-100 d-flex flex-column justify-content-center" icon="bx-bar-chart-alt-2"
+                         title="Nenhum chamado aberto neste período ainda."
+                         hint="Troque o período em Dia, Semana ou Mês pra ver um intervalo maior." />
+      } @else {
+        @defer (on idle) {
+          <canvas #volumeChart aria-hidden="true"></canvas>
+        } @placeholder {
+          <div class="d-flex align-items-center justify-content-center h-100">
+            <span class="spinner-border text-primary" aria-hidden="true"></span>
+          </div>
+        }
+      }
+    </div>
+
+    @if (showTable()) {
+      <div class="table-responsive">
+        <table #volumeTable tabindex="-1" class="table table-sm table-bordered align-middle mb-0">
+          <caption class="visually-hidden">Quantidade de chamados criados{{ hasResolved() ? ' e resolvidos' : '' }} por período</caption>
+          <thead>
+            <tr>
+              <th scope="col">Período</th>
+              <th scope="col" class="text-end">Chamados criados</th>
+              @if (hasResolved()) {
+                <th scope="col" class="text-end">Resolvidos</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading()) {
+              <tr><td [attr.colspan]="hasResolved() ? 3 : 2" class="text-center py-4"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando volume de chamados…</span></td></tr>
+            } @else if (failed()) {
+              <tr><td [attr.colspan]="hasResolved() ? 3 : 2" class="text-center py-4">Não foi possível carregar o volume de chamados.</td></tr>
+            } @else if (points().length === 0) {
+              <tr><td [attr.colspan]="hasResolved() ? 3 : 2" class="text-center py-4 text-muted">Nenhum chamado aberto neste período ainda.</td></tr>
+            } @else {
+              @for (point of points(); track point.periodStart; let i = $index) {
+                <tr>
+                  <th scope="row">{{ periodLabels()[i] }}</th>
+                  <td class="text-end">{{ point.count }}</td>
+                  @if (hasResolved()) {
+                    <td class="text-end">{{ point.resolvedCount }}</td>
+                  }
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

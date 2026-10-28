@@ -30,8 +30,10 @@ const CUSTOM_PERIOD = 'custom';
   imports: [FilterBarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- Cinco campos numa linha só a partir de 1400px; antes, recorte (período, departamento, setor) numa
+         linha e prioridade/responsável na outra, pra nenhum seletor ficar estreito demais pro texto. -->
     <app-filter-bar label="Filtrar a operação" [clearable]="chips().length > 0" (clear)="clear.emit()">
-      <div class="col-12 col-sm-6 col-lg">
+      <div class="col-12 col-sm-6 col-lg-4 col-xxl">
         <label class="form-label small" for="dashboardPeriod">Período de abertura</label>
         <select #periodSelect id="dashboardPeriod" class="form-select" [value]="periodValue()"
                 (change)="change.emit(toPeriod(periodSelect.value))">
@@ -42,7 +44,7 @@ const CUSTOM_PERIOD = 'custom';
           <option value="custom">Personalizado</option>
         </select>
       </div>
-      <div class="col-12 col-sm-6 col-lg">
+      <div class="col-12 col-sm-6 col-lg-4 col-xxl">
         <label class="form-label small" for="dashboardDepartment">Departamento</label>
         <select #departmentSelect id="dashboardDepartment" class="form-select" [value]="filters().departmentId ?? ''"
                 (change)="change.emit(toDepartment(departmentSelect.value))">
@@ -52,7 +54,7 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
-      <div class="col-12 col-sm-6 col-lg">
+      <div class="col-12 col-sm-6 col-lg-4 col-xxl">
         <label class="form-label small" for="dashboardSector">Setor</label>
         <select #sectorSelect id="dashboardSector" class="form-select" [value]="filters().sectorId ?? ''"
                 (change)="change.emit({ sectorId: sectorSelect.value || undefined })">
@@ -66,7 +68,7 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
-      <div class="col-6 col-lg">
+      <div class="col-6 col-lg-4 col-xxl">
         <label class="form-label small" for="dashboardPriority">Prioridade</label>
         <select #prioritySelect id="dashboardPriority" class="form-select" [value]="filters().priority ?? ''"
                 (change)="change.emit({ priority: toPriority(prioritySelect.value) })">
@@ -76,7 +78,7 @@ const CUSTOM_PERIOD = 'custom';
           }
         </select>
       </div>
-      <div class="col-6 col-lg">
+      <div class="col-6 col-lg-4 col-xxl">
         <label class="form-label small" for="dashboardAssignee">Responsável</label>
         <select #assigneeSelect id="dashboardAssignee" class="form-select" [value]="assigneeValue()"
                 (change)="change.emit(toAssignee(assigneeSelect.value))">
@@ -84,7 +86,7 @@ const CUSTOM_PERIOD = 'custom';
           <option value="me">Atribuídos a mim</option>
           <option value="none">Sem responsável</option>
           @if (assignees().length > 0) {
-            <optgroup label="Pessoas da equipe">
+            <optgroup [label]="assigneeGroupLabel()">
               @for (assignee of assignees(); track assignee.id) {
                 <option [value]="assignee.id">{{ assignee.fullName }}</option>
               }
@@ -135,6 +137,14 @@ const CUSTOM_PERIOD = 'custom';
     .filter-chip:focus-visible {
       border-color: var(--tk-primary);
     }
+
+    /* Toque: o chip inteiro remove o filtro, então ele ganha a altura mínima de um alvo de dedo (44px). */
+    @media (pointer: coarse) {
+      .filter-chip {
+        min-height: 44px;
+        padding-inline: 0.875rem;
+      }
+    }
   `
 })
 export class DashboardFilterBarComponent {
@@ -144,6 +154,8 @@ export class DashboardFilterBarComponent {
   readonly departments = input<Department[]>([]);
   /** Responsáveis elegíveis (GET /tickets/assignees). */
   readonly assignees = input<TicketAssignee[]>([]);
+  /** Total de responsáveis elegíveis; maior que a lista quando ela veio cortada. */
+  readonly assigneesTotal = input(0);
   /** Hoje (`aaaa-mm-dd`, horário de Brasília): limite do período e fim do personalizado. */
   readonly today = input.required<string>();
 
@@ -171,6 +183,13 @@ export class DashboardFilterBarComponent {
     return department ? [department] : this.departmentOptions();
   });
 
+  /** Rótulo do grupo de pessoas; diz quando a lista não traz todo mundo. */
+  readonly assigneeGroupLabel = computed(() => {
+    const shown = this.assignees().length;
+    const total = this.assigneesTotal();
+    return total > shown ? `Pessoas da equipe (${shown} de ${total}, em ordem de nome)` : 'Pessoas da equipe';
+  });
+
   /** Valor do seletor de período. */
   readonly periodValue = computed(() => {
     const filters = this.filters();
@@ -193,7 +212,10 @@ export class DashboardFilterBarComponent {
       chips.push({ key: 'custom', label, removal: { from: undefined, to: undefined } });
     }
     if (filters.departmentId) {
-      chips.push({ key: 'department', label: `Departamento: ${this.selectedDepartment()?.name ?? 'selecionado'}`, removal: { departmentId: undefined } });
+      // Departamento que não está na lista (id inválido ou lista que falhou) não recorta nada: o chip diz isso.
+      const department = this.selectedDepartment();
+      const label = department ? `Departamento: ${department.name}` : 'Departamento não encontrado (ignorado)';
+      chips.push({ key: 'department', label, removal: { departmentId: undefined } });
     }
     if (filters.sectorId) {
       const sector = this.departments().flatMap(d => d.sectors).find(s => s.id === filters.sectorId);
@@ -244,11 +266,15 @@ export class DashboardFilterBarComponent {
   }
 
   /**
-   * Troca uma ponta do período personalizado. Data inválida ou que inverte o intervalo não vai pra
-   * URL: o campo volta pro valor aplicado.
+   * Troca uma ponta do período personalizado. Campo vazio deixa aquela ponta em aberto ("desde" ou
+   * "até"); data inválida ou que inverte o intervalo não vai pra URL e o campo volta pro valor aplicado.
    */
   onDateChange(edge: 'from' | 'to', field: HTMLInputElement): void {
     const value = field.value;
+    if (value === '') {
+      this.change.emit({ [edge]: undefined });
+      return;
+    }
     const other = edge === 'from' ? this.filters().to : this.filters().from;
     const inverted = other && isIsoDate(value) && (edge === 'from' ? value > other : value < other);
     if (!isIsoDate(value) || inverted) {

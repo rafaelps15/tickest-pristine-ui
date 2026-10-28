@@ -36,6 +36,7 @@ describe('TicketAssigneesStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.assignees()).toEqual([{ id: 'u1', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]);
+    expect(store.total()).toBe(1);
     expect(store.error()).toBeNull();
   });
 

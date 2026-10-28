@@ -253,6 +253,15 @@ body {
   border-radius: var(--tk-radius-md);
 }
 
+/*
+ * Chamada de um card clicável ("Ver na fila", "Ver em Meus Chamados"), no slot [statHint] do
+ * stat-card: o índigo de texto do sistema (7,5:1 no claro, 6,9:1 no escuro — o token se ajusta sozinho).
+ */
+.kpi-cta {
+  color: var(--tk-primary-text);
+  font-weight: 500;
+}
+
 /* Celular: KPIs em grade 2x2 (`col-6`) — o ícone sai pra não espremer o número, que é o que importa. */
 @media (max-width: 575.98px) {
   .card-stats .kpi-icon {

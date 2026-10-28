@@ -2,7 +2,6 @@ import { signalStore, withProps, withComputed, withMethods } from '@ngrx/signals
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { SessionService, extractErrorMessage } from '../../shared';
 
@@ -20,12 +19,14 @@ export const TicketAssigneesStore = signalStore(
   withProps((store) => ({
     _listResource: rxResource({
       params: () => (store._session.hasPermission('tickets:manage') ? true : undefined),
-      stream: () => store._ticketDataService.getAssignees().pipe(map(page => page.items))
+      stream: () => store._ticketDataService.getAssignees()
     })
   })),
   withComputed((store) => ({
     /** Responsáveis elegíveis em ordem de nome (vazio enquanto carrega ou em erro). */
-    assignees: computed(() => store._listResource.hasValue() ? store._listResource.value() : []),
+    assignees: computed(() => store._listResource.hasValue() ? store._listResource.value().items : []),
+    /** Quantos responsáveis elegíveis existem no total (pode ser mais que a página carregada). */
+    total: computed(() => store._listResource.hasValue() ? store._listResource.value().totalCount : 0),
     /** A lista está carregando. */
     loading: computed(() => store._listResource.isLoading()),
     /** Erro ao carregar a lista. */

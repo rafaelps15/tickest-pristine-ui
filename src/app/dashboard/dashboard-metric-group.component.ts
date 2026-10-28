@@ -45,7 +45,10 @@ export interface DashboardMetric {
       <!-- Resumo pro leitor de tela quando os números chegam ou mudam com os filtros. -->
       <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
 
-      @if (error()) {
+      @if (unavailable()) {
+        <!-- O aviso de erro (com "Tentar novamente") fica uma vez só, acima dos grupos que dependem da mesma leitura. -->
+        <p class="text-muted small mb-0"><i class="bx bx-info-circle me-1" aria-hidden="true"></i>Indisponível no momento — veja o aviso acima.</p>
+      } @else if (error()) {
         <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-0" role="alert">
           <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ error() }}</span>
           <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="retry.emit()">Tentar novamente</button>
@@ -88,16 +91,6 @@ export interface DashboardMetric {
     </section>
   `,
   styles: `
-    /* "Ver na fila": mesmo índigo escuro dos KPIs do Início (4.5:1 sobre o card claro). */
-    .kpi-cta {
-      color: var(--tk-primary-dark);
-      font-weight: 500;
-    }
-
-    :host-context([data-bs-theme="dark"]) .kpi-cta {
-      color: var(--tk-primary);
-    }
-
     .metric-skeleton {
       display: flex;
       flex-direction: column;
@@ -154,6 +147,11 @@ export class DashboardMetricGroupComponent {
   readonly loading = input(false);
   /** Mensagem de erro da leitura, ou null. */
   readonly error = input<string | null>(null);
+  /**
+   * Os números deste grupo não chegaram por um erro que a tela já mostra num aviso único (vários
+   * grupos vindos da mesma leitura) — aqui fica só uma linha neutra, sem repetir o alerta.
+   */
+  readonly unavailable = input(false);
   /** Título do estado vazio (todos os indicadores zerados). */
   readonly emptyTitle = input('Nenhum chamado neste recorte.');
   /** Dica do estado vazio. */
@@ -175,7 +173,7 @@ export class DashboardMetricGroupComponent {
 
   /** Frase lida pelo leitor de tela quando os números chegam ("Volume: 12 no total, 5 no backlog."). */
   readonly liveSummary = computed(() => {
-    if (!this.hasValues() || this.loading() || this.error()) return '';
+    if (!this.hasValues() || this.loading() || this.error() || this.unavailable()) return '';
     return `${this.title()}: ` + this.metrics().map(metric => `${metric.value} ${metric.ariaNoun}`).join(', ') + '.';
   });
 }

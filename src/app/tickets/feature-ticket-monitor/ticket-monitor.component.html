@@ -102,7 +102,9 @@
       <option value="me">Atribuídos a mim</option>
       <option value="none">Sem responsável</option>
       @if (assigneesStore.assignees().length > 0) {
-        <optgroup label="Pessoas da equipe">
+        <optgroup [label]="assigneesStore.total() > assigneesStore.assignees().length
+                             ? 'Pessoas da equipe (' + assigneesStore.assignees().length + ' de ' + assigneesStore.total() + ', em ordem de nome)'
+                             : 'Pessoas da equipe'">
           @for (assignee of assigneesStore.assignees(); track assignee.id) {
             <option [value]="assignee.id">{{ assignee.fullName }}</option>
           }

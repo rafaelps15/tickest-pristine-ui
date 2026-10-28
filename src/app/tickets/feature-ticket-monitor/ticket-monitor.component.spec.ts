@@ -108,7 +108,7 @@ describe('TicketMonitorComponent', () => {
         { provide: TicketMonitorStore, useValue: storeFake },
         { provide: TicketQuickInfoStore, useValue: quickInfoStoreFake },
         { provide: DepartmentsStore, useValue: departmentsStoreFake },
-        { provide: TicketAssigneesStore, useValue: { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Suporte' }]) } },
+        { provide: TicketAssigneesStore, useValue: { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Suporte' }]), total: signal(1) } },
         { provide: SessionService, useValue: sessionServiceFake },
         { provide: ToastService, useValue: toastServiceFake }
       ]

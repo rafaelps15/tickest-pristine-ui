@@ -4,13 +4,14 @@ import { provideRouter } from '@angular/router';
 import { DashboardMetric, DashboardMetricGroupComponent } from './dashboard-metric-group.component';
 
 @Component({
-  template: `<app-dashboard-metric-group title="SLA" [metrics]="metrics()" [loading]="loading()" [error]="error()" (retry)="retried = true" />`,
+  template: `<app-dashboard-metric-group title="SLA" [metrics]="metrics()" [loading]="loading()" [error]="error()" [unavailable]="unavailable()" (retry)="retried = true" />`,
   imports: [DashboardMetricGroupComponent]
 })
 class HostComponent {
   metrics = signal<DashboardMetric[]>([]);
   loading = signal(false);
   error = signal<string | null>(null);
+  unavailable = signal(false);
   retried = false;
 }
 
@@ -50,6 +51,17 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Não foi possível carregar o SLA.');
     (fixture.nativeElement.querySelector('.alert button') as HTMLButtonElement).click();
     expect(fixture.componentInstance.retried).toBeTrue();
+  });
+
+  it('indisponível: só uma linha neutra, sem repetir o alerta nem o "Tentar novamente"', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.metrics.set(metrics(null, null));
+    fixture.componentInstance.unavailable.set(true);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Indisponível no momento');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button')).toBeNull();
   });
 
   it('vazio (tudo zero): explica por quê, em vez de cards zerados', async () => {
