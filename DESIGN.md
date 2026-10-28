@@ -499,6 +499,15 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
 - **Responsável (Monitorar):** "Qualquer um", "Atribuídos a mim" (a fila pessoal de quem atende) ou
   "Sem responsável" — um select visível ao lado de Status e SLA, não um switch escondido. O Início
   leva direto pra "Atribuídos a mim" (`?assignedToMe=true`; o id de quem está logado não vai pra URL).
+- **Fila de trabalho (Monitorar):** sem `status` na URL, a tela abre nos ativos com o prazo que vence
+  primeiro no topo; "Todos os status" vai na URL como `?status=all`, e todo drill-down sem status
+  manda `status=all`. Ordenar fica no topo da tabela, ao lado do total — não é filtro nem conta em
+  "Mais filtros". Os filtros de "Mais filtros" aplicados aparecem em texto ao lado do botão.
+- **SLA e prazo numa célula (Monitorar):** etiqueta e, pros ativos, o prazo relativo ("vence em 2h" /
+  "venceu há 35 min") pela hora do servidor (`serverNowUtc` do resumo de SLA), recalculado a cada
+  30s; atrasado também em texto e peso, não só cor; a data exata no `title`.
+- **Selects que dependem de lista assíncrona** (setor, responsável): a seleção vai no `[selected]` de
+  cada opção, não no `[value]` do select — as opções chegam depois e o `[value]` ficaria em "Todos".
 - **Paginação (`<app-pagination>`, `shared/ui/pagination`):** rodapé do card da tabela — "Exibindo
   X–Y de N {itens}", Anterior/números/Próxima (no celular só "Página X de Y") e "Por página".
 

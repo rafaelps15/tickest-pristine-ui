@@ -1,4 +1,4 @@
-<app-page-header title="Monitorar Chamados" subtitle="Todos os chamados do sistema, com prazos e situação de SLA."
+<app-page-header title="Monitorar Chamados" subtitle="A fila de chamados, com o prazo de cada um e a situação de SLA."
                  [crumbs]="[{ label: 'Administração' }]" />
 
 <app-ticket-monitor-guide />
@@ -11,29 +11,26 @@
 <div class="monitor-scope d-flex align-items-end flex-wrap gap-3 mb-3">
   <div class="monitor-scope-field">
     <label class="form-label small mb-1" for="monitorSector">Setor</label>
-    <select #sectorSelect id="monitorSector" class="form-select" [value]="sectorValue()"
+    <!-- Cada opção marca a própria seleção ([selected]): as opções chegam depois do select (departamentos
+         carregando), e um [value] no select ficaria em "Todos os setores" com um setor aplicado. -->
+    <select #sectorSelect id="monitorSector" class="form-select"
             aria-describedby="monitorSectorHint"
             (change)="onSectorChange(sectorSelect.value)">
-      <option value="">Todos os setores</option>
-      @if (sectorValue() === 'many') {
-        <option value="many" [selected]="true">{{ store.filters().sectorIds?.length }} setores (vindos do Início)</option>
+      <option value="" [selected]="sectorValue() === ''">Todos os setores</option>
+      @if (drillSectorIds()) {
+        <!-- O conjunto que veio do Início continua escolhível depois de trocar de setor. -->
+        <option value="many" [selected]="sectorValue() === 'many'">{{ drillSectorLabel() }}</option>
       }
       @for (department of departmentsStore.departments(); track department.id) {
         <optgroup [label]="department.name">
           @for (sector of department.sectors; track sector.id) {
-            <option [value]="sector.id">{{ sector.name }}</option>
+            <option [value]="sector.id" [selected]="sectorValue() === sector.id">{{ sector.name }}</option>
           }
         </optgroup>
       }
     </select>
   </div>
-  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">
-    @if (sectorValue() === 'many') {
-      A tabela mostra só esses setores; os números de SLA valem pra empresa toda (eles aceitam um setor por vez).
-    } @else {
-      Vale pros números de SLA e pra tabela. Os números ignoram os outros filtros.
-    }
-  </p>
+  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">Vale pros números de SLA e pra tabela.</p>
 </div>
 
 @if (store.slaSummaryState().error) {
@@ -43,13 +40,17 @@
   </div>
 }
 
-<!-- Resumo de SLA: cada card filtra a tabela pelo mesmo SLA que mostra (clicar no ativo volta pra "Ativos"). -->
+<!--
+  Resumo de SLA: cada card filtra a tabela pelos ativos com o mesmo SLA que mostra ("Ativos" tira o
+  filtro de SLA). O escopo dos números fica dito acima deles: seguem só o setor.
+-->
+<p class="text-muted small mb-2">{{ slaScopeLabel() }}</p>
 <div class="row g-3 mb-4">
   @for (card of slaCards; track card.label) {
     <div class="col-6 col-lg-3">
       <app-stat-card [label]="card.label" [value]="slaCount(card.count)" [hint]="card.hint" [icon]="card.icon" [tone]="card.tone"
                      [loading]="store.slaSummaryState().loading && !store.slaSummary()" [failed]="!!store.slaSummaryState().error && !store.slaSummary()"
-                     [pressed]="store.filters().slaStatus === card.slaStatus"
+                     [pressed]="isSlaCardPressed(card.slaStatus)"
                      [pressLabel]="'Filtrar a tabela: ' + card.label"
                      (press)="onSlaCardClick(card.slaStatus)" />
     </div>
@@ -69,7 +70,7 @@
     <label class="form-label small" for="monitorStatus">Status</label>
     <select #statusSelect id="monitorStatus" class="form-select" [value]="store.filters().activeOnly ? 'active' : store.filters().status ?? ''"
             (change)="onStatusChange(statusSelect.value)">
-      <option value="">Todos</option>
+      <option value="">Todos os status</option>
       <option value="active">Ativos (Aberto + Em andamento)</option>
       @for (status of statusOptions; track status) {
         <option [value]="status">{{ statusLabels[status] }}</option>
@@ -96,17 +97,17 @@
   <!-- A fila de quem atende: "Atribuídos a mim" e "Sem responsável" são as duas pontas da mesma pergunta. -->
   <div class="col-12 col-md-3">
     <label class="form-label small" for="monitorResponsible">Responsável</label>
-    <select #responsibleSelect id="monitorResponsible" class="form-select" [value]="responsibleFilter()"
+    <select #responsibleSelect id="monitorResponsible" class="form-select"
             (change)="onResponsibleFilterChange(responsibleSelect.value)">
-      <option value="any">Qualquer um</option>
-      <option value="me">Atribuídos a mim</option>
-      <option value="none">Sem responsável</option>
+      <option value="any" [selected]="responsibleFilter() === 'any'">Qualquer um</option>
+      <option value="me" [selected]="responsibleFilter() === 'me'">Atribuídos a mim</option>
+      <option value="none" [selected]="responsibleFilter() === 'none'">Sem responsável</option>
       @if (assigneesStore.assignees().length > 0) {
         <optgroup [label]="assigneesStore.total() > assigneesStore.assignees().length
                              ? 'Pessoas da equipe (' + assigneesStore.assignees().length + ' de ' + assigneesStore.total() + ', em ordem de nome)'
                              : 'Pessoas da equipe'">
           @for (assignee of assigneesStore.assignees(); track assignee.id) {
-            <option [value]="assignee.id">{{ assignee.fullName }}</option>
+            <option [value]="assignee.id" [selected]="responsibleFilter() === assignee.id">{{ assignee.fullName }}</option>
           }
         </optgroup>
       }
@@ -139,22 +140,24 @@
       <div class="col-6 col-md-4">
         <label class="form-label small" for="monitorCreatedFrom">Aberto de</label>
         <input #createdFromInput id="monitorCreatedFrom" type="date" class="form-control" [value]="store.filters().createdFrom ?? ''"
+               [class.is-invalid]="dateError() === 'from'" [attr.aria-invalid]="dateError() === 'from' || null"
+               [attr.aria-describedby]="dateError() === 'from' ? 'monitorDateError' : null"
                [max]="store.filters().createdTo ?? ''" (change)="onCreatedDateChange('from', createdFromInput)" />
       </div>
       <div class="col-6 col-md-4">
         <label class="form-label small" for="monitorCreatedTo">Aberto até</label>
         <input #createdToInput id="monitorCreatedTo" type="date" class="form-control" [value]="store.filters().createdTo ?? ''"
+               [class.is-invalid]="dateError() === 'to'" [attr.aria-invalid]="dateError() === 'to' || null"
+               [attr.aria-describedby]="dateError() === 'to' ? 'monitorDateError' : null"
                [min]="store.filters().createdFrom ?? ''" (change)="onCreatedDateChange('to', createdToInput)" />
       </div>
-      <div class="col-6 col-md-4">
-        <label class="form-label small" for="monitorSort">Ordenar</label>
-        <select id="monitorSort" class="form-select" [value]="store.filters().sort"
-                (change)="store.setSort(+$any($event.target).value)">
-          @for (sort of sortOptions; track sort) {
-            <option [value]="sort">{{ sortOrderLabels[sort] }}</option>
-          }
-        </select>
-      </div>
+      @if (dateError()) {
+        <!-- Data recusada: diz o motivo, em vez de só voltar o campo pro valor aplicado. -->
+        <p id="monitorDateError" class="col-12 small text-danger mb-0" role="alert">
+          {{ dateError() === 'from' ? 'O início precisa ser no máximo o fim do período.' : 'O fim precisa ser no mínimo o início do período.' }}
+          Mantivemos a data anterior.
+        </p>
+      }
     </div>
   </div>
 
@@ -163,6 +166,9 @@
     <i class="bx me-1" [class.bx-chevron-down]="!moreFiltersOpen()" [class.bx-chevron-up]="moreFiltersOpen()" aria-hidden="true"></i>
     {{ moreFiltersOpen() ? 'Menos filtros' : 'Mais filtros' }}@if (secondaryFilterCount() > 0) { ({{ secondaryFilterCount() }}) }
   </button>
+  @if (!moreFiltersOpen() && secondaryFilterSummary()) {
+    <span filterExtras class="small text-muted">{{ secondaryFilterSummary() }}</span>
+  }
 </app-filter-bar>
 
 @if (store.listState().error) {
@@ -182,8 +188,26 @@
 <div class="row g-3">
   <div class="col-12" [class.col-lg-8]="selectedTicket()">
   <div class="card">
+  <!-- Total (anunciado ao trocar filtro) e ordenação, no topo da tabela: ordenar não é filtrar. -->
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+    <span class="small text-muted" aria-live="polite">
+      @if (!store.listState().loading || store.tickets().length > 0) {
+        {{ store.total() === 1 ? '1 chamado' : store.total() + ' chamados' }}
+      }
+    </span>
+    <div class="d-flex align-items-center gap-2">
+      <label class="small text-muted mb-0" for="monitorSort">Ordenar por</label>
+      <select #sortSelect id="monitorSort" class="form-select form-select-sm w-auto"
+              (change)="store.setSort(+sortSelect.value)">
+        @for (sort of sortOptions; track sort) {
+          <option [value]="sort" [selected]="store.filters().sort === sort">{{ sortOrderLabels[sort] }}</option>
+        }
+      </select>
+    </div>
+  </div>
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
+    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0"
+           [attr.aria-busy]="store.listState().loading || null">
       <caption class="visually-hidden">Chamados do sistema, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
@@ -193,23 +217,39 @@
           <th scope="col">Setor</th>
           <th scope="col">Prioridade</th>
           <th scope="col">Status</th>
-          <th scope="col">SLA</th>
-          <th scope="col">Prazo</th>
+          <th scope="col">SLA e prazo</th>
           <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
         @if (store.listState().loading && store.tickets().length === 0) {
-          <tr><td colspan="9"><app-loading-state label="Carregando chamados…" /></td></tr>
+          <tr><td colspan="8"><app-loading-state label="Carregando chamados…" /></td></tr>
         } @else if (store.tickets().length === 0) {
           <tr>
-            <td colspan="9">
-              <app-empty-state icon="bx-receipt" title="Nenhum chamado encontrado com esses filtros."
-                               hint="Tente outro termo de busca, setor ou status de SLA.">
-                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">
-                  <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
-                </button>
-              </app-empty-state>
+            <td colspan="8">
+              @switch (emptyKind()) {
+                @case ('filtered') {
+                  <app-empty-state icon="bx-filter-alt" title="Nenhum chamado com esses filtros."
+                                   hint="Tente outro termo de busca, setor ou situação de SLA.">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">
+                      <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+                    </button>
+                  </app-empty-state>
+                }
+                @case ('queueClear') {
+                  <!-- A fila de trabalho vazia é uma boa notícia, não um "nada encontrado". -->
+                  <app-empty-state icon="bx-check-circle" title="Fila em dia."
+                                   hint="Nenhum chamado aberto ou em andamento agora.">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.setStatus(undefined)">
+                      Ver todos os status
+                    </button>
+                  </app-empty-state>
+                }
+                @default {
+                  <app-empty-state icon="bx-receipt" title="Ainda não há chamados."
+                                   hint="Quando alguém abrir o primeiro chamado, ele aparece aqui." />
+                }
+              }
             </td>
           </tr>
         } @else {
@@ -252,14 +292,18 @@
                   <span class="d-block small text-muted mt-1">{{ awaitingLabels[ticket.awaiting] }}</span>
                 }
               </td>
-              <td data-label="SLA"><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
-              <td class="text-nowrap small" data-label="Prazo" [class.text-danger]="isOverdue(ticket)">
-                <!-- Ícone e data num item só: no card do celular a célula vira flex e os separaria. -->
-                <span>
-                  @if (isOverdue(ticket)) {
-                    <i class="bx bx-error-circle me-1" aria-hidden="true"></i>
+              <!--
+                SLA e prazo numa célula: a etiqueta e, pros ativos, o prazo relativo ("vence em 2h") pela
+                hora do servidor — a assinatura do produto, a mesma da faixa do Início. A data exata fica no title.
+              -->
+              <td data-label="SLA e prazo">
+                <span class="d-inline-flex flex-column align-items-start gap-1" [title]="'Prazo: ' + (ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">
+                  <span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span>
+                  @if (dueRelative(ticket); as relative) {
+                    <span class="small text-nowrap" [class.text-danger]="isOverdue(ticket)" [class.fw-semibold]="isOverdue(ticket)">{{ relative }}</span>
+                  } @else if (ticket.slaStatus !== slaNotApplicable) {
+                    <span class="small text-muted text-nowrap">Prazo era {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</span>
                   }
-                  {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
                 </span>
               </td>
               <td class="text-end table-stack-actions" (click)="$event.stopPropagation()">
@@ -267,11 +311,11 @@
                   @if (canAssignToMe(ticket)) {
                     <li>
                       <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
-                              [attr.aria-label]="'Atribuir o chamado ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
+                              [attr.aria-label]="'Atribuir a mim: ' + ticket.title" (click)="onAssignToMe(ticket.id)">
                         @if (store.assigningToMeIds().includes(ticket.id)) {
                           <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                         } @else {
-                          <i class="bx bx-user-plus me-2"></i>
+                          <i class="bx bx-user-plus me-2" aria-hidden="true"></i>
                         }
                         Atribuir a mim
                       </button>
@@ -280,15 +324,15 @@
                   @if (canAssignResponsible(ticket)) {
                     <li>
                       <button type="button" class="dropdown-item"
-                              [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo chamado ' : 'Atribuir responsável pelo chamado ') + ticket.title"
+                              [attr.aria-label]="(ticket.assignedToName ? 'Alterar responsável: ' : 'Atribuir responsável: ') + ticket.title"
                               (click)="onOpenAssignResponsibleModal(ticket.id)">
-                        <i class="bx bx-user-check me-2"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
+                        <i class="bx bx-user-check me-2" aria-hidden="true"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
                       </button>
                     </li>
                   }
                   <li>
-                    <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do chamado ' + ticket.title">
-                      <i class="bx bx-show me-2"></i>Ver detalhes
+                    <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes: ' + ticket.title">
+                      <i class="bx bx-show me-2" aria-hidden="true"></i>Ver detalhes
                     </a>
                   </li>
                 </app-row-actions>

@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { DashboardInsightsComponent, formatSlaDuration } from './dashboard-insights.component';
+import { DashboardInsightsComponent } from './dashboard-insights.component';
+import { formatSlaDuration } from '../shared';
 import { TicketMonitorItem, TicketSlaStatus, TicketPriority, TicketStatus } from '../tickets';
 
 const ticket: TicketMonitorItem = {

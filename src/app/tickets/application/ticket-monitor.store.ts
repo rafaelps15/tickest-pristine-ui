@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, map } from 'rxjs';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -13,8 +13,11 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
 
-/** Filtros e paginação padrão: todos os status/prioridade/SLA, mais recentes primeiro, 20 por página. */
-const DEFAULT_FILTERS: TicketMonitorFilters = { sort: TicketSortOrder.Newest, page: 1, pageSize: 20 };
+/**
+ * Filtros e paginação padrão: a fila de trabalho — só os ativos (Aberto + Em andamento), o prazo
+ * que vence primeiro no topo, 20 por página. "Todos os status" fica a um clique.
+ */
+export const TICKET_MONITOR_DEFAULT_FILTERS: TicketMonitorFilters = { activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 };
 
 /**
  * Store de "Monitorar Tickets": listagem paginada e filtrável de todos os chamados do sistema,
@@ -26,7 +29,7 @@ const DEFAULT_FILTERS: TicketMonitorFilters = { sort: TicketSortOrder.Newest, pa
 export const TicketMonitorStore = signalStore(
   { providedIn: 'root' },
   withState({
-    filters: DEFAULT_FILTERS,
+    filters: TICKET_MONITOR_DEFAULT_FILTERS,
     /** Ids de chamados com uma atribuição "pra mim" em andamento — desabilita só a linha, não a tabela inteira. */
     assigningToMeIds: [] as string[],
     /** Erro da última tentativa de atribuição (pra mim ou de um responsável escolhido), separado dos erros de leitura da listagem/resumo de SLA. */
@@ -55,7 +58,9 @@ export const TicketMonitorStore = signalStore(
         const sectorIds = store.filters().sectorIds ?? [];
         return { sectorId: sectorIds.length === 1 ? sectorIds[0] : undefined };
       },
+      // A hora da chegada junto da hora do servidor: o prazo relativo da tabela anda no relógio do servidor.
       stream: ({ params }) => store._ticketDataService.getSlaSummary(params.sectorId)
+        .pipe(map(summary => ({ ...summary, receivedAtMs: Date.now() })))
     })
   })),
   withComputed((store) => ({
@@ -71,6 +76,14 @@ export const TicketMonitorStore = signalStore(
           403: 'Você não tem permissão para monitorar os chamados do sistema.'
         }, 'Erro ao carregar chamados') : null
       };
+    }),
+    /**
+     * Quanto o relógio do servidor está à frente (+) ou atrás (−) do navegador, em ms, pela hora que
+     * veio no resumo de SLA — 0 enquanto ele não chega. "Vence em"/"venceu há" usa a hora do servidor.
+     */
+    clockOffsetMs: computed(() => {
+      const summary = valueOf(store._slaSummaryResource);
+      return summary ? Date.parse(summary.serverNowUtc) - summary.receivedAtMs : 0;
     }),
     /** Resumo de SLA dos chamados ativos, respeitando o filtro de setor atual. */
     slaSummary: computed(() => valueOf(store._slaSummaryResource)),
@@ -185,7 +198,7 @@ export const TicketMonitorStore = signalStore(
 
     /** Limpa todos os filtros, voltando ao estado padrão. */
     clearFilters(): void {
-      patchState(store, { filters: DEFAULT_FILTERS });
+      patchState(store, { filters: TICKET_MONITOR_DEFAULT_FILTERS });
     },
 
     /**

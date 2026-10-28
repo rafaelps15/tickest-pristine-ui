@@ -78,16 +78,16 @@ describe('dashboard-filters', () => {
       { sectorIds: ['s1', 's2'], priority: TicketPriority.High, assignee: 'me', from: '2026-10-01', to: '2026-10-28' },
       { slaStatus: TicketSlaStatus.Breached });
 
-    expect(params).toEqual({ sectorId: ['s1', 's2'], priority: 3, assignedToMe: 'true', createdFrom: '2026-10-01', createdTo: '2026-10-28', slaStatus: 3 });
+    expect(params).toEqual({ status: 'all', sectorId: ['s1', 's2'], priority: 3, assignedToMe: 'true', createdFrom: '2026-10-01', createdTo: '2026-10-28', slaStatus: 3 });
   });
 
   it('um setor vai como valor simples, e uma pessoa vai pelo id', () => {
-    expect(toMonitorQueryParams({ sectorIds: ['s1'], assignedToUserId: 'u1' })).toEqual({ sectorId: 's1', assignedToUserId: 'u1' });
+    expect(toMonitorQueryParams({ sectorIds: ['s1'], assignedToUserId: 'u1' })).toEqual({ status: 'all', sectorId: 's1', assignedToUserId: 'u1' });
   });
 
   it('no drill-down, o indicador vence o recorte e "sem responsável" exclui qualquer responsável', () => {
     expect(toMonitorQueryParams({ priority: TicketPriority.Low, assignee: 'me' }, { priority: TicketPriority.Urgent, unassignedOnly: 'true' }))
-      .toEqual({ priority: 4, unassignedOnly: 'true' });
-    expect(toMonitorQueryParams({ assignedToUserId: 'u1' }, { unassignedOnly: 'true' })).toEqual({ unassignedOnly: 'true' });
+      .toEqual({ status: 'all', priority: 4, unassignedOnly: 'true' });
+    expect(toMonitorQueryParams({ assignedToUserId: 'u1' }, { unassignedOnly: 'true' })).toEqual({ status: 'all', unassignedOnly: 'true' });
   });
 });

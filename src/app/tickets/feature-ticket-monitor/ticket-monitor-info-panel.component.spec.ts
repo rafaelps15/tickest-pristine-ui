@@ -177,7 +177,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(closeSpy).toHaveBeenCalled();
   });
 
-  it('o link "Ver detalhes completos" leva pro chamado com ?from=monitor', async () => {
+  it('o link "Ver detalhes" leva pro chamado com ?from=monitor', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 

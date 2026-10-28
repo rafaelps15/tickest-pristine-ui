@@ -35,11 +35,12 @@ describe('TicketMonitorComponent', () => {
   /** Cria um store de monitoramento falso com signals reais, para o template reagir como no store verdadeiro. */
   function createStoreFake() {
     return {
-      filters: signal<TicketMonitorFilters>({ sort: TicketSortOrder.Newest, page: 1, pageSize: 20 }),
+      filters: signal<TicketMonitorFilters>({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 }),
       tickets: signal<TicketMonitorItem[]>([ticket]),
       listState: signal({ loading: false, error: null as string | null }),
       slaSummary: signal<TicketSlaSummary | undefined>(slaSummary),
       slaSummaryState: signal({ loading: false, error: null as string | null }),
+      clockOffsetMs: signal(0),
       currentPage: signal(1),
       currentPageSize: signal(20),
       total: signal(1),
@@ -162,10 +163,31 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
-      status: undefined, activeOnly: undefined, priority: undefined, sectorIds: undefined,
+      status: undefined, activeOnly: true, priority: undefined, sectorIds: undefined,
       createdFrom: undefined, createdTo: undefined, awaiting: undefined, slaStatus: undefined,
-      unassignedOnly: undefined, assignedToUserId: undefined, sort: TicketSortOrder.Newest, page: 1, pageSize: 20
+      unassignedOnly: undefined, assignedToUserId: undefined, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20
     });
+  });
+
+  it('sem status na URL abre na fila de trabalho (Ativos), e "?status=all" é "Todos os status"', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ status: 'all' }) } }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith(jasmine.objectContaining({ status: undefined, activeOnly: undefined }));
+  });
+
+  it('grava "Todos os status" na URL como status=all (o padrão, Ativos, não vai pra URL)', async () => {
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+    storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(navigate.calls.mostRecent().args[1]!.queryParams!['status']).toBe('all');
   });
 
   it('lê do drill-down do Início vários setores, o período de abertura, "aguardando" e uma pessoa como responsável', async () => {
@@ -203,19 +225,42 @@ describe('TicketMonitorComponent', () => {
     expect(mine['assignedToUserId']).toBeNull();
   });
 
-  it('com vários setores, o seletor mostra "N setores" e o aviso de que os números de SLA são da empresa toda', async () => {
+  it('com vários setores vindos do Início, nomeia o conjunto, avisa que os números de SLA são da empresa toda e deixa voltar a ele', async () => {
+    departmentsStoreFake.departments.set([{ ...department, sectors: [{ id: 's1', name: 'Suporte', description: null }, { id: 's2', name: 'Infra', description: null }] }]);
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({ sectorId: ['s1', 's2'] }) } }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
     storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1', 's2'] });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
     expect(sector.value).toBe('many');
-    expect(sector.textContent).toContain('2 setores (vindos do Início)');
-    expect(fixture.nativeElement.querySelector('#monitorSectorHint').textContent).toContain('valem pra empresa toda');
+    expect(sector.textContent).toContain('TI (todos os setores)');
+    expect(fixture.nativeElement.textContent).toContain('Toda a empresa: os números de SLA aceitam um setor por vez.');
 
     sector.value = 's1';
     sector.dispatchEvent(new Event('change'));
     expect(storeFake.setSectorIds).toHaveBeenCalledWith(['s1']);
+
+    storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1'] });
+    await fixture.whenStable();
+    sector.value = 'many';
+    sector.dispatchEvent(new Event('change'));
+    expect(storeFake.setSectorIds).toHaveBeenCalledWith(['s1', 's2']);
+  });
+
+  it('marca o setor da URL no seletor mesmo quando os departamentos chegam depois', async () => {
+    departmentsStoreFake.departments.set([]);
+    storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1'] });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    departmentsStoreFake.departments.set([department]);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement).value).toBe('s1');
   });
 
   it('oferece as pessoas da equipe no filtro de responsável e aplica a escolhida', async () => {
@@ -427,7 +472,7 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement;
-    const assignButton = row.querySelector('button[aria-label^="Atribuir o chamado"]') as HTMLButtonElement;
+    const assignButton = row.querySelector('button[aria-label^="Atribuir a mim:"]') as HTMLButtonElement;
     assignButton.click();
     await fixture.whenStable();
 
@@ -556,7 +601,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const assignButtons = fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o chamado"]') as NodeListOf<HTMLButtonElement>;
+    const assignButtons = fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir a mim:"]') as NodeListOf<HTMLButtonElement>;
     expect(assignButtons.length).withContext('só o chamado t1 (ativo e sem responsável) deve ter o botão').toBe(1);
 
     assignButtons[0].click();
@@ -567,7 +612,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const assignButton = fixture.nativeElement.querySelector('button[aria-label^="Atribuir o chamado"]') as HTMLButtonElement;
+    const assignButton = fixture.nativeElement.querySelector('button[aria-label^="Atribuir a mim:"]') as HTMLButtonElement;
     assignButton.click();
 
     const onSuccess = storeFake.assignToMe.calls.mostRecent().args[2] as () => void;
@@ -581,7 +626,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir o chamado"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir a mim:"]')).toBeNull();
   });
 
   it('desabilita e mostra um spinner só no botão do chamado que está sendo atribuído', async () => {
@@ -593,7 +638,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const assignButtons = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir o chamado"]') as NodeListOf<HTMLButtonElement>);
+    const assignButtons = Array.from(fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir a mim:"]') as NodeListOf<HTMLButtonElement>);
     expect(assignButtons[0].disabled).toBeTrue();
     expect(assignButtons[0].querySelector('.spinner-border')).toBeTruthy();
     expect(assignButtons[1].disabled).toBeFalse();
@@ -625,19 +670,24 @@ describe('TicketMonitorComponent', () => {
 
     const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
     const hint = fixture.nativeElement.querySelector(`#${sector.getAttribute('aria-describedby')}`) as HTMLElement;
-    expect(hint.textContent).toContain('Os números ignoram os outros filtros');
+    expect(hint.textContent).toContain('Vale pros números de SLA e pra tabela.');
+    expect(fixture.nativeElement.textContent).toContain('Toda a empresa: os números seguem só o setor, não os outros filtros.');
     expect(sector.compareDocumentPosition(fixture.nativeElement.querySelector('app-stat-card')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sector.closest('app-filter-bar')).toBeNull();
   });
 
-  it('recolhe Prioridade e Ordenar em "Mais filtros", com a contagem dos aplicados', async () => {
-    storeFake.filters.set({ ...storeFake.filters(), priority: 3, sort: TicketSortOrder.DueDate });
+  it('recolhe Prioridade em "Mais filtros", com a contagem e o resumo dos aplicados; Ordenar fica no topo da tabela', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), priority: 3, awaiting: TicketAwaiting.Agent });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     const more = fixture.nativeElement.querySelector('.btn-more-filters') as HTMLButtonElement;
     expect(fixture.nativeElement.querySelector('#monitorMoreFilters').hidden).toBeTrue();
     expect(more.textContent).toContain('Mais filtros (2)');
+    expect(fixture.nativeElement.textContent).toContain('Prioridade Alta · Aguardando a equipe');
+    const sort = fixture.nativeElement.querySelector('#monitorSort') as HTMLSelectElement;
+    expect(sort.closest('#monitorMoreFilters')).toBeNull();
+    expect(sort.closest('.card')).not.toBeNull();
 
     more.click();
     await fixture.whenStable();
@@ -659,16 +709,28 @@ describe('TicketMonitorComponent', () => {
     expect(resolvedOptions).toEqual(['Cumprido', 'Resolvido com atraso', 'Sem SLA']);
   });
 
-  it('mostra o estado vazio quando não há chamados', async () => {
+  it('na fila de trabalho sem filtro, o vazio é "Fila em dia", com um atalho pra todos os status', async () => {
     storeFake.tickets.set([]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado encontrado com esses filtros.');
+    expect(fixture.nativeElement.textContent).toContain('Fila em dia.');
+    (fixture.nativeElement.querySelector('.empty-state button') as HTMLButtonElement).click();
+    expect(storeFake.setStatus).toHaveBeenCalledWith(undefined);
   });
 
-  it('oferece "Limpar filtros" no estado vazio, e limpa ao clicar', async () => {
+  it('com "Todos os status" e nada mais, o vazio diz que ainda não há chamados', async () => {
     storeFake.tickets.set([]);
+    storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Ainda não há chamados.');
+  });
+
+  it('com filtro, oferece "Limpar filtros" no estado vazio, e limpa ao clicar', async () => {
+    storeFake.tickets.set([]);
+    storeFake.filters.set({ ...storeFake.filters(), priority: 4 });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -725,13 +787,23 @@ describe('TicketMonitorComponent', () => {
 
     const cards = fixture.nativeElement.querySelectorAll('.stat-press') as NodeListOf<HTMLButtonElement>;
     expect(cards.length).toBe(4);
-    expect(cards[0].getAttribute('aria-pressed')).toBe('true'); // "Ativos": sem filtro de SLA é o padrão
+    expect(cards[0].getAttribute('aria-pressed')).toBe('true'); // "Ativos": o padrão da tela
 
     cards[3].click(); // "Atrasados"
+    expect(storeFake.setStatus).toHaveBeenCalledWith('active');
     expect(storeFake.setSlaStatus).toHaveBeenCalledWith(TicketSlaStatus.Breached);
 
     cards[0].click(); // "Ativos" limpa o filtro de SLA
     expect(storeFake.setSlaStatus).toHaveBeenCalledWith(undefined);
+  });
+
+  it('com "Todos os status", o card "Ativos" não aparece pressionado (não descreve a tabela)', async () => {
+    storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const cards = fixture.nativeElement.querySelectorAll('.stat-press') as NodeListOf<HTMLButtonElement>;
+    expect(cards[0].getAttribute('aria-pressed')).toBe('false');
   });
 
   it('ao clicar num card de resumo de SLA, também ordena por prazo mais próximo (urgência)', async () => {
@@ -854,13 +926,30 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.isOverdue(resolvedTicket)).toBeFalse();
   });
 
-  it('mostra um ícone de alerta na célula de prazo atrasado, não só a cor', async () => {
-    storeFake.tickets.set([{ ...ticket, dueAtUtc: '2020-01-01T00:00:00Z', resolvedAtUtc: null }]);
+  it('mostra o prazo relativo na célula de SLA, pela hora do servidor, com o atraso dito em texto (não só cor)', async () => {
+    const inTwoHours = new Date(Date.now() + 2 * 3_600_000 + 30_000).toISOString();
+    storeFake.tickets.set([
+      { ...ticket, id: 't1', dueAtUtc: '2020-01-01T00:00:00Z', resolvedAtUtc: null },
+      { ...ticket, id: 't2', dueAtUtc: inTwoHours, resolvedAtUtc: null }
+    ]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const dueDateCell = fixture.nativeElement.querySelector('td.text-danger');
-    expect(dueDateCell?.querySelector('.bx-error-circle')).withContext('a célula atrasada deve ter um ícone, não só cor').toBeTruthy();
+    const cells = Array.from(fixture.nativeElement.querySelectorAll('td[data-label="SLA e prazo"]') as NodeListOf<HTMLElement>);
+    expect(cells[0].textContent).toContain('venceu há');
+    expect(cells[0].querySelector('.text-danger')).not.toBeNull();
+    expect(cells[1].textContent).toContain('vence em 2h');
+    expect(fixture.nativeElement.querySelector('th:nth-child(7)').textContent).toContain('SLA e prazo');
+  });
+
+  it('o prazo relativo segue o relógio do servidor, não o do navegador', async () => {
+    // Prazo daqui a 30 min no navegador, mas o servidor está 1h à frente: já venceu.
+    storeFake.clockOffsetMs.set(3_600_000);
+    storeFake.tickets.set([{ ...ticket, dueAtUtc: new Date(Date.now() + 30 * 60_000).toISOString(), resolvedAtUtc: null }]);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('td[data-label="SLA e prazo"]').textContent).toContain('venceu há');
   });
 
   it('mostra "Atribuir responsável" pra chamado ativo, com ou sem responsável atual', async () => {
@@ -872,7 +961,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const buttons = fixture.nativeElement.querySelectorAll('button[aria-label*="responsável pelo chamado"]') as NodeListOf<HTMLButtonElement>;
+    const buttons = fixture.nativeElement.querySelectorAll('button[aria-label*="responsável: "]') as NodeListOf<HTMLButtonElement>;
     expect(buttons.length).withContext('só os chamados ativos (t1, t2) devem ter o botão').toBe(2);
   });
 
@@ -880,7 +969,7 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const openButton = fixture.nativeElement.querySelector('button[aria-label*="responsável pelo chamado"]') as HTMLButtonElement;
+    const openButton = fixture.nativeElement.querySelector('button[aria-label*="responsável: "]') as HTMLButtonElement;
     openButton.click();
     await fixture.whenStable();
 

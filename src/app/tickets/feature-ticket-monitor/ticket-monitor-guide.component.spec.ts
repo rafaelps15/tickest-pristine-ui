@@ -16,15 +16,13 @@ describe('TicketMonitorGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('mostra a legenda de prioridade, status e SLA a partir das constantes compartilhadas', async () => {
+  it('explica como ler a fila e mostra a legenda de SLA a partir das constantes compartilhadas', async () => {
     const fixture = TestBed.createComponent(TicketMonitorGuideComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Baixa');
-    expect(text).toContain('Urgente');
-    expect(text).toContain('Aberto');
-    expect(text).toContain('Cancelado');
+    expect(text).toContain('a tela abre nos chamados ativos');
+    expect(text).toContain('vence em 2h');
     expect(text).toContain('No prazo');
     expect(text).toContain('Sem SLA');
     expect(text).toContain('Dentro do prazo de atendimento definido pelo SLA.');

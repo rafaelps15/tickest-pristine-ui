@@ -61,11 +61,11 @@ describe('TicketMonitorStore', () => {
   it('carrega a primeira página de chamados e o resumo de SLA com os filtros padrão', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledWith({ sort: TicketSortOrder.Newest, page: 1, pageSize: 20 });
+    expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
     expect(dataService.getSlaSummary).toHaveBeenCalledWith(undefined);
     expect(store.tickets()).toEqual([ticket]);
     expect(store.total()).toBe(1);
-    expect(store.slaSummary()).toEqual(slaSummary);
+    expect(store.slaSummary()).toEqual(jasmine.objectContaining(slaSummary));
   });
 
   it('expõe a mensagem de erro quando a listagem falhar', async () => {
@@ -345,6 +345,6 @@ describe('TicketMonitorStore', () => {
     store.clearFilters();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledWith({ sort: TicketSortOrder.Newest, page: 1, pageSize: 20 });
+    expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
   });
 });

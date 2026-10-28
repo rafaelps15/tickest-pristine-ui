@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, effect, signal, computed, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, ChangeDetectionStrategy, effect, signal, computed, HostListener, DestroyRef, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
@@ -14,7 +14,7 @@ import { TicketSortOrder, TICKET_SORT_ORDER_LABELS } from '../entities/ticket-so
 import { TicketAwaiting, TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
 import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { DepartmentsStore } from '../../departments';
-import { SessionService, ToastService, formatIsoDate, injectSidePanelOverlay, isEscapeFromNestedLayer, isIsoDate } from '../../shared';
+import { SessionService, ToastService, formatIsoDate, formatSlaDuration, injectSidePanelOverlay, isEscapeFromNestedLayer, isIsoDate } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
@@ -25,7 +25,11 @@ import { PaginationComponent } from '../../shared/ui/pagination/pagination.compo
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 
-const DEFAULT_SORT = TicketSortOrder.Newest;
+/** Ordenação padrão: o prazo que vence primeiro (a fila de trabalho). */
+const DEFAULT_SORT = TicketSortOrder.DueDate;
+
+/** De quanto em quanto tempo o prazo relativo da tabela ("vence em 2h") é recalculado. */
+const CLOCK_TICK_MS = 30_000;
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
@@ -96,28 +100,95 @@ export class TicketMonitorComponent implements OnInit {
     /** Os 4 cards de SLA do topo: rótulo, contagem do resumo, legenda, ícone, tom e o filtro que aplicam. */
     protected readonly slaCards: { label: string; count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'; hint: string; icon: string; tone: StatTone; slaStatus: TicketSlaStatus | undefined }[] = [
         { label: 'Ativos', count: 'activeCount', hint: 'Com o relógio do SLA correndo', icon: 'bx-receipt', tone: 'primary', slaStatus: undefined },
-        { label: 'No Prazo', count: 'onTimeCount', hint: 'Dentro do SLA', icon: 'bx-check-circle', tone: 'success', slaStatus: TicketSlaStatus.OnTime },
-        { label: 'Em Risco', count: 'atRiskCount', hint: 'Perto de vencer', icon: 'bx-error-circle', tone: 'warning', slaStatus: TicketSlaStatus.AtRisk },
+        { label: 'No prazo', count: 'onTimeCount', hint: 'Dentro do SLA', icon: 'bx-check-circle', tone: 'success', slaStatus: TicketSlaStatus.OnTime },
+        { label: 'Em risco', count: 'atRiskCount', hint: 'A partir de 75% do prazo', icon: 'bx-error-circle', tone: 'warning', slaStatus: TicketSlaStatus.AtRisk },
         { label: 'Atrasados', count: 'breachedCount', hint: 'Já passaram do prazo', icon: 'bx-error', tone: 'danger', slaStatus: TicketSlaStatus.Breached }
     ];
 
-    /** Se a linha "Mais filtros" (Prioridade, Ordenar, Só sem responsável) está aberta. */
+    /** Se a linha "Mais filtros" (Prioridade, Aguardando, período de abertura) está aberta. */
     readonly moreFiltersOpen = signal(false);
 
-    /** Quantos filtros da linha "Mais filtros" estão aplicados — mostrado no botão e usado pra abri-la sozinha. */
+    /** Quantos filtros da linha "Mais filtros" estão aplicados — mostrado no botão. */
     readonly secondaryFilterCount = computed(() => {
         const filters = this.store.filters();
         return (filters.priority !== undefined ? 1 : 0)
-            + (filters.sort !== TicketSortOrder.Newest ? 1 : 0)
             + (filters.awaiting !== undefined ? 1 : 0)
             + (filters.createdFrom || filters.createdTo ? 1 : 0);
     });
+
+    /**
+     * Os filtros de "Mais filtros" aplicados, em texto, ao lado do botão — com a linha fechada, quem
+     * chega por um link vê o que está valendo sem abrir nada ("Prioridade Alta · Aguardando a equipe").
+     */
+    readonly secondaryFilterSummary = computed(() => {
+        const filters = this.store.filters();
+        const parts: string[] = [];
+        if (filters.priority !== undefined) parts.push(`Prioridade ${this.priorityLabels[filters.priority]}`);
+        if (filters.awaiting !== undefined) parts.push(this.awaitingLabels[filters.awaiting]);
+        const range = this.createdRangeLabel();
+        if (range) parts.push(`Aberto ${range.charAt(0).toLowerCase()}${range.slice(1)}`);
+        return parts.join(' · ');
+    });
+
+    /**
+     * Setores que vieram de um drill-down do Início (um departamento), guardados pra poder voltar a
+     * eles pelo seletor depois de escolher outro setor; null quando a tela não veio assim.
+     */
+    readonly drillSectorIds = signal<string[] | null>(null);
+
+    /**
+     * Nome do conjunto de setores do drill-down: o departamento, quando são todos os setores dele;
+     * senão, os nomes ("Helpdesk, Infra e mais 2").
+     */
+    readonly drillSectorLabel = computed(() => {
+        const ids = this.drillSectorIds();
+        if (!ids) return '';
+        const departments = this.departmentsStore.departments();
+        const department = departments.find(d => d.sectors.length === ids.length && d.sectors.every(sector => ids.includes(sector.id)));
+        if (department) return `${department.name} (todos os setores)`;
+        const names = departments.flatMap(d => d.sectors).filter(sector => ids.includes(sector.id)).map(sector => sector.name);
+        if (names.length === 0) return `${ids.length} setores (vindos do Início)`;
+        return names.length > 3 ? `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}` : names.join(', ');
+    });
+
+    /** Escopo dos números de SLA, dito acima dos cards: eles seguem só o setor, não os outros filtros. */
+    readonly slaScopeLabel = computed(() => {
+        const sectorIds = this.store.filters().sectorIds ?? [];
+        if (sectorIds.length > 1) return 'Toda a empresa: os números de SLA aceitam um setor por vez. A tabela mostra só os setores escolhidos.';
+        if (sectorIds.length === 1) {
+            const sector = this.departmentsStore.departments().flatMap(d => d.sectors).find(s => s.id === sectorIds[0]);
+            return `Setor ${sector?.name ?? 'escolhido'}: os números seguem só o setor, não os outros filtros.`;
+        }
+        return 'Toda a empresa: os números seguem só o setor, não os outros filtros.';
+    });
+
+    /** Qual ponta do período de abertura foi recusada por inverter o intervalo (ou data inválida), ou null. */
+    readonly dateError = signal<'from' | 'to' | null>(null);
+
+    /** Relógio local (ms), avançado a cada 30s — dispara o recálculo do prazo relativo da tabela. */
+    protected readonly nowMs = signal(Date.now());
+
+    /**
+     * Que vazio mostrar quando a tabela não tem chamados: com algum filtro além do padrão, a culpa é
+     * do filtro; na fila de trabalho sem filtro, é a fila em dia; com "Todos os status" e nada mais,
+     * a empresa ainda não tem chamados.
+     */
+    readonly emptyKind = computed<'filtered' | 'queueClear' | 'noTickets'>(() => {
+        const f = this.store.filters();
+        const otherFilters = f.status !== undefined || f.priority !== undefined || !!f.sectorIds?.length || f.slaStatus !== undefined
+            || !!f.search || !!f.unassignedOnly || !!f.assignedToUserId || !!f.createdFrom || !!f.createdTo || f.awaiting !== undefined;
+        if (otherFilters) return 'filtered';
+        return f.activeOnly ? 'queueClear' : 'noTickets';
+    });
+
+    /** "Sem SLA" exposto ao template: esses chamados não têm prazo pra mostrar. */
+    protected readonly slaNotApplicable = TicketSlaStatus.NotApplicable;
 
     /** Opções do filtro "Aguardando". */
     protected readonly awaitingOptions = [TicketAwaiting.Agent, TicketAwaiting.Requester];
     protected readonly awaitingLabels = TICKET_AWAITING_LABELS;
 
-    /** Valor do seletor de setor: um setor, "vários" (veio de um departamento no Início) ou todos. */
+    /** Valor do seletor de setor: um setor, "vários" (veio de um departamento no Início) ou todos. Vai no `[selected]` de cada opção, que chega depois do select. */
     readonly sectorValue = computed(() => {
         const sectorIds = this.store.filters().sectorIds ?? [];
         return sectorIds.length > 1 ? 'many' : sectorIds[0] ?? '';
@@ -132,9 +203,12 @@ export class TicketMonitorComponent implements OnInit {
         return null;
     });
 
-    /** Troca o setor pelo seletor; "vários" mantém o recorte que veio do Início. */
+    /** Troca o setor pelo seletor; "vários" volta ao recorte que veio do Início. */
     onSectorChange(value: string): void {
-        if (value === 'many') return;
+        if (value === 'many') {
+            this.store.setSectorIds(this.drillSectorIds() ?? undefined);
+            return;
+        }
         this.store.setSectorIds(value ? [value] : undefined);
     }
 
@@ -145,8 +219,10 @@ export class TicketMonitorComponent implements OnInit {
         const next = edge === 'from' ? { from: value, to: createdTo } : { from: createdFrom, to: value };
         if ((field.value && !value) || (next.from && next.to && next.from > next.to)) {
             field.value = (edge === 'from' ? createdFrom : createdTo) ?? '';
+            this.dateError.set(edge);
             return;
         }
+        this.dateError.set(null);
         this.store.setCreatedRange(next.from, next.to);
     }
 
@@ -200,6 +276,12 @@ export class TicketMonitorComponent implements OnInit {
     });
 
     constructor() {
+        // O prazo relativo ("vence em 2h") anda sozinho: um tique a cada 30s, só no navegador.
+        if (isPlatformBrowser(inject(PLATFORM_ID))) {
+            const tick = setInterval(() => this.nowMs.set(Date.now()), CLOCK_TICK_MS);
+            inject(DestroyRef).onDestroy(() => clearInterval(tick));
+        }
+
         // O painel busca a descrição completa (único campo que a linha da tabela não tem) do
         // ticket selecionado; trocar a seleção rápido cancela a busca anterior automaticamente
         // (characteristic do rxResource, que troca de observable a cada mudança de `ticketId`).
@@ -288,11 +370,13 @@ export class TicketMonitorComponent implements OnInit {
      */
     ngOnInit(): void {
         const params = this.route.snapshot.queryParamMap;
+        const status = params.get('status');
 
         const filters: TicketMonitorFilters = {
             status: parseEnumParam(params.get('status'), this.statusOptions),
-            // "?status=active" é o grupo "Ativos" (Aberto + Em Andamento), vindo do backlog e dos críticos do Início.
-            activeOnly: params.get('status') === 'active' ? true : undefined,
+            // Sem `status` (ou com "active") é a fila de trabalho: Ativos (Aberto + Em andamento). "Todos os
+            // status" vai na URL como "?status=all"; um status específico, pelo número.
+            activeOnly: status === 'all' || parseEnumParam(status, this.statusOptions) !== undefined ? undefined : true,
             priority: parseEnumParam(params.get('priority'), this.priorityOptions),
             // `sectorId` repetido: vários setores (drill-down de um departamento no Início).
             sectorIds: params.getAll('sectorId').filter(Boolean).length ? params.getAll('sectorId').filter(Boolean) : undefined,
@@ -314,6 +398,7 @@ export class TicketMonitorComponent implements OnInit {
         };
 
         this.store.hydrateFiltersFromUrl(filters);
+        if ((filters.sectorIds?.length ?? 0) > 1) this.drillSectorIds.set(filters.sectorIds ?? null);
         this.selectedTicketId.set(params.get('ticketId') || undefined);
         this.store.load();
     }
@@ -373,7 +458,7 @@ export class TicketMonitorComponent implements OnInit {
     private filtersToQueryParams(filters: TicketMonitorFilters): Record<string, string | number | string[] | null> {
         const isMe = !!filters.assignedToUserId && filters.assignedToUserId === this.sessionService.currentUser()?.id;
         return {
-            status: filters.activeOnly ? 'active' : filters.status ?? null,
+            status: filters.activeOnly ? null : filters.status ?? 'all',
             priority: filters.priority ?? null,
             sectorId: filters.sectorIds?.length ? filters.sectorIds : null,
             createdFrom: filters.createdFrom ?? null,
@@ -406,8 +491,16 @@ export class TicketMonitorComponent implements OnInit {
      * (`TicketSortOrder.DueDate`) disponível, só não a acionavam.
      */
     onSlaCardClick(slaStatus: TicketSlaStatus | undefined): void {
+        // Todo card fala de chamados ativos: o filtro de status vira "Ativos", pra tabela bater com o card.
+        this.store.setStatus('active');
         this.store.setSlaStatus(slaStatus);
         this.store.setSort(TicketSortOrder.DueDate);
+    }
+
+    /** Se um card de SLA descreve o que a tabela mostra agora (ativos, e o mesmo SLA — ou nenhum, no "Ativos"). */
+    isSlaCardPressed(slaStatus: TicketSlaStatus | undefined): boolean {
+        const filters = this.store.filters();
+        return !!filters.activeOnly && filters.slaStatus === slaStatus;
     }
 
     /** Limpa todos os filtros, incluindo o texto de busca ainda não aplicado (debounce em andamento). */
@@ -421,9 +514,19 @@ export class TicketMonitorComponent implements OnInit {
         this.store.setPageSize(pageSize);
     }
 
-    /** Indica se o chamado já passou do prazo e ainda não foi resolvido, para destacar a data na tabela. */
+    /** Indica se o chamado já passou do prazo e ainda não foi resolvido, pela hora do servidor. */
     isOverdue(ticket: TicketMonitorItem): boolean {
-        return !ticket.resolvedAtUtc && new Date(ticket.dueAtUtc).getTime() < Date.now();
+        return !ticket.resolvedAtUtc && new Date(ticket.dueAtUtc).getTime() < this.nowMs() + this.store.clockOffsetMs();
+    }
+
+    /**
+     * Prazo de um chamado ativo em texto relativo ("vence em 2h 14min" / "venceu há 35 min"), pela
+     * hora do servidor; null pra quem não tem prazo correndo (resolvido ou sem SLA).
+     */
+    dueRelative(ticket: TicketMonitorItem): string | null {
+        if (ticket.resolvedAtUtc || ticket.slaStatus === TicketSlaStatus.NotApplicable || !TICKET_ACTIVE_STATUSES.has(ticket.status)) return null;
+        const diff = new Date(ticket.dueAtUtc).getTime() - (this.nowMs() + this.store.clockOffsetMs());
+        return diff < 0 ? `venceu há ${formatSlaDuration(-diff)}` : `vence em ${formatSlaDuration(diff)}`;
     }
 
     /** Indica se o botão "Atribuir a mim" deve aparecer: chamado ativo, sem responsável, pra quem administra a fila. */

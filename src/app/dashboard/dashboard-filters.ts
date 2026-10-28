@@ -138,7 +138,7 @@ export function resolveDashboardScope(filters: DashboardFilters, departments: De
  * Leva o recorte do Início pro Monitor (drill-down): setores (repetidos), prioridade,
  * responsável e período de abertura viram os parâmetros que o Monitor aceita, e `extra`
  * acrescenta o que o indicador clicado representa (status, situação do SLA…). `extra` vence o
- * recorte quando os dois falam da mesma coisa.
+ * recorte quando os dois falam da mesma coisa. Sem status no `extra`, vai `status=all`.
  */
 export function toMonitorQueryParams(scope: TicketDashboardScope, extra: Params = {}): Params {
   const params: Params = {};
@@ -149,7 +149,9 @@ export function toMonitorQueryParams(scope: TicketDashboardScope, extra: Params 
   if (scope.assignedToUserId) params['assignedToUserId'] = scope.assignedToUserId;
   if (scope.from) params['createdFrom'] = scope.from;
   if (scope.to) params['createdTo'] = scope.to;
-  const merged = { ...params, ...extra };
+  // O Monitor abre nos ativos quando o link não diz o status: um card sem status (Total, Cumpridos…)
+  // pede "todos os status" explicitamente, pra mostrar o mesmo que conta.
+  const merged: Params = { status: 'all', ...params, ...extra };
   // "Sem responsável" exclui qualquer responsável no Monitor.
   if (merged['unassignedOnly'] === 'true') {
     delete merged['assignedToMe'];
