@@ -289,9 +289,9 @@ describe('DashboardComponent', () => {
     await fixture.whenStable();
 
     const labels = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('aria-label'));
-    expect(labels).toContain('Ver 5 chamados abertos ou em andamento na fila de monitoramento');
-    expect(labels).toContain('Ver 2 chamados atrasados na fila de monitoramento');
-    expect(labels).toContain('Ver 3 chamados ativos sem responsável na fila de monitoramento');
+    expect(labels).toContain('Na fila: 5, aberto ou em andamento. Ver na fila de monitoramento');
+    expect(labels).toContain('Atrasados: 2, passaram do prazo. Ver na fila de monitoramento');
+    expect(labels).toContain('Sem responsável: 3, ativos, ninguém assumiu. Ver na fila de monitoramento');
   });
 
   it('leva o recorte da URL pros widgets e pro drill-down (setor, prioridade e responsável)', async () => {
@@ -303,7 +303,7 @@ describe('DashboardComponent', () => {
     const scope: TicketDashboardScope = { sectorIds: ['s1'], priority: 4, assignee: 'none', assignedToUserId: undefined, from: undefined, to: undefined };
     expect(operationFake.setScope).toHaveBeenCalledWith(scope);
     const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('abertos ou em andamento'))!;
+      .find(a => a.getAttribute('aria-label')?.includes('Na fila'))!;
     const href = backlog.getAttribute('href')!;
     expect(href).toContain('sectorId=s1');
     expect(href).toContain('priority=4');
@@ -343,7 +343,7 @@ describe('DashboardComponent', () => {
     expect(scope.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(scope.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('abertos ou em andamento'))!;
+      .find(a => a.getAttribute('aria-label')?.includes('Na fila'))!;
     const href = backlog.getAttribute('href')!;
     expect(href).toContain('sectorId=s1&sectorId=s2');
     expect(href).toContain(`createdFrom=${scope.from}`);
@@ -372,8 +372,19 @@ describe('DashboardComponent', () => {
     expect(attention.textContent).toContain('Aguardando a equipe');
     expect(attention.textContent).toContain('Aguardando o solicitante');
     const link = Array.from(attention.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('esperando resposta da equipe'))!;
+      .find(a => a.getAttribute('aria-label')?.includes('Aguardando a equipe'))!;
     expect(link.getAttribute('href')).toContain('awaiting=2');
+  });
+
+  it('anuncia um resumo só da operação ao leitor de tela, não uma frase por grupo', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const regions = Array.from(fixture.nativeElement.querySelectorAll('[aria-live="polite"]') as NodeListOf<HTMLElement>)
+      .filter(region => region.closest('app-dashboard-metric-group, app-dashboard-times'));
+    expect(regions.length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('Central de atenção: atrasados 2, críticos 1, sem responsável 3. Na fila: 5; em risco: 1.');
   });
 
   it('sem os contadores de "aguardando", a Central mostra só os três de hoje', async () => {

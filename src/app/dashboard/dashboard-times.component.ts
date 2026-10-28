@@ -43,7 +43,9 @@ export function formatBusinessMinutes(minutes: number): string {
       </div>
 
       <!-- Resumo pro leitor de tela quando os tempos chegam ou mudam com os filtros (como nos grupos de números). -->
-      <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
+      @if (announce()) {
+        <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
+      }
 
       @if (error()) {
         <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-0" role="alert">
@@ -105,6 +107,11 @@ export class DashboardTimesComponent {
   readonly error = input<string | null>(null);
   /** Se há período escolhido (muda a explicação de quais chamados entram). */
   readonly hasPeriod = input(false);
+  /**
+   * Se o próprio grupo anuncia os números ao leitor de tela. A tela desliga quando vários grupos
+   * mudam juntos (troca de filtro) e anuncia um resumo só, em vez de uma frase por grupo.
+   */
+  readonly announce = input(true);
 
   /** "Tentar novamente". */
   readonly retry = output<void>();

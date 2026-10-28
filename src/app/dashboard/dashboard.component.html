@@ -36,7 +36,7 @@
                          [loading]="myTickets.loading()" [failed]="myTickets.failed()" [linked]="true">
             <span statHint class="kpi-cta">Ver em Meus Chamados <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
             <a class="stretched-link" routerLink="/tickets" [queryParams]="card.queryParams"
-               [attr.aria-label]="myTickets.failed() ? card.label + ': ver em Meus Chamados' : card.value + ' ' + card.ariaNoun + ': ver em Meus Chamados'"></a>
+               [attr.aria-label]="card.label + ': ' + (myTickets.failed() ? 'indisponível' : card.value) + '. Ver em Meus Chamados'"></a>
           </app-stat-card>
         </div>
       }
@@ -72,6 +72,9 @@
                             [assignees]="assigneesStore.assignees()" [assigneesTotal]="assigneesStore.total()" [today]="today"
                             (change)="onFilterChange($event)" (clear)="filters.clear()" />
 
+  <!-- Um resumo só pro leitor de tela a cada troca de filtro (os grupos abaixo não anunciam sozinhos). -->
+  <p class="visually-hidden" aria-live="polite">{{ operationSummary() }}</p>
+
   <!-- Central de atenção, Volume e SLA vêm da mesma leitura: um aviso só, em vez de três alertas iguais. -->
   @if (operation.overviewError(); as overviewError) {
     <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
@@ -80,25 +83,25 @@
     </div>
   }
 
-  <app-dashboard-metric-group title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave."
+  <app-dashboard-metric-group [announce]="false" title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave."
                               [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               [emptyTitle]="filters.active() ? 'Nada pedindo atenção com estes filtros.' : 'Nada pedindo atenção agora.'"
                               [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-check-circle'" emptyHint="Sem chamados atrasados, críticos ou sem responsável."
                               />
 
-  <app-dashboard-metric-group title="Volume" [description]="hasPeriod() ? 'Chamados abertos no período, por situação atual.' : 'Chamados com os filtros acima, por situação atual.'"
+  <app-dashboard-metric-group [announce]="false" title="Volume" [description]="hasPeriod() ? 'Chamados abertos no período, por situação atual.' : 'Chamados com os filtros acima, por situação atual.'"
                               variant="strip"
                               [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
                               [metrics]="volumeMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               />
 
-  <app-dashboard-metric-group title="SLA" description="Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão na Central de atenção."
+  <app-dashboard-metric-group [announce]="false" title="SLA" description="Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão na Central de atenção."
                               columnClass="col-12 col-sm-6 col-xl-3"
                               [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
                               [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               />
 
-  <app-dashboard-times [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesError()"
+  <app-dashboard-times [announce]="false" [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesError()"
                        [hasPeriod]="hasPeriod()" (retry)="operation.reloadTimes()" />
 }
 
@@ -123,8 +126,8 @@
         @if (sessionService.hasPermission('tickets:manage')) {
           <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: card.status }"
              [attr.aria-label]="store.statusCountsFailed()
-               ? 'Ver chamados ' + card.ariaNoun + ' na fila de monitoramento'
-               : 'Ver ' + card.value + ' chamados ' + card.ariaNoun + ' na fila de monitoramento'"></a>
+               ? card.label + ': indisponível. Ver na fila de monitoramento'
+               : card.label + ': ' + card.value + '. Ver na fila de monitoramento'"></a>
         }
       </app-stat-card>
     </div>

@@ -105,13 +105,24 @@ const CUSTOM_PERIOD = 'custom';
         <div class="col-6 col-md-3">
           <label class="form-label small" for="dashboardFrom">De</label>
           <input #fromInput id="dashboardFrom" type="date" class="form-control" [value]="filters().from ?? ''"
+                 [class.is-invalid]="dateError() === 'from'" [attr.aria-invalid]="dateError() === 'from' || null"
+                 [attr.aria-describedby]="dateError() === 'from' ? 'dashboardDateError' : null"
                  [max]="filters().to ?? today()" (change)="onDateChange('from', fromInput)" />
         </div>
         <div class="col-6 col-md-3">
           <label class="form-label small" for="dashboardTo">Até</label>
           <input #toInput id="dashboardTo" type="date" class="form-control" [value]="filters().to ?? ''"
+                 [class.is-invalid]="dateError() === 'to'" [attr.aria-invalid]="dateError() === 'to' || null"
+                 [attr.aria-describedby]="dateError() === 'to' ? 'dashboardDateError' : null"
                  [min]="filters().from ?? ''" [max]="today()" (change)="onDateChange('to', toInput)" />
         </div>
+        @if (dateError()) {
+          <!-- Data recusada: diz o motivo, em vez de só voltar o campo pro valor aplicado. -->
+          <p id="dashboardDateError" class="col-12 small text-danger mb-0 mt-1" role="alert">
+            {{ dateError() === 'from' ? 'O início precisa ser no máximo o fim do período.' : 'O fim precisa ser no mínimo o início do período.' }}
+            Mantivemos a data anterior.
+          </p>
+        }
       }
 
       <button filterExtras type="button" class="btn btn-link btn-more-filters text-decoration-none px-0"
@@ -185,6 +196,9 @@ export class DashboardFilterBarComponent {
 
   /** Se a linha "Mais filtros" (prioridade e responsável) está aberta — estado de tela, não vai pra URL. */
   readonly moreFiltersOpen = signal(false);
+
+  /** Qual ponta do período personalizado foi recusada por inverter o intervalo (ou data inválida), ou null. */
+  readonly dateError = signal<'from' | 'to' | null>(null);
 
   /** Quantos filtros de "Mais filtros" estão aplicados (aparece no botão, com a linha fechada ou aberta). */
   readonly secondaryFilterCount = computed(() => {
@@ -298,6 +312,7 @@ export class DashboardFilterBarComponent {
   onDateChange(edge: 'from' | 'to', field: HTMLInputElement): void {
     const value = field.value;
     if (value === '') {
+      this.dateError.set(null);
       this.change.emit({ [edge]: undefined });
       return;
     }
@@ -305,8 +320,10 @@ export class DashboardFilterBarComponent {
     const inverted = other && isIsoDate(value) && (edge === 'from' ? value > other : value < other);
     if (!isIsoDate(value) || inverted) {
       field.value = this.filters()[edge] ?? '';
+      this.dateError.set(edge);
       return;
     }
+    this.dateError.set(null);
     this.change.emit({ [edge]: value });
   }
 }

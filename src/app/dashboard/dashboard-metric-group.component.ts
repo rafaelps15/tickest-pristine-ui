@@ -15,8 +15,6 @@ export interface DashboardMetric {
   tone: StatTone;
   /** Número, ou null quando ainda não há resposta. */
   value: number | null;
-  /** Como o número se lê em voz alta ("chamados atrasados"). */
-  ariaNoun: string;
   /** Linha de apoio abaixo do número. */
   hint?: string;
   /** Query params do Monitor pro drill-down; null quando o indicador não leva a lugar nenhum. */
@@ -43,7 +41,9 @@ export interface DashboardMetric {
       </div>
 
       <!-- Resumo pro leitor de tela quando os números chegam ou mudam com os filtros. -->
-      <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
+      @if (announce()) {
+        <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
+      }
 
       @if (unavailable()) {
         <!-- O aviso de erro (com "Tentar novamente") fica uma vez só, acima dos grupos que dependem da mesma leitura. -->
@@ -52,6 +52,21 @@ export interface DashboardMetric {
         <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-0" role="alert">
           <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ error() }}</span>
           <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="retry.emit()">Tentar novamente</button>
+        </div>
+      } @else if (loading() && !hasValues() && variant() === 'strip') {
+        <!-- Esqueleto no formato da faixa: a tela não pula quando os números chegam. -->
+        <div class="card metric-strip-card" role="status">
+          <span class="visually-hidden">Carregando {{ title() }}…</span>
+          <ul class="list-unstyled d-flex flex-wrap mb-0 metric-strip" aria-hidden="true">
+            @for (metric of metrics(); track metric.key) {
+              <li class="metric-strip-item">
+                <span class="metric-strip-link">
+                  <span class="skeleton-line skeleton-label"></span>
+                  <span class="skeleton-line skeleton-value"></span>
+                </span>
+              </li>
+            }
+          </ul>
         </div>
       } @else if (loading() && !hasValues()) {
         <div class="row g-3" role="status">
@@ -77,7 +92,7 @@ export interface DashboardMetric {
               <li class="metric-strip-item">
                 @if (metric.queryParams !== null) {
                   <a class="metric-strip-link" routerLink="/tickets/monitorar" [queryParams]="metric.queryParams"
-                     [attr.aria-label]="'Ver ' + (metric.value ?? '') + ' ' + metric.ariaNoun + ' na fila de monitoramento'">
+                     [attr.aria-label]="linkLabel(metric)">
                     <span class="text-muted small">{{ metric.label }}</span>
                     <span class="fs-4 stat-value">{{ metric.value ?? '—' }}</span>
                     @if (metric.hint) {
@@ -106,7 +121,7 @@ export interface DashboardMetric {
                 }
                 @if (metric.queryParams !== null) {
                   <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="metric.queryParams"
-                     [attr.aria-label]="'Ver ' + (metric.value ?? '') + ' ' + metric.ariaNoun + ' na fila de monitoramento'"></a>
+                     [attr.aria-label]="linkLabel(metric)"></a>
                 }
               </app-stat-card>
             </div>
@@ -155,12 +170,21 @@ export interface DashboardMetric {
     }
 
     /* Recarga com números na tela (troca de filtro): esmaece em vez de piscar o esqueleto. */
+    /*
+     * Fio entre os números: todo item tem o fio à esquerda e a lista sobra 1px pra fora do card, que
+     * corta o excesso — o primeiro de cada linha nunca fica com fio solto, em qualquer quebra.
+     */
+    .metric-strip-card {
+      overflow: hidden;
+    }
+
+    .metric-strip {
+      margin-left: -1px;
+    }
+
     .metric-strip-item {
       flex: 1 1 9rem;
       min-width: 0;
-    }
-
-    .metric-strip-item + .metric-strip-item {
       border-left: 1px solid var(--tk-border);
     }
 
@@ -186,14 +210,10 @@ export interface DashboardMetric {
       outline-offset: -2px;
     }
 
-    /* Celular: dois por linha, com o fio entre colunas só onde há vizinho à esquerda. */
+    /* Celular: dois por linha. */
     @media (max-width: 575.98px) {
       .metric-strip-item {
         flex-basis: 50%;
-      }
-
-      .metric-strip-item:nth-child(odd) {
-        border-left: 0;
       }
     }
 
@@ -219,6 +239,11 @@ export class DashboardMetricGroupComponent {
    * grupos vindos da mesma leitura) — aqui fica só uma linha neutra, sem repetir o alerta.
    */
   readonly unavailable = input(false);
+  /**
+   * Se o próprio grupo anuncia os números ao leitor de tela. A tela desliga quando vários grupos
+   * mudam juntos (troca de filtro) e anuncia um resumo só, em vez de uma frase por grupo.
+   */
+  readonly announce = input(true);
   /**
    * Forma do grupo: `cards` (um stat-card por número, pros grupos de ação) ou `strip` (uma faixa
    * compacta, pros números de contexto como o Volume — menos peso visual, mesmo drill-down).
@@ -248,6 +273,15 @@ export class DashboardMetricGroupComponent {
   /** Frase lida pelo leitor de tela quando os números chegam ("Volume: 12 no total, 5 na fila."). */
   readonly liveSummary = computed(() => {
     if (!this.hasValues() || this.loading() || this.error() || this.unavailable()) return '';
-    return `${this.title()}: ` + this.metrics().map(metric => `${metric.value} ${metric.ariaNoun}`).join(', ') + '.';
+    return `${this.title()}: ` + this.metrics().map(metric => `${metric.label.toLowerCase()} ${metric.value}`).join(', ') + '.';
   });
+
+  /**
+   * Nome do link do drill-down pro leitor de tela: rótulo, número e legenda do card, sem montar
+   * plural ("Críticos: 1, urgentes, ainda ativos. Ver na fila de monitoramento").
+   */
+  linkLabel(metric: DashboardMetric): string {
+    const hint = metric.hint ? `, ${metric.hint.charAt(0).toLowerCase()}${metric.hint.slice(1)}` : '';
+    return `${metric.label}: ${metric.value ?? 'indisponível'}${hint}. Ver na fila de monitoramento`;
+  }
 }

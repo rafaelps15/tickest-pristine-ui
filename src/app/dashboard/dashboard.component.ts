@@ -86,11 +86,11 @@ export class DashboardComponent implements OnInit {
     const scope = this.scope() ?? {};
     const volume = this.operation.volume();
     return [
-      { key: 'total', label: 'Total', icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, ariaNoun: 'chamados no total', hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
-      { key: 'backlog', label: 'Na fila', icon: 'bx-error-circle', tone: 'warning', value: volume?.backlog ?? null, ariaNoun: 'chamados abertos ou em andamento', hint: 'Aberto ou em andamento', queryParams: toMonitorQueryParams(scope, { status: 'active' }) },
-      { key: 'inProgress', label: 'Em andamento', icon: 'bx-time-five', tone: 'info', value: volume?.inProgress ?? null, ariaNoun: 'chamados em andamento', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.InProgress }) },
-      { key: 'resolved', label: 'Resolvidos', icon: 'bx-check-double', tone: 'success', value: volume?.resolved ?? null, ariaNoun: 'chamados resolvidos', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Resolved }) },
-      { key: 'closed', label: 'Fechados', icon: 'bx-lock-alt', tone: 'primary', value: volume?.closed ?? null, ariaNoun: 'chamados fechados', queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Closed }) }
+      { key: 'total', label: 'Total', icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
+      { key: 'backlog', label: 'Na fila', icon: 'bx-error-circle', tone: 'warning', value: volume?.backlog ?? null, hint: 'Aberto ou em andamento', queryParams: toMonitorQueryParams(scope, { status: 'active' }) },
+      { key: 'inProgress', label: 'Em andamento', icon: 'bx-time-five', tone: 'info', value: volume?.inProgress ?? null, queryParams: toMonitorQueryParams(scope, { status: TicketStatus.InProgress }) },
+      { key: 'resolved', label: 'Resolvidos', icon: 'bx-check-double', tone: 'success', value: volume?.resolved ?? null, queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Resolved }) },
+      { key: 'closed', label: 'Fechados', icon: 'bx-lock-alt', tone: 'primary', value: volume?.closed ?? null, queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Closed }) }
     ];
   });
 
@@ -100,10 +100,10 @@ export class DashboardComponent implements OnInit {
     const sla = this.operation.sla();
     const since = this.hasPeriod() ? 'abertos no período' : 'desde o início';
     return [
-      { key: 'atRisk', label: 'Em risco', icon: 'bx-time', tone: 'warning', value: sla?.atRisk ?? null, ariaNoun: 'chamados em risco', hint: 'A partir de 75% do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.AtRisk }) },
-      { key: 'onTime', label: 'No prazo', icon: 'bx-timer', tone: 'info', value: sla?.onTime ?? null, ariaNoun: 'chamados ativos dentro do prazo', hint: 'Ativos, com folga', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.OnTime }) },
-      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: sla?.met ?? null, ariaNoun: 'chamados resolvidos no prazo', hint: `Resolvidos no prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Met }) },
-      { key: 'missed', label: 'Resolvidos com atraso', icon: 'bx-calendar-x', tone: 'danger', value: sla?.missed ?? null, ariaNoun: 'chamados resolvidos depois do prazo', hint: `Fora do prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Missed }) }
+      { key: 'atRisk', label: 'Em risco', icon: 'bx-time', tone: 'warning', value: sla?.atRisk ?? null, hint: 'A partir de 75% do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.AtRisk }) },
+      { key: 'onTime', label: 'No prazo', icon: 'bx-timer', tone: 'info', value: sla?.onTime ?? null, hint: 'Ativos, com folga', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.OnTime }) },
+      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: sla?.met ?? null, hint: `Resolvidos no prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Met }) },
+      { key: 'missed', label: 'Resolvidos com atraso', icon: 'bx-calendar-x', tone: 'danger', value: sla?.missed ?? null, hint: `Fora do prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Missed }) }
     ];
   });
 
@@ -116,17 +116,29 @@ export class DashboardComponent implements OnInit {
     const attention = this.operation.attention();
     const awaiting: DashboardMetric[] = [];
     if (attention?.awaitingAgent !== undefined) {
-      awaiting.push({ key: 'awaitingAgent', label: 'Aguardando a equipe', icon: 'bx-message-square-dots', tone: 'warning', value: attention.awaitingAgent, ariaNoun: 'chamados esperando resposta da equipe', hint: 'A última palavra é do solicitante', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Agent, status: 'active' }) });
+      awaiting.push({ key: 'awaitingAgent', label: 'Aguardando a equipe', icon: 'bx-message-square-dots', tone: 'warning', value: attention.awaitingAgent, hint: 'A última palavra é do solicitante', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Agent, status: 'active' }) });
     }
     if (attention?.awaitingRequester !== undefined) {
-      awaiting.push({ key: 'awaitingRequester', label: 'Aguardando o solicitante', icon: 'bx-user-voice', tone: 'info', value: attention.awaitingRequester, ariaNoun: 'chamados esperando o solicitante', hint: 'A equipe respondeu por último', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Requester, status: 'active' }) });
+      awaiting.push({ key: 'awaitingRequester', label: 'Aguardando o solicitante', icon: 'bx-user-voice', tone: 'info', value: attention.awaitingRequester, hint: 'A equipe respondeu por último', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Requester, status: 'active' }) });
     }
     return [
-      { key: 'overdue', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: attention?.overdue ?? null, ariaNoun: 'chamados atrasados', hint: 'Passaram do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
-      { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.critical ?? null, ariaNoun: 'chamados urgentes ativos', hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
-      { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassigned ?? null, ariaNoun: 'chamados ativos sem responsável', hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) },
+      { key: 'overdue', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: attention?.overdue ?? null, hint: 'Passaram do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
+      { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.critical ?? null, hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
+      { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassigned ?? null, hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) },
       ...awaiting
     ];
+  });
+
+  /**
+   * Resumo da operação pro leitor de tela, anunciado uma vez quando os números chegam ou mudam com
+   * os filtros: o que pede ação (a Central inteira) e uma linha de contexto (na fila e em risco).
+   */
+  protected readonly operationSummary = computed(() => {
+    if (this.operation.overviewLoading() || this.operation.overviewError() || !this.operation.volume()) return '';
+    const attention = this.attentionMetrics().map(metric => `${metric.label.toLowerCase()} ${metric.value}`).join(', ');
+    const volume = this.operation.volume()!;
+    const sla = this.operation.sla()!;
+    return `Central de atenção: ${attention}. Na fila: ${volume.backlog}; em risco: ${sla.atRisk}.`;
   });
 
   /** Troca de um filtro na barra (grava na URL; os widgets seguem a URL). */
@@ -150,24 +162,21 @@ export class DashboardComponent implements OnInit {
       label: 'Em Aberto',
       tone: 'warning' as StatTone,
       icon: 'bx-error-circle',
-      value: this.store.openCount(),
-      ariaNoun: 'em aberto'
+      value: this.store.openCount()
     },
     {
       status: TicketStatus.InProgress,
       label: 'Em Andamento',
       tone: 'info' as StatTone,
       icon: 'bx-time-five',
-      value: this.store.inProgressCount(),
-      ariaNoun: 'em andamento'
+      value: this.store.inProgressCount()
     },
     {
       status: TicketStatus.Resolved,
       label: 'Resolvidos',
       tone: 'success' as StatTone,
       icon: 'bx-check-double',
-      value: this.store.resolvedCount(),
-      ariaNoun: 'resolvidos'
+      value: this.store.resolvedCount()
     }
   ]);
 
@@ -189,9 +198,9 @@ export class DashboardComponent implements OnInit {
    * abre "Encerrados" (`?status=finished`), que também inclui fechados e cancelados.
    */
   protected readonly myTicketCards = computed(() => [
-    { label: 'Em aberto', icon: 'bx-error-circle', tone: 'warning' as StatTone, value: this.myTickets.openCount(), ariaNoun: 'chamados seus em aberto', queryParams: {} },
-    { label: 'Em andamento', icon: 'bx-time-five', tone: 'info' as StatTone, value: this.myTickets.inProgressCount(), ariaNoun: 'chamados seus em andamento', queryParams: {} },
-    { label: 'Resolvidos', icon: 'bx-check-double', tone: 'success' as StatTone, value: this.myTickets.resolvedCount(), ariaNoun: 'chamados seus resolvidos', queryParams: { status: 'finished' } }
+    { label: 'Em aberto', icon: 'bx-error-circle', tone: 'warning' as StatTone, value: this.myTickets.openCount(), queryParams: {} },
+    { label: 'Em andamento', icon: 'bx-time-five', tone: 'info' as StatTone, value: this.myTickets.inProgressCount(), queryParams: {} },
+    { label: 'Resolvidos', icon: 'bx-check-double', tone: 'success' as StatTone, value: this.myTickets.resolvedCount(), queryParams: { status: 'finished' } }
   ]);
 
   protected readonly isAdministrative = computed(() =>

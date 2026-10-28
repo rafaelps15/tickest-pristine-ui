@@ -19,8 +19,8 @@ describe('DashboardMetricGroupComponent', () => {
   /** Dois indicadores do SLA com os números informados. */
   function metrics(breached: number | null, met: number | null): DashboardMetric[] {
     return [
-      { key: 'breached', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: breached, ariaNoun: 'chamados atrasados', queryParams: { slaStatus: 3 } },
-      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: met, ariaNoun: 'chamados cumpridos', queryParams: null }
+      { key: 'breached', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: breached, queryParams: { slaStatus: 3 } },
+      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: met, queryParams: null }
     ];
   }
 
@@ -72,8 +72,29 @@ describe('DashboardMetricGroupComponent', () => {
 
     expect(fixture.nativeElement.querySelectorAll('app-stat-card').length).toBe(0);
     const link = fixture.nativeElement.querySelector('a.metric-strip-link') as HTMLAnchorElement;
-    expect(link.getAttribute('aria-label')).toBe('Ver 4 chamados atrasados na fila de monitoramento');
+    expect(link.getAttribute('aria-label')).toBe('Atrasados: 4. Ver na fila de monitoramento');
     expect(fixture.nativeElement.querySelectorAll('.metric-strip-item').length).toBe(2);
+  });
+
+  it('o nome do link não monta plural: rótulo, número e legenda ("Críticos: 1, urgentes…")', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.metrics.set([
+      { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: 1, hint: 'Urgentes, ainda ativos', queryParams: { priority: 4 } }
+    ]);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('a.stretched-link').getAttribute('aria-label'))
+      .toBe('Críticos: 1, urgentes, ainda ativos. Ver na fila de monitoramento');
+  });
+
+  it('carregando a faixa: o esqueleto já tem o formato da faixa', async () => {
+    TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="Volume" variant="strip" [metrics]="metrics()" [loading]="true" />` } });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.metrics.set(metrics(null, null));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelectorAll('.metric-strip-item .skeleton-line').length).toBe(4);
+    expect(fixture.nativeElement.querySelector('.metric-skeleton')).toBeNull();
   });
 
   it('vazio (tudo zero): explica por quê, em vez de cards zerados', async () => {
@@ -93,8 +114,8 @@ describe('DashboardMetricGroupComponent', () => {
     const links = fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>;
     expect(links.length).toBe(1);
     expect(links[0].getAttribute('href')).toBe('/tickets/monitorar?slaStatus=3');
-    expect(links[0].getAttribute('aria-label')).toBe('Ver 2 chamados atrasados na fila de monitoramento');
-    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toContain('SLA: 2 chamados atrasados, 7 chamados cumpridos.');
+    expect(links[0].getAttribute('aria-label')).toBe('Atrasados: 2. Ver na fila de monitoramento');
+    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toContain('SLA: atrasados 2, cumpridos 7.');
   });
 
   it('recarregando com números na tela: mantém os cards (esmaecidos) em vez de voltar ao esqueleto', async () => {

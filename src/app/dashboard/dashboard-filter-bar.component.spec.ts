@@ -108,10 +108,15 @@ describe('DashboardFilterBarComponent', () => {
     from.dispatchEvent(new Event('change'));
     expect(fixture.componentInstance.changes).toEqual([]);
     expect(from.value).toBe('2026-10-01');
+    await fixture.whenStable();
+    expect(from.getAttribute('aria-invalid')).toBe('true');
+    expect(fixture.nativeElement.querySelector('#dashboardDateError').textContent).toContain('O início precisa ser no máximo o fim do período.');
 
     from.value = '2026-10-05';
     from.dispatchEvent(new Event('change'));
     expect(fixture.componentInstance.changes).toEqual([{ from: '2026-10-05' }]);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#dashboardDateError')).toBeNull();
   });
 
   it('apagar uma data deixa aquela ponta do período em aberto', async () => {
