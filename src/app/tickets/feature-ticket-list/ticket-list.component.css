@@ -45,8 +45,26 @@
     z-index: 1;
   }
 
-  .table-stack-actions {
+  /*
+   * As ações deixam o canto superior (onde ficava o "⋮") e vão pro rodapé do card, à esquerda, acima
+   * do link esticado do título. Sem o "⋮" no canto, o título não precisa mais reservar espaço à direita.
+   */
+  .table-stack td.table-stack-actions {
+    position: relative;
     z-index: 2;
+    top: auto;
+    right: auto;
+    order: 5;
+    width: 100%;
+    padding-top: 0.5rem;
+  }
+
+  .table-stack td:first-child {
+    padding-right: 0;
+  }
+
+  .table-stack .row-actions-inline {
+    justify-content: flex-start;
   }
 
   /*
@@ -201,7 +219,46 @@
 
 /* Tempo restante pro dono cancelar, ao lado da ação no "⋮": informação, não alerta (cor de texto secundário). */
 .cancel-hint {
-  margin-left: 0.5rem;
-  color: var(--tk-text-secondary);
+  margin-left: 0.25rem;
+  opacity: 0.85;
   font-variant-numeric: tabular-nums;
+}
+
+/* Contagem do grupo no seletor ("Em aberto 3"): número discreto, que não compete com o rótulo. */
+.status-group-count {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* Situação do prazo como texto com ícone: o tom muda só quando pede atenção, e o texto sempre diz. */
+.due-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--tk-text-primary);
+}
+
+.due-warning .due-label {
+  color: var(--tk-warning-text);
+  font-weight: 600;
+}
+
+.due-danger .due-label {
+  color: var(--tk-danger-text);
+  font-weight: 600;
+}
+
+/* Ações da linha à vista: botões pequenos lado a lado, à direita no desktop. */
+.row-actions-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.row-actions-inline .btn {
+  white-space: nowrap;
 }

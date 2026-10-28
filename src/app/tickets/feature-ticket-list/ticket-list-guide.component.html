@@ -11,15 +11,19 @@
   </app-guide-section>
 
   <app-guide-section title="O que dá pra fazer">
-    <p class="small text-muted mb-2">Pelo menu ⋮ da linha: <strong>editar a descrição</strong> enquanto o chamado está aberto ou em andamento, e <strong>cancelar</strong> nos 15 primeiros minutos depois de abrir. Depois disso, peça o cancelamento a quem administra os chamados.</p>
+    <p class="small text-muted mb-2">Na própria linha: <strong>editar</strong> a descrição enquanto o chamado está aberto ou em andamento, e <strong>cancelar</strong> nos 15 primeiros minutos depois de abrir. Depois disso, peça o cancelamento a quem administra os chamados.</p>
     <p class="small text-muted mb-0">Depois de resolvido, fechado ou cancelado, dá pra <strong>reabrir</strong> e dizer o que faltou — um novo prazo de atendimento começa a contar, e você o acompanha no detalhe do chamado.</p>
   </app-guide-section>
 
   <app-guide-section title="Prazo">
-    <p class="small text-muted mb-2">Cada chamado tem um prazo de atendimento, contado em horário útil. A etiqueta diz como ele está:</p>
-    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-2">
-      @for (sla of slaOptions; track sla) {
-        <li><span class="badge" [ngClass]="slaBadgeClass[sla]">{{ slaLabels[sla] }}</span></li>
+    <p class="small text-muted mb-2">Cada chamado tem um prazo de atendimento, contado em horário útil. A coluna Prazo diz como ele está:</p>
+    <ul class="list-unstyled small mb-2">
+      @for (sla of dueLegend; track sla) {
+        <li class="d-flex align-items-center gap-2">
+          <i class="bx {{ dueDisplay[sla].icon }}" aria-hidden="true"
+             [class.text-warning]="dueDisplay[sla].tone === 'warning'" [class.text-danger]="dueDisplay[sla].tone === 'danger'"></i>
+          <span>{{ dueDisplay[sla].label }}</span>
+        </li>
       }
     </ul>
     <p class="small text-muted mb-0"><strong>Atualizado</strong> mostra há quanto tempo foi a última movimentação: mensagem, troca de status, responsável ou anexo.</p>

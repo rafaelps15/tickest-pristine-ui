@@ -51,6 +51,15 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.failed()).toBeFalse();
   });
 
+  it('soma os grupos do seletor de Meus Chamados: em aberto, encerrados (com os cancelados) e todos', async () => {
+    const store = createStore();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.activeCount()).toBe(7);
+    expect(store.finishedCount()).toBe(15);
+    expect(store.totalCount()).toBe(22);
+  });
+
   it('marca falha e não inventa 0 quando a API falha', async () => {
     dataService.getMineSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const store = createStore();

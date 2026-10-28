@@ -23,7 +23,11 @@ describe('TicketListGuideComponent', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Aguardando alguém do setor assumir.');
     expect(text).toContain('confira e reabra se não ficou certo');
-    expect(fixture.nativeElement.querySelectorAll('.badge').length).toBeGreaterThanOrEqual(9);
+    // Pílulas só pros 5 status; o prazo vem em texto com ícone, os mesmos da coluna Prazo.
+    expect(fixture.nativeElement.querySelectorAll('.badge').length).toBe(5);
+    expect(text).toContain('Perto de vencer');
+    expect(text).toContain('Sem prazo');
+    expect(text).toContain('dá pra reabrir se o problema voltar');
   });
 
   it('diz o que dá pra fazer em cada fase (editar/cancelar enquanto ativo, reabrir depois)', async () => {

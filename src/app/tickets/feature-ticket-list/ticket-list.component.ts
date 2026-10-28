@@ -1,17 +1,17 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, ElementRef, Injector, DestroyRef, afterNextRender, viewChild } from '@angular/core';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, take } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
+import { MyTicketsSummaryStore } from '../application/my-tickets-summary.store';
+import { TICKET_LIST_DUE_DISPLAY } from './ticket-list-due';
 import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
-import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
 import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
 import { DepartmentsStore } from '../../departments';
-import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
@@ -46,13 +46,15 @@ export function formatLastActivity(isoUtc: string, nowMs: number): string {
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
     selector: 'app-ticket-list',
-    imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, EmptyStateComponent, FilterBarComponent, TicketListGuideComponent],
+    imports: [CommonModule, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, EmptyStateComponent, FilterBarComponent, TicketListGuideComponent],
     templateUrl: './ticket-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-list.component.css'
 })
 export class TicketListComponent implements OnInit {
     protected readonly store = inject(TicketsStore);
+    /** Contagens por grupo pro seletor (GET /tickets/mine/summary, o mesmo resumo do Início). */
+    protected readonly summaryStore = inject(MyTicketsSummaryStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
     private readonly sessionService = inject(SessionService);
@@ -67,8 +69,8 @@ export class TicketListComponent implements OnInit {
 
     readonly statusLabels = TICKET_STATUS_LABELS;
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
-    readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
-    readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+    /** Como a coluna "Prazo" conta cada situação, na voz de quem abriu o chamado. */
+    readonly dueDisplay = TICKET_LIST_DUE_DISPLAY;
 
     /** Opções do seletor de grupo, na ordem da tela; "Em aberto" é o padrão. */
     readonly statusGroupOptions: { key: keyof typeof TICKET_STATUS_GROUP_URL_VALUES; label: string; value: TicketStatusGroup | null }[] = [
@@ -148,6 +150,9 @@ export class TicketListComponent implements OnInit {
         this.applyQueryParams(this.route.snapshot.queryParamMap);
         this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => this.applyQueryParams(params));
         this.store.loadForCurrentUser();
+        // O resumo é root (o Início também usa): recarrega ao abrir pra contagem do seletor não ficar velha
+        // depois de abrir um chamado em outra tela.
+        this.summaryStore.reload();
     }
 
     /** Lê `?status=` (finished/all; ausente ou inválido = Em aberto) e `?q=` e aplica no Store e no campo de busca. */
@@ -172,6 +177,38 @@ export class TicketListComponent implements OnInit {
     /** Troca o grupo de status pelo seletor. */
     onStatusGroupChange(statusGroup: TicketStatusGroup | null): void {
         this.store.setStatusGroup(statusGroup);
+    }
+
+    /** Quantos chamados há no grupo do seletor, ou null enquanto o resumo não chegou (o número só aparece quando há). */
+    groupCount(key: 'active' | 'finished' | 'all'): number | null {
+        if (key === 'active') return this.summaryStore.activeCount();
+        if (key === 'finished') return this.summaryStore.finishedCount();
+        return this.summaryStore.totalCount();
+    }
+
+    /** Nome do grupo atual em minúsculas, pra frase da busca vazia ("A busca vale só para em aberto."). */
+    currentGroupLabel(): string {
+        const option = this.statusGroupOptions.find(o => o.value === this.store.statusGroup());
+        return (option?.label ?? 'Todos').toLowerCase();
+    }
+
+    /** Limpa só a busca, mantendo o grupo escolhido (inclusive o texto ainda no debounce). */
+    onClearSearch(): void {
+        this.searchInput.set('');
+        this.store.setSearch('');
+    }
+
+    /**
+     * Depois de cancelar/reabrir, a linha pode sair do grupo filtrado ("Em aberto" → "Encerrados").
+     * Espera a lista recarregar e devolve o foco às ações da linha — ou, se ela saiu, ao título da tela,
+     * em vez de deixá-lo cair no `<body>`. Também atualiza as contagens do seletor.
+     */
+    private afterRowMutation(ticketId: string): void {
+        this.summaryStore.reload();
+        toObservable(this.store.state, { injector: this.injector }).pipe(
+            filter(state => !state.loading),
+            take(1)
+        ).subscribe(() => this.focusRowActions(ticketId));
     }
 
     /** Volta ao padrão: Em aberto, sem busca (inclusive o texto ainda no debounce). */
@@ -235,7 +272,7 @@ export class TicketListComponent implements OnInit {
      */
     private focusRowActions(ticketId: string): void {
         afterNextRender(() => {
-            const toggle = this.host.nativeElement.querySelector<HTMLElement>(`[data-row-actions="${ticketId}"]`);
+            const toggle = this.host.nativeElement.querySelector<HTMLElement>(`[data-row-actions="${ticketId}"] button:not([disabled])`);
             if (toggle) toggle.focus();
             else this.pageHeader()?.focus();
         }, { injector: this.injector });
@@ -252,9 +289,11 @@ export class TicketListComponent implements OnInit {
         const ticket = this.reopeningTicket();
         if (!ticket) return;
 
+        const leavesGroup = this.store.statusGroup() === TicketStatusGroup.Finished;
         this.store.reopen(ticket.id, reason, () => {
-            this.toastService.show('Chamado reaberto.');
-            this.onReopenClosed();
+            this.toastService.show(leavesGroup ? 'Chamado reaberto — agora está em Em aberto.' : 'Chamado reaberto.');
+            this.reopeningTicket.set(null);
+            this.afterRowMutation(ticket.id);
         });
     }
 
@@ -302,8 +341,10 @@ export class TicketListComponent implements OnInit {
             this.focusRowActions(ticket.id);
             if (!confirmed) return;
 
+            const leavesGroup = this.store.statusGroup() === TicketStatusGroup.Active;
             this.store.update(ticket.id, { description: ticket.description, status: TicketStatus.Canceled }, () => {
-                this.toastService.show('Chamado cancelado.');
+                this.toastService.show(leavesGroup ? 'Chamado cancelado — agora está em Encerrados.' : 'Chamado cancelado.');
+                this.afterRowMutation(ticket.id);
             });
         });
     }

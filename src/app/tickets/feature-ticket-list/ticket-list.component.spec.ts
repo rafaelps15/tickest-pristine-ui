@@ -11,10 +11,26 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { DepartmentsStore } from '../../departments';
+import { MyTicketsSummaryStore } from '../application/my-tickets-summary.store';
 
 /** Data UTC a N minutos de agora, pra janela de cancelamento do dono nos testes. */
 function minutesFromNow(minutes: number): string {
   return new Date(Date.now() + minutes * 60_000).toISOString();
+}
+
+/** Botões das ações da linha (à vista, sem "⋮"), com o texto sem a contagem da janela do dono. */
+function rowActionLabels(root: HTMLElement): string[] {
+  return Array.from(root.querySelectorAll('.row-actions-inline button') as NodeListOf<HTMLButtonElement>).map(button => {
+    const clone = button.cloneNode(true) as HTMLElement;
+    clone.querySelector('.cancel-hint')?.remove();
+    return clone.textContent?.trim() ?? '';
+  });
+}
+
+/** Primeiro botão das ações da linha com o texto informado. */
+function rowAction(root: HTMLElement, text: string): HTMLButtonElement | undefined {
+  return Array.from(root.querySelectorAll('.row-actions-inline button') as NodeListOf<HTMLButtonElement>)
+    .find(button => button.textContent?.includes(text));
 }
 
 describe('TicketListComponent', () => {
@@ -67,6 +83,7 @@ describe('TicketListComponent', () => {
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
   let toastServiceFake: { show: jasmine.Spy };
   let sessionServiceFake: { hasPermission: jasmine.Spy };
+  let summaryStoreFake: { activeCount: ReturnType<typeof signal<number | null>>; finishedCount: ReturnType<typeof signal<number | null>>; totalCount: ReturnType<typeof signal<number | null>>; reload: jasmine.Spy };
   let departmentsStoreFake: { departments: ReturnType<typeof signal<{ name: string; sectors: unknown[] }[]>> };
 
   beforeEach(async () => {
@@ -74,6 +91,7 @@ describe('TicketListComponent', () => {
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
     toastServiceFake = { show: jasmine.createSpy('show') };
     sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(false) };
+    summaryStoreFake = { activeCount: signal<number | null>(3), finishedCount: signal<number | null>(5), totalCount: signal<number | null>(8), reload: jasmine.createSpy('reload') };
     departmentsStoreFake = { departments: signal<{ name: string; sectors: unknown[] }[]>([]) };
 
     await TestBed.configureTestingModule({
@@ -85,6 +103,7 @@ describe('TicketListComponent', () => {
         { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
         { provide: ToastService, useValue: toastServiceFake },
         { provide: SessionService, useValue: sessionServiceFake },
+        { provide: MyTicketsSummaryStore, useValue: summaryStoreFake },
         { provide: DepartmentsStore, useValue: departmentsStoreFake }
       ]
     }).compileComponents();
@@ -95,9 +114,10 @@ describe('TicketListComponent', () => {
     await fixture.whenStable();
 
     expect(storeFake.loadForCurrentUser).toHaveBeenCalled();
+    expect(summaryStoreFake.reload).toHaveBeenCalled();
   });
 
-  it('renderiza cada chamado com quem atende, setor, prazo com SLA, status e última atividade — sem a prioridade', async () => {
+  it('renderiza cada chamado com quem atende, setor, prazo em texto, status e última atividade — sem a prioridade', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -108,9 +128,11 @@ describe('TicketListComponent', () => {
     expect(text).toContain('Helpdesk');
     expect(text).toContain('Ana Souza');
     expect(text).toContain('No prazo');
-    expect(text).toContain('Cumprido');
+    expect(text).toContain('Resolvido no prazo');
     expect(text).toContain('Aberto');
     expect(text).not.toContain('Alta');
+    // O Status é a única pílula da linha; o prazo é texto com ícone.
+    expect(fixture.nativeElement.querySelectorAll('tbody tr:first-child .badge').length).toBe(1);
     const time = fixture.nativeElement.querySelector('time') as HTMLTimeElement;
     expect(time.getAttribute('datetime')).toBe(openTicket.lastActivityAtUtc);
   });
@@ -186,7 +208,7 @@ describe('TicketListComponent', () => {
 
     expect(fixture.componentInstance.canReopen(openTicket)).toBeFalse();
     expect(fixture.componentInstance.canReopen(resolvedTicket)).toBeTrue();
-    expect(fixture.nativeElement.querySelectorAll('.dropdown-item.text-success').length).toBe(1);
+    expect(rowActionLabels(fixture.nativeElement).filter(label => label === 'Reabrir').length).toBe(1);
   });
 
   it('leva ao detalhe pelo título do chamado, sem um botão "Ver detalhes" separado', async () => {
@@ -285,7 +307,7 @@ describe('TicketListComponent', () => {
     expect(pageTwoButton?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('desabilita as ações e troca o ícone do "⋮" por um spinner no chamado pendente', async () => {
+  it('desabilita as ações e mostra um spinner só na linha do chamado pendente', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     storeFake.pendingTicketIds.set(['t2']);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -294,30 +316,23 @@ describe('TicketListComponent', () => {
     expect(fixture.componentInstance.isPending(resolvedTicket)).toBeTrue();
     expect(fixture.componentInstance.isPending(openTicket)).toBeFalse();
 
-    const reopenButton = fixture.nativeElement.querySelector('.dropdown-item.text-success') as HTMLButtonElement;
-    expect(reopenButton.disabled).toBeTrue();
-    const menuButtons = fixture.nativeElement.querySelectorAll('.btn-row-actions');
-    expect(menuButtons[1].querySelector('.spinner-border')).not.toBeNull();
-    expect(menuButtons[0].querySelector('.spinner-border')).toBeNull();
+    expect(rowAction(fixture.nativeElement, 'Reabrir')!.disabled).toBeTrue();
+    const groups = fixture.nativeElement.querySelectorAll('.row-actions-inline');
+    expect(groups[1].querySelector('.spinner-border')).not.toBeNull();
+    expect(groups[1].getAttribute('aria-busy')).toBe('true');
+    expect(groups[0].querySelector('.spinner-border')).toBeNull();
   });
 
-  it('mostra Editar descrição/Cancelar chamado no "⋮" só para chamados ativos (Aberto/Em Andamento)', async () => {
+  it('mostra as ações na própria linha, sem "⋮": Editar e Cancelar nos ativos, Reabrir nos encerrados', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     expect(fixture.componentInstance.isActive(openTicket)).toBeTrue();
     expect(fixture.componentInstance.isActive(resolvedTicket)).toBeFalse();
-    // Cada linha tem um único "⋮"; o do chamado ativo (t1) traz editar e cancelar, o do inativo (t2) só Reabrir.
-    // O rótulo é lido sem a contagem da janela do dono ("por mais 8 min"), coberta em teste próprio.
-    expect(fixture.nativeElement.querySelectorAll('.btn-row-actions').length).toBe(2);
-    const itemLabels = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLElement>)
-      .map(item => {
-        const clone = item.cloneNode(true) as HTMLElement;
-        clone.querySelector('.cancel-hint')?.remove();
-        return clone.textContent?.trim();
-      });
-    expect(itemLabels).toEqual(['Editar descrição', 'Cancelar chamado', 'Reabrir chamado']);
+    expect(fixture.nativeElement.querySelector('.btn-row-actions')).toBeNull();
+    expect(rowActionLabels(fixture.nativeElement)).toEqual(['Editar', 'Cancelar', 'Reabrir']);
+    expect(rowAction(fixture.nativeElement, 'Editar')!.getAttribute('aria-label')).toBe('Editar a descrição do chamado ' + openTicket.title);
   });
 
   it('abre o modal de edição pré-carregando o chamado, e fecha sem salvar', async () => {
@@ -345,31 +360,31 @@ describe('TicketListComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Descrição atualizada.');
   });
 
-  it('renderiza o modal de edição ao clicar em "Editar descrição"', async () => {
+  it('renderiza o modal de edição ao clicar em "Editar"', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    const editButton = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLButtonElement>)
-      .find(item => item.textContent?.includes('Editar descrição'))!;
-    editButton.click();
+    rowAction(fixture.nativeElement, 'Editar')!.click();
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('app-ticket-edit-dialog')).not.toBeNull();
   });
 
-  it('cancela o chamado quando confirmado, preservando a descrição atual', async () => {
+  it('cancela o chamado quando confirmado, preservando a descrição atual, e diz pra onde ele foi', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.onCancelTicket(openTicket);
 
-    // "Voltar" em vez de "Cancelar" ao lado de "Cancelar ticket", pra não ficar ambíguo.
+    // "Voltar" em vez de "Cancelar" ao lado de "Cancelar chamado", pra não ficar ambíguo.
     expect(confirmDialogServiceFake.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ confirmLabel: 'Cancelar chamado', cancelLabel: 'Voltar' }));
     expect(storeFake.update).toHaveBeenCalledWith('t1', { description: openTicket.description, status: TicketStatus.Canceled }, jasmine.any(Function));
 
+    // Na aba "Em aberto" o chamado cancelado some da lista: o toast diz onde ele está agora.
     storeFake.update.calls.mostRecent().args[2]();
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado cancelado.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado cancelado — agora está em Encerrados.');
+    expect(summaryStoreFake.reload).toHaveBeenCalled();
   });
 
   it('não cancela o chamado quando a confirmação for cancelada', async () => {
@@ -444,7 +459,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Finished);
   });
 
-  it('mostra a busca sem resultado com "Limpar busca", que volta ao padrão', async () => {
+  it('mostra a busca sem resultado com "Limpar busca", que limpa só a busca', async () => {
     storeFake.tickets.set([]);
     // A busca vem da URL (a tela a aplica ao abrir), como quando a pessoa volta pelo navegador.
     await TestBed.inject(Router).navigateByUrl('/?q=impressora');
@@ -452,11 +467,12 @@ describe('TicketListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum chamado com “impressora” no título');
-    const button = Array.from(fixture.nativeElement.querySelectorAll('.filtered-empty button') as NodeListOf<HTMLButtonElement>)
-      .find(b => b.textContent?.includes('Limpar busca'))!;
-    button.click();
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.filtered-empty button') as NodeListOf<HTMLButtonElement>);
+    storeFake.setStatusGroup.calls.reset();
+    buttons.find(b => b.textContent?.includes('Limpar busca'))!.click();
     expect(storeFake.setSearch).toHaveBeenCalledWith('');
-    expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Active);
+    // Limpa só a busca: o grupo escolhido continua.
+    expect(storeFake.setStatusGroup).not.toHaveBeenCalled();
   });
 
   it('mostra "Carregando…" enquanto a sondagem decide entre primeiro uso e nada pendente', async () => {
@@ -531,40 +547,40 @@ describe('TicketListComponent', () => {
     expect(formatLastActivity('2026-01-01T12:00:00Z', now)).toBe(new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date('2026-01-01T12:00:00Z')));
   });
 
-  it('mostra "Cancelar chamado" com o tempo que falta pro dono, dentro da janela de 15 min', async () => {
+  it('mostra "Cancelar" com o tempo que falta pro dono, dentro da janela de 15 min', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    const cancel = Array.from(fixture.nativeElement.querySelectorAll('.dropdown-item') as NodeListOf<HTMLButtonElement>)
-      .find(item => item.textContent?.includes('Cancelar chamado'))!;
+    const cancel = rowAction(fixture.nativeElement, 'Cancelar')!;
     expect(cancel).toBeTruthy();
     expect(cancel.querySelector('.cancel-hint')?.textContent?.trim()).toBe('por mais 8 min');
+    expect(cancel.getAttribute('aria-label')).toContain('disponível por mais 8 min');
   });
 
-  it('esconde "Cancelar chamado" quando o back-end diz que não dá (canCancel = false)', async () => {
+  it('esconde "Cancelar" quando o back-end diz que não dá (canCancel = false)', async () => {
     storeFake.tickets.set([{ ...openTicket, canCancel: false }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Cancelar chamado');
-    expect(fixture.nativeElement.textContent).toContain('Editar descrição');
+    expect(rowAction(fixture.nativeElement, 'Cancelar')).toBeUndefined();
+    expect(rowAction(fixture.nativeElement, 'Editar')).toBeTruthy();
   });
 
-  it('esconde "Cancelar chamado" do dono quando a janela já venceu, mesmo com canCancel desatualizado', async () => {
+  it('esconde "Cancelar" do dono quando a janela já venceu, mesmo com canCancel desatualizado', async () => {
     storeFake.tickets.set([{ ...openTicket, ownerCancelDeadlineUtc: minutesFromNow(-1) }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Cancelar chamado');
+    expect(rowAction(fixture.nativeElement, 'Cancelar')).toBeUndefined();
   });
 
-  it('com tickets:cancel, mostra "Cancelar chamado" sem prazo e sem contagem', async () => {
+  it('com tickets:cancel, mostra "Cancelar" sem prazo e sem contagem', async () => {
     sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:cancel');
     storeFake.tickets.set([{ ...openTicket, ownerCancelDeadlineUtc: minutesFromNow(-60) }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Cancelar chamado');
+    expect(rowAction(fixture.nativeElement, 'Cancelar')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.cancel-hint')).toBeNull();
   });
 
@@ -581,5 +597,73 @@ describe('TicketListComponent', () => {
     expect(text).not.toContain('Nada pendente');
     expect(text).not.toContain('Nenhum chamado aberto ainda');
     expect(text).not.toContain('Carregando chamados…');
+  });
+
+  it('na busca vazia dentro de um grupo, oferece "Buscar em todos os chamados" e explica o escopo', async () => {
+    storeFake.tickets.set([]);
+    await TestBed.inject(Router).navigateByUrl('/?q=monitor');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('A busca vale só para em aberto.');
+    const all = Array.from(fixture.nativeElement.querySelectorAll('.filtered-empty button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('Buscar em todos os chamados'))!;
+    all.click();
+    expect(storeFake.setStatusGroup).toHaveBeenCalledWith(null);
+  });
+
+  it('não oferece "Buscar em todos" quando a busca já é em todos', async () => {
+    storeFake.tickets.set([]);
+    await TestBed.inject(Router).navigateByUrl('/?status=all&q=monitor');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Buscar em todos os chamados');
+    expect(fixture.nativeElement.textContent).toContain('Confira o termo digitado.');
+  });
+
+  it('mostra a contagem de cada grupo no seletor, e nenhuma enquanto o resumo não chega', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const counts = Array.from(fixture.nativeElement.querySelectorAll('.status-group-count') as NodeListOf<HTMLElement>).map(c => c.textContent?.trim());
+    expect(counts).toEqual(['3', '5', '8']);
+
+    summaryStoreFake.activeCount.set(null);
+    summaryStoreFake.finishedCount.set(null);
+    summaryStoreFake.totalCount.set(null);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelectorAll('.status-group-count').length).toBe(0);
+  });
+
+  it('mostra o prazo "Perto de vencer" e "Atrasado" com tom de atenção, e "Sem prazo" sem data', async () => {
+    storeFake.tickets.set([
+      { ...openTicket, id: 'a', slaStatus: TicketSlaStatus.AtRisk },
+      { ...openTicket, id: 'b', slaStatus: TicketSlaStatus.Breached },
+      { ...resolvedTicket, id: 'c', slaStatus: TicketSlaStatus.NotApplicable }
+    ]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const dues = Array.from(fixture.nativeElement.querySelectorAll('.due') as NodeListOf<HTMLElement>);
+    expect(dues[0].classList).toContain('due-warning');
+    expect(dues[0].textContent).toContain('Perto de vencer');
+    expect(dues[1].classList).toContain('due-danger');
+    expect(dues[1].textContent).toContain('Atrasado');
+    expect(dues[2].textContent).toContain('Sem prazo');
+    expect(dues[2].querySelector('.due-date')).toBeNull();
+  });
+
+  it('reabrindo dentro de "Encerrados", o toast diz que o chamado foi pra "Em aberto"', async () => {
+    await TestBed.inject(Router).navigateByUrl('/?status=finished');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onStartReopen(resolvedTicket);
+    fixture.componentInstance.onReopenConfirm(null);
+    storeFake.reopen.calls.mostRecent().args[2]();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado reaberto — agora está em Em aberto.');
+    expect(fixture.componentInstance.reopeningTicket()).toBeNull();
   });
 });

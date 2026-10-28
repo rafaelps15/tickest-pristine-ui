@@ -15,7 +15,12 @@
       @for (option of statusGroupOptions; track option.key) {
         <input type="radio" class="btn-check" name="ticketStatusGroup" [id]="'ticketStatusGroup-' + option.key"
                [checked]="store.statusGroup() === option.value" (change)="onStatusGroupChange(option.value)" />
-        <label class="btn btn-outline-secondary" [for]="'ticketStatusGroup-' + option.key">{{ option.label }}</label>
+        <label class="btn btn-outline-secondary" [for]="'ticketStatusGroup-' + option.key">
+          {{ option.label }}
+          @if (groupCount(option.key); as count) {
+            <span class="status-group-count num" [attr.aria-label]="count + (count === 1 ? ' chamado' : ' chamados')">{{ count }}</span>
+          }
+        </label>
       }
     </div>
   </div>
@@ -99,8 +104,13 @@
           <tr>
             <td colspan="6" class="filtered-empty">
               <app-empty-state icon="bx-search" [title]="'Nenhum chamado com “' + store.search() + '” no título'"
-                               hint="Confira o termo ou busque em todos os seus chamados.">
-                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">Limpar busca</button>
+                               [hint]="store.statusGroup() === null ? 'Confira o termo digitado.' : 'A busca vale só para ' + currentGroupLabel() + '. O chamado pode estar no outro grupo.'">
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                  @if (store.statusGroup() !== null) {
+                    <button type="button" class="btn btn-sm btn-primary" (click)="onStatusGroupChange(null)">Buscar em todos os chamados</button>
+                  }
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearSearch()">Limpar busca</button>
+                </div>
               </app-empty-state>
             </td>
           </tr>
@@ -142,9 +152,12 @@
                 </div>
               </td>
               <td data-label="Prazo">
-                <div class="due">
-                  <span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span>
-                  <span class="due-date small num">{{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                @let due = dueDisplay[ticket.slaStatus];
+                <div class="due" [class.due-warning]="due.tone === 'warning'" [class.due-danger]="due.tone === 'danger'">
+                  <span class="due-label"><i class="bx {{ due.icon }}" aria-hidden="true"></i>{{ due.label }}</span>
+                  @if (due.showDate) {
+                    <span class="due-date small num">{{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                  }
                 </div>
               </td>
               <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
@@ -154,31 +167,32 @@
                 </time>
               </td>
               <td class="text-end table-stack-actions">
-                <app-row-actions [label]="'Ações para o chamado ' + ticket.title" [busy]="isPending(ticket)" [rowKey]="ticket.id">
+                <!-- Uma ou duas ações por linha: botões à vista (o "⋮" é só pra mais de duas, pela regra do DESIGN.md). -->
+                <div class="row-actions-inline" [attr.data-row-actions]="ticket.id" [attr.aria-busy]="isPending(ticket) || null">
+                  @if (isPending(ticket)) {
+                    <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Salvando…</span></span>
+                  }
                   @if (isActive(ticket)) {
-                    <li>
-                      <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)">
-                        <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar descrição
-                      </button>
-                    </li>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)"
+                            [attr.aria-label]="'Editar a descrição do chamado ' + ticket.title">
+                      <i class="bx bx-edit me-1" aria-hidden="true"></i>Editar
+                    </button>
                     @if (canCancel(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
-                          <i class="bx bx-x-circle me-2" aria-hidden="true"></i>Cancelar chamado
-                          @if (cancelHint(ticket); as hint) {
-                            <span class="cancel-hint small">{{ hint }}</span>
-                          }
-                        </button>
-                      </li>
+                      <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)"
+                              [attr.aria-label]="'Cancelar o chamado ' + ticket.title + (cancelHint(ticket) ? ', disponível ' + cancelHint(ticket) : '')">
+                        <i class="bx bx-x-circle me-1" aria-hidden="true"></i>Cancelar
+                        @if (cancelHint(ticket); as hint) {
+                          <span class="cancel-hint num">{{ hint }}</span>
+                        }
+                      </button>
                     }
                   } @else if (canReopen(ticket)) {
-                    <li>
-                      <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)">
-                        <i class="bx bx-refresh me-2" aria-hidden="true"></i>Reabrir chamado
-                      </button>
-                    </li>
+                    <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)"
+                            [attr.aria-label]="'Reabrir o chamado ' + ticket.title">
+                      <i class="bx bx-refresh me-1" aria-hidden="true"></i>Reabrir
+                    </button>
                   }
-                </app-row-actions>
+                </div>
               </td>
             </tr>
           }
