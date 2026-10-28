@@ -97,6 +97,7 @@
 
   <app-dashboard-metric-group [announce]="false" title="SLA" description="Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão na Central de atenção."
                               columnClass="col-12 col-sm-6 col-xl-3"
+                              [lead]="slaLead()"
                               [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
                               [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
                               />

@@ -82,6 +82,24 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getVolume).toHaveBeenCalledWith('Day', jasmine.objectContaining({ createdFrom: '2026-10-01', createdTo: '2026-10-28' }));
   });
 
+  it('com período fechado, busca também o período anterior de mesmo tamanho pra comparar', async () => {
+    const store = createStore();
+    store.setScope({ sectorIds: ['s1'], from: '2026-10-22', to: '2026-10-28' });
+    await settle();
+
+    expect(dataService.getOverview).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'], createdFrom: '2026-10-15', createdTo: '2026-10-21' }));
+    expect(store.previousOverview()).toEqual(OVERVIEW);
+  });
+
+  it('sem período (ou com uma ponta só), não há período anterior', async () => {
+    const store = createStore();
+    store.setScope({ from: '2026-10-01' });
+    await settle();
+
+    expect(dataService.getOverview).toHaveBeenCalledTimes(1);
+    expect(store.previousOverview()).toBeNull();
+  });
+
   it('"meus" vira o id de quem está logado, "sem responsável" vira unassignedOnly, e uma pessoa vai pelo id', async () => {
     const store = createStore();
     store.setScope({ assignee: 'me' });

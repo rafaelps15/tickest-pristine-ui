@@ -7,7 +7,7 @@ import { DashboardFilters, resolveDashboardScope, toMonitorQueryParams, todayInS
 import { DashboardTimesComponent } from './dashboard-times.component';
 import { DashboardVolumeChartComponent } from './dashboard-volume-chart.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
-import { DashboardMetric, DashboardMetricGroupComponent } from './dashboard-metric-group.component';
+import { DashboardMetric, DashboardMetricGroupComponent, DashboardMetricLead } from './dashboard-metric-group.component';
 import { SessionService, ToastService } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
@@ -16,6 +16,23 @@ import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.co
 // O shell pode ligar peças de um domínio direto (como faz com as telas feature-*): o diálogo depende de
 // UserSummary (domínio users), por isso mora em tickets/ui e não em shared/ui.
 import { TicketAssignDialogComponent } from '../tickets/ui/ticket-assign-dialog/ticket-assign-dialog.component';
+
+/**
+ * Comparação de uma contagem com a do período anterior, em texto ("12 a mais que no período
+ * anterior"); null quando não há período anterior pra comparar.
+ */
+export function countTrend(current: number | undefined, previous: number | undefined): string | null {
+  if (current === undefined || previous === undefined) return null;
+  const diff = current - previous;
+  if (diff === 0) return 'igual ao período anterior';
+  return `${Math.abs(diff)} a ${diff > 0 ? 'mais' : 'menos'} que no período anterior`;
+}
+
+/** Taxa de SLA cumprido entre os resolvidos (cumpridos ÷ cumpridos + com atraso), em %, ou null sem resolvidos. */
+export function slaRate(met: number, missed: number): number | null {
+  const resolved = met + missed;
+  return resolved > 0 ? Math.round((met * 100) / resolved) : null;
+}
 
 /**
  * Saudação pela hora do dia (0–23) — "Bom dia"/"Boa tarde"/"Boa noite" é o que se diz em pt-BR ao
@@ -68,6 +85,26 @@ export class DashboardComponent implements OnInit {
   protected readonly scope = computed(() => resolveDashboardScope(
     this.filters.filters(), this.departmentsStore.departments(), this.departmentsStore.listState().loading, this.today));
 
+  /**
+   * Taxa de SLA cumprido, o número que resume o grupo de SLA pra quem supervisiona: cumpridos ÷
+   * resolvidos (cumpridos + com atraso), dos chamados com os filtros. Com período, compara com o
+   * período anterior em pontos percentuais. Sem resolvidos, não há taxa (null, o destaque some).
+   */
+  protected readonly slaLead = computed((): DashboardMetricLead | null => {
+    const sla = this.operation.sla();
+    if (!sla) return null;
+    const rate = slaRate(sla.met, sla.missed);
+    if (rate === null) return null;
+    const previous = this.operation.previousOverview()?.sla;
+    const previousRate = previous ? slaRate(previous.met, previous.missed) : null;
+    let trend: string | null = null;
+    if (previousRate !== null) {
+      const diff = rate - previousRate;
+      trend = diff === 0 ? 'igual ao período anterior' : `${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'ponto' : 'pontos'} ${diff > 0 ? 'acima' : 'abaixo'} do período anterior`;
+    }
+    return { value: `${rate}%`, text: `resolvidos no prazo (${sla.met} de ${sla.met + sla.missed})`, trend };
+  });
+
   /** Vazio do Volume e do SLA: com filtro, a culpa é do filtro; sem filtro, a operação ainda não tem chamados. */
   protected readonly emptyTitle = computed(() => this.filters.active() ? 'Nenhum chamado com estes filtros.' : 'Nenhum chamado ainda.');
   /** Dica do vazio, com a próxima ação de cada caso. */
@@ -85,8 +122,9 @@ export class DashboardComponent implements OnInit {
   protected readonly volumeMetrics = computed((): DashboardMetric[] => {
     const scope = this.scope() ?? {};
     const volume = this.operation.volume();
+    const previous = this.operation.previousOverview()?.volume;
     return [
-      { key: 'total', label: 'Total', icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
+      { key: 'total', label: 'Total', trend: countTrend(volume?.total, previous?.total), icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
       { key: 'backlog', label: 'Na fila', icon: 'bx-error-circle', tone: 'warning', value: volume?.backlog ?? null, hint: 'Aberto ou em andamento', queryParams: toMonitorQueryParams(scope, { status: 'active' }) },
       { key: 'inProgress', label: 'Em andamento', icon: 'bx-time-five', tone: 'info', value: volume?.inProgress ?? null, queryParams: toMonitorQueryParams(scope, { status: TicketStatus.InProgress }) },
       { key: 'resolved', label: 'Resolvidos', icon: 'bx-check-double', tone: 'success', value: volume?.resolved ?? null, queryParams: toMonitorQueryParams(scope, { status: TicketStatus.Resolved }) },

@@ -87,6 +87,22 @@ describe('DashboardMetricGroupComponent', () => {
       .toBe('Críticos: 1, urgentes, ainda ativos. Ver na fila de monitoramento');
   });
 
+  it('mostra o número de destaque e a comparação com o período anterior, no card e no nome do link', async () => {
+    TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="SLA" [metrics]="metrics()" [lead]="{ value: '87%', text: 'resolvidos no prazo (7 de 8)', trend: '5 pontos acima do período anterior' }" />` } });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.metrics.set([
+      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: 7, trend: '2 a mais que no período anterior', queryParams: { slaStatus: 4 } }
+    ]);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('87%');
+    expect(fixture.nativeElement.textContent).toContain('resolvidos no prazo (7 de 8)');
+    expect(fixture.nativeElement.textContent).toContain('5 pontos acima do período anterior');
+    expect(fixture.nativeElement.querySelector('app-stat-card').textContent).toContain('2 a mais que no período anterior');
+    expect(fixture.nativeElement.querySelector('a.stretched-link').getAttribute('aria-label'))
+      .toBe('Cumpridos: 7, 2 a mais que no período anterior. Ver na fila de monitoramento');
+  });
+
   it('carregando a faixa: o esqueleto já tem o formato da faixa', async () => {
     TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="Volume" variant="strip" [metrics]="metrics()" [loading]="true" />` } });
     const fixture = TestBed.createComponent(HostComponent);

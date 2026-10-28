@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
-import { DashboardComponent, greetingForHour } from './dashboard.component';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardScope, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
+import { DashboardComponent, countTrend, greetingForHour, slaRate } from './dashboard.component';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardScope, TicketDashboardOverview, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
 import { DepartmentsStore, Department } from '../departments';
 import { SessionService, ToastService } from '../shared';
 
@@ -13,6 +13,7 @@ describe('DashboardComponent', () => {
       volume: signal<TicketDashboardVolume | null>({ total: 10, open: 3, inProgress: 2, resolved: 4, closed: 1, canceled: 0, backlog: 5 }),
       sla: signal<TicketDashboardSla | null>({ onTime: 3, atRisk: 1, breached: 2, met: 7, missed: 1, notApplicable: 0 }),
       attention: signal<TicketDashboardAttention | null>({ overdue: 2, critical: 1, unassigned: 3 }),
+      previousOverview: signal<TicketDashboardOverview | null>(null),
       overviewLoading: signal(false),
       overviewError: signal<string | null>(null),
       times: signal<TicketAverageTimes | null>({
@@ -385,6 +386,42 @@ describe('DashboardComponent', () => {
       .filter(region => region.closest('app-dashboard-metric-group, app-dashboard-times'));
     expect(regions.length).toBe(0);
     expect(fixture.nativeElement.textContent).toContain('Central de atenção: atrasados 2, críticos 1, sem responsável 3. Na fila: 5; em risco: 1.');
+  });
+
+  it('mostra a taxa de SLA cumprido em destaque, calculada com os números do servidor', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    // met 7, missed 1 no falso: 7 ÷ 8 = 88%.
+    const sla = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]') as HTMLElement;
+    expect(sla.textContent).toContain('88%');
+    expect(sla.textContent).toContain('resolvidos no prazo (7 de 8)');
+  });
+
+  it('com o período anterior carregado, compara o total e a taxa', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    operationFake.previousOverview.set({
+      serverNowUtc: '',
+      volume: { total: 7, open: 0, inProgress: 0, resolved: 0, closed: 0, canceled: 0, backlog: 0 },
+      sla: { onTime: 0, atRisk: 0, breached: 0, met: 3, missed: 1, notApplicable: 0 },
+      attention: { overdue: 0, critical: 0, unassigned: 0 }
+    });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]').textContent).toContain('3 a mais que no período anterior');
+    // 88% agora contra 75% antes.
+    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]').textContent).toContain('13 pontos acima do período anterior');
+  });
+
+  it('calcula a comparação e a taxa sem inventar número', () => {
+    expect(countTrend(10, 7)).toBe('3 a mais que no período anterior');
+    expect(countTrend(5, 8)).toBe('3 a menos que no período anterior');
+    expect(countTrend(4, 4)).toBe('igual ao período anterior');
+    expect(countTrend(4, undefined)).toBeNull();
+    expect(slaRate(7, 1)).toBe(88);
+    expect(slaRate(0, 0)).toBeNull();
   });
 
   it('sem os contadores de "aguardando", a Central mostra só os três de hoje', async () => {

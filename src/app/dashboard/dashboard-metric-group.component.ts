@@ -17,8 +17,20 @@ export interface DashboardMetric {
   value: number | null;
   /** Linha de apoio abaixo do número. */
   hint?: string;
+  /** Comparação com o período anterior ("12 a mais que no período anterior"), quando há. */
+  trend?: string | null;
   /** Query params do Monitor pro drill-down; null quando o indicador não leva a lugar nenhum. */
   queryParams: Params | null;
+}
+
+/** Número de destaque do grupo, acima dos indicadores (ex.: a taxa de SLA cumprido). */
+export interface DashboardMetricLead {
+  /** O número já formatado ("87%"). */
+  value: string;
+  /** O que ele significa ("resolvidos no prazo, 7 de 8"). */
+  text: string;
+  /** Comparação com o período anterior, quando há. */
+  trend?: string | null;
 }
 
 /**
@@ -39,6 +51,19 @@ export interface DashboardMetric {
           <p class="text-muted small mb-0">{{ description() }}</p>
         }
       </div>
+
+      @if (lead(); as headline) {
+        @if (!unavailable() && !error()) {
+          <!-- O número que resume o grupo, antes dos detalhes. -->
+          <p class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+            <span class="fs-3 stat-value">{{ headline.value }}</span>
+            <span class="text-muted">{{ headline.text }}</span>
+            @if (headline.trend) {
+              <span class="text-muted small">· {{ headline.trend }}</span>
+            }
+          </p>
+        }
+      }
 
       <!-- Resumo pro leitor de tela quando os números chegam ou mudam com os filtros. -->
       @if (announce()) {
@@ -98,6 +123,9 @@ export interface DashboardMetric {
                     @if (metric.hint) {
                       <span class="text-muted small">{{ metric.hint }}</span>
                     }
+                    @if (metric.trend) {
+                      <span class="text-muted small">{{ metric.trend }}</span>
+                    }
                   </a>
                 } @else {
                   <span class="metric-strip-link">
@@ -114,7 +142,7 @@ export interface DashboardMetric {
           @for (metric of metrics(); track metric.key) {
             <div [class]="columnClass()">
               <app-stat-card [label]="metric.label" [icon]="metric.icon" [tone]="metric.tone" [value]="metric.value"
-                             [hint]="metric.hint ?? ''" [linked]="metric.queryParams !== null">
+                             [hint]="cardHint(metric)" [linked]="metric.queryParams !== null">
                 <!-- Dois @if separados: um nó por bloco, pra o "Ver na fila" cair no slot [statHint] do card. -->
                 @if (metric.queryParams !== null) {
                   <span statHint class="kpi-cta">Ver na fila <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
@@ -249,6 +277,8 @@ export class DashboardMetricGroupComponent {
    * compacta, pros números de contexto como o Volume — menos peso visual, mesmo drill-down).
    */
   readonly variant = input<'cards' | 'strip'>('cards');
+  /** Número de destaque acima dos indicadores, ou null. */
+  readonly lead = input<DashboardMetricLead | null>(null);
   /** Título do estado vazio (todos os indicadores zerados). */
   readonly emptyTitle = input('Nenhum chamado com estes filtros.');
   /** Dica do estado vazio. */
@@ -282,6 +312,12 @@ export class DashboardMetricGroupComponent {
    */
   linkLabel(metric: DashboardMetric): string {
     const hint = metric.hint ? `, ${metric.hint.charAt(0).toLowerCase()}${metric.hint.slice(1)}` : '';
-    return `${metric.label}: ${metric.value ?? 'indisponível'}${hint}. Ver na fila de monitoramento`;
+    const trend = metric.trend ? `, ${metric.trend}` : '';
+    return `${metric.label}: ${metric.value ?? 'indisponível'}${hint}${trend}. Ver na fila de monitoramento`;
+  }
+
+  /** Legenda do stat-card: a dica e, quando há, a comparação com o período anterior. */
+  cardHint(metric: DashboardMetric): string {
+    return [metric.hint, metric.trend].filter(Boolean).join(' · ');
   }
 }

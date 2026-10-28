@@ -6,7 +6,7 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketDashboardScope } from '../entities/ticket-dashboard';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
-import { SessionService, extractErrorMessage } from '../../shared';
+import { SessionService, extractErrorMessage, previousIsoRange } from '../../shared';
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
 function widgetError(error: unknown, fallback: string): string | null {
@@ -65,6 +65,18 @@ export const TicketDashboardStore = signalStore(
         },
         stream: ({ params }) => store._ticketDataService.getOverview(params)
       }),
+      // O mesmo agregado no período anterior de mesmo tamanho, pra comparar ("12 a mais que no período
+      // anterior"); só com as duas pontas do período — sem período, não há "anterior".
+      _previousOverviewResource: rxResource({
+        params: () => {
+          const query = allowed() ? base() : null;
+          const { from, to } = store.scope();
+          if (!query || !from || !to) return undefined;
+          const previous = previousIsoRange(from, to);
+          return { ...query, createdFrom: previous.from, createdTo: previous.to };
+        },
+        stream: ({ params }) => store._ticketDataService.getOverview(params)
+      }),
       // Os tempos médios consideram as conclusões no período (spec 027, DEC-4).
       _timesResource: rxResource({
         params: () => {
@@ -99,6 +111,12 @@ export const TicketDashboardStore = signalStore(
     /** Erro do agregado (vale pros três grupos que dependem dele). */
     overviewError: computed(() => widgetError(store._overviewResource.error(), 'Não foi possível carregar os números da operação.')),
 
+    /**
+     * Agregado do período anterior, pra comparação; null sem período fechado, enquanto carrega ou
+     * em erro (a comparação some, os números do período continuam).
+     */
+    previousOverview: computed(() => store._previousOverviewResource.hasValue() ? store._previousOverviewResource.value() : null),
+
     /** Tempos médios do recorte, ou null. */
     times: computed(() => store._timesResource.hasValue() ? store._timesResource.value() : null),
     /** Os tempos médios estão carregando. */
@@ -128,6 +146,7 @@ export const TicketDashboardStore = signalStore(
     /** "Tentar novamente" do agregado (Volume, SLA e Central de atenção). */
     reloadOverview(): void {
       store._overviewResource.reload();
+      store._previousOverviewResource.reload();
     },
 
     /** "Tentar novamente" dos tempos médios. */

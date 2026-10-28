@@ -1,7 +1,7 @@
 import { ParamMap, Params } from '@angular/router';
 import { Department } from '../departments';
 import { TicketDashboardAssignee, TicketDashboardScope, TicketPriority } from '../tickets';
-import { isIsoDate } from '../shared';
+import { isIsoDate, shiftIsoDate } from '../shared';
 
 /** Períodos prontos do Início: últimos 7, 30 ou 90 dias, contando hoje. */
 export type DashboardPeriodPreset = '7d' | '30d' | '90d';
@@ -51,12 +51,8 @@ export function todayInSaoPaulo(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 }
 
-/** Soma (ou subtrai) dias de uma data `aaaa-mm-dd`. */
-export function addDays(date: string, days: number): string {
-  const value = new Date(`${date}T12:00:00Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
+/** Soma (ou subtrai) dias de uma data `aaaa-mm-dd` (o mesmo cálculo do shared, com o nome que a tela usa). */
+export const addDays = shiftIsoDate;
 
 /**
  * Lê os filtros do Início a partir da URL — a URL é a fonte da verdade (link compartilhável e
