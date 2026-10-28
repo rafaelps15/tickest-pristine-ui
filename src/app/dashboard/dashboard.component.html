@@ -1,9 +1,30 @@
-<app-page-header [subtitle]="showOperation() ? 'Veja o que pede ação agora e como está a operação.' : 'Veja como estão os chamados de toda a empresa.'">
+<app-page-header class="dashboard-header" [subtitle]="showOperation() ? 'Como está a operação e o que pede ação agora.' : 'Como estão os chamados de toda a empresa.'">
   @if (sessionService.currentUser(); as user) {
     <span pageTitle>{{ greeting }}, <span class="text-primary">{{ user.firstName }}</span>!</span>
   } @else {
     <span pageTitle>{{ greeting }}!</span>
   }
+
+  <!-- Idade dos números e atualização manual: o espaço livre do cabeçalho, sem acrescentar altura. -->
+  <div pageActions class="freshness">
+    @if (freshness(); as label) {
+      <span class="freshness-label" [class.freshness-failed]="staleAfterFailure()">
+        @if (refreshing()) {
+          <span class="spinner-border spinner-border-sm freshness-spinner" aria-hidden="true"></span>
+        } @else if (staleAfterFailure()) {
+          <i class="bx bx-error-circle" aria-hidden="true"></i>
+        }
+        {{ label }}
+      </span>
+    }
+    <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle" [disabled]="refreshing()"
+            aria-label="Atualizar os números agora" (click)="refreshNow()">
+      <i class="bx bx-refresh fs-5" aria-hidden="true"></i>
+    </button>
+    <!-- Só o "Atualizado agora" é anunciado, nunca os números (que mudariam a cada 2 min). -->
+    <span class="visually-hidden" aria-live="polite">{{ liveAnnouncement() }}</span>
+  </div>
+  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" [filteredAvailable]="filteredAvailable()" [flowFilteredAvailable]="flowFilteredAvailable()" />
   @if (!isAdministrative()) {
     <a pageActions class="btn btn-primary" routerLink="/tickets/novo">
       <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
@@ -11,147 +32,136 @@
   }
 </app-page-header>
 
-<app-dashboard-guide [showSla]="sessionService.hasPermission('tickets:manage')" [showMine]="showMyTickets()" />
-
-<!--
-  Pra quem não atende a fila: os próprios chamados primeiro — é a pergunta de quem abriu um pedido.
-  Os números da empresa continuam logo abaixo, iguais pra todo papel (decisão do produto).
--->
-@if (showMyTickets()) {
-  <section class="mb-4" aria-labelledby="myTicketsTitle">
-    <div class="d-flex align-items-baseline justify-content-between gap-2 mb-2">
-      <h2 id="myTicketsTitle" class="h6 section-label mb-0">Seus chamados</h2>
-      <a routerLink="/tickets" class="small">Ver todos</a>
-    </div>
-    @if (myTickets.failed()) {
-      <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
-        <span>Não foi possível carregar o resumo dos seus chamados.</span>
-        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="myTickets.reload()">Tentar novamente</button>
-      </div>
-    }
-    <div class="row g-3">
-      @for (card of myTicketCards(); track card.label) {
-        <div class="col-12 col-sm-4">
-          <app-stat-card [label]="card.label" [icon]="card.icon" [tone]="card.tone" [value]="card.value"
-                         [loading]="myTickets.loading()" [failed]="myTickets.failed()" [linked]="true">
-            <span statHint class="kpi-cta">Ver em Meus Chamados <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
-            <a class="stretched-link" routerLink="/tickets" [queryParams]="card.queryParams"
-               [attr.aria-label]="card.label + ': ' + (myTickets.failed() ? 'indisponível' : card.value) + '. Ver em Meus Chamados'"></a>
-          </app-stat-card>
-        </div>
-      }
-    </div>
-  </section>
-
-  <h2 class="h6 section-label mb-2">Toda a empresa</h2>
-}
-
-@if (store.summaryError()) {
-  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
-    <span>{{ store.summaryError() }}</span>
-    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
+@if (companyUnavailable()) {
+  <!-- Indicadores e gráfico dependem da mesma liberação do back-end: um aviso só, em vez de um por bloco. -->
+  <div class="card px-3 py-2 mb-3">
+    <app-dashboard-notice text="Números de toda a empresa (indicadores e gráfico da operação): disponível em breve." />
   </div>
-}
+} @else {
+  <!-- Filtros: a barra só no escopo "Com filtros"; na empresa toda, os filtros da URL valem pras listas e ficam à vista. -->
+  @if (showOperation() && chartScope() === 'filtered') {
+    <app-dashboard-filter-bar [filters]="filters.filters()" [departments]="departmentsStore.departments()"
+                              [assignees]="assigneesStore.assignees()" [assigneesTotal]="assigneesStore.total()" [today]="today"
+                              (change)="onFilterChange($event)" (clear)="filters.clear()" />
+  } @else if (filterChips().length > 0) {
+    <p class="applied-filters">
+      <i class="bx bx-filter-alt" aria-hidden="true"></i>
+      <span>Filtros aplicados às listas: {{ filterChipLabels() }}</span>
+      <button type="button" class="btn btn-link btn-sm p-0" (click)="filters.clear()">Limpar</button>
+    </p>
+  }
 
-<!-- Alertas de SLA em faixa própria, antes dos KPIs: é o que pede ação de quem atende a fila. -->
-@if (sessionService.hasPermission('tickets:manage')) {
-  <app-dashboard-insights [criticalTickets]="store.criticalTickets()"
-                          [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()"
-                          [clockOffsetMs]="store.clockOffsetMs()"
-                          [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
-                          [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
-                          (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
+  <app-dashboard-kpi-strip class="d-block kpi-row" [kpis]="kpis()" [state]="countsState()" [errorText]="countsErrorText()" (retry)="reloadCounts()" />
+
+  <app-dashboard-hero-chart class="d-block mb-4"
+                            [showScope]="showOperation()" [scope]="chartScope()" [filteredAvailable]="filteredAvailable()" [flowFiltered]="flowScope() === 'filtered'"
+                            [insight]="insight()" [composition]="composition()" [compositionState]="countsState()" [statusLinks]="statusLinks()"
+                            [points]="flowPoints()" [groupBy]="flowGroupBy()" [flowState]="flowState()" [bucketLink]="bucketLink()"
+                            [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()" [range]="scope()"
+                            (scopeChange)="setChartScope($event)" (groupByChange)="setGroupBy($event)"
+                            [compositionErrorElsewhere]="true" (retryFlow)="reloadFlow()" />
 }
 
 <!--
-  Operação filtrável, pra quem atende a fila: Central de atenção (o que pede ação), Volume e SLA,
-  todos com o recorte da barra de filtros (na URL). Cada grupo carrega e falha sozinho.
+  O que pede ação, lado a lado no desktop (Central à esquerda, Alertas à direita) e empilhado no
+  celular com os Alertas primeiro — o DOM segue a ordem do celular e só o desktop reordena. Com a
+  Central "em breve", ela fica estreita e os Alertas largos; nenhum dos dois estica pra casar a altura.
 -->
 @if (showOperation()) {
-  <app-dashboard-filter-bar [filters]="filters.filters()" [departments]="departmentsStore.departments()"
-                            [assignees]="assigneesStore.assignees()" [assigneesTotal]="assigneesStore.total()" [today]="today"
-                            (change)="onFilterChange($event)" (clear)="filters.clear()" />
-
-  <!-- Um resumo só pro leitor de tela a cada troca de filtro (os grupos abaixo não anunciam sozinhos). -->
-  <p class="visually-hidden" aria-live="polite">{{ operationSummary() }}</p>
-
-  <!-- Central de atenção, Volume e SLA vêm da mesma leitura: um aviso só, em vez de três alertas iguais. -->
-  @if (operation.overviewError(); as overviewError) {
-    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
-      <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ overviewError }} A Central de atenção, o Volume e o SLA ficam sem números até carregar.</span>
-      <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="operation.reloadOverview()">Tentar novamente</button>
+  <div class="row g-3 mb-4 align-items-start">
+    <div class="col-12 order-lg-2" [class.col-lg-7]="features.operationOverview" [class.col-lg-8]="!features.operationOverview">
+      <app-dashboard-insights [criticalTickets]="store.criticalTickets()"
+                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()" [showTotals]="!features.operationOverview"
+                              [clockOffsetMs]="store.clockOffsetMs()"
+                              [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
+                              [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
+                              (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
     </div>
-  }
-
-  <app-dashboard-metric-group [announce]="false" title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave."
-                              [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
-                              [emptyTitle]="filters.active() ? 'Nada pedindo atenção com estes filtros.' : 'Nada pedindo atenção agora.'"
-                              [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-check-circle'" emptyHint="Sem chamados atrasados, críticos ou sem responsável."
-                              />
-
-  <app-dashboard-metric-group [announce]="false" title="Volume" [description]="hasPeriod() ? 'Chamados abertos no período, por situação atual.' : 'Chamados com os filtros acima, por situação atual.'"
-                              variant="strip"
-                              [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
-                              [metrics]="volumeMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
-                              />
-
-  <app-dashboard-metric-group [announce]="false" title="SLA" description="Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão na Central de atenção."
-                              columnClass="col-12 col-sm-6 col-xl-3"
-                              [lead]="slaLead()"
-                              [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" [emptyIcon]="filters.active() ? 'bx-filter-alt' : 'bx-receipt'"
-                              [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="!!operation.overviewError()"
-                              />
-
-  <app-dashboard-times [announce]="false" [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesError()"
-                       [hasPeriod]="hasPeriod()" (retry)="operation.reloadTimes()" />
+    <div class="col-12 order-lg-1" [class.col-lg-5]="features.operationOverview" [class.col-lg-4]="!features.operationOverview">
+      @if (features.operationOverview) {
+        <!-- O erro do agregado aparece uma vez só, aqui; o grupo de SLA, abaixo, só remete a ele. -->
+        <app-dashboard-metric-group [announce]="false" title="Central de atenção" description="O que pede ação agora, do mais grave ao menos grave. Os atrasados estão no topo da tela."
+                                    columnClass="col-12 col-sm-6" [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()"
+                                    [error]="operation.overviewFailed() ? operation.overviewError() : null" (retry)="operation.reloadOverview()"
+                                    [emptyTitle]="isFirstUse() ? emptyTitle() : 'Nenhum crítico ou sem responsável agora.'"
+                                    [emptyIcon]="isFirstUse() ? 'bx-receipt' : 'bx-check-circle'"
+                                    [emptyHint]="isFirstUse() ? emptyHint() : 'Os chamados urgentes e os sem dono aparecem aqui.'" />
+      } @else {
+        <!-- "Em breve" compacto: o card não estica até a altura dos Alertas de SLA. -->
+        <section class="card p-3" aria-labelledby="attentionTitle">
+          <h2 id="attentionTitle" class="h5 card-title fw-bold mb-1">Central de atenção</h2>
+          <app-dashboard-notice text="Atrasados, críticos, sem responsável e aguardando, do mais grave ao menos grave: disponível em breve." />
+        </section>
+      }
+    </div>
+  </div>
 }
 
-<!-- Cards de Estatísticas (toda a empresa) pra quem não atende a fila; quem atende vê o Volume filtrável acima. -->
-@if (!showOperation()) {
-<div class="row g-3 mb-4">
-  <div class="col-6 col-lg-3">
-    <app-stat-card label="Total de Chamados" icon="bx-receipt" [value]="store.total()"
-                   [loading]="store.statusCountsLoading()" [failed]="store.statusCountsFailed()"
-                   [hint]="totalBreakdownLabel(store.closedCount(), store.canceledCount()) ?? 'Todos os status'" />
+<!-- Linha secundária: detalhe do SLA e tempos (quem atende) ou "Seus chamados" (quem abre), e os atalhos. Some quando não há nada pra este papel. -->
+@if (hasSecondaryRow()) {
+<div class="row g-3 mb-4 align-items-start">
+  <div class="col-12 col-lg-8 d-flex flex-column gap-3">
+    @if (showOperation()) {
+      @if (secondaryUnavailable()) {
+        <section class="card p-3" aria-labelledby="slaDetailTitle">
+          <h2 id="slaDetailTitle" class="h5 card-title fw-bold mb-1">SLA e tempos de atendimento</h2>
+          <app-dashboard-notice text="Situação de SLA por chamado e tempos médios de primeira resposta e de resolução: disponível em breve." />
+        </section>
+      } @else {
+        @if (features.operationOverview) {
+          <app-dashboard-metric-group [announce]="false" title="SLA" description="Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão no topo da tela."
+                                      columnClass="col-12 col-sm-6 col-xxl-3" [lead]="slaLead()"
+                                      [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" emptyIcon="bx-receipt"
+                                      [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="operation.overviewFailed()" />
+        } @else {
+          <section class="card p-3" aria-labelledby="slaDetailTitle">
+            <h2 id="slaDetailTitle" class="h5 card-title fw-bold mb-1">SLA</h2>
+            <app-dashboard-notice text="Situação de SLA por chamado: disponível em breve." />
+          </section>
+        }
+        @if (features.averageTimes) {
+          <app-dashboard-times [announce]="false" [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesError()"
+                               [hasPeriod]="hasPeriod()" (retry)="operation.reloadTimes()" />
+        } @else {
+          <section class="card p-3" aria-labelledby="timesTitle">
+            <h2 id="timesTitle" class="h5 card-title fw-bold mb-1">Tempos de atendimento</h2>
+            <app-dashboard-notice text="Tempos médios de primeira resposta e de resolução: disponível em breve." />
+          </section>
+        }
+      }
+    } @else if (showMyTickets() && myTickets) {
+      <section aria-labelledby="myTicketsTitle">
+        <div class="d-flex align-items-baseline justify-content-between gap-2 mb-2">
+          <h2 id="myTicketsTitle" class="h5 card-title fw-bold mb-0">Seus chamados</h2>
+          <a routerLink="/tickets" class="small see-all">Ver todos</a>
+        </div>
+        @if (myTickets.failed()) {
+          <div class="card px-3 py-2 mb-3">
+            <app-dashboard-notice kind="error" text="Não foi possível carregar o resumo dos seus chamados." (retry)="myTickets.reload()" />
+          </div>
+        }
+        <div class="row g-3">
+          @for (card of myTicketCards(); track card.label) {
+            <div class="col-12 col-sm-4">
+              <app-stat-card [label]="card.label" [icon]="card.icon" [tone]="card.tone" [value]="card.value"
+                             [loading]="myTickets.loading()" [failed]="myTickets.failed()" [linked]="true" [compact]="true">
+                <span statHint class="kpi-cta">Ver em Meus Chamados <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
+                <a class="stretched-link" routerLink="/tickets" [queryParams]="card.queryParams"
+                   [attr.aria-label]="card.label + ': ' + (myTickets.failed() ? 'indisponível' : card.value) + '. Ver em Meus Chamados'"></a>
+              </app-stat-card>
+            </div>
+          }
+        </div>
+      </section>
+    }
   </div>
 
-  @for (card of statusCards(); track card.status) {
-    <div class="col-6 col-lg-3">
-      <app-stat-card [label]="card.label" [icon]="card.icon" [tone]="card.tone" [value]="card.value"
-                     [loading]="store.statusCountsLoading()" [failed]="store.statusCountsFailed()"
-                     [linked]="sessionService.hasPermission('tickets:manage')">
-        <!-- Quem pode clicar vê só a ação ("Ver na fila"), que serve pra mouse e toque. -->
-        @if (sessionService.hasPermission('tickets:manage')) {
-          <span statHint class="kpi-cta">Ver na fila <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
-        }
-        @if (sessionService.hasPermission('tickets:manage')) {
-          <a class="stretched-link" routerLink="/tickets/monitorar" [queryParams]="{ status: card.status }"
-             [attr.aria-label]="store.statusCountsFailed()
-               ? card.label + ': indisponível. Ver na fila de monitoramento'
-               : card.label + ': ' + card.value + '. Ver na fila de monitoramento'"></a>
-        }
-      </app-stat-card>
-    </div>
-  }
-</div>
-
-}
-
-<!-- Gráfico e Ações Rápidas -->
-<div class="row">
-  <!-- Ações Rápidas antes do gráfico no DOM (ordem de leitura/Tab igual à visual no celular); só no
-       desktop o gráfico vai pra esquerda (order-lg-*). -->
-  <div class="col-12 col-lg-4 mb-4 order-lg-2">
-
+  <div class="col-12 col-lg-4">
     <!-- Sem nenhum atalho pra este papel (admin sem tickets:manage), o card não aparece vazio. -->
     @if (!isAdministrative() || sessionService.hasPermission('tickets:manage')) {
-      <div class="card">
-        <div class="card-header py-3">
-          <h2 class="h5 card-title m-0 fw-bold">Ações Rápidas</h2>
-        </div>
-        <!-- Só atalhos, como linhas discretas: a ação primária (Novo Chamado) fica no cabeçalho da tela,
-             no mesmo lugar das outras telas. Os ícones coloridos ficam (pedido do usuário em 2026-10-24). -->
-        <div class="card-body">
+      <!-- Mesmo modelo dos cards vizinhos (título dentro, padding de 1rem). Só atalhos, como linhas discretas: a ação primária (Novo Chamado) fica no cabeçalho da tela. -->
+      <section class="card p-3" aria-labelledby="quickActionsTitle">
+          <h2 id="quickActionsTitle" class="h5 card-title fw-bold mb-2">Ações rápidas</h2>
           <ul class="list-unstyled mb-0 quick-links">
             @if (!isAdministrative()) {
               <li>
@@ -179,20 +189,13 @@
                 </a>
               </li>
             }
-            <!-- Críticos e sem responsável não têm atalho aqui: a Central de atenção, acima, já os mostra com número. -->
+            <!-- Críticos e sem responsável não têm atalho aqui: a Central de atenção já os mostra com número. -->
           </ul>
-        </div>
-      </div>
+      </section>
     }
   </div>
-
-  <div class="col-12 col-lg-8 mb-4 order-lg-1">
-    <app-dashboard-volume-chart [points]="chartPoints()" [groupBy]="chartGroupBy()" [loading]="chartLoading()" [failed]="chartFailed()"
-                                [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()"
-                                [range]="showOperation() ? scope() : null" [filtered]="showOperation()"
-                                (groupByChange)="setGroupBy($event)" (retry)="reloadChart()" />
-  </div>
 </div>
+}
 
 <!-- "Atribuir" dos Alertas de SLA: o mesmo diálogo do detalhe e do Monitorar, ligado ao store do Dashboard. -->
 @if (assigningTicket(); as assigning) {

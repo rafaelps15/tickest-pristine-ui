@@ -10,7 +10,7 @@ import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
-import { SessionService } from '../../shared';
+import { SessionService, DASHBOARD_FEATURES, DashboardFeatures } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
 
 describe('TicketSummaryStore', () => {
@@ -18,6 +18,7 @@ describe('TicketSummaryStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
   let sessionService: jasmine.SpyObj<SessionService>;
   let userDataService: jasmine.SpyObj<UserDataService>;
+  let features: DashboardFeatures;
 
   const statusCounts: TicketStatusCounts = {
     totalCount: 10, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 0
@@ -63,6 +64,7 @@ describe('TicketSummaryStore', () => {
 
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
+    features = { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
 
     configure();
     store = await createStore();
@@ -76,21 +78,40 @@ describe('TicketSummaryStore', () => {
         TicketSummaryStore,
         { provide: TicketDataService, useValue: dataService },
         { provide: SessionService, useValue: sessionService },
-        { provide: UserDataService, useValue: userDataService }
+        { provide: UserDataService, useValue: userDataService },
+        { provide: DASHBOARD_FEATURES, useValue: features }
       ]
     });
   }
 
-  it('quem atende a fila não pede os números da empresa toda (o Início usa os do recorte)', () => {
+  it('quem atende a fila pede os números da empresa toda (indicadores e gráfico do Início)', () => {
+    expect(dataService.getStatusCounts).toHaveBeenCalledTimes(1);
+    expect(dataService.getVolume).toHaveBeenCalledWith('Day');
+    expect(store.companyStatsAvailable()).toBeTrue();
+    expect(store.statusCounts()).toEqual(statusCounts);
+    expect(store.volumeHasValue()).toBeTrue();
+  });
+
+  it('quem não atende a fila não pede os números da empresa enquanto o back-end exige tickets:manage (evita o 403 certo)', async () => {
+    TestBed.resetTestingModule();
+    sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
+    dataService.getStatusCounts.calls.reset();
+    dataService.getVolume.calls.reset();
+    configure();
+    store = await createStore();
+
     expect(dataService.getStatusCounts).not.toHaveBeenCalled();
     expect(dataService.getVolume).not.toHaveBeenCalled();
+    expect(store.companyStatsAvailable()).toBeFalse();
+    expect(store.statusCounts()).toBeNull();
     expect(store.summaryError()).toBeNull();
   });
 
-  describe('visão da empresa (quem não atende a fila)', () => {
+  describe('visão da empresa pra quem não atende a fila, com o back-end liberado (companyStatsForAll)', () => {
     beforeEach(async () => {
       TestBed.resetTestingModule();
       sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
+      features = { ...features, companyStatsForAll: true, listPeriodFilter: false };
       configure();
       store = await createStore();
     });
@@ -136,6 +157,15 @@ describe('TicketSummaryStore', () => {
       // Os totais em erro não podem lançar — o template os lê sempre, mesmo mostrando "—".
       expect(store.total()).toBe(0);
       expect(store.closedCount()).toBe(0);
+    });
+
+    it('sem permissão (403), diz o motivo em vez da mensagem genérica', async () => {
+      dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.load();
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.summaryError()).toBe('Você não tem permissão para ver os números da empresa.');
     });
 
     it('não marca nenhuma busca como falha quando as duas respondem', () => {

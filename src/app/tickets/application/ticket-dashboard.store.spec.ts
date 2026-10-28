@@ -7,37 +7,44 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketDashboardOverview } from '../entities/ticket-dashboard';
 import { TicketAverageTimes } from '../entities/ticket-average-times';
 import { TicketPriority } from '../entities/ticket-priority';
-import { SessionService } from '../../shared';
+import { DASHBOARD_FEATURES, DashboardFeatures, SessionService } from '../../shared';
 
 /** Agregado de exemplo, com um número diferente em cada campo. */
 const OVERVIEW: TicketDashboardOverview = {
   serverNowUtc: '2026-10-28T15:00:00Z',
-  volume: { total: 20, open: 3, inProgress: 2, resolved: 6, closed: 1, canceled: 8, backlog: 5 },
-  sla: { onTime: 4, atRisk: 1, breached: 2, met: 7, missed: 9, notApplicable: 0 },
-  attention: { overdue: 2, critical: 4, unassigned: 3 }
+  volume: { totalCount: 20, openCount: 3, inProgressCount: 2, resolvedCount: 6, closedCount: 1, canceledCount: 8, backlogCount: 5 },
+  sla: { onTimeCount: 4, atRiskCount: 1, breachedCount: 2, metCount: 7, missedCount: 9, notApplicableCount: 0 },
+  attention: { breachedCount: 2, criticalCount: 4, unassignedCount: 3 }
 };
 
 /** Tempos de exemplo: primeira resposta calculada, resolução abaixo da amostra mínima. */
 const TIMES: TicketAverageTimes = {
   firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
   resolution: { averageMinutes: null, medianMinutes: null, sampleSize: 4 },
-  minimumSample: 5
+  minimumSampleSize: 5
 };
 
 describe('TicketDashboardStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
   let permissions: Set<string>;
+  let features: DashboardFeatures;
 
-  /** Cria o Store com o Data Service falso e as permissões do teste. */
-  function createStore() {
+  /**
+   * Cria o Store com o Data Service falso, as permissões e as flags do teste. Por padrão, com o
+   * back-end pronto (flags ligadas) e o gráfico no escopo do recorte, pra exercitar todas as leituras.
+   */
+  function createStore(chartScope: 'company' | 'filtered' = 'filtered') {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         { provide: TicketDataService, useValue: dataService },
-        { provide: SessionService, useValue: { userId: signal('u-me'), hasPermission: (code: string) => permissions.has(code) } }
+        { provide: SessionService, useValue: { userId: signal('u-me'), hasPermission: (code: string) => permissions.has(code) } },
+        { provide: DASHBOARD_FEATURES, useValue: features }
       ]
     });
-    return TestBed.inject(TicketDashboardStore);
+    const store = TestBed.inject(TicketDashboardStore);
+    store.setChartScope(chartScope);
+    return store;
   }
 
   /** Espera os resources resolverem. */
@@ -49,6 +56,64 @@ describe('TicketDashboardStore', () => {
     dataService.getTimes.and.returnValue(of(TIMES));
     dataService.getVolume.and.returnValue(of([{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]));
     permissions = new Set(['tickets:manage']);
+    features = { operationOverview: true, averageTimes: true, volumeResolved: true, companyStatsForAll: false, listPeriodFilter: false };
+  });
+
+  describe('flags do back-end (DASHBOARD_FEATURES)', () => {
+    it('com as flags desligadas, não faz nenhuma requisição e nada fica carregando', async () => {
+      features = { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
+      const store = createStore();
+      store.setScope({ from: '2026-10-01', to: '2026-10-28' });
+      await settle();
+
+      expect(dataService.getOverview).not.toHaveBeenCalled();
+      expect(dataService.getTimes).not.toHaveBeenCalled();
+      expect(dataService.getVolume).not.toHaveBeenCalled();
+      expect(store.overviewLoading()).toBeFalse();
+      expect(store.overviewError()).toBeNull();
+    });
+
+    it('cada flag libera só a sua leitura', async () => {
+      features = { operationOverview: false, averageTimes: true, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
+      createStore();
+      await settle();
+
+      expect(dataService.getOverview).not.toHaveBeenCalled();
+      expect(dataService.getTimes).toHaveBeenCalledTimes(1);
+      expect(dataService.getVolume).not.toHaveBeenCalled();
+    });
+
+    it('com a flag ligada, um 404 é erro de verdade (não "em breve")', async () => {
+      dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+      const store = createStore();
+      await settle();
+
+      expect(store.overviewError()).toBeTruthy();
+    });
+  });
+
+  it('o volume do recorte só é pedido no escopo "Com filtros"', async () => {
+    const store = createStore('company');
+    await settle();
+    expect(dataService.getVolume).not.toHaveBeenCalled();
+
+    store.setChartScope('filtered');
+    await settle();
+    expect(dataService.getVolume).toHaveBeenCalledTimes(1);
+    expect(store.trendHasValue()).toBeTrue();
+  });
+
+  it('refresh recarrega as leituras ligadas mantendo os números na tela', async () => {
+    const store = createStore();
+    await settle();
+    dataService.getOverview.calls.reset();
+
+    store.refresh();
+    expect(store.volume()).toEqual(OVERVIEW.volume);
+    await settle();
+
+    expect(dataService.getOverview).toHaveBeenCalled();
+    expect(store.volume()).toEqual(OVERVIEW.volume);
   });
 
   it('expõe Volume, SLA e Central de atenção do agregado do servidor, numa chamada só', async () => {
@@ -166,6 +231,28 @@ describe('TicketDashboardStore', () => {
 
     expect(store.overviewError()).toBeNull();
     expect(store.volume()).toEqual(OVERVIEW.volume);
+  });
+
+  it('uma atualização do agregado que falha mantém os números do recorte (velhos), e trocar o recorte os zera', async () => {
+    const store = createStore();
+    await settle();
+    // A tela lê o agregado o tempo todo; é essa leitura que guarda os últimos números bons.
+    expect(store.overview()).toEqual(OVERVIEW);
+
+    dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    store.reloadOverview();
+    await settle();
+
+    expect(store.overviewError()).toBeTruthy();
+    expect(store.attention()).toEqual(OVERVIEW.attention);
+    expect(store.overviewStale()).toBeTrue();
+    expect(store.overviewFailed()).toBeFalse();
+
+    store.setScope({ priority: TicketPriority.Urgent });
+    await settle();
+
+    expect(store.overview()).toBeNull();
+    expect(store.overviewFailed()).toBeTrue();
   });
 
   it('erro nos tempos e no gráfico aparece em cada um', async () => {

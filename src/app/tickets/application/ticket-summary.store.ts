@@ -7,7 +7,7 @@ import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage, SessionService, valueOf } from '../../shared';
+import { DASHBOARD_FEATURES, extractErrorMessage, SessionService, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
@@ -40,39 +40,52 @@ export const TicketSummaryStore = signalStore(
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
     _sessionService: inject(SessionService),
-    _userDataService: inject(UserDataService)
+    _userDataService: inject(UserDataService),
+    _features: inject(DASHBOARD_FEATURES)
   })),
-  withProps((store) => ({
-    // Quem atende a fila (`tickets:manage`) vê o volume e os totais com o recorte do Início
-    // (TicketDashboardStore): pra esse papel, os números da empresa toda não são pedidos à API.
-    _statusCountsResource: rxResource({
-      params: () => (store._sessionService.hasPermission('tickets:manage') ? undefined : true),
-      stream: () => store._ticketDataService.getStatusCounts()
-    }),
-    _volumeResource: rxResource({
-      params: () => (store._sessionService.hasPermission('tickets:manage') ? undefined : store.groupBy()),
-      stream: ({ params }) => store._ticketDataService.getVolume(params)
-    }),
+  withProps((store) => {
     /**
-     * Chamados com SLA vencido e em risco (até 5 de cada, com o total de cada grupo), pro card "Alertas de SLA" do
-     * Dashboard — mesmo endpoint que Monitorar Tickets usa (GET /tickets), que exige a permissão
-     * `tickets:manage`. `params` retorna `undefined` pra quem não tem a permissão, o que faz o
-     * `rxResource` nem chamar a API (evita um 403 certo pra Solicitante).
+     * Os números da empresa (GET /tickets/stats/status e /stats/volume) exigem `tickets:manage` no
+     * back-end; pros demais colaboradores, só depois que ele liberar (flag `companyStatsForAll`) —
+     * antes disso a requisição daria 403 certo e não sai.
      */
-    _criticalTicketsResource: rxResource({
-      params: () => (store._sessionService.hasPermission('tickets:manage') ? true : undefined),
-      // Vencidos (Breached) e em risco (AtRisk) — o filtro da API aceita um status por vez. Antes só
-      // AtRisk: os chamados que já estouraram o prazo, os mais graves, ficavam fora do alerta.
-      // `slaSummary` só pra ler a hora do servidor (`serverNowUtc`): o prazo relativo do card ("vence em
-      // 2h") anda sozinho no navegador, mas ancorado no relógio do servidor, não no da máquina.
-      stream: () => forkJoin({
-        breached: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
-        atRisk: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
-        slaSummary: store._ticketDataService.getSlaSummary()
-      }).pipe(map(result => ({ ...result, receivedAtMs: Date.now() })))
-    })
-  })),
+    const companyStatsAvailable = computed(() => store._sessionService.hasPermission('tickets:manage') || store._features.companyStatsForAll);
+    return {
+      /** Os números da empresa podem ser pedidos por quem está logado (permissão ou back-end liberado). */
+      companyStatsAvailable,
+      _statusCountsResource: rxResource({
+        params: () => (companyStatsAvailable() ? true : undefined),
+        stream: () => store._ticketDataService.getStatusCounts()
+      }),
+      _volumeResource: rxResource({
+        params: () => (companyStatsAvailable() ? store.groupBy() : undefined),
+        stream: ({ params }) => store._ticketDataService.getVolume(params)
+      }),
+      /**
+       * Chamados com SLA vencido e em risco (até 5 de cada, com o total de cada grupo), pro card "Alertas de SLA" do
+       * Dashboard — mesmo endpoint que Monitorar Tickets usa (GET /tickets), que exige a permissão
+       * `tickets:manage`. `params` retorna `undefined` pra quem não tem a permissão, o que faz o
+       * `rxResource` nem chamar a API (evita um 403 certo pra Solicitante).
+       */
+      _criticalTicketsResource: rxResource({
+        params: () => (store._sessionService.hasPermission('tickets:manage') ? true : undefined),
+        // Vencidos (Breached) e em risco (AtRisk) — o filtro da API aceita um status por vez. Antes só
+        // AtRisk: os chamados que já estouraram o prazo, os mais graves, ficavam fora do alerta.
+        // `slaSummary` só pra ler a hora do servidor (`serverNowUtc`): o prazo relativo do card ("vence em
+        // 2h") anda sozinho no navegador, mas ancorado no relógio do servidor, não no da máquina.
+        stream: () => forkJoin({
+          breached: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
+          atRisk: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
+          slaSummary: store._ticketDataService.getSlaSummary()
+        }).pipe(map(result => ({ ...result, receivedAtMs: Date.now() })))
+      })
+    };
+  }),
   withComputed((store) => ({
+    /** Totais por status da empresa, ou null enquanto não há resposta (numa recarga, os anteriores continuam). */
+    statusCounts: computed(() => valueOf(store._statusCountsResource) ?? null),
+    /** Já chegou algum volume (numa recarga, os pontos anteriores continuam na tela). */
+    volumeHasValue: computed(() => store._volumeResource.hasValue()),
     /** Pontos de volume de tickets abertos no período atual (dia/semana/mês), do mais antigo pro mais novo. */
     volume: computed(() => valueOf(store._volumeResource) ?? []),
     /** Carregando os totais por status — só esse recurso, não o volume (os 2 são independentes; trocar o agrupamento do gráfico não deve acender o spinner dos 4 cards de status). */
@@ -91,7 +104,7 @@ export const TicketSummaryStore = signalStore(
       const statusError = store._statusCountsResource.error() as HttpErrorResponse | undefined;
       const volumeError = store._volumeResource.error() as HttpErrorResponse | undefined;
       return statusError
-        ? extractErrorMessage(statusError, {}, 'Erro ao carregar o resumo dos chamados')
+        ? extractErrorMessage(statusError, { 403: 'Você não tem permissão para ver os números da empresa.' }, 'Erro ao carregar o resumo dos chamados')
         : volumeError
           ? extractErrorMessage(volumeError, {}, 'Erro ao carregar o volume de chamados')
           : null;
@@ -147,8 +160,8 @@ export const TicketSummaryStore = signalStore(
     /** Atualizando os alertas de SLA com a lista anterior ainda na tela (botão "Atualizar" gira). */
     criticalTicketsRefreshing: computed(() => store._criticalTicketsResource.isLoading() && store._criticalTicketsResource.hasValue()),
     /**
-     * Quando os alertas de SLA chegaram (ms, relógio do navegador) — o card mostra "Atualizado às" e
-     * decide recarregar ao voltar pra aba. Null sem dados.
+     * Quando os alertas de SLA chegaram (ms, relógio do navegador) — o card mostra "Atualizado às".
+     * Null sem dados.
      */
     criticalTicketsLoadedAtMs: computed(() => valueOf(store._criticalTicketsResource)?.receivedAtMs ?? null),
     /** Mensagem de erro ao buscar os chamados em risco de SLA — não derruba o resto do dashboard, só esse card. */

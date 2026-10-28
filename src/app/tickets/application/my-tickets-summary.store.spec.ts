@@ -60,6 +60,14 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.totalCount()).toBe(22);
   });
 
+  it('separa Resolvido e Fechado, pra comparar cada um com o mesmo número da empresa', async () => {
+    const store = createStore();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.resolvedOnlyCount()).toBe(5);
+    expect(store.closedCount()).toBe(1);
+  });
+
   it('marca falha e não inventa 0 quando a API falha', async () => {
     dataService.getMineSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const store = createStore();

@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
 import { TicketAverageTimes, TicketTimeStat } from '../tickets';
+import { DashboardNoticeComponent } from './dashboard-notice.component';
 
 /** Um tempo pronto pra exibir. */
 interface TimeCard {
@@ -34,11 +35,12 @@ export function formatBusinessMinutes(minutes: number): string {
  */
 @Component({
   selector: 'app-dashboard-times',
+  imports: [DashboardNoticeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="mb-4" aria-labelledby="dashboardTimesTitle" [attr.aria-busy]="loading() || null">
+    <section aria-labelledby="dashboardTimesTitle" [attr.aria-busy]="loading() || null">
       <div class="mb-2">
-        <h2 id="dashboardTimesTitle" class="h6 section-label mb-0">Tempos de atendimento</h2>
+        <h2 id="dashboardTimesTitle" class="h5 card-title fw-bold mb-1">Tempos de atendimento</h2>
         <p class="text-muted small mb-0">{{ description() }}</p>
       </div>
 
@@ -48,17 +50,15 @@ export function formatBusinessMinutes(minutes: number): string {
       }
 
       @if (error()) {
-        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-0" role="alert">
-          <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ error() }}</span>
-          <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="retry.emit()">Tentar novamente</button>
-        </div>
+        <!-- Falha técnica em tom neutro: vermelho fica pro risco operacional (SLA vencido). -->
+        <div class="card px-3 py-2"><app-dashboard-notice kind="error" [text]="error()!" (retry)="retry.emit()" /></div>
       } @else if (loading() && !times()) {
         <p class="text-muted small mb-0" role="status">
           <span class="spinner-border spinner-border-sm text-primary me-2" aria-hidden="true"></span>Carregando os tempos de atendimento…
         </p>
       } @else if (times(); as data) {
-        <!-- Recarga com tempos na tela (troca de filtro): esmaece, como os grupos de números. -->
-        <div class="row g-3" [class.times-refreshing]="loading()">
+        <!-- Numa recarga, os tempos ficam como estão: o indicador de atualização é o do cabeçalho da tela. -->
+        <div class="row g-3">
           @for (card of cards(); track card.key) {
             <div class="col-12 col-md-6">
               <div class="card h-100">
@@ -67,18 +67,18 @@ export function formatBusinessMinutes(minutes: number): string {
                   <h3 class="fs-6 fw-normal text-muted mb-0">{{ card.label }}</h3>
                   @if (card.stat.medianMinutes !== null && card.stat.averageMinutes !== null) {
                     <p class="d-flex align-items-baseline gap-2 mt-2 mb-1">
-                      <span class="fs-3 stat-value">{{ format(card.stat.medianMinutes) }}</span>
+                      <span class="fs-4 stat-value">{{ format(card.stat.medianMinutes) }}</span>
                       <span class="text-muted small">de mediana</span>
                     </p>
                     <p class="text-muted small mb-1">Média {{ format(card.stat.averageMinutes) }} · {{ card.stat.sampleSize }} chamados · horário útil</p>
                   } @else {
-                    <p class="fs-5 stat-value mt-2 mb-1">Dados insuficientes</p>
+                    <p class="fs-6 stat-value mt-2 mb-1">Dados insuficientes</p>
                     <p class="text-muted small mb-1">
                       @if (card.stat.sampleSize === 0) {
-                        Nenhum chamado entrou na conta ainda; o cálculo precisa de pelo menos {{ data.minimumSample }}.
+                        Nenhum chamado entrou na conta ainda; o cálculo precisa de pelo menos {{ data.minimumSampleSize }}.
                       } @else {
                         Só {{ card.stat.sampleSize === 1 ? '1 chamado entrou' : card.stat.sampleSize + ' chamados entraram' }} na conta;
-                        o cálculo precisa de pelo menos {{ data.minimumSample }}.
+                        o cálculo precisa de pelo menos {{ data.minimumSampleSize }}.
                       }
                     </p>
                   }
@@ -91,12 +91,6 @@ export function formatBusinessMinutes(minutes: number): string {
       }
     </section>
   `,
-  styles: `
-    .times-refreshing {
-      opacity: 0.6;
-      transition: opacity 150ms ease;
-    }
-  `
 })
 export class DashboardTimesComponent {
   /** Tempos do recorte, ou null enquanto não há resposta. */

@@ -9,6 +9,7 @@ import { StatCardComponent } from './stat-card.component';
     <app-stat-card id="filter" label="Em Risco" [value]="value()" hint="Perto de vencer" icon="bx-error-circle" tone="warning"
                    [loading]="loading()" [failed]="failed()" [pressed]="pressed()" (press)="presses = presses + 1" />
     <app-stat-card id="plain" label="Total" [value]="10" />
+    <app-stat-card id="compact" label="Em aberto" [value]="2" [compact]="true" />
   `
 })
 class HostComponent {
@@ -49,6 +50,17 @@ describe('StatCardComponent', () => {
     expect(card.textContent).toContain('Perto de vencer');
     expect(card.querySelector('.kpi-icon')?.getAttribute('aria-hidden')).toBe('true');
     expect(card.querySelector('h1, h2, h3, h4, h5, h6')).toBeNull();
+  });
+
+  it('tamanho padrão do número continua o mesmo; o compacto desce um passo (apoio abaixo de números maiores)', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+
+    const plain = fixture.nativeElement.querySelector('#plain .stat-value') as HTMLElement;
+    const compact = fixture.nativeElement.querySelector('#compact .stat-value') as HTMLElement;
+    expect(plain.classList).toContain('fs-3');
+    expect(compact.classList).toContain('fs-4');
+    expect(compact.classList).not.toContain('fs-3');
   });
 
   it('mostra spinner enquanto carrega e "—"/indisponível quando falhou, nunca um 0', async () => {

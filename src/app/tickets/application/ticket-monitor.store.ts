@@ -73,10 +73,10 @@ export const TicketMonitorStore = signalStore(
         params: overviewQuery,
         // A hora da chegada junto da hora do servidor: o prazo relativo da tabela anda no relógio do servidor.
         stream: ({ params }) => store._ticketDataService.getOverview(params).pipe(map((overview): TicketSlaSummary & { receivedAtMs: number } => ({
-          activeCount: overview.volume.backlog,
-          onTimeCount: overview.sla.onTime,
-          atRiskCount: overview.sla.atRisk,
-          breachedCount: overview.sla.breached,
+          activeCount: overview.volume.backlogCount,
+          onTimeCount: overview.sla.onTimeCount,
+          atRiskCount: overview.sla.atRiskCount,
+          breachedCount: overview.sla.breachedCount,
           serverNowUtc: overview.serverNowUtc,
           receivedAtMs: Date.now()
         })))

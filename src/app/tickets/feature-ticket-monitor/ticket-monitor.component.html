@@ -172,6 +172,14 @@
   }
 </app-filter-bar>
 
+@if (pendingPeriodLabel(); as period) {
+  <!-- O back-end ainda não filtra a lista por data (spec 025): dito em tom neutro, pra a lista não parecer errada. -->
+  <p class="small text-muted d-flex align-items-start gap-2 mb-3" role="status">
+    <i class="bx bx-info-circle mt-1" aria-hidden="true"></i>
+    <span>O período de abertura ({{ period }}) ainda não é aplicado nesta lista: ela mostra chamados de qualquer data. O filtro por data chega em breve.</span>
+  </p>
+}
+
 @if (store.listState().error) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.listState().error }}</span>

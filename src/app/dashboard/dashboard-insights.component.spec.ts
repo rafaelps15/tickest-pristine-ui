@@ -128,6 +128,18 @@ describe('DashboardInsightsComponent', () => {
     expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
   });
 
+  it('cor de alerta só quando há o que alertar: zero em risco fica neutro', async () => {
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [{ ...ticket, slaStatus: TicketSlaStatus.Breached, dueAtUtc: new Date(Date.now() - 3_600_000).toISOString() }]);
+    fixture.componentRef.setInput('breachedCount', 4);
+    fixture.componentRef.setInput('atRiskCount', 0);
+    await fixture.whenStable();
+
+    const [breached, atRisk] = Array.from(fixture.nativeElement.querySelectorAll('.sla-total .stat-value') as NodeListOf<HTMLElement>);
+    expect(breached.classList).toContain('text-danger');
+    expect(atRisk.classList).not.toContain('text-warning');
+  });
+
   describe('faixa', () => {
     it('com a fila em dia, vira a forma compacta, sem coluna de lista', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
@@ -187,20 +199,15 @@ describe('DashboardInsightsComponent', () => {
       expect(refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('ao voltar pra aba, recarrega só se a lista tiver mais de 5 minutos', async () => {
+    it('ao voltar pra aba não pede dados sozinho: quem recarrega é a atualização automática do Início', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       const refresh = jasmine.createSpy('refresh');
       fixture.componentInstance.refresh.subscribe(refresh);
 
-      fixture.componentRef.setInput('loadedAtMs', Date.now() - 60_000);
-      await fixture.whenStable();
-      document.dispatchEvent(new Event('visibilitychange'));
-      expect(refresh).not.toHaveBeenCalled();
-
       fixture.componentRef.setInput('loadedAtMs', Date.now() - 6 * 60_000);
       await fixture.whenStable();
       document.dispatchEvent(new Event('visibilitychange'));
-      expect(refresh).toHaveBeenCalledTimes(1);
+      expect(refresh).not.toHaveBeenCalled();
     });
   });
 

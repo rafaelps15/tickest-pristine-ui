@@ -30,9 +30,9 @@ export type StatTone = 'primary' | 'success' | 'warning' | 'danger' | 'info';
             @if (loading()) {
               <span class="spinner-border spinner-border-sm {{ toneText() }}" role="status"><span class="visually-hidden">Carregando {{ label() }}…</span></span>
             } @else if (failed()) {
-              <div class="mb-0 me-2 fs-3 stat-value text-muted"><span aria-hidden="true">—</span><span class="visually-hidden">indisponível</span></div>
+              <div class="mb-0 me-2 stat-value text-muted" [class.fs-3]="!compact()" [class.fs-4]="compact()"><span aria-hidden="true">—</span><span class="visually-hidden">indisponível</span></div>
             } @else {
-              <div class="mb-0 me-2 fs-3 stat-value {{ toneValue() }}">{{ value() ?? '—' }}</div>
+              <div class="mb-0 me-2 stat-value {{ toneValue() }}" [class.fs-3]="!compact()" [class.fs-4]="compact()">{{ value() ?? '—' }}</div>
             }
           </div>
           <small class="text-muted stat-hint"><ng-content select="[statHint]" />{{ hint() }}</small>
@@ -70,6 +70,11 @@ export class StatCardComponent {
   readonly pressLabel = input<string | null>(null);
   /** Card navegável por um link projetado — ganha o realce de hover de card clicável. */
   readonly linked = input(false);
+  /**
+   * Número um passo menor (o mesmo dos indicadores do topo do Início): pra quando o card é apoio
+   * abaixo de números mais importantes e não pode ganhar deles na hierarquia.
+   */
+  readonly compact = input(false);
 
   /** Pedido de alternar o filtro deste card (modo `pressed`). */
   readonly press = output<void>();

@@ -1,16 +1,19 @@
 /**
- * Carrega o Chart.js sob demanda (import dinâmico) em vez de embutido no chunk de quem usa —
- * a lib + registerables pesam ~450kB, então só valem a pena baixar quando um gráfico for
- * realmente exibido (ver `@defer` no template de quem chama). Cacheado numa Promise módulo-wide
- * para registrar os componentes do Chart.js uma única vez, mesmo com mais de uma tela usando.
+ * Carrega o Chart.js sob demanda (import dinâmico) em vez de embutido no chunk de quem usa — só
+ * vale a pena baixar quando um gráfico for realmente exibido (ver `@defer` no template de quem
+ * chama). Carrega `chart-setup`, que registra só as peças usadas (barras, escalas, tooltip e
+ * legenda) — o `registerables` inteiro trazia controladores e elementos que nenhuma tela desenha.
+ * Cacheado numa Promise módulo-wide pra registrar uma única vez.
  */
-let chartModulePromise: Promise<typeof import('chart.js')> | null = null;
+let chartModulePromise: Promise<typeof import('./chart-setup')> | null = null;
 
-/** Devolve o módulo do Chart.js, já com os componentes registrados. */
-export function loadChart(): Promise<typeof import('chart.js')> {
-  chartModulePromise ??= import('chart.js').then(module => {
-    module.Chart.register(...module.registerables);
-    return module;
+/** Devolve o módulo com o `Chart` já com as peças registradas. */
+export function loadChart(): Promise<typeof import('./chart-setup')> {
+  // Se o chunk falhar (rede caiu, deploy novo), a Promise rejeitada não fica no cache: a próxima
+  // tentativa ("Tentar novamente") baixa de novo.
+  chartModulePromise ??= import('./chart-setup').catch(error => {
+    chartModulePromise = null;
+    throw error;
   });
   return chartModulePromise;
 }

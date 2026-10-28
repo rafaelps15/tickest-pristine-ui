@@ -1,7 +1,7 @@
 import { ParamMap, Params } from '@angular/router';
 import { Department } from '../departments';
-import { TicketDashboardAssignee, TicketDashboardScope, TicketPriority } from '../tickets';
-import { isIsoDate, shiftIsoDate } from '../shared';
+import { TicketAssignee, TicketDashboardAssignee, TicketDashboardScope, TicketPriority, TICKET_PRIORITY_LABELS } from '../tickets';
+import { formatIsoDate, isIsoDate, shiftIsoDate } from '../shared';
 
 /** Períodos prontos do Início: últimos 7, 30 ou 90 dias, contando hoje. */
 export type DashboardPeriodPreset = '7d' | '30d' | '90d';
@@ -158,4 +158,49 @@ export function toMonitorQueryParams(scope: TicketDashboardScope, extra: Params 
     delete merged['assignedToUserId'];
   }
   return merged;
+}
+
+/** Um filtro ativo, mostrado como chip removível (barra) ou como texto (linha "Filtros aplicados"). */
+export interface DashboardFilterChip {
+  /** Identificador do filtro. */
+  key: string;
+  /** Texto do filtro ("Setor: Helpdesk"). */
+  label: string;
+  /** Troca que remove o filtro. */
+  removal: Partial<DashboardFilters>;
+}
+
+/** Filtros ativos em texto, na ordem da barra, com os nomes de departamento, setor e pessoa resolvidos. */
+export function dashboardFilterChips(filters: DashboardFilters, departments: Department[], assignees: TicketAssignee[]): DashboardFilterChip[] {
+  const chips: DashboardFilterChip[] = [];
+  if (filters.period) {
+    chips.push({ key: 'period', label: DASHBOARD_PERIOD_LABELS[filters.period], removal: { period: undefined } });
+  } else if (filters.from || filters.to) {
+    const label = filters.from && filters.to
+      ? `De ${formatIsoDate(filters.from)} a ${formatIsoDate(filters.to)}`
+      : filters.from ? `Desde ${formatIsoDate(filters.from)}` : `Até ${formatIsoDate(filters.to as string)}`;
+    chips.push({ key: 'custom', label, removal: { from: undefined, to: undefined } });
+  }
+  if (filters.departmentId) {
+    // Departamento que não está na lista (id inválido ou lista que falhou) não recorta nada: o chip diz isso.
+    const department = departments.find(d => d.id === filters.departmentId);
+    const label = department ? `Departamento: ${department.name}` : 'Departamento não encontrado (ignorado)';
+    chips.push({ key: 'department', label, removal: { departmentId: undefined } });
+  }
+  if (filters.sectorId) {
+    const sector = departments.flatMap(d => d.sectors).find(s => s.id === filters.sectorId);
+    chips.push({ key: 'sector', label: `Setor: ${sector?.name ?? 'selecionado'}`, removal: { sectorId: undefined } });
+  }
+  if (filters.priority !== undefined) {
+    chips.push({ key: 'priority', label: `Prioridade: ${TICKET_PRIORITY_LABELS[filters.priority]}`, removal: { priority: undefined } });
+  }
+  if (filters.assignee === 'me') {
+    chips.push({ key: 'assignee', label: 'Atribuídos a mim', removal: { assignee: undefined } });
+  } else if (filters.assignee === 'none') {
+    chips.push({ key: 'assignee', label: 'Sem responsável', removal: { assignee: undefined } });
+  } else if (filters.assignedToUserId) {
+    const person = assignees.find(a => a.id === filters.assignedToUserId);
+    chips.push({ key: 'assignee', label: `Responsável: ${person?.fullName ?? 'selecionado'}`, removal: { assignedToUserId: undefined } });
+  }
+  return chips;
 }

@@ -2,69 +2,100 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 
-const STORAGE_KEY = 'tickest.dashboardGuide.open';
-
 describe('DashboardGuideComponent', () => {
   beforeEach(async () => {
-    localStorage.removeItem(STORAGE_KEY);
-
     await TestBed.configureTestingModule({
       imports: [DashboardGuideComponent],
       providers: [provideZonelessChangeDetection()]
     }).compileComponents();
   });
 
-  afterEach(() => localStorage.removeItem(STORAGE_KEY));
-
-  it('explica o que cada card de estatística e o gráfico representam', async () => {
+  /** Cria o guia (anexado ao documento, pra o foco funcionar) e devolve o fixture e o botão que abre. */
+  async function setup(inputs: { showOperation?: boolean; showMine?: boolean } = {}) {
     const fixture = TestBed.createComponent(DashboardGuideComponent);
+    fixture.componentRef.setInput('showOperation', inputs.showOperation ?? false);
+    fixture.componentRef.setInput('showMine', inputs.showMine ?? false);
+    document.body.appendChild(fixture.nativeElement);
     await fixture.whenStable();
+    const trigger = fixture.nativeElement.querySelector('.guide-trigger') as HTMLButtonElement;
+    return { fixture, trigger };
+  }
 
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Total de Chamados');
-    expect(text).toContain('Em Aberto');
-    expect(text).toContain('Em Andamento');
-    expect(text).toContain('Resolvidos');
-    expect(text).toContain('Dia, Semana ou Mês');
+  /** O diálogo aberto, ou null. */
+  const dialog = () => document.querySelector('[role="dialog"]');
+
+  afterEach(() => document.querySelectorAll('app-dashboard-guide').forEach(element => element.remove()));
+
+  it('começa fechado: só o botão "Guia da tela" no cabeçalho, sem ocupar o corpo da tela', async () => {
+    const { trigger } = await setup();
+
+    expect(trigger.textContent).toContain('Guia da tela');
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(dialog()).toBeNull();
   });
 
-  it('explica "em risco" e "atrasado" só pra quem vê os Alertas de SLA', async () => {
-    const fixture = TestBed.createComponent(DashboardGuideComponent);
+  it('abre um diálogo centralizado com título acessível', async () => {
+    const { fixture, trigger } = await setup();
+    trigger.click();
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).not.toContain('alertas de SLA');
 
-    fixture.componentRef.setInput('showSla', true);
-    await fixture.whenStable();
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Como ler os alertas de SLA');
-    expect(text).toContain('Em risco:');
-    expect(text).toContain('Atrasado:');
+    const box = dialog()!;
+    expect(box).not.toBeNull();
+    expect(box.getAttribute('aria-modal')).toBe('true');
+    const titleId = box.getAttribute('aria-labelledby')!;
+    expect(document.getElementById(titleId)?.textContent).toContain('Guia da tela');
   });
 
-  it('começa fechado no Dashboard até na primeira visita (exceção à regra do Guia aberto)', async () => {
-    const fixture = TestBed.createComponent(DashboardGuideComponent);
+  it('fecha com Esc e devolve o foco ao botão que abriu', async () => {
+    const { fixture, trigger } = await setup();
+    trigger.focus();
+    trigger.click();
     await fixture.whenStable();
 
-    expect((fixture.nativeElement.querySelector('.guide-toggle') as HTMLElement).getAttribute('aria-expanded')).toBe('false');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 
-  it('não repete nos títulos das seções o nome de um card da tela (leitor de tela confundia ajuda com conteúdo)', async () => {
-    const fixture = TestBed.createComponent(DashboardGuideComponent);
-    fixture.componentRef.setInput('showSla', true);
+  it('fecha pelo botão visível de fechar', async () => {
+    const { fixture, trigger } = await setup();
+    trigger.click();
     await fixture.whenStable();
 
-    const titles = Array.from(fixture.nativeElement.querySelectorAll('h2, h3') as NodeListOf<HTMLElement>).map(h => h.textContent?.trim());
-    expect(titles).not.toContain('Chamados criados');
-    expect(titles).not.toContain('Alertas de SLA');
+    (document.querySelector('[role="dialog"] .btn-close') as HTMLButtonElement).click();
+    await fixture.whenStable();
+
+    expect(dialog()).toBeNull();
   });
 
-  it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
-    const fixture = TestBed.createComponent(DashboardGuideComponent);
+  it('organiza o conteúdo por bloco: indicadores e gráfico pra todos', async () => {
+    const { fixture, trigger } = await setup();
+    trigger.click();
     await fixture.whenStable();
 
-    (fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement).click();
+    const titles = Array.from(document.querySelectorAll('[role="dialog"] h3')).map(h => h.textContent?.trim());
+    expect(titles).toEqual(['Indicadores', 'Gráfico da operação', 'Atualização']);
+  });
+
+  it('pra quem atende a fila, explica também filtros, Central de atenção e Alertas de SLA', async () => {
+    const { fixture, trigger } = await setup({ showOperation: true });
+    trigger.click();
     await fixture.whenStable();
 
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
+    const titles = Array.from(document.querySelectorAll('[role="dialog"] h3')).map(h => h.textContent?.trim());
+    expect(titles).toEqual(['Indicadores', 'Gráfico da operação', 'Filtros', 'Central de atenção', 'Alertas de SLA', 'Atualização']);
+    expect(document.querySelector('[role="dialog"]')!.textContent).toContain('75% do prazo');
+  });
+
+  it('pra quem abre chamados, explica "Seus chamados" e que a lista mostra só os próprios', async () => {
+    const { fixture, trigger } = await setup({ showMine: true });
+    trigger.click();
+    await fixture.whenStable();
+
+    const text = document.querySelector('[role="dialog"]')!.textContent;
+    expect(text).toContain('Seus chamados');
+    expect(text).toContain('você vê só os seus');
   });
 });

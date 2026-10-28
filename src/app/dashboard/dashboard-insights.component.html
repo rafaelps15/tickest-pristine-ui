@@ -1,8 +1,8 @@
 <!--
-  Faixa de largura total no topo da tela (layout, critique de 2026-10-27): resumo à esquerda e lista à
-  direita no desktop; com a fila em dia, vira uma linha compacta — o tamanho da faixa é a mensagem.
+  Card ao lado da Central de atenção, abaixo do gráfico (redesenho de 2026-10-28): resumo e lista
+  empilhados, ou lado a lado quando o card é largo; com a fila em dia, vira uma linha compacta.
 -->
-<div class="card insights-card mb-4">
+<section class="card insights-card" aria-labelledby="slaAlertsTitle">
   <div class="card-body sla-band" [class.sla-band-quiet]="isQuiet()">
     <div class="sla-band-summary">
       <div class="d-flex align-items-start gap-2 sla-band-header">
@@ -11,7 +11,7 @@
            [class.bx-error]="criticalTickets().length > 0" [class.text-warning]="criticalTickets().length > 0"
            [class.bx-time-five]="criticalTickets().length === 0" [class.text-muted]="criticalTickets().length === 0"></i>
         <div>
-          <h2 class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
+          <h2 id="slaAlertsTitle" class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
           <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
           <!-- A faixa é sempre da empresa toda: os filtros da operação, abaixo, não valem pra ela. -->
           <p class="text-muted small mb-0">Toda a empresa, sem os filtros@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
@@ -31,10 +31,7 @@
           <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando alertas de SLA…</span>
         </div>
       } @else if (error(); as errorMessage) {
-        <div class="d-flex flex-column align-items-start gap-2" role="alert">
-          <p class="text-danger small mb-0">{{ errorMessage }}</p>
-          <button type="button" class="btn btn-sm btn-outline-danger" (click)="refresh.emit()">Tentar novamente</button>
-        </div>
+        <app-dashboard-notice kind="error" [text]="errorMessage" (retry)="refresh.emit()" />
       } @else if (criticalTickets().length === 0) {
         <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
         <div class="d-flex align-items-center gap-3 sla-all-clear">
@@ -44,17 +41,22 @@
             <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco agora.</p>
           </div>
         </div>
+      } @else if (!showTotals()) {
+        <!-- Só a lista: os totais estão no topo da tela e no grupo de SLA. A fila inteira, pelo prazo, fica a um clique. -->
+        <p class="small text-muted mb-1">Os mais perto do prazo primeiro.</p>
+        <a class="small fw-semibold tap-target" routerLink="/tickets/monitorar">Ver a fila pelo prazo <i class="bx bx-chevron-right" aria-hidden="true"></i></a>
       } @else {
         <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
         <div class="sla-totals">
           <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
              [attr.aria-label]="shownBreachedCount() + ' chamados atrasados — ver na fila'">
-            <span class="stat-value fs-3 text-danger">{{ shownBreachedCount() }}</span>
+            <!-- Cor de alerta só quando há o que alertar: zero fica neutro. -->
+            <span class="stat-value fs-4" [class.text-danger]="shownBreachedCount() > 0">{{ shownBreachedCount() }}</span>
             <span class="small">{{ shownBreachedCount() === 1 ? 'atrasado' : 'atrasados' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
           </a>
           <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
              [attr.aria-label]="shownAtRiskCount() + ' chamados em risco — ver na fila'">
-            <span class="stat-value fs-3 text-warning">{{ shownAtRiskCount() }}</span>
+            <span class="stat-value fs-4" [class.text-warning]="shownAtRiskCount() > 0">{{ shownAtRiskCount() }}</span>
             <span class="small">em risco <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
           </a>
         </div>
@@ -71,7 +73,7 @@
               <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
               <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link flex-grow-1" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
                 <span class="d-flex align-items-start justify-content-between gap-2">
-                  <span class="critical-ticket-title">{{ item.ticket.title }}</span>
+                  <span class="critical-ticket-title text-break">{{ item.ticket.title }}</span>
                   @if (item.overdue) {
                     <span class="badge bg-label-danger flex-shrink-0">Atrasado</span>
                   } @else {
@@ -104,4 +106,4 @@
       </div>
     }
   </div>
-</div>
+</section>

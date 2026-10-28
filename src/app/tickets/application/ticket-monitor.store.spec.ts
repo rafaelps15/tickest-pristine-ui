@@ -27,9 +27,9 @@ describe('TicketMonitorStore', () => {
   /** O agregado da operação que gera o resumo acima (ativos = backlog; no prazo, em risco e atrasados do SLA). */
   const overview: TicketDashboardOverview = {
     serverNowUtc: '2026-01-01T12:00:00Z',
-    volume: { total: 30, open: 4, inProgress: 6, resolved: 15, closed: 5, canceled: 0, backlog: 10 },
-    sla: { onTime: 6, atRisk: 3, breached: 1, met: 12, missed: 3, notApplicable: 0 },
-    attention: { overdue: 1, critical: 0, unassigned: 2 }
+    volume: { totalCount: 30, openCount: 4, inProgressCount: 6, resolvedCount: 15, closedCount: 5, canceledCount: 0, backlogCount: 10 },
+    sla: { onTimeCount: 6, atRiskCount: 3, breachedCount: 1, metCount: 12, missedCount: 3, notApplicableCount: 0 },
+    attention: { breachedCount: 1, criticalCount: 0, unassignedCount: 2 }
   };
 
   function pageOf(items: TicketMonitorItem[], page = 1, totalCount = items.length, pageSize = 20): PagedResponse<TicketMonitorItem> {

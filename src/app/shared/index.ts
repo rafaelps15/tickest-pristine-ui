@@ -6,6 +6,7 @@ export * from './entities/cursor-page';
 export * from './entities/current-user';
 export * from './entities/change-required-password-data';
 export * from './entities/activate-account-data';
+export * from './entities/dashboard-features';
 export * from './infrastructure/auth.data.service';
 export * from './services/session.service';
 export * from './services/current-user.service';

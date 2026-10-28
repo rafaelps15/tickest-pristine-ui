@@ -14,7 +14,7 @@ import { TicketSortOrder, TICKET_SORT_ORDER_LABELS } from '../entities/ticket-so
 import { TicketAwaiting, TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
 import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { DepartmentsStore } from '../../departments';
-import { SessionService, ToastService, formatIsoDate, formatSlaDuration, injectSidePanelOverlay, isEscapeFromNestedLayer, isIsoDate } from '../../shared';
+import { DASHBOARD_FEATURES, SessionService, ToastService, formatIsoDate, formatSlaDuration, injectSidePanelOverlay, isEscapeFromNestedLayer, isIsoDate } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
@@ -75,6 +75,8 @@ export class TicketMonitorComponent implements OnInit {
     /** Responsáveis elegíveis pro filtro "Responsável" (GET /tickets/assignees). */
     protected readonly assigneesStore = inject(TicketAssigneesStore);
     protected readonly sessionService = inject(SessionService);
+    /** Funcionalidades que dependem de endpoints novos do back-end (aqui, o período na listagem). */
+    private readonly features = inject(DASHBOARD_FEATURES);
     private readonly toastService = inject(ToastService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
@@ -194,6 +196,12 @@ export class TicketMonitorComponent implements OnInit {
         const sectorIds = this.store.filters().sectorIds ?? [];
         return sectorIds.length > 1 ? 'many' : sectorIds[0] ?? '';
     });
+
+    /**
+     * Período de abertura que veio na URL (ex.: drill-down do Início) mas que a listagem do back-end
+     * ainda não aplica (spec 025): a tela avisa, pra a lista não parecer errada. Null sem aviso.
+     */
+    readonly pendingPeriodLabel = computed(() => (this.features.listPeriodFilter ? null : this.createdRangeLabel()));
 
     /** Período de abertura aplicado, em texto ("De 01/10/2026 a 28/10/2026"), ou null. */
     readonly createdRangeLabel = computed(() => {

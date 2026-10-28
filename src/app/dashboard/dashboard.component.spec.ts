@@ -1,59 +1,77 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { DashboardComponent, countTrend, greetingForHour, slaRate } from './dashboard.component';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardScope, TicketDashboardOverview, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardOverview, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem, TicketStatusCounts, TicketDashboardChartScope } from '../tickets';
 import { DepartmentsStore, Department } from '../departments';
-import { SessionService, ToastService } from '../shared';
+import { DASHBOARD_FEATURES, DashboardFeatures, SessionService, ToastService } from '../shared';
+
+/** 30 dias de volume, 10 criados por dia, terminando em 28/10/2026. */
+function thirtyDays(count = 10): TicketVolumePoint[] {
+  return Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(Date.UTC(2026, 8, 29 + i));
+    return { periodStart: date.toISOString().slice(0, 10), count };
+  });
+}
 
 describe('DashboardComponent', () => {
-  /** Store falso dos widgets operacionais (agregado, tempos médios e gráfico), com signals reais. */
+  /** Store falso dos widgets operacionais (agregado, tempos médios e volume do recorte), com signals reais. */
   function createOperationStoreFake() {
+    const volume = signal<TicketDashboardVolume | null>({ totalCount: 10, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 0, backlogCount: 5 });
+    const sla = signal<TicketDashboardSla | null>({ onTimeCount: 3, atRiskCount: 1, breachedCount: 2, metCount: 7, missedCount: 1, notApplicableCount: 0 });
+    const attention = signal<TicketDashboardAttention | null>({ breachedCount: 2, criticalCount: 1, unassignedCount: 3 });
+    const overviewError = signal<string | null>(null);
+    // O agregado inteiro existe enquanto os três blocos existem (como no store, que os deriva dele).
+    const overview = computed((): TicketDashboardOverview | null => {
+      const [v, s, a] = [volume(), sla(), attention()];
+      return v && s && a ? { serverNowUtc: '2026-10-28T12:00:00Z', volume: v, sla: s, attention: a } : null;
+    });
     return {
-      volume: signal<TicketDashboardVolume | null>({ total: 10, open: 3, inProgress: 2, resolved: 4, closed: 1, canceled: 0, backlog: 5 }),
-      sla: signal<TicketDashboardSla | null>({ onTime: 3, atRisk: 1, breached: 2, met: 7, missed: 1, notApplicable: 0 }),
-      attention: signal<TicketDashboardAttention | null>({ overdue: 2, critical: 1, unassigned: 3 }),
+      volume,
+      sla,
+      attention,
+      overview,
+      overviewFailed: computed(() => overviewError() !== null && overview() === null),
+      overviewStale: computed(() => overviewError() !== null && overview() !== null),
       previousOverview: signal<TicketDashboardOverview | null>(null),
       overviewLoading: signal(false),
-      overviewError: signal<string | null>(null),
+      overviewError,
       times: signal<TicketAverageTimes | null>({
         firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
         resolution: { averageMinutes: null, medianMinutes: null, sampleSize: 4 },
-        minimumSample: 5
+        minimumSampleSize: 5
       }),
       timesLoading: signal(false),
       timesError: signal<string | null>(null),
       trend: signal<TicketVolumePoint[]>([{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]),
+      trendHasValue: signal(true),
       trendLoading: signal(false),
       trendError: signal<string | null>(null),
       groupBy: signal<TicketVolumeGrouping>('Day'),
+      chartScope: signal<TicketDashboardChartScope>('company'),
       setScope: jasmine.createSpy('setScope'),
       setGroupBy: jasmine.createSpy('setGroupBy'),
+      setChartScope: jasmine.createSpy('setChartScope'),
+      refresh: jasmine.createSpy('refresh'),
       reloadOverview: jasmine.createSpy('reloadOverview'),
       reloadTimes: jasmine.createSpy('reloadTimes'),
       reloadTrend: jasmine.createSpy('reloadTrend')
     };
   }
 
-  /** Cria um store de resumo falso com signals reais, para o template reagir como no store verdadeiro. */
+  /** Store falso dos números da empresa e dos alertas de SLA, com signals reais. */
   function createTicketsStoreFake() {
     return {
+      companyStatsAvailable: signal(true),
       summaryError: signal<string | null>(null),
+      statusCounts: signal<TicketStatusCounts | null>({ totalCount: 12, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 2 }),
       statusCountsLoading: signal(false),
-      volumeLoading: signal(false),
       statusCountsFailed: signal(false),
+      volume: signal<TicketVolumePoint[]>(thirtyDays()),
+      volumeHasValue: signal(true),
+      volumeLoading: signal(false),
       volumeFailed: signal(false),
-      total: signal(10),
-      openCount: signal(3),
-      inProgressCount: signal(2),
-      resolvedCount: signal(4),
-      closedCount: signal(1),
-      canceledCount: signal(0),
       groupBy: signal<TicketVolumeGrouping>('Day'),
-      volume: signal<TicketVolumePoint[]>([
-        { periodStart: '2026-01-05', count: 2 },
-        { periodStart: '2026-01-06', count: 5 }
-      ]),
       load: jasmine.createSpy('load'),
       setGroupBy: jasmine.createSpy('setGroupBy'),
       criticalTickets: signal<TicketMonitorItem[]>([]),
@@ -77,32 +95,44 @@ describe('DashboardComponent', () => {
     };
   }
 
+  /** Store falso de "Seus chamados". */
+  function createMyTicketsFake() {
+    return {
+      openCount: signal<number | null>(2), inProgressCount: signal<number | null>(1), resolvedCount: signal<number | null>(5),
+      resolvedOnlyCount: signal<number | null>(4), closedCount: signal<number | null>(1),
+      activeCount: signal<number | null>(3), totalCount: signal<number | null>(8),
+      loading: signal(false), failed: signal(false), reload: jasmine.createSpy('reload')
+    };
+  }
+
   type CurrentUserFake = { firstName: string; roles: { name: string }[] } | null;
 
   let operationFake: ReturnType<typeof createOperationStoreFake>;
+  let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
+  let myTicketsFake: ReturnType<typeof createMyTicketsFake>;
   let departmentsFake: { departments: ReturnType<typeof signal<Department[]>>; listState: ReturnType<typeof signal<{ loading: boolean }>> };
   let assigneesFake: { assignees: ReturnType<typeof signal<TicketAssignee[]>>; total: ReturnType<typeof signal<number>> };
-  let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
-  let myTicketsFake: {
-    openCount: ReturnType<typeof signal<number | null>>; inProgressCount: ReturnType<typeof signal<number | null>>;
-    resolvedCount: ReturnType<typeof signal<number | null>>; loading: ReturnType<typeof signal<boolean>>;
-    failed: ReturnType<typeof signal<boolean>>; reload: jasmine.Spy;
-  };
   let currentUser: ReturnType<typeof signal<CurrentUserFake>>;
   let toastServiceFake: { show: jasmine.Spy };
+  let features: DashboardFeatures;
+  /** Se a tela pediu o store de "Seus chamados" (ele busca sozinho ao nascer). */
+  let myTicketsCreated: boolean;
+
+  /** Só a permissão de quem atende a fila. */
+  const asAgent = () => hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+  /** Só a permissão de quem abre chamados. */
+  const asRequester = () => hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
 
   beforeEach(async () => {
     ticketsStoreFake = createTicketsStoreFake();
+    operationFake = createOperationStoreFake();
+    myTicketsFake = createMyTicketsFake();
+    myTicketsCreated = false;
     hasPermission = jasmine.createSpy('hasPermission').and.returnValue(false);
-    myTicketsFake = {
-      openCount: signal<number | null>(2), inProgressCount: signal<number | null>(1), resolvedCount: signal<number | null>(5),
-      loading: signal(false), failed: signal(false), reload: jasmine.createSpy('reload')
-    };
     currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Colaborador' }] });
     toastServiceFake = { show: jasmine.createSpy('show') };
-
-    operationFake = createOperationStoreFake();
+    features = { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
     departmentsFake = {
       departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] }]),
       listState: signal({ loading: false })
@@ -117,548 +147,617 @@ describe('DashboardComponent', () => {
         { provide: TicketDashboardStore, useValue: operationFake },
         { provide: DepartmentsStore, useValue: departmentsFake },
         { provide: TicketAssigneesStore, useValue: assigneesFake },
-        { provide: MyTicketsSummaryStore, useValue: myTicketsFake },
+        { provide: MyTicketsSummaryStore, useFactory: () => { myTicketsCreated = true; return myTicketsFake; } },
         { provide: SessionService, useValue: { hasPermission, currentUser } },
-        { provide: ToastService, useValue: toastServiceFake }
+        { provide: ToastService, useValue: toastServiceFake },
+        { provide: DASHBOARD_FEATURES, useFactory: () => features }
       ]
     }).compileComponents();
   });
 
+  /** Cria a tela e espera renderizar. */
+  async function render() {
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+    return fixture;
+  }
+
+  /** Os cards da faixa do topo, como texto. */
+  const kpiTexts = (root: HTMLElement) => Array.from(root.querySelectorAll('.kpi-card') as NodeListOf<HTMLElement>)
+    .map(card => Array.from(card.querySelectorAll('.kpi-label-text, .kpi-value, .kpi-hint, .kpi-soon')).map(part => part.textContent?.trim()).join(' '));
+
+  /** O link de um card da faixa pelo rótulo. */
+  const kpiLink = (root: HTMLElement, label: string) => Array.from(root.querySelectorAll('.kpi-card a') as NodeListOf<HTMLAnchorElement>)
+    .find(a => a.getAttribute('aria-label')?.startsWith(label + ':'))!;
+
   describe('saudação', () => {
     it('cumprimenta pelo primeiro nome conforme a hora do dia', async () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
-      await fixture.whenStable();
-
-      const expected = `${greetingForHour(new Date().getHours())}, Maria!`;
-      expect(fixture.nativeElement.querySelector('h1').textContent).toContain(expected);
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('h1').textContent).toContain(`${greetingForHour(new Date().getHours())}, Maria!`);
     });
 
     it('cumprimenta sem nome quando o usuário logado ainda não foi carregado', async () => {
       currentUser.set(null);
-      const fixture = TestBed.createComponent(DashboardComponent);
-      await fixture.whenStable();
-
+      const fixture = await render();
       expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe(`${greetingForHour(new Date().getHours())}!`);
     });
 
     it('escolhe "Bom dia", "Boa tarde" ou "Boa noite" pela hora (madrugada é noite)', () => {
-      expect(greetingForHour(5)).toBe('Bom dia');
-      expect(greetingForHour(11)).toBe('Bom dia');
-      expect(greetingForHour(12)).toBe('Boa tarde');
-      expect(greetingForHour(17)).toBe('Boa tarde');
-      expect(greetingForHour(18)).toBe('Boa noite');
+      expect(greetingForHour(8)).toBe('Bom dia');
+      expect(greetingForHour(13)).toBe('Boa tarde');
+      expect(greetingForHour(20)).toBe('Boa noite');
       expect(greetingForHour(2)).toBe('Boa noite');
     });
   });
 
-  it('carrega o resumo da empresa ao inicializar, para qualquer papel', async () => {
-    currentUser.set({ firstName: 'Carlos', roles: [{ name: 'Administrador' }] });
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(ticketsStoreFake.load).toHaveBeenCalled();
-  });
-
-  it('mostra o alerta de erro quando o resumo da empresa falhar', async () => {
-    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos chamados');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o resumo dos chamados');
-  });
-
-  it('recarrega o resumo ao clicar em "Tentar novamente" no alerta de erro', async () => {
-    ticketsStoreFake.summaryError.set('Erro ao carregar o resumo dos chamados');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const retryButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find(b => b.textContent?.includes('Tentar novamente'));
-    retryButton?.click();
-
-    expect(ticketsStoreFake.load).toHaveBeenCalled();
-  });
-
-  it('mostra "—" (indisponível) nos cards quando os totais falham, em vez de um 0 que passaria por dado real', async () => {
-    ticketsStoreFake.statusCountsFailed.set(true);
-    ticketsStoreFake.total.set(0);
-    ticketsStoreFake.openCount.set(0);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const values = Array.from(fixture.nativeElement.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>)
-      .map(v => v.textContent?.trim());
-    expect(values.length).toBe(4);
-    expect(values.every(v => v === '—indisponível')).toBeTrue();
-  });
-
-  it('mostra erro com "Tentar novamente" no gráfico quando o volume falha, não o vazio "nenhum ticket"', async () => {
-    ticketsStoreFake.volumeFailed.set(true);
-    ticketsStoreFake.volume.set([]);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const chart = fixture.nativeElement.querySelector('.chart-container') as HTMLElement;
-    expect(chart.textContent).toContain('Não foi possível carregar o volume de chamados.');
-    expect(chart.textContent).not.toContain('Nenhum chamado aberto');
-    (chart.querySelector('button') as HTMLButtonElement).click();
-    expect(ticketsStoreFake.load).toHaveBeenCalled();
-  });
-
-  it('mostra um spinner nos cards de estatística, em vez dos números, enquanto o resumo carrega', async () => {
-    ticketsStoreFake.statusCountsLoading.set(true);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const text = fixture.nativeElement.textContent;
-    expect(text).not.toContain('10');
-    expect(fixture.nativeElement.querySelectorAll('.spinner-border').length).toBeGreaterThanOrEqual(4);
-  });
-
-  it('não mostra spinner nos cards de estatística quando só o volume está carregando (recursos independentes)', async () => {
-    ticketsStoreFake.volumeLoading.set(true);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('10');
-  });
-
-  it('mostra uma mensagem de vazio no gráfico quando não há tickets abertos no período', async () => {
-    ticketsStoreFake.volume.set([]);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('Nenhum chamado aberto neste período ainda.');
-  });
-
-  describe('primeiro uso (empresa sem nenhum ticket)', () => {
-    beforeEach(() => {
-      ticketsStoreFake.total.set(0);
-      ticketsStoreFake.volume.set([]);
+  describe('cabeçalho', () => {
+    it('carrega os números ao abrir a tela', async () => {
+      await render();
+      expect(ticketsStoreFake.load).toHaveBeenCalled();
     });
 
-    it('convida quem pode abrir chamados a abrir o primeiro ticket, em vez do gráfico vazio', async () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
+    it('tem o botão "Guia da tela" no cabeçalho, e o guia não ocupa mais o corpo da tela', async () => {
+      const fixture = await render();
+      const header = fixture.nativeElement.querySelector('app-page-header') as HTMLElement;
+      expect(header.querySelector('.guide-trigger')?.textContent).toContain('Guia da tela');
+      expect(fixture.nativeElement.querySelector('app-screen-guide')).toBeNull();
+    });
+
+    it('diz a idade dos números e atualiza tudo na hora pelo botão, mantendo os números na tela', async () => {
+      asRequester();
+      const fixture = await render();
+      expect(fixture.nativeElement.textContent).toContain('Atualizado agora');
+      ticketsStoreFake.load.calls.reset();
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+
+      expect(ticketsStoreFake.load).toHaveBeenCalledTimes(1);
+      expect(operationFake.refresh).toHaveBeenCalledTimes(1);
+      expect(myTicketsFake.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('anuncia ao leitor de tela só "Atualizado agora" quando uma atualização termina, nunca os números', async () => {
+      const fixture = await render();
+      const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
+      expect(live()).toBe('');
+
+      // Uma troca de agrupamento ou de filtro também recarrega, mas não é "atualização": nada é anunciado.
+      ticketsStoreFake.volumeLoading.set(true);
+      await fixture.whenStable();
+      ticketsStoreFake.volumeLoading.set(false);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 150));
+      expect(live()).toBe('');
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('.freshness-spinner')).not.toBeNull();
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+      // Limpa e escreve de novo, pra a mesma frase ser lida a cada atualização.
+      await new Promise(resolve => setTimeout(resolve, 150));
       await fixture.whenStable();
 
-      const chart = fixture.nativeElement.querySelector('.chart-container') as HTMLElement;
-      expect(chart.textContent).toContain('A empresa ainda não tem nenhum chamado.');
-      expect(chart.querySelector('a')?.getAttribute('href')).toBe('/tickets/novo');
-      expect(chart.textContent).not.toContain('Nenhum chamado aberto neste período');
+      expect(live()).toBe('Atualizado agora');
+      // Durante a recarga, os números continuam (nada de esqueleto no lugar).
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('12');
+    });
+  });
+
+  describe('indicadores do topo (empresa toda)', () => {
+    it('mostra total, na fila, em andamento, resolvidos, fechados e, pra quem atende a fila, os atrasados', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTicketsLoadedAtMs.set(Date.now());
+      ticketsStoreFake.breachedCount.set(86);
+      const fixture = await render();
+
+      const texts = kpiTexts(fixture.nativeElement);
+      expect(texts.length).toBe(6);
+      expect(texts[0]).toContain('Total 12');
+      expect(texts[1]).toContain('Na fila 5');
+      expect(texts[2]).toContain('Em andamento 2');
+      expect(texts[3]).toContain('Resolvidos 4');
+      expect(texts[4]).toContain('Fechados 1');
+      // Sem o agregado no back-end, no lugar da taxa de SLA ("em breve") entra o risco: os atrasados, em vermelho.
+      expect(texts[5]).toContain('Atrasados 86');
+      expect(fixture.nativeElement.querySelectorAll('.kpi-value')[5].classList).toContain('kpi-risk');
+      expect(kpiLink(fixture.nativeElement, 'Atrasados').getAttribute('href')).toContain('slaStatus=3');
     });
 
-    it('leva quem administra a estrutura a cadastrar departamentos e setores primeiro', async () => {
-      hasPermission.and.callFake((code: string) => code === 'departments:manage');
-      const fixture = TestBed.createComponent(DashboardComponent);
+    it('zero atrasados fica neutro, e o card carrega sozinho enquanto os alertas não chegam', async () => {
+      asAgent();
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelectorAll('.kpi-card')[5].querySelector('.kpi-skeleton')).not.toBeNull();
+
+      ticketsStoreFake.criticalTicketsLoadedAtMs.set(Date.now());
       await fixture.whenStable();
-
-      const cta = fixture.nativeElement.querySelector('.chart-container a') as HTMLAnchorElement;
-      expect(cta.textContent?.trim()).toBe('Cadastrar departamentos e setores');
-      expect(cta.getAttribute('href')).toBe('/departamentos');
+      expect(kpiTexts(fixture.nativeElement)[5]).toContain('Atrasados 0');
+      expect(fixture.nativeElement.querySelectorAll('.kpi-value')[5].classList).not.toContain('kpi-risk');
     });
 
-    it('não mostra o convite enquanto os totais carregam ou quando falharam (0 ali não é "empresa nova")', async () => {
+    it('pra quem não atende a fila, a taxa de SLA diz "em breve" (neutro, sem erro)', async () => {
+      asRequester();
+      features.companyStatsForAll = true;
+      const fixture = await render();
+      expect(kpiTexts(fixture.nativeElement)[5]).toContain('SLA cumprido Disponível em breve');
+    });
+
+    it('cada número leva à fila com o status dele e os filtros da URL', async () => {
+      asAgent();
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1&priority=4');
+      const fixture = await render();
+
+      const backlog = kpiLink(fixture.nativeElement, 'Na fila').getAttribute('href')!;
+      expect(backlog).toContain('/tickets/monitorar');
+      expect(backlog).toContain('status=active');
+      expect(backlog).toContain('sectorId=s1');
+      expect(backlog).toContain('priority=4');
+      expect(kpiLink(fixture.nativeElement, 'Em andamento').getAttribute('href')).toContain('status=2');
+      expect(kpiLink(fixture.nativeElement, 'Total').getAttribute('href')).toContain('status=all');
+    });
+
+    it('carregando: esqueleto do mesmo tamanho, sem número inventado', async () => {
+      ticketsStoreFake.statusCounts.set(null);
+      ticketsStoreFake.statusCountsLoading.set(true);
+      const fixture = await render();
+
+      expect(fixture.nativeElement.querySelector('.kpi-strip[aria-busy="true"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.kpi-skeleton').length).toBe(5);
+    });
+
+    it('erro de verdade: um aviso neutro com "Tentar novamente", sem vermelho', async () => {
+      ticketsStoreFake.statusCounts.set(null);
       ticketsStoreFake.statusCountsFailed.set(true);
-      const fixture = TestBed.createComponent(DashboardComponent);
+      const fixture = await render();
+      ticketsStoreFake.load.calls.reset();
+
+      const strip = fixture.nativeElement.querySelector('app-dashboard-kpi-strip') as HTMLElement;
+      expect(strip.textContent).toContain('Não foi possível carregar os números.');
+      expect(fixture.nativeElement.querySelector('.alert-danger, .btn-outline-danger')).toBeNull();
+      (strip.querySelector('[role="alert"] button') as HTMLButtonElement).click();
+      expect(ticketsStoreFake.load).toHaveBeenCalled();
+    });
+
+    it('mensagem do servidor no erro (ex.: sem permissão), não a genérica', async () => {
+      ticketsStoreFake.statusCounts.set(null);
+      ticketsStoreFake.statusCountsFailed.set(true);
+      ticketsStoreFake.summaryError.set('Você não tem permissão para ver os números da empresa.');
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('app-dashboard-kpi-strip').textContent).toContain('Você não tem permissão para ver os números da empresa.');
+    });
+
+    it('numa atualização que falha, os números anteriores ficam e o cabeçalho diz de quando são', async () => {
+      const fixture = await render();
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 12');
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+      ticketsStoreFake.statusCounts.set(null);
+      ticketsStoreFake.statusCountsFailed.set(true);
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 150));
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.textContent).not.toContain('A empresa ainda não tem nenhum chamado.');
+      // Os números certos não viram um erro; o cabeçalho avisa e o leitor de tela ouve a falha.
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 12');
+      expect(fixture.nativeElement.querySelector('app-dashboard-kpi-strip [role="alert"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.freshness-label').textContent).toContain('Falha ao atualizar · números das');
+      expect(fixture.nativeElement.querySelector('.freshness [aria-live="polite"]').textContent.trim()).toBe('Não foi possível atualizar os números');
+    });
+
+    it('números grandes em pt-BR compacto, com o número completo à mão', async () => {
+      ticketsStoreFake.statusCounts.set({ totalCount: 12345, openCount: 1200, inProgressCount: 0, resolvedCount: 11145, closedCount: 0, canceledCount: 0 });
+      const fixture = await render();
+
+      const total = fixture.nativeElement.querySelector('.kpi-value') as HTMLElement;
+      expect(total.textContent?.trim()).toMatch(/^12,3\smil$/);
+      expect(total.getAttribute('title')).toBe('12.345');
     });
   });
 
-  it('com tickets:manage, troca os cards da empresa pelo Volume filtrável, cada número levando à fila com o mesmo status', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+  describe('gráfico principal', () => {
+    it('mostra a composição atual com números e percentuais, e os cancelados fora da barra pra a soma fechar', async () => {
+      asAgent();
+      const fixture = await render();
+      // A legenda mora dentro da barra: cada fatia diz status, número e percentual.
+      const items = Array.from(fixture.nativeElement.querySelectorAll('.composition-segment .segment-full') as NodeListOf<HTMLElement>)
+        .map(span => span.textContent?.replace(/\s+/g, ' ').trim());
 
-    const volume = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]') as HTMLElement;
-    const links = Array.from(volume.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>);
-    expect(links).toHaveSize(5);
-    expect(links.some(a => a.getAttribute('href')?.includes('status=active'))).toBeTrue();
-    expect(links.some(a => a.getAttribute('href')?.includes('status=2'))).toBeTrue();
-    const companyCards = Array.from(fixture.nativeElement.querySelectorAll('app-stat-card') as NodeListOf<HTMLElement>)
-      .filter(card => card.textContent?.includes('Total de Chamados'));
-    expect(companyCards.length).toBe(0);
-    // Volume é contexto: faixa compacta, sem um stat-card por número.
-    expect(volume.querySelector('.metric-strip')).not.toBeNull();
-    expect(volume.querySelectorAll('app-stat-card').length).toBe(0);
-  });
-
-  it('inclui a contagem atual no aria-label dos cards operacionais, pra quem usa leitor de tela saber "quantos" antes de entrar', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const labels = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('aria-label'));
-    expect(labels).toContain('Na fila: 5, aberto ou em andamento. Ver na fila de monitoramento');
-    expect(labels).toContain('Atrasados: 2, passaram do prazo. Ver na fila de monitoramento');
-    expect(labels).toContain('Sem responsável: 3, ativos, ninguém assumiu. Ver na fila de monitoramento');
-  });
-
-  it('leva o recorte da URL pros widgets e pro drill-down (setor, prioridade e responsável)', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    await TestBed.inject(Router).navigateByUrl('/?sectorId=s1&priority=4&assignee=none');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const scope: TicketDashboardScope = { sectorIds: ['s1'], priority: 4, assignee: 'none', assignedToUserId: undefined, from: undefined, to: undefined };
-    expect(operationFake.setScope).toHaveBeenCalledWith(scope);
-    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('Na fila'))!;
-    const href = backlog.getAttribute('href')!;
-    expect(href).toContain('sectorId=s1');
-    expect(href).toContain('priority=4');
-    expect(href).toContain('unassignedOnly=true');
-    expect(href).toContain('status=active');
-    // Chip do filtro ativo, com o nome do setor.
-    expect(fixture.nativeElement.textContent).toContain('Setor: Helpdesk');
-  });
-
-  it('o agregado com erro mostra um aviso só (não um por grupo), sem derrubar os tempos médios, e recarrega só ele', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    operationFake.sla.set(null);
-    operationFake.overviewError.set('Não foi possível carregar os números da operação.');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const alerts = Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>)
-      .filter(alert => alert.textContent?.includes('números da operação'));
-    expect(alerts.length).toBe(1);
-    const sla = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]') as HTMLElement;
-    expect(sla.textContent).toContain('Indisponível no momento');
-    (alerts[0].querySelector('button') as HTMLButtonElement).click();
-    expect(operationFake.reloadOverview).toHaveBeenCalled();
-    expect(operationFake.reloadTimes).not.toHaveBeenCalled();
-    // Os tempos médios continuam com os números.
-    expect(fixture.nativeElement.querySelector('app-dashboard-times').textContent).toContain('1 h 15 min');
-  });
-
-  it('traduz o departamento nos setores dele e o período pronto em datas, e leva os dois pro drill-down', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    await TestBed.inject(Router).navigateByUrl('/?departmentId=d1&period=7d');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const scope = operationFake.setScope.calls.mostRecent().args[0] as TicketDashboardScope;
-    expect(scope.sectorIds).toEqual(['s1', 's2']);
-    expect(scope.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(scope.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('Na fila'))!;
-    const href = backlog.getAttribute('href')!;
-    expect(href).toContain('sectorId=s1&sectorId=s2');
-    expect(href).toContain(`createdFrom=${scope.from}`);
-    expect(fixture.nativeElement.textContent).toContain('Departamento: TI');
-    expect(fixture.nativeElement.textContent).toContain('Últimos 7 dias');
-  });
-
-  it('espera os departamentos carregarem antes de mandar um recorte por departamento', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    departmentsFake.departments.set([]);
-    departmentsFake.listState.set({ loading: true });
-    await TestBed.inject(Router).navigateByUrl('/?departmentId=d1');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(operationFake.setScope).not.toHaveBeenCalled();
-  });
-
-  it('mostra "Aguardando" na Central quando o agregado manda os contadores', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    operationFake.attention.set({ overdue: 2, critical: 1, unassigned: 3, awaitingAgent: 6, awaitingRequester: 4 });
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const attention = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Central de atenção"]') as HTMLElement;
-    expect(attention.textContent).toContain('Aguardando a equipe');
-    expect(attention.textContent).toContain('Aguardando o solicitante');
-    const link = Array.from(attention.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.getAttribute('aria-label')?.includes('Aguardando a equipe'))!;
-    expect(link.getAttribute('href')).toContain('awaiting=2');
-  });
-
-  it('anuncia um resumo só da operação ao leitor de tela, não uma frase por grupo', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const regions = Array.from(fixture.nativeElement.querySelectorAll('[aria-live="polite"]') as NodeListOf<HTMLElement>)
-      .filter(region => region.closest('app-dashboard-metric-group, app-dashboard-times'));
-    expect(regions.length).toBe(0);
-    expect(fixture.nativeElement.textContent).toContain('Central de atenção: atrasados 2, críticos 1, sem responsável 3. Na fila: 5; em risco: 1.');
-  });
-
-  it('mostra a taxa de SLA cumprido em destaque, calculada com os números do servidor', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    // met 7, missed 1 no falso: 7 ÷ 8 = 88%.
-    const sla = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]') as HTMLElement;
-    expect(sla.textContent).toContain('88%');
-    expect(sla.textContent).toContain('resolvidos no prazo (7 de 8)');
-  });
-
-  it('com o período anterior carregado, compara o total e a taxa', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    operationFake.previousOverview.set({
-      serverNowUtc: '',
-      volume: { total: 7, open: 0, inProgress: 0, resolved: 0, closed: 0, canceled: 0, backlog: 0 },
-      sla: { onTime: 0, atRisk: 0, breached: 0, met: 3, missed: 1, notApplicable: 0 },
-      attention: { overdue: 0, critical: 0, unassigned: 0 }
+      expect(items).toEqual(['Abertos 3 · 30%', 'Andamento 2 · 20%', 'Resolvidos 4 · 40%', 'Fechados 1 · 10%']);
+      expect(fixture.nativeElement.querySelector('.composition-canceled').textContent.trim()).toBe('+ 2 cancelados');
     });
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]').textContent).toContain('3 a mais que no período anterior');
-    // 88% agora contra 75% antes.
-    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]').textContent).toContain('13 pontos acima do período anterior');
+    it('cada fatia leva à lista do status (teclado), e a barra tem descrição pro leitor de tela', async () => {
+      asAgent();
+      const fixture = await render();
+
+      const links = Array.from(fixture.nativeElement.querySelectorAll('.composition-segment a') as NodeListOf<HTMLAnchorElement>);
+      expect(links.length).toBe(4);
+      expect(links[0].getAttribute('href')).toContain('status=1');
+      expect(links[0].getAttribute('aria-label')).toBe('Abertos: 3 chamados, 30%. Ver a lista');
+      expect(fixture.nativeElement.querySelector('.composition-bar').getAttribute('aria-label')).toContain('abertos 3 (30%)');
+      expect(fixture.nativeElement.querySelector('.composition-bar').getAttribute('aria-label')).toContain('mais 2 cancelados');
+    });
+
+    it('mostra a frase de destaque quando há amostra, e nenhuma frase quando não há', async () => {
+      // 7 dias até ontem com 20 por dia (índices 22–28) contra 10 por dia antes: +100%.
+      ticketsStoreFake.volume.set(thirtyDays().map((p, i) => ({ ...p, count: i >= 22 && i <= 28 ? 20 : 10 })));
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('.hero-insight')?.textContent).toContain('70 chamados a mais (+100%) nos 7 dias até ontem');
+
+      ticketsStoreFake.volume.set(thirtyDays(1));
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('.hero-insight')).toBeNull();
+    });
+
+    it('sem os resolvidos por período, diz uma vez que eles chegam em breve, sem série fantasma', async () => {
+      const fixture = await render();
+      const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
+      expect(footnote).toContain('Todos os chamados da empresa · Últimos 30 dias');
+      expect(footnote).toContain('Resolvidos por período e fila ao longo do tempo: disponível em breve.');
+    });
+
+    it('vazio: nenhum chamado no período', async () => {
+      ticketsStoreFake.volume.set(thirtyDays(0));
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Nenhum chamado no período.');
+    });
+
+    it('erro do fluxo: aviso neutro e "Tentar novamente" na fonte certa, não o vazio', async () => {
+      ticketsStoreFake.volume.set([]);
+      ticketsStoreFake.volumeHasValue.set(false);
+      ticketsStoreFake.volumeFailed.set(true);
+      const fixture = await render();
+      ticketsStoreFake.load.calls.reset();
+
+      const area = fixture.nativeElement.querySelector('.flow-area') as HTMLElement;
+      expect(area.textContent).toContain('Não foi possível carregar os chamados por período.');
+      expect(area.textContent).not.toContain('Nenhum chamado');
+      (area.querySelector('button') as HTMLButtonElement).click();
+      expect(ticketsStoreFake.load).toHaveBeenCalled();
+    });
+
+    describe('primeiro uso (empresa sem nenhum chamado)', () => {
+      beforeEach(() => {
+        ticketsStoreFake.statusCounts.set({ totalCount: 0, openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, canceledCount: 0 });
+        ticketsStoreFake.volume.set(thirtyDays(0));
+      });
+
+      it('convida quem pode abrir chamados a abrir o primeiro', async () => {
+        const fixture = await render();
+        expect(fixture.nativeElement.textContent).toContain('A empresa ainda não tem nenhum chamado.');
+        expect(fixture.nativeElement.querySelector('.flow-area a[href="/tickets/novo"]')).not.toBeNull();
+      });
+
+      it('leva quem administra a estrutura a cadastrar departamentos e setores primeiro', async () => {
+        hasPermission.and.callFake((code: string) => code === 'departments:manage');
+        const fixture = await render();
+        expect(fixture.nativeElement.querySelector('.flow-area a[href="/departamentos"]')).not.toBeNull();
+      });
+    });
+
+    it('muda o agrupamento ao clicar em Semana', async () => {
+      const fixture = await render();
+      const week = Array.from(fixture.nativeElement.querySelectorAll('.hero-controls button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.trim() === 'Semana')!;
+      week.click();
+      expect(ticketsStoreFake.setGroupBy).toHaveBeenCalledWith('Week');
+    });
+
+    it('a tabela acessível mostra os mesmos números, leva o foco e oferece o drill-down por período', async () => {
+      asAgent();
+      const fixture = TestBed.createComponent(DashboardComponent);
+      document.body.appendChild(fixture.nativeElement);
+      await fixture.whenStable();
+
+      const toggle = fixture.nativeElement.querySelector('button[aria-label="Ver como tabela"]') as HTMLButtonElement;
+      toggle.click();
+      await fixture.whenStable();
+
+      const table = fixture.nativeElement.querySelector('table') as HTMLTableElement;
+      expect(document.activeElement).toBe(table);
+      expect(table.textContent).toContain('28/10/2026');
+      const link = table.querySelector('a') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toContain('createdFrom=2026-09-29');
+      expect(link.getAttribute('href')).toContain('createdTo=2026-09-29');
+      fixture.nativeElement.remove();
+    });
+
+    it('"Com filtros" continua focável, mas desabilitado e "Em breve" enquanto o back-end não entrega', async () => {
+      asAgent();
+      const fixture = await render();
+      const filtered = fixture.nativeElement.querySelector('.scope-soon') as HTMLButtonElement;
+
+      expect(filtered.disabled).toBeFalse();
+      expect(filtered.getAttribute('aria-disabled')).toBe('true');
+      expect(filtered.getAttribute('data-tip')).toBe('Em breve');
+      expect(filtered.textContent).toContain('(em breve)');
+      filtered.click();
+      expect(operationFake.setChartScope).not.toHaveBeenCalled();
+    });
+
+    it('quem não atende a fila não vê o alternador de escopo', async () => {
+      asRequester();
+      features.companyStatsForAll = true;
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('.scope-soon')).toBeNull();
+    });
   });
 
-  it('calcula a comparação e a taxa sem inventar número', () => {
-    expect(countTrend(10, 7)).toBe('3 a mais que no período anterior');
-    expect(countTrend(5, 8)).toBe('3 a menos que no período anterior');
-    expect(countTrend(4, 4)).toBe('igual ao período anterior');
-    expect(countTrend(4, undefined)).toBeNull();
-    expect(slaRate(7, 1)).toBe(88);
-    expect(slaRate(0, 0)).toBeNull();
+  describe('filtros', () => {
+    it('no escopo da empresa, a barra fica escondida, mas os filtros da URL ficam à vista com "Limpar"', async () => {
+      asAgent();
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1&priority=4');
+      const fixture = await render();
+
+      expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).toBeNull();
+      const line = fixture.nativeElement.querySelector('.applied-filters') as HTMLElement;
+      expect(line.textContent).toContain('Filtros aplicados às listas: Setor: Helpdesk, Prioridade: Urgente');
+
+      (line.querySelector('button') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      expect(TestBed.inject(Router).url).toBe('/');
+    });
+
+    it('sem filtros, nenhuma linha de filtros', async () => {
+      asAgent();
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('.applied-filters')).toBeNull();
+    });
+
+    it('os widgets operacionais seguem a empresa toda no escopo da empresa (os filtros valem só pras listas)', async () => {
+      asAgent();
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
+      await render();
+      expect(operationFake.setScope).toHaveBeenCalledWith({});
+    });
+
+    it('com o back-end pronto e filtros na URL, abre no escopo "Com filtros", com a barra e os números do recorte', async () => {
+      asAgent();
+      features = { operationOverview: true, averageTimes: true, volumeResolved: true, companyStatsForAll: false, listPeriodFilter: false };
+      operationFake.chartScope.set('filtered');
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
+      const fixture = await render();
+
+      expect(operationFake.setChartScope).toHaveBeenCalledWith('filtered');
+      expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
+      expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).not.toBeNull();
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 10');
+      expect(kpiTexts(fixture.nativeElement)[5]).toContain('Atrasados 2');
+      expect(fixture.nativeElement.querySelector('#heroTitle').textContent).toContain('Operação com os filtros');
+    });
+
+    it('com o agregado mas sem o volume do recorte, a barra e os números seguem os filtros e o fluxo fica o da empresa', async () => {
+      asAgent();
+      features = { operationOverview: true, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
+      operationFake.chartScope.set('filtered');
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
+      const fixture = await render();
+
+      expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
+      expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).not.toBeNull();
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 10');
+      expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).toContain('o fluxo ainda é o da empresa toda');
+    });
   });
 
-  it('sem os contadores de "aguardando", a Central mostra só os três de hoje', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+  describe('o que pede ação (quem atende a fila)', () => {
+    it('Central de atenção "Disponível em breve" sem o agregado, ao lado dos Alertas de SLA', async () => {
+      asAgent();
+      const fixture = await render();
 
-    const attention = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Central de atenção"]') as HTMLElement;
-    expect(attention.querySelectorAll('a.stretched-link, a.metric-strip-link').length).toBe(3);
+      const attention = fixture.nativeElement.querySelector('section[aria-labelledby="attentionTitle"]') as HTMLElement;
+      expect(attention.textContent).toContain('Central de atenção');
+      expect(attention.textContent).toContain('do mais grave ao menos grave: disponível em breve.');
+      expect(fixture.nativeElement.querySelector('app-dashboard-insights')).not.toBeNull();
+    });
+
+    it('com o agregado no ar, os atrasados vão pro topo e a Central mostra críticos e sem responsável', async () => {
+      asAgent();
+      features.operationOverview = true;
+      const fixture = await render();
+
+      expect(kpiTexts(fixture.nativeElement)[5]).toContain('Atrasados 2');
+      const central = fixture.nativeElement.querySelector('app-dashboard-metric-group') as HTMLElement;
+      expect(central.textContent).toContain('Críticos');
+      expect(central.textContent).toContain('Sem responsável');
+      expect(central.textContent).not.toContain('Passaram do prazo');
+    });
+
+    it('com o agregado no ar, os Alertas de SLA ficam só com a lista (os totais moram no topo e no SLA)', async () => {
+      asAgent();
+      features.operationOverview = true;
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('app-dashboard-insights .sla-totals')).toBeNull();
+    });
+
+    it('uma atualização do agregado que falha mantém os números, sem alerta, e o cabeçalho avisa', async () => {
+      asAgent();
+      features.operationOverview = true;
+      const fixture = await render();
+
+      operationFake.overviewError.set('Não foi possível carregar os números da operação.');
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('app-dashboard-metric-group [role="alert"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.freshness-label').textContent).toContain('Falha ao atualizar');
+    });
+
+    it('sem números do agregado, o erro aparece uma vez só (na Central) e recarrega o agregado', async () => {
+      asAgent();
+      features.operationOverview = true;
+      operationFake.volume.set(null);
+      operationFake.sla.set(null);
+      operationFake.attention.set(null);
+      operationFake.overviewError.set('Não foi possível carregar os números da operação.');
+      const fixture = await render();
+
+      const alerts = fixture.nativeElement.querySelectorAll('app-dashboard-metric-group [role="alert"]');
+      expect(alerts.length).toBe(1);
+      expect(fixture.nativeElement.textContent).toContain('Indisponível no momento');
+      (alerts[0].querySelector('button') as HTMLButtonElement).click();
+      expect(operationFake.reloadOverview).toHaveBeenCalled();
+    });
+
+    it('SLA detalhado e tempos esperando o back-end viram um aviso só pra linha', async () => {
+      asAgent();
+      const fixture = await render();
+      const notices = Array.from(fixture.nativeElement.querySelectorAll('app-dashboard-notice') as NodeListOf<HTMLElement>).map(n => n.textContent ?? '');
+      expect(notices.filter(text => text.includes('tempos médios')).length).toBe(1);
+      expect(fixture.nativeElement.querySelector('app-dashboard-times')).toBeNull();
+    });
+
+    it('com os tempos no ar, mostra o widget de tempos', async () => {
+      asAgent();
+      features.averageTimes = true;
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('app-dashboard-times')).not.toBeNull();
+    });
+
+    it('mostra os Alertas de SLA com os chamados do store e atualiza só eles pelo "Atualizar" do card', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTickets.set([{ id: 't1', title: 'Chamado urgente' } as TicketMonitorItem]);
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('app-dashboard-insights').textContent).toContain('Chamado urgente');
+      ticketsStoreFake.load.calls.reset();
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement).click();
+      expect(ticketsStoreFake.reloadCritical).toHaveBeenCalledTimes(1);
+      expect(ticketsStoreFake.load).not.toHaveBeenCalled();
+    });
+
+    it('no DOM (ordem do celular e do Tab), os Alertas de SLA vêm antes da Central; o desktop reordena', async () => {
+      asAgent();
+      const fixture = await render();
+      const alerts = fixture.nativeElement.querySelector('app-dashboard-insights') as HTMLElement;
+      const central = fixture.nativeElement.querySelector('section[aria-labelledby="attentionTitle"]') as HTMLElement;
+      expect(alerts.compareDocumentPosition(central) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(alerts.parentElement!.classList).toContain('order-lg-2');
+      expect(central.parentElement!.classList).toContain('order-lg-1');
+    });
+
+    it('sem nada pra mostrar na linha secundária (administrativo sem a fila), ela não ocupa espaço', async () => {
+      hasPermission.and.callFake((code: string) => code === 'users:read');
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('#quickActionsTitle')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.row.g-3.mb-4').length).toBe(0);
+    });
+
+    it('não mostra Central nem Alertas de SLA pra quem não atende a fila', async () => {
+      asRequester();
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('app-dashboard-insights')).toBeNull();
+      expect(fixture.nativeElement.querySelector('section[aria-labelledby="attentionTitle"]')).toBeNull();
+    });
   });
 
-  it('com tickets:manage, o gráfico usa o Criados x Resolvidos do recorte, com a coluna de resolvidos na tabela', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+  describe('quem não atende a fila', () => {
+    it('sem os números da empresa liberados no back-end, um aviso só no lugar dos indicadores e do gráfico', async () => {
+      asRequester();
+      ticketsStoreFake.companyStatsAvailable.set(false);
+      ticketsStoreFake.statusCounts.set(null);
+      ticketsStoreFake.volumeHasValue.set(false);
+      const fixture = await render();
 
-    expect(fixture.nativeElement.textContent).toContain('Criados x Resolvidos');
-    expect(fixture.nativeElement.textContent).toContain('com os filtros acima');
-    (Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.includes('Ver como tabela'))!).click();
-    await fixture.whenStable();
-    const headers = Array.from(fixture.nativeElement.querySelectorAll('table thead th') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
-    expect(headers).toEqual(['Período', 'Chamados criados', 'Resolvidos']);
+      expect(fixture.nativeElement.querySelector('app-dashboard-kpi-strip')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-dashboard-hero-chart')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Números de toda a empresa (indicadores e gráfico da operação): disponível em breve.');
+    });
+
+    it('com os números liberados, o drill-down abre Meus Chamados e diz quantos deles a pessoa vê', async () => {
+      asRequester();
+      features.companyStatsForAll = true;
+      const fixture = await render();
+
+      const link = kpiLink(fixture.nativeElement, 'Na fila');
+      expect(link.getAttribute('href')).toBe('/tickets');
+      expect(link.closest('.kpi-card')?.textContent).toContain('Você tem acesso a 3 dos 5 chamados');
+      expect(kpiLink(fixture.nativeElement, 'Resolvidos').getAttribute('href')).toBe('/tickets?status=finished');
+    });
   });
 
-  it('com tickets:manage, o "Tentar novamente" do gráfico recarrega o gráfico do recorte', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    operationFake.trend.set([]);
-    operationFake.trendError.set('Não foi possível carregar o volume de chamados.');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+  describe('seus chamados', () => {
+    it('mostra os próprios chamados por situação na linha secundária, ligando a Meus Chamados', async () => {
+      asRequester();
+      const fixture = await render();
 
-    (fixture.nativeElement.querySelector('.chart-container button') as HTMLButtonElement).click();
-    expect(operationFake.reloadTrend).toHaveBeenCalled();
-    expect(ticketsStoreFake.load).toHaveBeenCalledTimes(1);
+      const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
+      expect(section.querySelector('h2')?.textContent).toContain('Seus chamados');
+      const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
+      expect(values).toEqual(['2', '1', '5']);
+      const links = Array.from(section.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
+      expect(links).toEqual(['/tickets', '/tickets', '/tickets?status=finished']);
+    });
+
+    it('não mostra o bloco pra quem atende a fila, nem pede o resumo à API (o store nem é criado)', async () => {
+      hasPermission.and.callFake((code: string) => code === 'tickets:view-own' || code === 'tickets:manage');
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]')).toBeNull();
+      expect(myTicketsCreated).toBeFalse();
+    });
+
+    it('pra quem abre chamados, o store é criado (busca o resumo)', async () => {
+      asRequester();
+      await render();
+      expect(myTicketsCreated).toBeTrue();
+    });
+
+    it('falha: aviso neutro com "Tentar novamente"', async () => {
+      asRequester();
+      myTicketsFake.failed.set(true);
+      const fixture = await render();
+
+      const retry = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"] [role="alert"] button') as HTMLButtonElement;
+      retry.click();
+      expect(myTicketsFake.reload).toHaveBeenCalled();
+    });
   });
 
-  it('sem tickets:manage, não mostra os widgets operacionais nem a barra de filtros', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
+  describe('Ações rápidas', () => {
+    it('mostra Novo Chamado, Meus Chamados e Atribuídos a mim pra quem atende a fila sem ser administrativo', async () => {
+      asAgent();
+      const fixture = await render();
+      const links = Array.from(fixture.nativeElement.querySelectorAll('.quick-link') as NodeListOf<HTMLElement>).map(a => a.textContent ?? '');
+      expect(links.some(t => t.includes('Meus Chamados'))).toBeTrue();
+      expect(links.some(t => t.includes('Atribuídos a mim'))).toBeTrue();
+      expect(fixture.nativeElement.textContent).toContain('Novo Chamado');
+    });
 
-    expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).toBeNull();
-    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group')).toBeNull();
+    it('não mostra "Atribuídos a mim" pra quem não atende a fila', async () => {
+      const fixture = await render();
+      expect(fixture.nativeElement.textContent).not.toContain('Atribuídos a mim');
+    });
+
+    it('administrativo que atende a fila vê "Atribuídos a mim", sem Novo Chamado nem Meus Chamados', async () => {
+      hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'tickets:manage');
+      const fixture = await render();
+      const text = fixture.nativeElement.textContent;
+      expect(text).toContain('Atribuídos a mim');
+      expect(text).not.toContain('Novo Chamado');
+      expect(text).not.toContain('Meus Chamados');
+    });
+
+    it('administrativo sem tickets:manage não vê o card vazio nem atalho pro Monitorar', async () => {
+      hasPermission.and.callFake((code: string) => code === 'users:read');
+      const fixture = await render();
+      expect(fixture.nativeElement.querySelector('a[href^="/tickets/monitorar"]')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Ações rápidas');
+    });
+
+    it('Novo Chamado é um link de verdade (<a>), pra funcionar com Ctrl+clique/nova aba', async () => {
+      const fixture = await render();
+      const link = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).find(a => a.textContent?.includes('Novo Chamado'));
+      expect(link).toBeTruthy();
+    });
   });
 
-  it('não linka os cards de status sem a permissão tickets:manage', async () => {
-    hasPermission.and.returnValue(false);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelectorAll('a.stretched-link, a.metric-strip-link')).toHaveSize(0);
-    expect(fixture.nativeElement.textContent).not.toContain('Ver na fila');
-  });
-
-  it('renderiza os cards de estatísticas com os valores do store', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('10');
-    expect(text).toContain('3');
-    expect(text).toContain('2');
-    expect(text).toContain('4');
-  });
-
-  it('explica a diferença entre o Total e os 3 cards visíveis quando há fechados/cancelados', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('Inclui 1 fechado');
-  });
-
-  it('não mostra a legenda de detalhamento quando não há fechados nem cancelados', async () => {
-    ticketsStoreFake.closedCount.set(0);
-    ticketsStoreFake.canceledCount.set(0);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).not.toContain('Inclui');
-    expect(fixture.nativeElement.textContent).toContain('Todos os status');
-  });
-
-  it('diz no título do gráfico que conta tickets criados e qual o intervalo, conforme o agrupamento', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const header = () => (fixture.nativeElement.querySelector('.chart-container')!.closest('.card') as HTMLElement)
-      .querySelector('.card-header')!.textContent;
-    expect(header()).toContain('Chamados criados');
-    expect(header()).toContain('Últimos 2 dias');
-
-    ticketsStoreFake.groupBy.set('Week');
-    ticketsStoreFake.volume.set([]);
-    await fixture.whenStable();
-    expect(header()).toContain('Últimas 12 semanas');
-    // O intervalo é anunciado ao trocar o agrupamento.
-    expect(fixture.nativeElement.querySelector('.card-header [aria-live="polite"]').textContent.trim()).toBe('Últimas 12 semanas');
-  });
-
-  it('usa uma hierarquia de títulos sem saltos: h1 na saudação, h2 nas seções e h3 só dentro delas', async () => {
-    hasPermission.and.returnValue(true);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const levels = Array.from(fixture.nativeElement.querySelectorAll('h1, h2, h3, h4, h5, h6') as NodeListOf<HTMLElement>)
-      .map(h => Number(h.tagName.slice(1)));
-    expect(levels[0]).toBe(1);
-    expect(levels.slice(1).every((level, i) => level >= 2 && level <= levels[i] + 1)).toBeTrue();
-  });
-
-  it('pluraliza corretamente a legenda de detalhamento quando há mais de um fechado e mais de um cancelado', async () => {
-    ticketsStoreFake.closedCount.set(2);
-    ticketsStoreFake.canceledCount.set(3);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).toContain('Inclui 2 fechados e 3 cancelados');
-  });
-
-  it('muda o agrupamento do gráfico ao clicar em Semana/Mês', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const monthButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find(b => b.textContent?.trim() === 'Mês');
-    monthButton?.click();
-
-    expect(ticketsStoreFake.setGroupBy).toHaveBeenCalledWith('Month');
-  });
-
-  it('mostra a tabela acessível com o volume por período ao alternar "Ver como tabela"', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const toggleButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find(b => b.textContent?.includes('Ver como tabela'));
-    toggleButton?.click();
-    await fixture.whenStable();
-
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Quantidade de chamados criados por período');
-    expect(text).toContain('05/01');
-    expect(text).toContain('5');
-    // O foco vai pra tabela, pro leitor de tela anunciar a troca (antes o conteúdo mudava em silêncio).
-    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('table'));
-  });
-
-  it('mostra Novo Chamado, Meus Chamados e Atribuídos a mim pra quem não é administrativo mas tem tickets:manage (ex. Atendente), sem repetir a Central', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const links = Array.from(fixture.nativeElement.querySelectorAll('.quick-link') as NodeListOf<HTMLElement>).map(a => a.textContent ?? '');
-    expect(links.some(t => t.includes('Meus Chamados'))).toBeTrue();
-    expect(links.some(t => t.includes('Atribuídos a mim'))).toBeTrue();
-    expect(links.some(t => t.includes('Chamados sem responsável') || t.includes('Chamados críticos'))).toBeFalse();
-    expect(fixture.nativeElement.textContent).toContain('Novo Chamado');
-  });
-
-  it('não mostra o atalho "Atribuídos a mim" pra quem não tem a permissão tickets:manage (ex. Solicitante)', async () => {
-    hasPermission.and.returnValue(false);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).not.toContain('Atribuídos a mim');
-  });
-
-  it('troca Novo Chamado/Meus Chamados por "Atribuídos a mim" pra quem é administrativo e gerencia a fila', async () => {
-    hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Atribuídos a mim');
-    expect(text).not.toContain('Novo Chamado');
-    expect(text).not.toContain('Meus Chamados');
-  });
-
-  it('não mostra o atalho pro Monitorar (nem o card vazio) pra administrativo sem tickets:manage, que a rota recusaria', async () => {
-    hasPermission.and.callFake((code: string) => code === 'users:read');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('a[href^="/tickets/monitorar"]')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Ações Rápidas');
-  });
-
-  it('mantém Ações Rápidas restrito a atalhos contextuais ao dashboard, não a um menu de administração duplicado', async () => {
-    hasPermission.and.returnValue(true);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const text = fixture.nativeElement.textContent;
-    expect(text).not.toContain('Monitorar Chamados');
-    expect(text).not.toContain('Gestão de Usuários');
-    expect(text).not.toContain('Funções');
-    expect(text).not.toContain('Departamentos e setores');
-  });
-
-  it('os atalhos de Ações Rápidas são links de verdade (<a>), não botões, pra funcionar com Ctrl+clique/nova aba', async () => {
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const novoTicketLink = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>)
-      .find(a => a.textContent?.includes('Novo Chamado'));
-
-    expect(novoTicketLink).withContext('o atalho "Novo Ticket" deve ser <a>, não <button>').toBeTruthy();
-  });
-
-  it('não mostra o card de Alertas de SLA pra quem não tem a permissão tickets:manage', async () => {
-    hasPermission.and.returnValue(false);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('app-dashboard-insights')).toBeNull();
-  });
-
-  it('mostra o card de Alertas de SLA, com os chamados em risco do store, pra quem tem tickets:manage', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    ticketsStoreFake.criticalTickets.set([{ id: 't1', title: 'Chamado urgente' } as TicketMonitorItem]);
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-
-    const insights = fixture.nativeElement.querySelector('app-dashboard-insights');
-    expect(insights).toBeTruthy();
-    expect(insights.textContent).toContain('Chamado urgente');
-  });
-
-  it('atualiza só os alertas de SLA (reloadCritical) ao pedir "Atualizar" no card, sem recarregar o resto', async () => {
-    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
-    const fixture = TestBed.createComponent(DashboardComponent);
-    await fixture.whenStable();
-    ticketsStoreFake.load.calls.reset();
-
-    (fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement).click();
-
-    expect(ticketsStoreFake.reloadCritical).toHaveBeenCalledTimes(1);
-    expect(ticketsStoreFake.load).not.toHaveBeenCalled();
+  it('usa uma hierarquia de títulos sem saltos: h1 na saudação e h2 nos blocos', async () => {
+    asAgent();
+    const fixture = await render();
+    const headings = Array.from(fixture.nativeElement.querySelectorAll('h1, h2, h3, h4') as NodeListOf<HTMLElement>).map(h => h.tagName);
+    expect(headings[0]).toBe('H1');
+    expect(headings.slice(1).every(tag => tag === 'H2')).toBeTrue();
   });
 
   describe('"Atribuir" nos Alertas de SLA', () => {
@@ -667,12 +766,11 @@ describe('DashboardComponent', () => {
       dueAtUtc: new Date(Date.now() + 3_600_000).toISOString(), slaStatus: 2
     } as unknown as TicketMonitorItem;
 
-    /** Abre o Dashboard como quem atende a fila, com um alerta sem responsável, e clica em "Atribuir". */
+    /** Abre o Início como quem atende a fila, com um alerta sem responsável, e clica em "Atribuir". */
     async function openAssignDialog() {
-      hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+      asAgent();
       ticketsStoreFake.criticalTickets.set([unassigned]);
-      const fixture = TestBed.createComponent(DashboardComponent);
-      await fixture.whenStable();
+      const fixture = await render();
       (fixture.nativeElement.querySelector('button[aria-label="Atribuir responsável ao chamado VPN caindo"]') as HTMLButtonElement).click();
       await fixture.whenStable();
       return fixture;
@@ -680,7 +778,6 @@ describe('DashboardComponent', () => {
 
     it('abre o diálogo de atribuição com a busca limpa', async () => {
       const fixture = await openAssignDialog();
-
       expect(ticketsStoreFake.resetAssignment).toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).not.toBeNull();
     });
@@ -712,39 +809,12 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('seus chamados', () => {
-    it('mostra os próprios chamados por situação, ligando a Meus Chamados, pra quem abre chamados e não atende a fila', async () => {
-      hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
-      const fixture = TestBed.createComponent(DashboardComponent);
-      await fixture.whenStable();
-
-      const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
-      expect(section.querySelector('h2')?.textContent).toContain('Seus chamados');
-      const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
-      expect(values).toEqual(['2', '1', '5']);
-      const links = Array.from(section.querySelectorAll('a.stretched-link, a.metric-strip-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
-      expect(links).toEqual(['/tickets', '/tickets', '/tickets?status=finished']);
-      expect(fixture.nativeElement.textContent).toContain('Toda a empresa');
-    });
-
-    it('não mostra o bloco pra quem atende a fila', async () => {
-      hasPermission.and.callFake((code: string) => code === 'tickets:view-own' || code === 'tickets:manage');
-      const fixture = TestBed.createComponent(DashboardComponent);
-      await fixture.whenStable();
-
-      expect(fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]')).toBeNull();
-    });
-
-    it('mostra "—" e "Tentar novamente" quando o resumo falha', async () => {
-      hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
-      myTicketsFake.failed.set(true);
-      const fixture = TestBed.createComponent(DashboardComponent);
-      await fixture.whenStable();
-
-      const retry = Array.from(fixture.nativeElement.querySelectorAll('section button') as NodeListOf<HTMLButtonElement>)
-        .find(b => b.textContent?.includes('Tentar novamente'));
-      retry!.click();
-      expect(myTicketsFake.reload).toHaveBeenCalled();
-    });
+  it('calcula a comparação e a taxa de SLA sem inventar número', () => {
+    expect(countTrend(12, 10)).toBe('2 a mais que no período anterior');
+    expect(countTrend(8, 10)).toBe('2 a menos que no período anterior');
+    expect(countTrend(10, 10)).toBe('igual ao período anterior');
+    expect(countTrend(10, undefined)).toBeNull();
+    expect(slaRate(7, 1)).toBe(88);
+    expect(slaRate(0, 0)).toBeNull();
   });
 });

@@ -2,18 +2,8 @@ import { Component, ChangeDetectionStrategy, computed, input, output, signal } f
 import { Department } from '../departments';
 import { TicketAssignee, TicketPriority, TICKET_PRIORITY_LABELS } from '../tickets';
 import { FilterBarComponent } from '../shared/ui/filter-bar/filter-bar.component';
-import { DASHBOARD_PERIOD_DAYS, DASHBOARD_PERIOD_LABELS, DashboardFilters, DashboardPeriodPreset, addDays } from './dashboard-filters';
-import { formatIsoDate, isIsoDate } from '../shared';
-
-/** Um filtro ativo, mostrado como chip removível. */
-interface ActiveFilterChip {
-  /** Identificador do chip. */
-  key: string;
-  /** Texto do chip ("Setor: Helpdesk"). */
-  label: string;
-  /** Troca que remove o filtro do chip. */
-  removal: Partial<DashboardFilters>;
-}
+import { DASHBOARD_PERIOD_DAYS, DASHBOARD_PERIOD_LABELS, DashboardFilterChip, DashboardFilters, DashboardPeriodPreset, addDays, dashboardFilterChips } from './dashboard-filters';
+import { isIsoDate } from '../shared';
 
 /** Valor do seletor de período pro período personalizado. */
 const CUSTOM_PERIOD = 'custom';
@@ -235,40 +225,7 @@ export class DashboardFilterBarComponent {
   readonly assigneeValue = computed(() => this.filters().assignee ?? this.filters().assignedToUserId ?? '');
 
   /** Filtros ativos como chips, na ordem da barra. */
-  readonly chips = computed((): ActiveFilterChip[] => {
-    const filters = this.filters();
-    const chips: ActiveFilterChip[] = [];
-    if (filters.period) {
-      chips.push({ key: 'period', label: this.periodLabels[filters.period], removal: { period: undefined } });
-    } else if (filters.from || filters.to) {
-      const label = filters.from && filters.to
-        ? `De ${formatIsoDate(filters.from)} a ${formatIsoDate(filters.to)}`
-        : filters.from ? `Desde ${formatIsoDate(filters.from)}` : `Até ${formatIsoDate(filters.to as string)}`;
-      chips.push({ key: 'custom', label, removal: { from: undefined, to: undefined } });
-    }
-    if (filters.departmentId) {
-      // Departamento que não está na lista (id inválido ou lista que falhou) não recorta nada: o chip diz isso.
-      const department = this.selectedDepartment();
-      const label = department ? `Departamento: ${department.name}` : 'Departamento não encontrado (ignorado)';
-      chips.push({ key: 'department', label, removal: { departmentId: undefined } });
-    }
-    if (filters.sectorId) {
-      const sector = this.departments().flatMap(d => d.sectors).find(s => s.id === filters.sectorId);
-      chips.push({ key: 'sector', label: `Setor: ${sector?.name ?? 'selecionado'}`, removal: { sectorId: undefined } });
-    }
-    if (filters.priority !== undefined) {
-      chips.push({ key: 'priority', label: `Prioridade: ${this.priorityLabels[filters.priority]}`, removal: { priority: undefined } });
-    }
-    if (filters.assignee === 'me') {
-      chips.push({ key: 'assignee', label: 'Atribuídos a mim', removal: { assignee: undefined } });
-    } else if (filters.assignee === 'none') {
-      chips.push({ key: 'assignee', label: 'Sem responsável', removal: { assignee: undefined } });
-    } else if (filters.assignedToUserId) {
-      const person = this.assignees().find(a => a.id === filters.assignedToUserId);
-      chips.push({ key: 'assignee', label: `Responsável: ${person?.fullName ?? 'selecionado'}`, removal: { assignedToUserId: undefined } });
-    }
-    return chips;
-  });
+  readonly chips = computed((): DashboardFilterChip[] => dashboardFilterChips(this.filters(), this.departments(), this.assignees()));
 
   /** Abre ou fecha a linha "Mais filtros". */
   toggleMoreFilters(): void {

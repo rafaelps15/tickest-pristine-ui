@@ -15,5 +15,5 @@ export interface TicketAverageTimes {
   /** Da abertura até a primeira resolução. */
   resolution: TicketTimeStat;
   /** Amostra mínima pra calcular média e mediana. */
-  minimumSample: number;
+  minimumSampleSize: number;
 }

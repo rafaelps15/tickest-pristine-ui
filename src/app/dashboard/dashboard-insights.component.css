@@ -5,18 +5,21 @@
  */
 :host {
   display: block;
+  container-type: inline-size;
 }
 
 /*
- * Faixa de SLA (largura total, topo da tela): no celular tudo empilha; a partir de "lg", resumo
- * (cabeçalho + totais) à esquerda e lista à direita. Com a fila em dia, cabeçalho e "Fila em dia"
- * numa linha só — a faixa encolhe, e o tamanho dela vira a mensagem.
+ * Card de SLA (ao lado da Central de atenção, abaixo do gráfico): estreito, tudo empilha; com
+ * espaço (o card, não a tela, passa de 40rem), resumo (cabeçalho + totais) à esquerda e lista à
+ * direita. Com a fila em dia, cabeçalho e "Fila em dia" numa linha só — o card encolhe, e o tamanho
+ * dele vira a mensagem. Container query (o host é o contêiner): a largura que importa é a da
+ * coluna, não a da janela.
  */
 .sla-band-header {
   margin-bottom: 1rem;
 }
 
-@media (min-width: 992px) {
+@container (width >= 40rem) {
   .sla-band:not(.sla-band-quiet) {
     display: grid;
     grid-template-columns: minmax(16rem, 1fr) 2fr;
@@ -32,6 +35,13 @@
   .sla-band-quiet .sla-band-header {
     margin-bottom: 0;
   }
+}
+
+/* Links do card (totais e chamados): sem sublinhado e com o realce de fundo animado. */
+.sla-total,
+.critical-ticket-link {
+  text-decoration: none;
+  transition: background-color var(--tk-transition);
 }
 
 /*
@@ -53,8 +63,6 @@
   border-radius: var(--tk-radius-sm);
   background-color: rgba(var(--tk-primary-rgb), 0.04);
   color: var(--tk-text-secondary);
-  text-decoration: none;
-  transition: background-color var(--tk-transition);
 }
 
 .sla-total:hover,
@@ -62,8 +70,12 @@
   background-color: rgba(var(--tk-primary-rgb), 0.1);
 }
 
-.sla-total:focus-visible {
+.sla-total:focus-visible,
+.critical-ticket-link:focus-visible {
   outline: 2px solid var(--tk-primary);
+}
+
+.sla-total:focus-visible {
   outline-offset: 2px;
 }
 
@@ -94,8 +106,6 @@
   padding: 0.5rem;
   border-radius: var(--tk-radius-sm);
   color: var(--tk-text-primary);
-  text-decoration: none;
-  transition: background-color var(--tk-transition);
 }
 
 /* "Sem responsável" num alerta: o texto âmbar AA do sistema — pede alguém pra assumir. */
@@ -115,13 +125,11 @@
 
 .critical-ticket-link:hover .critical-ticket-title,
 .critical-ticket-link:focus-visible .critical-ticket-title {
-  color: var(--tk-primary);
+  color: var(--tk-primary-text);
   text-decoration: underline;
 }
 
-.critical-ticket-link:focus-visible {
-  outline: 2px solid var(--tk-primary);
-}
+
 
 /*
  * Momento focal do card (animate, 2026-10-27): quando um alerta vence com a tela aberta, a linha

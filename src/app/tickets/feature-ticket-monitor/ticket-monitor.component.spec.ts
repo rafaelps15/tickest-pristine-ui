@@ -18,7 +18,7 @@ import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketAssignee } from '../entities/ticket-assignee';
 import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { Department, DepartmentsStore } from '../../departments';
-import { SessionService, ToastService } from '../../shared';
+import { DASHBOARD_FEATURES, SessionService, ToastService } from '../../shared';
 import { UserSummary } from '../../users';
 
 describe('TicketMonitorComponent', () => {
@@ -114,6 +114,33 @@ describe('TicketMonitorComponent', () => {
         { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
+  });
+
+  describe('período de abertura antes da spec 025 no back-end', () => {
+    it('avisa, em tom neutro, que o período vindo do Início ainda não filtra a lista', async () => {
+      TestBed.overrideProvider(DASHBOARD_FEATURES, { useValue: { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false } });
+      storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20', createdTo: '2026-10-26' });
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      const notice = fixture.nativeElement.querySelector('p[role="status"]') as HTMLElement;
+      expect(notice.textContent).toContain('O período de abertura (De 20/10/2026 a 26/10/2026) ainda não é aplicado nesta lista');
+      expect(notice.classList).not.toContain('text-danger');
+    });
+
+    it('sem período, nenhum aviso', async () => {
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent).not.toContain('ainda não é aplicado nesta lista');
+    });
+
+    it('com a spec 025 no ar (flag ligada), o aviso some', async () => {
+      TestBed.overrideProvider(DASHBOARD_FEATURES, { useValue: { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true } });
+      storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20' });
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.textContent).not.toContain('ainda não é aplicado nesta lista');
+    });
   });
 
   it('carrega os chamados ao inicializar, sem recarregar os departamentos (o store já os carrega sozinho)', async () => {

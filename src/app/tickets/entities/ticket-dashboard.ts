@@ -25,49 +25,49 @@ export interface TicketDashboardScope {
 /** Volume do recorte, por situação. */
 export interface TicketDashboardVolume {
   /** Todos os status. */
-  total: number;
+  totalCount: number;
   /** Só Aberto. */
-  open: number;
+  openCount: number;
   /** Só Em Andamento. */
-  inProgress: number;
+  inProgressCount: number;
   /** Só Resolvido. */
-  resolved: number;
+  resolvedCount: number;
   /** Só Fechado. */
-  closed: number;
+  closedCount: number;
   /** Só Cancelado. */
-  canceled: number;
+  canceledCount: number;
   /** Aberto + Em Andamento (ainda não resolvidos). */
-  backlog: number;
+  backlogCount: number;
 }
 
 /** SLA do recorte (a regra de cada situação é a do back-end, `TicketSlaFilters`). */
 export interface TicketDashboardSla {
   /** Ativos dentro do prazo. */
-  onTime: number;
+  onTimeCount: number;
   /** Ativos que já passaram do aviso (75% da meta) e ainda não venceram. */
-  atRisk: number;
+  atRiskCount: number;
   /** Ativos com o prazo vencido. */
-  breached: number;
+  breachedCount: number;
   /** Resolvidos dentro do prazo. */
-  met: number;
+  metCount: number;
   /** Resolvidos depois do prazo. */
-  missed: number;
+  missedCount: number;
   /** Sem SLA. */
-  notApplicable: number;
+  notApplicableCount: number;
 }
 
 /** O que pede ação agora, em ordem de gravidade. */
 export interface TicketDashboardAttention {
   /** Ativos com o prazo vencido. */
-  overdue: number;
+  breachedCount: number;
   /** Ativos com prioridade Urgente. */
-  critical: number;
+  criticalCount: number;
   /** Ativos sem responsável. */
-  unassigned: number;
+  unassignedCount: number;
   /** Ativos esperando o solicitante (spec 029; ausente enquanto o back-end não manda). */
-  awaitingRequester?: number;
+  awaitingRequesterCount?: number;
   /** Ativos esperando quem atende (spec 029; ausente enquanto o back-end não manda). */
-  awaitingAgent?: number;
+  awaitingAgentCount?: number;
 }
 
 /** Agregado do recorte numa resposta só (GET /tickets/stats/overview, spec 026 do back-end). */

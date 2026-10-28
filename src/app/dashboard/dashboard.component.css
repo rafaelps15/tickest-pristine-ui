@@ -1,6 +1,63 @@
 /*
+ * Cabeçalho do Início mais justo que o das outras telas (1rem em vez de 1.5rem abaixo): a primeira
+ * dobra a 1366×650 precisa caber cabeçalho, indicadores e o gráfico inteiro.
+ */
+.dashboard-header.page-header {
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+/* KPIs -> gráfico com o mesmo espaço que separa os KPIs entre si (0.75rem): o grupo não se parte. */
+.kpi-row {
+    margin-bottom: 0.75rem;
+}
+
+/* Idade dos números + atualizar, alinhados às outras ações do cabeçalho. */
+.freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.freshness-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--tk-text-muted);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+/* Falha ao atualizar: texto secundário (não é risco operacional, então nada de vermelho). */
+.freshness-failed {
+    color: var(--tk-text-secondary);
+}
+
+.freshness-spinner {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-width: 0.15em;
+    color: var(--tk-text-muted);
+}
+
+/* Filtros da URL valendo pras listas: discretos, mas à vista, com "Limpar" ao lado. */
+.applied-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+    color: var(--tk-text-secondary);
+    font-size: 0.875rem;
+}
+
+.applied-filters .bx {
+    color: var(--tk-text-muted);
+}
+
+/*
  * Atalhos de Ações Rápidas como linhas discretas (quieter, 2026-10-27): sem caixa com borda, alvo
- * de 44px, realce leve no hover — o botão "Novo Ticket" acima fica sendo a única ação primária.
+ * de 44px, realce leve no hover — o botão "Novo Chamado" acima fica sendo a única ação primária.
  */
 .quick-links li + li {
     border-top: 1px solid var(--tk-border);
@@ -28,4 +85,15 @@
 .quick-link:focus-visible {
     outline: 2px solid var(--tk-primary);
     outline-offset: 0;
+}
+
+
+/* Toque: os links e botões pequenos da tela ganham o alvo mínimo de 44px (WCAG 2.5.5). */
+@media (pointer: coarse) {
+    .applied-filters .btn-link,
+    .see-all {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+    }
 }

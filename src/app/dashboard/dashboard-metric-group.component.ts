@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, computed, input, output } from '@an
 import { Params, RouterLink } from '@angular/router';
 import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
 import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
+import { DashboardNoticeComponent } from './dashboard-notice.component';
 
 /** Um indicador do grupo: um número com rótulo, ícone e o destino do drill-down. */
 export interface DashboardMetric {
@@ -41,12 +42,12 @@ export interface DashboardMetricLead {
  */
 @Component({
   selector: 'app-dashboard-metric-group',
-  imports: [RouterLink, StatCardComponent, EmptyStateComponent],
+  imports: [DashboardNoticeComponent, RouterLink, StatCardComponent, EmptyStateComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="mb-4" [attr.aria-labelledby]="headingId()" [attr.aria-busy]="loading() || null">
+    <section [attr.aria-labelledby]="headingId()" [attr.aria-busy]="loading() || null">
       <div class="mb-2">
-        <h2 [id]="headingId()" class="h6 section-label mb-0">{{ title() }}</h2>
+        <h2 [id]="headingId()" class="h5 card-title fw-bold mb-1">{{ title() }}</h2>
         @if (description()) {
           <p class="text-muted small mb-0">{{ description() }}</p>
         }
@@ -56,7 +57,7 @@ export interface DashboardMetricLead {
         @if (!unavailable() && !error()) {
           <!-- O número que resume o grupo, antes dos detalhes. -->
           <p class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
-            <span class="fs-3 stat-value">{{ headline.value }}</span>
+            <span class="fs-4 stat-value">{{ headline.value }}</span>
             <span class="text-muted">{{ headline.text }}</span>
             @if (headline.trend) {
               <span class="text-muted small">· {{ headline.trend }}</span>
@@ -74,10 +75,8 @@ export interface DashboardMetricLead {
         <!-- O aviso de erro (com "Tentar novamente") fica uma vez só, acima dos grupos que dependem da mesma leitura. -->
         <p class="text-muted small mb-0"><i class="bx bx-info-circle me-1" aria-hidden="true"></i>Indisponível no momento — veja o aviso acima.</p>
       } @else if (error()) {
-        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3 mb-0" role="alert">
-          <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ error() }}</span>
-          <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="retry.emit()">Tentar novamente</button>
-        </div>
+        <!-- Falha técnica em tom neutro: vermelho fica pro risco operacional (SLA vencido). -->
+        <div class="card px-3 py-2"><app-dashboard-notice kind="error" [text]="error()!" (retry)="retry.emit()" /></div>
       } @else if (loading() && !hasValues() && variant() === 'strip') {
         <!-- Esqueleto no formato da faixa: a tela não pula quando os números chegam. -->
         <div class="card metric-strip-card" role="status">
@@ -111,7 +110,7 @@ export interface DashboardMetricLead {
         </div>
       } @else if (variant() === 'strip') {
         <!-- Faixa: números de contexto numa linha só, sem ícone nem card por número — menos peso que os grupos de ação. -->
-        <div class="card metric-strip-card" [class.metric-refreshing]="loading()">
+        <div class="card metric-strip-card">
           <ul class="list-unstyled d-flex flex-wrap mb-0 metric-strip">
             @for (metric of metrics(); track metric.key) {
               <li class="metric-strip-item">
@@ -138,7 +137,8 @@ export interface DashboardMetricLead {
           </ul>
         </div>
       } @else {
-        <div class="row g-3" [class.metric-refreshing]="loading()">
+        <!-- Numa recarga, os números ficam como estão: o indicador de atualização é o do cabeçalho da tela. -->
+        <div class="row g-3">
           @for (metric of metrics(); track metric.key) {
             <div [class]="columnClass()">
               <app-stat-card [label]="metric.label" [icon]="metric.icon" [tone]="metric.tone" [value]="metric.value"
@@ -197,7 +197,6 @@ export interface DashboardMetricLead {
       }
     }
 
-    /* Recarga com números na tela (troca de filtro): esmaece em vez de piscar o esqueleto. */
     /*
      * Fio entre os números: todo item tem o fio à esquerda e a lista sobra 1px pra fora do card, que
      * corta o excesso — o primeiro de cada linha nunca fica com fio solto, em qualquer quebra.
@@ -243,11 +242,6 @@ export interface DashboardMetricLead {
       .metric-strip-item {
         flex-basis: 50%;
       }
-    }
-
-    .metric-refreshing {
-      opacity: 0.6;
-      transition: opacity 150ms ease;
     }
   `
 })

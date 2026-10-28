@@ -40,6 +40,10 @@ export const MyTicketsSummaryStore = signalStore(
       inProgressCount: sum([TicketStatus.InProgress]),
       /** Chamados próprios encerrados com solução (resolvidos ou fechados). */
       resolvedCount: sum([TicketStatus.Resolved, TicketStatus.Closed]),
+      /** Chamados próprios só no status Resolvido (pra comparar com o mesmo número da empresa). */
+      resolvedOnlyCount: sum([TicketStatus.Resolved]),
+      /** Chamados próprios só no status Fechado (pra comparar com o mesmo número da empresa). */
+      closedCount: sum([TicketStatus.Closed]),
       /** Chamados próprios do grupo "Em aberto" de Meus Chamados (Aberto e Em Andamento). */
       activeCount: sum([TicketStatus.Open, TicketStatus.InProgress]),
       /** Chamados próprios do grupo "Encerrados" de Meus Chamados (Resolvido, Fechado e Cancelado). */

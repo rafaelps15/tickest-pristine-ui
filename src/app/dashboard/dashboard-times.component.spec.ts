@@ -22,7 +22,7 @@ describe('DashboardTimesComponent', () => {
     fixture.componentRef.setInput('times', {
       firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
       resolution: { averageMinutes: null, medianMinutes: null, sampleSize: 4 },
-      minimumSample: 5
+      minimumSampleSize: 5
     });
     await fixture.whenStable();
 
@@ -41,12 +41,12 @@ describe('DashboardTimesComponent', () => {
     fixture.componentRef.setInput('times', {
       firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
       resolution: { averageMinutes: 90, medianMinutes: 60, sampleSize: 6 },
-      minimumSample: 5
+      minimumSampleSize: 5
     });
     fixture.componentRef.setInput('loading', true);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('.times-refreshing')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('1 h 15 min');
     expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toBe('');
   });
 
@@ -58,7 +58,9 @@ describe('DashboardTimesComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Não foi possível carregar os tempos de atendimento.');
-    (fixture.nativeElement.querySelector('.alert button') as HTMLButtonElement).click();
+    // Falha técnica em tom neutro: vermelho é só pra risco operacional.
+    expect(fixture.nativeElement.querySelector('.alert-danger, .btn-outline-danger')).toBeNull();
+    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
     expect(retried).toBeTrue();
   });
 

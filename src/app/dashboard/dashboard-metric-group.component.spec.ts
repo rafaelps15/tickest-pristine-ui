@@ -49,7 +49,9 @@ describe('DashboardMetricGroupComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Não foi possível carregar o SLA.');
-    (fixture.nativeElement.querySelector('.alert button') as HTMLButtonElement).click();
+    // Falha técnica em tom neutro: vermelho é só pra risco operacional.
+    expect(fixture.nativeElement.querySelector('.alert-danger, .btn-outline-danger')).toBeNull();
+    (fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement).click();
     expect(fixture.componentInstance.retried).toBeTrue();
   });
 
@@ -134,13 +136,14 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toContain('SLA: atrasados 2, cumpridos 7.');
   });
 
-  it('recarregando com números na tela: mantém os cards (esmaecidos) em vez de voltar ao esqueleto', async () => {
+  it('recarregando com números na tela: mantém os cards como estão, sem esqueleto nem esmaecer', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(2, 7));
     fixture.componentInstance.loading.set(true);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.metric-skeleton')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.metric-refreshing')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-stat-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[style*="opacity"], .metric-refreshing')).toBeNull();
   });
 });
