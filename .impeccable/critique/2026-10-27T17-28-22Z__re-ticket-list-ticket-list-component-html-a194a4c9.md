@@ -10,6 +10,7 @@ target_fingerprint: "sha256:671841f072beb4c02e71ed0151fcb8fd680327516d26b5baa150
 target_path: "C:\\dev\\tickest-pristine-front\\src\\app\\tickets\\feature-ticket-list\\ticket-list.component.html"
 timestamp: 2026-10-27T17-28-22Z
 slug: re-ticket-list-ticket-list-component-html-a194a4c9
+closed: true
 ---
 Method: dual-agent (A: design review · B: detector). Sem inspeção no navegador (extensão do Chrome desconectada; app exige login).
 
