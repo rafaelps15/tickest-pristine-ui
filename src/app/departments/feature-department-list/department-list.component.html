@@ -38,6 +38,11 @@
 
 @if (store.listState().loading && store.departments().length === 0) {
   <app-loading-state label="Carregando departamentos…" />
+} @else if (store.listState().error && store.departments().length === 0) {
+  <!--
+    Falha de carga: o alerta com "Tentar novamente" acima já diz tudo. Não cai no estado vazio —
+    "Nenhum departamento cadastrado" com "Novo Departamento" faria o erro parecer dado (DESIGN.md).
+  -->
 } @else if (store.departments().length === 0) {
   <div class="card shadow-sm border-0">
     <div class="card-body">

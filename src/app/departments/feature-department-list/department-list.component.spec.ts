@@ -86,6 +86,19 @@ describe('DepartmentListComponent', () => {
     expect(storeFake.load).toHaveBeenCalled();
   });
 
+  it('falha de carga mostra só o erro com "Tentar novamente", nunca o estado de "nenhum departamento"', async () => {
+    storeFake.departments.set([]);
+    storeFake.listState.set({ data: [], loading: false, error: 'Falha no servidor' });
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Falha no servidor');
+    expect(text).toContain('Tentar novamente');
+    expect(text).not.toContain('Nenhum departamento cadastrado ainda.');
+    expect(fixture.nativeElement.querySelector('app-empty-state')).toBeNull();
+  });
+
   it('mostra os setores dentro do card do departamento', async () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
