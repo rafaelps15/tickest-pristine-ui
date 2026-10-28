@@ -9,6 +9,8 @@ import { TicketPriority } from '../entities/ticket-priority';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketAwaiting } from '../entities/ticket-awaiting';
+import { TicketStatsQuery } from '../entities/ticket-stats-query';
+import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
@@ -24,7 +26,7 @@ export const TICKET_MONITOR_DEFAULT_FILTERS: TicketMonitorFilters = { activeOnly
  * mais o resumo de SLA dos chamados ativos — os dois somente leitura, para quem administra a
  * fila (`tickets:manage`). Duas ações rápidas de atribuição, direto na linha da tabela, sem ida à
  * tela de detalhe: "pra mim" (um clique) e "escolher responsável" (busca por nome/e-mail no modal
- * "Atribuir responsável"). O resumo de SLA acompanha o filtro de setor da listagem.
+ * "Atribuir responsável"). O resumo de SLA acompanha o recorte da listagem que o agregado aceita.
  */
 export const TicketMonitorStore = signalStore(
   { providedIn: 'root' },
@@ -45,24 +47,42 @@ export const TicketMonitorStore = signalStore(
     _ticketDataService: inject(TicketDataService),
     _userDataService: inject(UserDataService)
   })),
-  withProps((store) => ({
-    _listResource: rxResource({
-      params: () => store.filters(),
-      stream: ({ params }) => store._ticketDataService.getAll(params)
-    }),
-    // Envelopado em objeto: `sectorId` indefinido é um valor válido (= todos os setores), não "ainda sem parâmetros" — um `params` que
-    // retornasse `undefined` direto faria o rxResource pular a busca, em vez de buscar o resumo do sistema inteiro.
-    // O resumo aceita um setor só: com vários (drill-down de um departamento), mostra a empresa toda e a tela avisa.
-    _slaSummaryResource: rxResource({
-      params: () => {
-        const sectorIds = store.filters().sectorIds ?? [];
-        return { sectorId: sectorIds.length === 1 ? sectorIds[0] : undefined };
-      },
-      // A hora da chegada junto da hora do servidor: o prazo relativo da tabela anda no relógio do servidor.
-      stream: ({ params }) => store._ticketDataService.getSlaSummary(params.sectorId)
-        .pipe(map(summary => ({ ...summary, receivedAtMs: Date.now() })))
-    })
-  })),
+  withProps((store) => {
+    /**
+     * Recorte do agregado a partir dos filtros da tabela, comparado pelo conteúdo: mudar a busca, o
+     * Status, o SLA ou o Aguardando gera filtros novos, mas o mesmo recorte — sem refazer os números.
+     */
+    const overviewQuery = computed((): TicketStatsQuery => {
+      const f = store.filters();
+      return {
+        sectorIds: f.sectorIds, priority: f.priority, unassignedOnly: f.unassignedOnly,
+        assignedToUserId: f.assignedToUserId, createdFrom: f.createdFrom, createdTo: f.createdTo
+      };
+    }, { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) });
+
+    return {
+      _listResource: rxResource({
+        params: () => store.filters(),
+        stream: ({ params }) => store._ticketDataService.getAll(params)
+      }),
+      // Os números do topo vêm do agregado da operação (GET /tickets/stats/overview, spec 026) com o
+      // recorte da tabela que ele aceita: setores (vários), prioridade, responsável e período de abertura.
+      // Busca, Status, SLA e Aguardando ficam de fora — a tela diz isso acima dos cards. Um objeto
+      // sempre (nunca `undefined`), pra o resource buscar também sem nenhum filtro.
+      _slaSummaryResource: rxResource({
+        params: overviewQuery,
+        // A hora da chegada junto da hora do servidor: o prazo relativo da tabela anda no relógio do servidor.
+        stream: ({ params }) => store._ticketDataService.getOverview(params).pipe(map((overview): TicketSlaSummary & { receivedAtMs: number } => ({
+          activeCount: overview.volume.backlog,
+          onTimeCount: overview.sla.onTime,
+          atRiskCount: overview.sla.atRisk,
+          breachedCount: overview.sla.breached,
+          serverNowUtc: overview.serverNowUtc,
+          receivedAtMs: Date.now()
+        })))
+      })
+    };
+  }),
   withComputed((store) => ({
     /** Página atual devolvida pela API (itens + dados de paginação). */
     ticketsPage: computed(() => valueOf(store._listResource)),
@@ -140,7 +160,7 @@ export const TicketMonitorStore = signalStore(
       patchState(store, { filters: { ...store.filters(), priority, page: 1 } });
     },
 
-    /** Muda o filtro de setores e volta para a primeira página (também refaz o resumo de SLA); vazio = todos. */
+    /** Muda o filtro de setores e volta para a primeira página; vazio = todos. */
     setSectorIds(sectorIds: string[] | undefined): void {
       patchState(store, { filters: { ...store.filters(), sectorIds: sectorIds?.length ? sectorIds : undefined, page: 1 } });
     },

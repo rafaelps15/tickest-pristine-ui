@@ -151,15 +151,16 @@ export class TicketMonitorComponent implements OnInit {
         return names.length > 3 ? `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}` : names.join(', ');
     });
 
-    /** Escopo dos números de SLA, dito acima dos cards: eles seguem só o setor, não os outros filtros. */
+    /**
+     * Escopo dos números do topo, dito acima dos cards: seguem setor, prioridade, responsável e
+     * período de abertura (o que o agregado aceita); a busca, o Status, o SLA e o Aguardando, não.
+     */
     readonly slaScopeLabel = computed(() => {
-        const sectorIds = this.store.filters().sectorIds ?? [];
-        if (sectorIds.length > 1) return 'Toda a empresa: os números de SLA aceitam um setor por vez. A tabela mostra só os setores escolhidos.';
-        if (sectorIds.length === 1) {
-            const sector = this.departmentsStore.departments().flatMap(d => d.sectors).find(s => s.id === sectorIds[0]);
-            return `Setor ${sector?.name ?? 'escolhido'}: os números seguem só o setor, não os outros filtros.`;
-        }
-        return 'Toda a empresa: os números seguem só o setor, não os outros filtros.';
+        const f = this.store.filters();
+        const ignored = !!f.search || f.status !== undefined || f.slaStatus !== undefined || f.awaiting !== undefined;
+        return ignored
+            ? 'Os números seguem setor, prioridade, responsável e período — não a busca, o Status, o SLA nem o Aguardando.'
+            : 'Os números seguem os mesmos filtros da tabela.';
     });
 
     /** Qual ponta do período de abertura foi recusada por inverter o intervalo (ou data inválida), ou null. */

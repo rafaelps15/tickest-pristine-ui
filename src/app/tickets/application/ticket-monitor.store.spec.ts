@@ -5,6 +5,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { TicketMonitorStore } from './ticket-monitor.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketAwaiting } from '../entities/ticket-awaiting';
+import { TicketDashboardOverview } from '../entities/ticket-dashboard';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -23,6 +24,13 @@ describe('TicketMonitorStore', () => {
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
   const slaSummary: TicketSlaSummary = { activeCount: 10, onTimeCount: 6, atRiskCount: 3, breachedCount: 1, serverNowUtc: '2026-01-01T12:00:00Z' };
+  /** O agregado da operação que gera o resumo acima (ativos = backlog; no prazo, em risco e atrasados do SLA). */
+  const overview: TicketDashboardOverview = {
+    serverNowUtc: '2026-01-01T12:00:00Z',
+    volume: { total: 30, open: 4, inProgress: 6, resolved: 15, closed: 5, canceled: 0, backlog: 10 },
+    sla: { onTime: 6, atRisk: 3, breached: 1, met: 12, missed: 3, notApplicable: 0 },
+    attention: { overdue: 1, critical: 0, unassigned: 2 }
+  };
 
   function pageOf(items: TicketMonitorItem[], page = 1, totalCount = items.length, pageSize = 20): PagedResponse<TicketMonitorItem> {
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -39,9 +47,9 @@ describe('TicketMonitorStore', () => {
   let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getSlaSummary', 'assignTicket']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getOverview', 'assignTicket']);
     dataService.getAll.and.returnValue(of(pageOf([ticket])));
-    dataService.getSlaSummary.and.returnValue(of(slaSummary));
+    dataService.getOverview.and.returnValue(of(overview));
     userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
     userDataService.getAll.and.returnValue(of({
       items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
@@ -62,7 +70,9 @@ describe('TicketMonitorStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
-    expect(dataService.getSlaSummary).toHaveBeenCalledWith(undefined);
+    expect(dataService.getOverview).toHaveBeenCalledWith({
+      sectorIds: undefined, priority: undefined, unassignedOnly: undefined, assignedToUserId: undefined, createdFrom: undefined, createdTo: undefined
+    });
     expect(store.tickets()).toEqual([ticket]);
     expect(store.total()).toBe(1);
     expect(store.slaSummary()).toEqual(jasmine.objectContaining(slaSummary));
@@ -78,19 +88,19 @@ describe('TicketMonitorStore', () => {
   });
 
   it('expõe a mensagem de erro quando o resumo de SLA falhar, e recarrega ao chamar reloadSlaSummary', async () => {
-    dataService.getSlaSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.slaSummaryState().error).toBe('Erro ao carregar o resumo de SLA');
 
-    dataService.getSlaSummary.calls.reset();
-    dataService.getSlaSummary.and.returnValue(of(slaSummary));
+    dataService.getOverview.calls.reset();
+    dataService.getOverview.and.returnValue(of(overview));
     store.reloadSlaSummary();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getSlaSummary).toHaveBeenCalled();
+    expect(dataService.getOverview).toHaveBeenCalled();
     expect(store.slaSummaryState().error).toBeNull();
   });
 
@@ -124,24 +134,32 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ priority: TicketPriority.Urgent }));
   });
 
-  it('filtra por setor e refaz o resumo de SLA só para esse setor', async () => {
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.setSectorIds(['s1']);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
-    expect(dataService.getSlaSummary).toHaveBeenCalledWith('s1');
-  });
-
-  it('com vários setores, filtra a lista por todos e o resumo de SLA fica com a empresa toda (ele aceita um setor só)', async () => {
+  it('os números do topo seguem setores (vários), prioridade, responsável e período, como a tabela', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setSectorIds(['s1', 's2']);
+    store.setPriority(TicketPriority.Urgent);
+    store.setAssignedToUserId('u2');
+    store.setCreatedRange('2026-10-01', '2026-10-28');
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
-    expect(dataService.getSlaSummary).toHaveBeenCalledWith(undefined);
+    expect(dataService.getOverview).toHaveBeenCalledWith({
+      sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, unassignedOnly: undefined, assignedToUserId: 'u2',
+      createdFrom: '2026-10-01', createdTo: '2026-10-28'
+    });
+  });
+
+  it('a busca, o SLA e o Aguardando valem só pra tabela: não refazem os números do topo', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+    const calls = dataService.getOverview.calls.count();
+
+    store.setSearch('impressora');
+    store.setSlaStatus(TicketSlaStatus.Breached);
+    store.setAwaiting(TicketAwaiting.Agent);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getOverview.calls.count()).toBe(calls);
   });
 
   it('filtra pelo período de abertura e por "aguardando", voltando pra página 1', async () => {

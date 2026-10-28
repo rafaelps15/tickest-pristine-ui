@@ -225,7 +225,7 @@ describe('TicketMonitorComponent', () => {
     expect(mine['assignedToUserId']).toBeNull();
   });
 
-  it('com vários setores vindos do Início, nomeia o conjunto, avisa que os números de SLA são da empresa toda e deixa voltar a ele', async () => {
+  it('com vários setores vindos do Início, nomeia o conjunto e deixa voltar a ele', async () => {
     departmentsStoreFake.departments.set([{ ...department, sectors: [{ id: 's1', name: 'Suporte', description: null }, { id: 's2', name: 'Infra', description: null }] }]);
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ sectorId: ['s1', 's2'] }) } }
@@ -238,7 +238,7 @@ describe('TicketMonitorComponent', () => {
     const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
     expect(sector.value).toBe('many');
     expect(sector.textContent).toContain('TI (todos os setores)');
-    expect(fixture.nativeElement.textContent).toContain('Toda a empresa: os números de SLA aceitam um setor por vez.');
+    expect(fixture.nativeElement.textContent).toContain('Os números seguem os mesmos filtros da tabela.');
 
     sector.value = 's1';
     sector.dispatchEvent(new Event('change'));
@@ -664,14 +664,22 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('1');
   });
 
-  it('põe o Setor acima dos números de SLA, explicando que eles só mudam com o setor', async () => {
+  it('com busca, Status, SLA ou Aguardando aplicados, diz que os números do topo não seguem esses filtros', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), slaStatus: TicketSlaStatus.Breached });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Os números seguem setor, prioridade, responsável e período — não a busca, o Status, o SLA nem o Aguardando.');
+  });
+
+  it('põe o Setor acima dos números do topo, dizendo o escopo deles', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
     const hint = fixture.nativeElement.querySelector(`#${sector.getAttribute('aria-describedby')}`) as HTMLElement;
-    expect(hint.textContent).toContain('Vale pros números de SLA e pra tabela.');
-    expect(fixture.nativeElement.textContent).toContain('Toda a empresa: os números seguem só o setor, não os outros filtros.');
+    expect(hint.textContent).toContain('Vale pros números do topo e pra tabela.');
+    expect(fixture.nativeElement.textContent).toContain('Os números seguem os mesmos filtros da tabela.');
     expect(sector.compareDocumentPosition(fixture.nativeElement.querySelector('app-stat-card')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sector.closest('app-filter-bar')).toBeNull();
   });

@@ -30,7 +30,7 @@
       }
     </select>
   </div>
-  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">Vale pros números de SLA e pra tabela.</p>
+  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">Vale pros números do topo e pra tabela.</p>
 </div>
 
 @if (store.slaSummaryState().error) {
@@ -43,7 +43,7 @@
 
 <!--
   Resumo de SLA: cada card filtra a tabela pelos ativos com o mesmo SLA que mostra ("Ativos" tira o
-  filtro de SLA). O escopo dos números fica dito acima deles: seguem só o setor.
+  filtro de SLA). O escopo dos números fica dito acima deles (o recorte que o agregado aceita).
 -->
 <p class="text-muted small mb-2">{{ slaScopeLabel() }}</p>
 <div class="row g-3 mb-4">

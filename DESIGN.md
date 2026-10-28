@@ -495,7 +495,9 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
   campos visíveis; os de uso raro vão numa linha "Mais filtros (n)" recolhida (Monitorar; no Início,
   período, departamento e setor à vista e prioridade/responsável em "Mais filtros").
 - **Escopo da tela:** um filtro que muda *também* os números do topo (o Setor do Monitorar) fica
-  acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta.
+  acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta. No Monitorar, os
+  números vêm do agregado da operação (spec 026) e seguem setores, prioridade, responsável e período;
+  quando há busca, Status, SLA ou Aguardando aplicados, a linha acima dos cards diz que esses não valem pra eles.
 - **Responsável (Monitorar):** "Qualquer um", "Atribuídos a mim" (a fila pessoal de quem atende) ou
   "Sem responsável" — um select visível ao lado de Status e SLA, não um switch escondido. O Início
   leva direto pra "Atribuídos a mim" (`?assignedToMe=true`; o id de quem está logado não vai pra URL).
