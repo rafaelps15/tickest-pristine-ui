@@ -44,6 +44,8 @@ describe('TicketReopenDialogComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Monitor com defeito');
+    // Promete o que o produto entrega: um novo ciclo de prazo, visto na seção SLA do chamado.
+    expect(fixture.nativeElement.textContent).toContain('novo prazo de atendimento começa a contar');
     expect(document.activeElement).toBe(reasonField(fixture));
   });
 

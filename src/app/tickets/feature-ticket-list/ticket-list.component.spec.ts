@@ -567,4 +567,19 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Cancelar chamado');
     expect(fixture.nativeElement.querySelector('.cancel-hint')).toBeNull();
   });
+
+  it('com erro de leitura e lista vazia, não mostra "Nada pendente" nem o primeiro uso — o erro não vira dado', async () => {
+    storeFake.tickets.set([]);
+    storeFake.hasAnyTicket.set(null);
+    storeFake.loadError.set('Erro ao carregar chamados');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Erro ao carregar chamados');
+    expect(text).toContain('Não deu pra carregar seus chamados agora');
+    expect(text).not.toContain('Nada pendente');
+    expect(text).not.toContain('Nenhum chamado aberto ainda');
+    expect(text).not.toContain('Carregando chamados…');
+  });
 });

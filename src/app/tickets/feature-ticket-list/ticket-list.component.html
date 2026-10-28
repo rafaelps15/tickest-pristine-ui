@@ -62,6 +62,14 @@
       <tbody>
         @if (isLoadingList()) {
           <tr><td colspan="6"><app-loading-state label="Carregando chamados…" /></td></tr>
+        } @else if (store.loadError() && store.tickets().length === 0) {
+          <!-- Erro de leitura nunca vira dado: sem isso, a lista vazia caía em "Nada pendente" logo abaixo do alerta. -->
+          <tr>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-error-circle" title="Não deu pra carregar seus chamados agora"
+                               hint="Eles continuam guardados. Use “Tentar novamente” no aviso acima." />
+            </td>
+          </tr>
         } @else if (store.tickets().length === 0 && store.hasAnyTicket() === false) {
           <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro chamado. -->
           <tr>
