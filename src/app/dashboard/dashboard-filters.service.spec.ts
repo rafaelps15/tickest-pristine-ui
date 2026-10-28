@@ -30,7 +30,7 @@ describe('DashboardFiltersService', () => {
   it('lê os filtros da URL ao abrir a tela', async () => {
     const service = await open('/dashboard?sectorId=s1&priority=2&assignee=none');
 
-    expect(service.filters()).toEqual({ sectorId: 's1', priority: 2, assignee: 'none' });
+    expect(service.filters()).toEqual(jasmine.objectContaining({ sectorId: 's1', priority: 2, assignee: 'none', period: undefined }));
     expect(service.active()).toBeTrue();
   });
 
@@ -44,7 +44,7 @@ describe('DashboardFiltersService', () => {
     expect(router.url).toContain('sectorId=s1');
     expect(router.url).toContain('priority=4');
     expect(router.url).toContain('outro=x');
-    expect(service.filters()).toEqual({ sectorId: 's1', priority: 4, assignee: undefined });
+    expect(service.filters()).toEqual(jasmine.objectContaining({ sectorId: 's1', priority: 4, assignee: undefined }));
   });
 
   it('remover um filtro tira o parâmetro da URL, e "limpar" tira todos', async () => {

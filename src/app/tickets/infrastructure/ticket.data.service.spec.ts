@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TicketDataService } from './ticket.data.service';
 import { TicketPriority } from '../entities/ticket-priority';
-import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 
@@ -22,31 +22,51 @@ describe('TicketDataService', () => {
 
   afterEach(() => http.verify());
 
-  describe('count', () => {
-    it('pede uma página de 1 item e devolve o totalCount do servidor', () => {
-      let result: number | undefined;
-      service.count({ statuses: [TicketStatus.Open, TicketStatus.InProgress], priority: TicketPriority.Urgent, sectorId: 's1' })
-        .subscribe(total => result = total);
+  describe('estatísticas do recorte', () => {
+    it('getOverview manda setores repetidos, prioridade, responsável e o período de abertura', () => {
+      service.getOverview({ sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, assignedToUserId: 'u1', createdFrom: '2026-10-01', createdTo: '2026-10-28' }).subscribe();
 
-      const request = http.expectOne(req => req.url.endsWith('/tickets'));
-      expect(request.request.params.get('page')).toBe('1');
-      expect(request.request.params.get('pageSize')).toBe('1');
-      expect(request.request.params.getAll('status')).toEqual(['1', '2']);
+      const request = http.expectOne(req => req.url.endsWith('/tickets/stats/overview'));
+      expect(request.request.params.getAll('sectorId')).toEqual(['s1', 's2']);
       expect(request.request.params.get('priority')).toBe('4');
-      expect(request.request.params.get('sectorId')).toBe('s1');
-      request.flush({ items: [{}], page: 1, pageSize: 1, totalCount: 37, totalPages: 37, hasNextPage: true, hasPreviousPage: false });
-
-      expect(result).toBe(37);
+      expect(request.request.params.get('assignedToUserId')).toBe('u1');
+      expect(request.request.params.get('createdFrom')).toBe('2026-10-01');
+      expect(request.request.params.get('createdTo')).toBe('2026-10-28');
+      request.flush({});
     });
 
-    it('"sem responsável" ignora o responsável, e a situação do SLA vai como número', () => {
-      service.count({ unassignedOnly: true, assignedToUserId: 'u1', slaStatus: TicketSlaStatus.Breached }).subscribe();
+    it('"sem responsável" ignora o responsável', () => {
+      service.getTimes({ unassignedOnly: true, assignedToUserId: 'u1', resolvedFrom: '2026-10-01' }).subscribe();
 
-      const request = http.expectOne(req => req.url.endsWith('/tickets'));
+      const request = http.expectOne(req => req.url.endsWith('/tickets/stats/times'));
       expect(request.request.params.get('unassignedOnly')).toBe('true');
       expect(request.request.params.has('assignedToUserId')).toBeFalse();
-      expect(request.request.params.get('slaStatus')).toBe('3');
-      request.flush({ items: [], page: 1, pageSize: 1, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
+      expect(request.request.params.get('resolvedFrom')).toBe('2026-10-01');
+      request.flush({});
+    });
+
+    it('getVolume manda o agrupamento e o recorte; sem recorte, só o agrupamento', () => {
+      service.getVolume('Week', { sectorIds: ['s1'], createdFrom: '2026-09-01' }).subscribe();
+      service.getVolume('Day').subscribe();
+
+      const [filtered, plain] = http.match(req => req.url.endsWith('/tickets/stats/volume'));
+      expect(filtered.request.params.get('groupBy')).toBe('Week');
+      expect(filtered.request.params.getAll('sectorId')).toEqual(['s1']);
+      expect(filtered.request.params.get('createdFrom')).toBe('2026-09-01');
+      expect(plain.request.params.keys()).toEqual(['groupBy']);
+      filtered.flush([]);
+      plain.flush([]);
+    });
+
+    it('getAssignees pede a lista paginada com busca e setor', () => {
+      service.getAssignees(' ana ', 's1').subscribe();
+
+      const request = http.expectOne(req => req.url.endsWith('/tickets/assignees'));
+      expect(request.request.params.get('search')).toBe('ana');
+      expect(request.request.params.get('sectorId')).toBe('s1');
+      expect(request.request.params.get('page')).toBe('1');
+      expect(request.request.params.get('pageSize')).toBe('100');
+      request.flush({ items: [], page: 1, pageSize: 100, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
     });
   });
 
@@ -64,6 +84,17 @@ describe('TicketDataService', () => {
 
       const request = http.expectOne(req => req.url.endsWith('/tickets'));
       expect(request.request.params.getAll('status')).toEqual(['3']);
+      request.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
+    });
+
+    it('manda vários setores, o período de abertura e o filtro "aguardando"', () => {
+      service.getAll({ sectorIds: ['s1', 's2'], createdFrom: '2026-10-01', createdTo: '2026-10-28', awaiting: TicketAwaiting.Agent, sort: TicketSortOrder.Newest, page: 1, pageSize: 20 }).subscribe();
+
+      const request = http.expectOne(req => req.url.endsWith('/tickets'));
+      expect(request.request.params.getAll('sectorId')).toEqual(['s1', 's2']);
+      expect(request.request.params.get('createdFrom')).toBe('2026-10-01');
+      expect(request.request.params.get('createdTo')).toBe('2026-10-28');
+      expect(request.request.params.get('awaiting')).toBe('2');
       request.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
     });
   });

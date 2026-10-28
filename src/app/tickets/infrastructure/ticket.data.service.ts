@@ -1,10 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable } from 'rxjs';
 import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { TicketStatus } from '../entities/ticket-status';
-import { TicketCountQuery } from '../entities/ticket-count-query';
+import { TicketStatsQuery } from '../entities/ticket-stats-query';
+import { TicketDashboardOverview } from '../entities/ticket-dashboard';
+import { TicketAverageTimes } from '../entities/ticket-average-times';
+import { TicketAssignee } from '../entities/ticket-assignee';
 import { TicketSla } from '../entities/ticket-sla';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
@@ -136,8 +139,9 @@ export class TicketDataService {
     if (filters.priority !== undefined) {
       params = params.set('priority', filters.priority);
     }
-    if (filters.sectorId) {
-      params = params.set('sectorId', filters.sectorId);
+    params = appendStatsQuery(params, { sectorIds: filters.sectorIds, createdFrom: filters.createdFrom, createdTo: filters.createdTo });
+    if (filters.awaiting !== undefined) {
+      params = params.set('awaiting', filters.awaiting);
     }
     if (filters.slaStatus !== undefined) {
       params = params.set('slaStatus', filters.slaStatus);
@@ -155,31 +159,31 @@ export class TicketDataService {
   }
 
   /**
-   * Conta os chamados de um recorte (GET /tickets com `pageSize=1`): devolve o `totalCount` que o
-   * servidor calcula com os filtros — exige `tickets:manage`. Nunca conta itens de uma página.
+   * Busca o agregado do recorte numa resposta só — volume, SLA e central de atenção
+   * (GET /tickets/stats/overview) — exige `tickets:manage`.
    */
-  count(query: TicketCountQuery): Observable<number> {
-    let params = new HttpParams().set('page', 1).set('pageSize', 1);
+  getOverview(query: TicketStatsQuery): Observable<TicketDashboardOverview> {
+    return this.http.get<TicketDashboardOverview>(`${this.apiUrl}/stats/overview`, { params: appendStatsQuery(new HttpParams(), query) });
+  }
 
-    for (const status of query.statuses ?? []) {
-      params = params.append('status', status);
-    }
-    if (query.priority !== undefined) {
-      params = params.set('priority', query.priority);
-    }
-    if (query.sectorId) {
-      params = params.set('sectorId', query.sectorId);
-    }
-    if (query.slaStatus !== undefined) {
-      params = params.set('slaStatus', query.slaStatus);
-    }
-    if (query.unassignedOnly) {
-      params = params.set('unassignedOnly', true);
-    } else if (query.assignedToUserId) {
-      params = params.set('assignedToUserId', query.assignedToUserId);
-    }
+  /**
+   * Busca média e mediana da primeira resposta e da resolução do recorte, em minutos úteis
+   * (GET /tickets/stats/times) — exige `tickets:manage`. O período é o da conclusão (`resolvedFrom`/`resolvedTo`).
+   */
+  getTimes(query: TicketStatsQuery): Observable<TicketAverageTimes> {
+    return this.http.get<TicketAverageTimes>(`${this.apiUrl}/stats/times`, { params: appendStatsQuery(new HttpParams(), query) });
+  }
 
-    return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params }).pipe(map(page => page.totalCount));
+  /**
+   * Busca uma página dos responsáveis elegíveis (GET /tickets/assignees): ativos com
+   * `tickets:manage`, em ordem de nome — exige `tickets:manage`, não `users:read`.
+   */
+  getAssignees(search = '', sectorId?: string, page = 1, pageSize = 100): Observable<PagedResponse<TicketAssignee>> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    const term = search.trim();
+    if (term) params = params.set('search', term);
+    if (sectorId) params = params.set('sectorId', sectorId);
+    return this.http.get<PagedResponse<TicketAssignee>>(`${this.apiUrl}/assignees`, { params });
   }
 
   /** Busca as contagens de SLA dos chamados ativos, opcionalmente de um só setor (GET /tickets/sla-summary). */
@@ -198,9 +202,30 @@ export class TicketDataService {
     return this.http.get<TicketStatusCounts>(`${this.apiUrl}/stats/status`);
   }
 
-  /** Busca o volume de tickets abertos por período, de toda a empresa (GET /tickets/stats/volume). */
-  getVolume(groupBy: TicketVolumeGrouping): Observable<TicketVolumePoint[]> {
-    const params = new HttpParams().set('groupBy', groupBy);
+  /**
+   * Busca o volume de chamados criados (e resolvidos) por período (GET /tickets/stats/volume): da
+   * empresa toda sem recorte, ou só do recorte; com `createdFrom`/`createdTo`, o período define o intervalo do gráfico.
+   */
+  getVolume(groupBy: TicketVolumeGrouping, query: TicketStatsQuery = {}): Observable<TicketVolumePoint[]> {
+    const params = appendStatsQuery(new HttpParams().set('groupBy', groupBy), query);
     return this.http.get<TicketVolumePoint[]>(`${this.apiUrl}/stats/volume`, { params });
   }
+}
+
+/** Acrescenta o recorte das estatísticas aos parâmetros: setores repetidos, prioridade, responsável e períodos. */
+function appendStatsQuery(params: HttpParams, query: TicketStatsQuery): HttpParams {
+  for (const sectorId of query.sectorIds ?? []) {
+    params = params.append('sectorId', sectorId);
+  }
+  if (query.priority !== undefined) params = params.set('priority', query.priority);
+  if (query.unassignedOnly) {
+    params = params.set('unassignedOnly', true);
+  } else if (query.assignedToUserId) {
+    params = params.set('assignedToUserId', query.assignedToUserId);
+  }
+  if (query.createdFrom) params = params.set('createdFrom', query.createdFrom);
+  if (query.createdTo) params = params.set('createdTo', query.createdTo);
+  if (query.resolvedFrom) params = params.set('resolvedFrom', query.resolvedFrom);
+  if (query.resolvedTo) params = params.set('resolvedTo', query.resolvedTo);
+  return params;
 }

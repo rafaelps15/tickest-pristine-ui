@@ -1,27 +1,29 @@
 import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
 import { Department } from '../departments';
-import { TicketDashboardAssignee, TicketDashboardScope, TicketPriority, TICKET_PRIORITY_LABELS } from '../tickets';
+import { TicketAssignee, TicketPriority, TICKET_PRIORITY_LABELS } from '../tickets';
 import { FilterBarComponent } from '../shared/ui/filter-bar/filter-bar.component';
+import { DASHBOARD_PERIOD_DAYS, DASHBOARD_PERIOD_LABELS, DashboardFilters, DashboardPeriodPreset, addDays } from './dashboard-filters';
+import { formatIsoDate, isIsoDate } from '../shared';
 
 /** Um filtro ativo, mostrado como chip removível. */
 interface ActiveFilterChip {
-  /** Qual filtro o chip remove. */
-  key: keyof TicketDashboardScope;
+  /** Identificador do chip. */
+  key: string;
   /** Texto do chip ("Setor: Helpdesk"). */
   label: string;
+  /** Troca que remove o filtro do chip. */
+  removal: Partial<DashboardFilters>;
 }
 
-/** Rótulos do filtro de responsável. */
-const ASSIGNEE_LABELS: Record<TicketDashboardAssignee, string> = {
-  me: 'Atribuídos a mim',
-  none: 'Sem responsável'
-};
+/** Valor do seletor de período pro período personalizado. */
+const CUSTOM_PERIOD = 'custom';
 
 /**
- * Barra de filtros dos widgets operacionais do Início: setor (agrupado por departamento),
- * prioridade e responsável — os recortes que a API aceita. Mostra os filtros ativos como chips
- * removíveis. Componente de apresentação: recebe os filtros e os departamentos por `input()` e
- * avisa as trocas por `output()`; quem grava na URL é a tela.
+ * Barra de filtros dos widgets operacionais do Início: período (pronto ou personalizado),
+ * departamento, setor, prioridade e responsável (qualquer pessoa elegível) — os recortes que a
+ * API aceita. Mostra os filtros ativos como chips removíveis. Componente de apresentação: recebe
+ * os filtros, os departamentos e os responsáveis por `input()` e avisa as trocas por `output()`;
+ * quem grava na URL é a tela.
  */
 @Component({
   selector: 'app-dashboard-filter-bar',
@@ -29,12 +31,33 @@ const ASSIGNEE_LABELS: Record<TicketDashboardAssignee, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-filter-bar label="Filtrar a operação" [clearable]="chips().length > 0" (clear)="clear.emit()">
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-sm-6 col-lg">
+        <label class="form-label small" for="dashboardPeriod">Período de abertura</label>
+        <select #periodSelect id="dashboardPeriod" class="form-select" [value]="periodValue()"
+                (change)="change.emit(toPeriod(periodSelect.value))">
+          <option value="">Todo o período</option>
+          @for (period of periodOptions; track period) {
+            <option [value]="period">{{ periodLabels[period] }}</option>
+          }
+          <option value="custom">Personalizado</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-lg">
+        <label class="form-label small" for="dashboardDepartment">Departamento</label>
+        <select #departmentSelect id="dashboardDepartment" class="form-select" [value]="filters().departmentId ?? ''"
+                (change)="change.emit(toDepartment(departmentSelect.value))">
+          <option value="">Todos os departamentos</option>
+          @for (department of departmentOptions(); track department.id) {
+            <option [value]="department.id">{{ department.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-lg">
         <label class="form-label small" for="dashboardSector">Setor</label>
         <select #sectorSelect id="dashboardSector" class="form-select" [value]="filters().sectorId ?? ''"
                 (change)="change.emit({ sectorId: sectorSelect.value || undefined })">
-          <option value="">Todos os setores</option>
-          @for (department of departments(); track department.id) {
+          <option value="">{{ selectedDepartment() ? 'Todos do departamento' : 'Todos os setores' }}</option>
+          @for (department of sectorGroups(); track department.id) {
             <optgroup [label]="department.name">
               @for (sector of department.sectors; track sector.id) {
                 <option [value]="sector.id">{{ sector.name }}</option>
@@ -43,7 +66,7 @@ const ASSIGNEE_LABELS: Record<TicketDashboardAssignee, string> = {
           }
         </select>
       </div>
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-lg">
         <label class="form-label small" for="dashboardPriority">Prioridade</label>
         <select #prioritySelect id="dashboardPriority" class="form-select" [value]="filters().priority ?? ''"
                 (change)="change.emit({ priority: toPriority(prioritySelect.value) })">
@@ -53,22 +76,42 @@ const ASSIGNEE_LABELS: Record<TicketDashboardAssignee, string> = {
           }
         </select>
       </div>
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-lg">
         <label class="form-label small" for="dashboardAssignee">Responsável</label>
-        <select #assigneeSelect id="dashboardAssignee" class="form-select" [value]="filters().assignee ?? ''"
-                (change)="change.emit({ assignee: toAssignee(assigneeSelect.value) })">
+        <select #assigneeSelect id="dashboardAssignee" class="form-select" [value]="assigneeValue()"
+                (change)="change.emit(toAssignee(assigneeSelect.value))">
           <option value="">Qualquer um</option>
           <option value="me">Atribuídos a mim</option>
           <option value="none">Sem responsável</option>
+          @if (assignees().length > 0) {
+            <optgroup label="Pessoas da equipe">
+              @for (assignee of assignees(); track assignee.id) {
+                <option [value]="assignee.id">{{ assignee.fullName }}</option>
+              }
+            </optgroup>
+          }
         </select>
       </div>
+
+      @if (periodValue() === 'custom') {
+        <div class="col-6 col-md-3">
+          <label class="form-label small" for="dashboardFrom">De</label>
+          <input #fromInput id="dashboardFrom" type="date" class="form-control" [value]="filters().from ?? ''"
+                 [max]="filters().to ?? today()" (change)="onDateChange('from', fromInput)" />
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label small" for="dashboardTo">Até</label>
+          <input #toInput id="dashboardTo" type="date" class="form-control" [value]="filters().to ?? ''"
+                 [min]="filters().from ?? ''" [max]="today()" (change)="onDateChange('to', toInput)" />
+        </div>
+      }
 
       @if (chips().length > 0) {
         <ul filterExtras class="list-unstyled d-flex flex-wrap gap-2 mb-0 filter-chips" aria-label="Filtros aplicados">
           @for (chip of chips(); track chip.key) {
             <li>
               <button type="button" class="btn btn-sm filter-chip" [attr.aria-label]="'Remover o filtro ' + chip.label"
-                      (click)="change.emit(removal(chip.key))">
+                      (click)="change.emit(chip.removal)">
                 {{ chip.label }} <i class="bx bx-x" aria-hidden="true"></i>
               </button>
             </li>
@@ -96,35 +139,96 @@ const ASSIGNEE_LABELS: Record<TicketDashboardAssignee, string> = {
 })
 export class DashboardFilterBarComponent {
   /** Filtros aplicados agora (vindos da URL). */
-  readonly filters = input.required<TicketDashboardScope>();
+  readonly filters = input.required<DashboardFilters>();
   /** Departamentos ativos, com os setores — só o que a API devolve pra quem está logado. */
   readonly departments = input<Department[]>([]);
+  /** Responsáveis elegíveis (GET /tickets/assignees). */
+  readonly assignees = input<TicketAssignee[]>([]);
+  /** Hoje (`aaaa-mm-dd`, horário de Brasília): limite do período e fim do personalizado. */
+  readonly today = input.required<string>();
 
   /** Troca de um filtro (`undefined` remove aquele filtro). */
-  readonly change = output<Partial<TicketDashboardScope>>();
+  readonly change = output<Partial<DashboardFilters>>();
   /** Remove todos os filtros. */
   readonly clear = output<void>();
 
   /** Prioridades, da mais baixa à mais alta. */
   readonly priorityOptions = [TicketPriority.Low, TicketPriority.Medium, TicketPriority.High, TicketPriority.Urgent];
   readonly priorityLabels = TICKET_PRIORITY_LABELS;
+  /** Períodos prontos, do mais curto ao mais longo. */
+  readonly periodOptions = Object.keys(DASHBOARD_PERIOD_DAYS) as DashboardPeriodPreset[];
+  readonly periodLabels = DASHBOARD_PERIOD_LABELS;
+
+  /** Só os departamentos com setores: um departamento vazio não recorta nada. */
+  readonly departmentOptions = computed(() => this.departments().filter(d => d.sectors.length > 0));
+
+  /** Departamento escolhido, se existir na lista. */
+  readonly selectedDepartment = computed(() => this.departments().find(d => d.id === this.filters().departmentId) ?? null);
+
+  /** Setores no seletor: só os do departamento escolhido, ou todos agrupados por departamento. */
+  readonly sectorGroups = computed(() => {
+    const department = this.selectedDepartment();
+    return department ? [department] : this.departmentOptions();
+  });
+
+  /** Valor do seletor de período. */
+  readonly periodValue = computed(() => {
+    const filters = this.filters();
+    return filters.period ?? (filters.from || filters.to ? CUSTOM_PERIOD : '');
+  });
+
+  /** Valor do seletor de responsável. */
+  readonly assigneeValue = computed(() => this.filters().assignee ?? this.filters().assignedToUserId ?? '');
 
   /** Filtros ativos como chips, na ordem da barra. */
   readonly chips = computed((): ActiveFilterChip[] => {
     const filters = this.filters();
     const chips: ActiveFilterChip[] = [];
+    if (filters.period) {
+      chips.push({ key: 'period', label: this.periodLabels[filters.period], removal: { period: undefined } });
+    } else if (filters.from || filters.to) {
+      const label = filters.from && filters.to
+        ? `De ${formatIsoDate(filters.from)} a ${formatIsoDate(filters.to)}`
+        : filters.from ? `Desde ${formatIsoDate(filters.from)}` : `Até ${formatIsoDate(filters.to as string)}`;
+      chips.push({ key: 'custom', label, removal: { from: undefined, to: undefined } });
+    }
+    if (filters.departmentId) {
+      chips.push({ key: 'department', label: `Departamento: ${this.selectedDepartment()?.name ?? 'selecionado'}`, removal: { departmentId: undefined } });
+    }
     if (filters.sectorId) {
       const sector = this.departments().flatMap(d => d.sectors).find(s => s.id === filters.sectorId);
-      chips.push({ key: 'sectorId', label: `Setor: ${sector?.name ?? 'selecionado'}` });
+      chips.push({ key: 'sector', label: `Setor: ${sector?.name ?? 'selecionado'}`, removal: { sectorId: undefined } });
     }
     if (filters.priority !== undefined) {
-      chips.push({ key: 'priority', label: `Prioridade: ${this.priorityLabels[filters.priority]}` });
+      chips.push({ key: 'priority', label: `Prioridade: ${this.priorityLabels[filters.priority]}`, removal: { priority: undefined } });
     }
-    if (filters.assignee) {
-      chips.push({ key: 'assignee', label: ASSIGNEE_LABELS[filters.assignee] });
+    if (filters.assignee === 'me') {
+      chips.push({ key: 'assignee', label: 'Atribuídos a mim', removal: { assignee: undefined } });
+    } else if (filters.assignee === 'none') {
+      chips.push({ key: 'assignee', label: 'Sem responsável', removal: { assignee: undefined } });
+    } else if (filters.assignedToUserId) {
+      const person = this.assignees().find(a => a.id === filters.assignedToUserId);
+      chips.push({ key: 'assignee', label: `Responsável: ${person?.fullName ?? 'selecionado'}`, removal: { assignedToUserId: undefined } });
     }
     return chips;
   });
+
+  /** Valor do seletor de período → troca: pronto, personalizado (começa nos últimos 30 dias) ou nenhum. */
+  toPeriod(value: string): Partial<DashboardFilters> {
+    if (value === CUSTOM_PERIOD) {
+      return { period: undefined, from: addDays(this.today(), -29), to: this.today() };
+    }
+    const period = value in DASHBOARD_PERIOD_DAYS ? value as DashboardPeriodPreset : undefined;
+    return { period, from: undefined, to: undefined };
+  }
+
+  /** Valor do seletor de departamento → troca; o setor escolhido fica só se for desse departamento. */
+  toDepartment(value: string): Partial<DashboardFilters> {
+    const department = this.departments().find(d => d.id === value);
+    const sectorId = this.filters().sectorId;
+    const keepSector = !department || department.sectors.some(s => s.id === sectorId);
+    return { departmentId: department?.id, sectorId: keepSector ? sectorId : undefined };
+  }
 
   /** Valor do seletor de prioridade → prioridade (vazio ou fora da lista = sem filtro). */
   toPriority(value: string): TicketPriority | undefined {
@@ -132,13 +236,25 @@ export class DashboardFilterBarComponent {
     return this.priorityOptions.includes(priority) ? priority : undefined;
   }
 
-  /** Valor do seletor de responsável → filtro (vazio ou desconhecido = sem filtro). */
-  toAssignee(value: string): TicketDashboardAssignee | undefined {
-    return value === 'me' || value === 'none' ? value : undefined;
+  /** Valor do seletor de responsável → troca: "meus", "sem responsável", uma pessoa da lista ou ninguém. */
+  toAssignee(value: string): Partial<DashboardFilters> {
+    if (value === 'me' || value === 'none') return { assignee: value, assignedToUserId: undefined };
+    const person = this.assignees().find(a => a.id === value);
+    return { assignee: undefined, assignedToUserId: person?.id };
   }
 
-  /** Troca que remove só um filtro. */
-  removal(key: keyof TicketDashboardScope): Partial<TicketDashboardScope> {
-    return { [key]: undefined };
+  /**
+   * Troca uma ponta do período personalizado. Data inválida ou que inverte o intervalo não vai pra
+   * URL: o campo volta pro valor aplicado.
+   */
+  onDateChange(edge: 'from' | 'to', field: HTMLInputElement): void {
+    const value = field.value;
+    const other = edge === 'from' ? this.filters().to : this.filters().from;
+    const inverted = other && isIsoDate(value) && (edge === 'from' ? value > other : value < other);
+    if (!isIsoDate(value) || inverted) {
+      field.value = this.filters()[edge] ?? '';
+      return;
+    }
+    this.change.emit({ [edge]: value });
   }
 }

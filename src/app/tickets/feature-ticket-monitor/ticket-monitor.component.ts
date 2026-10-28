@@ -11,8 +11,10 @@ import { TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_A
 import { TicketPriority, TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TicketSortOrder, TICKET_SORT_ORDER_LABELS } from '../entities/ticket-sort-order';
+import { TicketAwaiting, TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
+import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { DepartmentsStore } from '../../departments';
-import { SessionService, ToastService, injectSidePanelOverlay, isEscapeFromNestedLayer } from '../../shared';
+import { SessionService, ToastService, formatIsoDate, injectSidePanelOverlay, isEscapeFromNestedLayer, isIsoDate } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
@@ -42,6 +44,11 @@ function parsePageSizeParam(value: string | null): number {
     return PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
 }
 
+/** Lê uma data `aaaa-mm-dd` real da query string; senão, `undefined`. */
+function parseDateParam(value: string | null): string | undefined {
+    return isIsoDate(value) ? value : undefined;
+}
+
 /** Lê um inteiro positivo (página); se ausente ou inválido, devolve 1 — a correção pra última página válida acontece depois do carregamento (EC-09). */
 function parsePageParam(value: string | null): number {
     if (value === null) return DEFAULT_PAGE;
@@ -61,6 +68,8 @@ export class TicketMonitorComponent implements OnInit {
     protected readonly store = inject(TicketMonitorStore);
     protected readonly quickInfoStore = inject(TicketQuickInfoStore);
     protected readonly departmentsStore = inject(DepartmentsStore);
+    /** Responsáveis elegíveis pro filtro "Responsável" (GET /tickets/assignees). */
+    protected readonly assigneesStore = inject(TicketAssigneesStore);
     protected readonly sessionService = inject(SessionService);
     private readonly toastService = inject(ToastService);
     private readonly route = inject(ActivatedRoute);
@@ -99,28 +108,77 @@ export class TicketMonitorComponent implements OnInit {
     readonly secondaryFilterCount = computed(() => {
         const filters = this.store.filters();
         return (filters.priority !== undefined ? 1 : 0)
-            + (filters.sort !== TicketSortOrder.Newest ? 1 : 0);
+            + (filters.sort !== TicketSortOrder.Newest ? 1 : 0)
+            + (filters.awaiting !== undefined ? 1 : 0)
+            + (filters.createdFrom || filters.createdTo ? 1 : 0);
     });
+
+    /** Opções do filtro "Aguardando". */
+    protected readonly awaitingOptions = [TicketAwaiting.Agent, TicketAwaiting.Requester];
+    protected readonly awaitingLabels = TICKET_AWAITING_LABELS;
+
+    /** Valor do seletor de setor: um setor, "vários" (veio de um departamento no Início) ou todos. */
+    readonly sectorValue = computed(() => {
+        const sectorIds = this.store.filters().sectorIds ?? [];
+        return sectorIds.length > 1 ? 'many' : sectorIds[0] ?? '';
+    });
+
+    /** Período de abertura aplicado, em texto ("De 01/10/2026 a 28/10/2026"), ou null. */
+    readonly createdRangeLabel = computed(() => {
+        const { createdFrom, createdTo } = this.store.filters();
+        if (createdFrom && createdTo) return `De ${formatIsoDate(createdFrom)} a ${formatIsoDate(createdTo)}`;
+        if (createdFrom) return `Desde ${formatIsoDate(createdFrom)}`;
+        if (createdTo) return `Até ${formatIsoDate(createdTo)}`;
+        return null;
+    });
+
+    /** Troca o setor pelo seletor; "vários" mantém o recorte que veio do Início. */
+    onSectorChange(value: string): void {
+        if (value === 'many') return;
+        this.store.setSectorIds(value ? [value] : undefined);
+    }
+
+    /** Troca uma ponta do período de abertura; data inválida ou que inverte o intervalo volta pro valor aplicado. */
+    onCreatedDateChange(edge: 'from' | 'to', field: HTMLInputElement): void {
+        const { createdFrom, createdTo } = this.store.filters();
+        const value = parseDateParam(field.value);
+        const next = edge === 'from' ? { from: value, to: createdTo } : { from: createdFrom, to: value };
+        if ((field.value && !value) || (next.from && next.to && next.from > next.to)) {
+            field.value = (edge === 'from' ? createdFrom : createdTo) ?? '';
+            return;
+        }
+        this.store.setCreatedRange(next.from, next.to);
+    }
+
+    /** Troca o filtro "Aguardando" pelo seletor (vazio = qualquer situação). */
+    onAwaitingChange(value: string): void {
+        this.store.setAwaiting(parseEnumParam(value || null, this.awaitingOptions));
+    }
 
     /** Contagem de um card de SLA no resumo carregado (`null` enquanto não há resumo). */
     slaCount(count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'): number | null {
         return this.store.slaSummary()?.[count] ?? null;
     }
 
-    /** Valor do filtro "Responsável": qualquer um, só os atribuídos a quem está logado, ou só os sem responsável. */
-    readonly responsibleFilter = computed<'any' | 'me' | 'none'>(() => {
+    /**
+     * Valor do filtro "Responsável": qualquer um, só os atribuídos a quem está logado, só os sem
+     * responsável, ou o id de uma pessoa da equipe.
+     */
+    readonly responsibleFilter = computed(() => {
         const filters = this.store.filters();
         if (filters.unassignedOnly) return 'none';
         if (filters.assignedToUserId && filters.assignedToUserId === this.sessionService.currentUser()?.id) return 'me';
-        return 'any';
+        return filters.assignedToUserId ?? 'any';
     });
 
-    /** Aplica o filtro "Responsável" escolhido. */
-    onResponsibleFilterChange(value: 'any' | 'me' | 'none'): void {
+    /** Aplica o filtro "Responsável" escolhido ("any", "me", "none" ou o id de uma pessoa). */
+    onResponsibleFilterChange(value: string): void {
         if (value === 'none') {
             this.store.setUnassignedOnly(true);
         } else if (value === 'me') {
             this.store.setAssignedToUserId(this.sessionService.currentUser()?.id);
+        } else if (value !== 'any') {
+            this.store.setAssignedToUserId(value);
         } else {
             this.store.setUnassignedOnly(false);
             this.store.setAssignedToUserId(undefined);
@@ -236,13 +294,20 @@ export class TicketMonitorComponent implements OnInit {
             // "?status=active" é o grupo "Ativos" (Aberto + Em Andamento), vindo do backlog e dos críticos do Início.
             activeOnly: params.get('status') === 'active' ? true : undefined,
             priority: parseEnumParam(params.get('priority'), this.priorityOptions),
-            sectorId: params.get('sectorId') || undefined,
+            // `sectorId` repetido: vários setores (drill-down de um departamento no Início).
+            sectorIds: params.getAll('sectorId').filter(Boolean).length ? params.getAll('sectorId').filter(Boolean) : undefined,
+            createdFrom: parseDateParam(params.get('createdFrom')),
+            createdTo: parseDateParam(params.get('createdTo')),
+            awaiting: parseEnumParam(params.get('awaiting'), this.awaitingOptions),
             slaStatus: parseEnumParam(params.get('slaStatus'), [...this.liveSlaStatusOptions, ...this.resolvedSlaStatusOptions]),
             unassignedOnly: params.get('unassignedOnly') === 'true' ? true : undefined,
-            // "?assignedToMe=true" (atalho do Início) vira o id de quem está logado — o id não vai pra URL.
-            assignedToUserId: params.get('assignedToMe') === 'true' && params.get('unassignedOnly') !== 'true'
-                ? this.sessionService.currentUser()?.id
-                : undefined,
+            // "?assignedToMe=true" (atalho do Início) vira o id de quem está logado — o próprio id não vai
+            // pra URL; o de outra pessoa da equipe vai em "?assignedToUserId=".
+            assignedToUserId: params.get('unassignedOnly') === 'true'
+                ? undefined
+                : params.get('assignedToMe') === 'true'
+                    ? this.sessionService.currentUser()?.id
+                    : params.get('assignedToUserId') || undefined,
             sort: parseEnumParam(params.get('sort'), this.sortOptions) ?? DEFAULT_SORT,
             page: parsePageParam(params.get('page')),
             pageSize: parsePageSizeParam(params.get('pageSize'))
@@ -305,14 +370,19 @@ export class TicketMonitorComponent implements OnInit {
     }
 
     /** Converte os filtros atuais no formato aceito por `Router.navigate`, omitindo valores padrão pra manter a URL curta. */
-    private filtersToQueryParams(filters: TicketMonitorFilters): Record<string, string | number | null> {
+    private filtersToQueryParams(filters: TicketMonitorFilters): Record<string, string | number | string[] | null> {
+        const isMe = !!filters.assignedToUserId && filters.assignedToUserId === this.sessionService.currentUser()?.id;
         return {
             status: filters.activeOnly ? 'active' : filters.status ?? null,
             priority: filters.priority ?? null,
-            sectorId: filters.sectorId ?? null,
+            sectorId: filters.sectorIds?.length ? filters.sectorIds : null,
+            createdFrom: filters.createdFrom ?? null,
+            createdTo: filters.createdTo ?? null,
+            awaiting: filters.awaiting ?? null,
             slaStatus: filters.slaStatus ?? null,
             unassignedOnly: filters.unassignedOnly ? 'true' : null,
-            assignedToMe: filters.assignedToUserId ? 'true' : null,
+            assignedToMe: isMe ? 'true' : null,
+            assignedToUserId: filters.assignedToUserId && !isMe ? filters.assignedToUserId : null,
             sort: filters.sort === DEFAULT_SORT ? null : filters.sort,
             page: filters.page === DEFAULT_PAGE ? null : filters.page,
             pageSize: filters.pageSize === DEFAULT_PAGE_SIZE ? null : filters.pageSize
@@ -320,10 +390,11 @@ export class TicketMonitorComponent implements OnInit {
     }
 
     /** Compara o alvo com a query string atual, pra só navegar quando algo de fato mudou. */
-    private matchesCurrentUrl(target: Record<string, string | number | null>): boolean {
+    private matchesCurrentUrl(target: Record<string, string | number | string[] | null>): boolean {
         const current = this.route.snapshot.queryParamMap;
-        return Object.entries(target).every(([key, value]) =>
-            current.get(key) === (value === null ? null : String(value)));
+        return Object.entries(target).every(([key, value]) => Array.isArray(value)
+            ? current.getAll(key).join() === value.join()
+            : current.get(key) === (value === null ? null : String(value)));
     }
 
     /**

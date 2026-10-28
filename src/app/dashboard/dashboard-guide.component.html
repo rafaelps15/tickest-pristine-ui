@@ -9,10 +9,11 @@
 
   @if (showSla()) {
     <app-guide-section title="Como ler a operação">
-      <p class="small text-muted mb-2"><strong>Filtros:</strong> setor, prioridade e responsável valem pra Central de atenção, Volume e SLA, e ficam no endereço da página — dá pra compartilhar o link.</p>
-      <p class="small text-muted mb-2"><strong>Central de atenção:</strong> atrasados, críticos (urgentes ainda ativos) e sem responsável, do mais grave ao menos grave.</p>
+      <p class="small text-muted mb-2"><strong>Filtros:</strong> período de abertura, departamento (todos os setores dele), setor, prioridade e responsável valem pra todos os números e pro gráfico, e ficam no endereço da página — dá pra compartilhar o link.</p>
+      <p class="small text-muted mb-2"><strong>Central de atenção:</strong> atrasados, críticos (urgentes ainda ativos), sem responsável e, quando disponível, os que esperam a equipe ou o solicitante (pela última mensagem), do mais grave ao menos grave.</p>
       <p class="small text-muted mb-2"><strong>Volume:</strong> o backlog é tudo que está aberto ou em andamento.</p>
-      <p class="small text-muted mb-2"><strong>SLA:</strong> "vencem em breve" são os que já usaram 75% do prazo; "cumpridos" contam desde o início, porque ainda não há filtro por período.</p>
+      <p class="small text-muted mb-2"><strong>SLA:</strong> "vencem em breve" são os que já usaram 75% do prazo; "cumpridos" e "resolvidos com atraso" contam os chamados abertos no período (ou desde o início, sem período).</p>
+      <p class="small text-muted mb-2"><strong>Tempos médios:</strong> mediana e média da primeira resposta e da resolução, em minutos úteis, das conclusões no período. Com menos chamados que o mínimo, aparece "Dados insuficientes".</p>
       <p class="small text-muted mb-0">Cada card abre a fila de monitoramento com o mesmo recorte.</p>
     </app-guide-section>
   } @else {
@@ -25,8 +26,12 @@
   }
 
   <app-guide-section title="Como ler o gráfico">
-    <p class="small text-muted mb-2">Quantos chamados foram criados em cada período, agrupados por dia, semana ou mês (botões Dia, Semana ou Mês); o intervalo coberto aparece logo abaixo do título do gráfico.</p>
-    <p class="small text-muted mb-0">Os números são de toda a empresa e não seguem os filtros da operação. Não é uma visão pessoal.</p>
+    <p class="small text-muted mb-2">Quantos chamados foram criados em cada período{{ showSla() ? ' (e quantos foram resolvidos, quando disponível)' : '' }}, agrupados por dia, semana ou mês (botões Dia, Semana ou Mês); o intervalo coberto aparece logo abaixo do título do gráfico.</p>
+    @if (showSla()) {
+      <p class="small text-muted mb-0">Segue os filtros da operação; com período, o gráfico cobre exatamente o período escolhido.</p>
+    } @else {
+      <p class="small text-muted mb-0">Os números são de toda a empresa. Não é uma visão pessoal.</p>
+    }
   </app-guide-section>
 
   @if (showSla()) {

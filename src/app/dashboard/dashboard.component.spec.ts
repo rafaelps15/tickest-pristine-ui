@@ -2,27 +2,35 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { DashboardComponent, greetingForHour } from './dashboard.component';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketDashboardScope, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardScope, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem } from '../tickets';
 import { DepartmentsStore, Department } from '../departments';
 import { SessionService, ToastService } from '../shared';
 
 describe('DashboardComponent', () => {
-  /** Store falso dos widgets operacionais (Volume, SLA, Central de atenção), com signals reais. */
+  /** Store falso dos widgets operacionais (agregado, tempos médios e gráfico), com signals reais. */
   function createOperationStoreFake() {
     return {
-      volume: signal<TicketDashboardVolume | null>({ total: 10, backlog: 5, inProgress: 2, resolved: 4, closed: 1 }),
-      volumeLoading: signal(false),
-      volumeError: signal<string | null>(null),
-      sla: signal<TicketDashboardSla | null>({ met: 7, breached: 2, atRisk: 1 }),
-      slaLoading: signal(false),
-      slaError: signal<string | null>(null),
+      volume: signal<TicketDashboardVolume | null>({ total: 10, open: 3, inProgress: 2, resolved: 4, closed: 1, canceled: 0, backlog: 5 }),
+      sla: signal<TicketDashboardSla | null>({ onTime: 3, atRisk: 1, breached: 2, met: 7, missed: 1, notApplicable: 0 }),
       attention: signal<TicketDashboardAttention | null>({ overdue: 2, critical: 1, unassigned: 3 }),
-      attentionLoading: signal(false),
-      attentionError: signal<string | null>(null),
+      overviewLoading: signal(false),
+      overviewError: signal<string | null>(null),
+      times: signal<TicketAverageTimes | null>({
+        firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
+        resolution: { averageMinutes: null, medianMinutes: null, sampleSize: 4 },
+        minimumSample: 5
+      }),
+      timesLoading: signal(false),
+      timesError: signal<string | null>(null),
+      trend: signal<TicketVolumePoint[]>([{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]),
+      trendLoading: signal(false),
+      trendError: signal<string | null>(null),
+      groupBy: signal<TicketVolumeGrouping>('Day'),
       setScope: jasmine.createSpy('setScope'),
-      reloadVolume: jasmine.createSpy('reloadVolume'),
-      reloadSla: jasmine.createSpy('reloadSla'),
-      reloadAttention: jasmine.createSpy('reloadAttention')
+      setGroupBy: jasmine.createSpy('setGroupBy'),
+      reloadOverview: jasmine.createSpy('reloadOverview'),
+      reloadTimes: jasmine.createSpy('reloadTimes'),
+      reloadTrend: jasmine.createSpy('reloadTrend')
     };
   }
 
@@ -71,7 +79,8 @@ describe('DashboardComponent', () => {
   type CurrentUserFake = { firstName: string; roles: { name: string }[] } | null;
 
   let operationFake: ReturnType<typeof createOperationStoreFake>;
-  let departmentsFake: { departments: ReturnType<typeof signal<Department[]>> };
+  let departmentsFake: { departments: ReturnType<typeof signal<Department[]>>; listState: ReturnType<typeof signal<{ loading: boolean }>> };
+  let assigneesFake: { assignees: ReturnType<typeof signal<TicketAssignee[]>> };
   let ticketsStoreFake: ReturnType<typeof createTicketsStoreFake>;
   let hasPermission: jasmine.Spy;
   let myTicketsFake: {
@@ -93,7 +102,11 @@ describe('DashboardComponent', () => {
     toastServiceFake = { show: jasmine.createSpy('show') };
 
     operationFake = createOperationStoreFake();
-    departmentsFake = { departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }] }]) };
+    departmentsFake = {
+      departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] }]),
+      listState: signal({ loading: false })
+    };
+    assigneesFake = { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]) };
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
@@ -102,6 +115,7 @@ describe('DashboardComponent', () => {
         { provide: TicketSummaryStore, useValue: ticketsStoreFake },
         { provide: TicketDashboardStore, useValue: operationFake },
         { provide: DepartmentsStore, useValue: departmentsFake },
+        { provide: TicketAssigneesStore, useValue: assigneesFake },
         { provide: MyTicketsSummaryStore, useValue: myTicketsFake },
         { provide: SessionService, useValue: { hasPermission, currentUser } },
         { provide: ToastService, useValue: toastServiceFake }
@@ -284,7 +298,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
-    const scope: TicketDashboardScope = { sectorId: 's1', priority: 4, assignee: 'none' };
+    const scope: TicketDashboardScope = { sectorIds: ['s1'], priority: 4, assignee: 'none', assignedToUserId: undefined, from: undefined, to: undefined };
     expect(operationFake.setScope).toHaveBeenCalledWith(scope);
     const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
       .find(a => a.getAttribute('aria-label')?.includes('backlog'))!;
@@ -297,20 +311,98 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Setor: Helpdesk');
   });
 
-  it('um widget com erro não derruba os outros, e o "Tentar novamente" recarrega só ele', async () => {
+  it('o agregado com erro mostra "Tentar novamente" sem derrubar os tempos médios, e recarrega só ele', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     operationFake.sla.set(null);
-    operationFake.slaError.set('Não foi possível carregar o SLA.');
+    operationFake.overviewError.set('Não foi possível carregar os números da operação.');
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
     const sla = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="SLA"]') as HTMLElement;
-    expect(sla.textContent).toContain('Não foi possível carregar o SLA.');
+    expect(sla.textContent).toContain('Não foi possível carregar os números da operação.');
     (sla.querySelector('.alert button') as HTMLButtonElement).click();
-    expect(operationFake.reloadSla).toHaveBeenCalled();
-    expect(operationFake.reloadVolume).not.toHaveBeenCalled();
-    // Os outros grupos continuam com os números.
-    expect(fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Volume"]').textContent).toContain('Backlog');
+    expect(operationFake.reloadOverview).toHaveBeenCalled();
+    expect(operationFake.reloadTimes).not.toHaveBeenCalled();
+    // Os tempos médios continuam com os números.
+    expect(fixture.nativeElement.querySelector('app-dashboard-times').textContent).toContain('1 h 15 min');
+  });
+
+  it('traduz o departamento nos setores dele e o período pronto em datas, e leva os dois pro drill-down', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    await TestBed.inject(Router).navigateByUrl('/?departmentId=d1&period=7d');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const scope = operationFake.setScope.calls.mostRecent().args[0] as TicketDashboardScope;
+    expect(scope.sectorIds).toEqual(['s1', 's2']);
+    expect(scope.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(scope.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const backlog = Array.from(fixture.nativeElement.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
+      .find(a => a.getAttribute('aria-label')?.includes('backlog'))!;
+    const href = backlog.getAttribute('href')!;
+    expect(href).toContain('sectorId=s1&sectorId=s2');
+    expect(href).toContain(`createdFrom=${scope.from}`);
+    expect(fixture.nativeElement.textContent).toContain('Departamento: TI');
+    expect(fixture.nativeElement.textContent).toContain('Últimos 7 dias');
+  });
+
+  it('espera os departamentos carregarem antes de mandar um recorte por departamento', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    departmentsFake.departments.set([]);
+    departmentsFake.listState.set({ loading: true });
+    await TestBed.inject(Router).navigateByUrl('/?departmentId=d1');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(operationFake.setScope).not.toHaveBeenCalled();
+  });
+
+  it('mostra "Aguardando" na Central quando o agregado manda os contadores', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    operationFake.attention.set({ overdue: 2, critical: 1, unassigned: 3, awaitingAgent: 6, awaitingRequester: 4 });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const attention = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Central de atenção"]') as HTMLElement;
+    expect(attention.textContent).toContain('Aguardando a equipe');
+    expect(attention.textContent).toContain('Aguardando o solicitante');
+    const link = Array.from(attention.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>)
+      .find(a => a.getAttribute('aria-label')?.includes('esperando resposta da equipe'))!;
+    expect(link.getAttribute('href')).toContain('awaiting=2');
+  });
+
+  it('sem os contadores de "aguardando", a Central mostra só os três de hoje', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    const attention = fixture.nativeElement.querySelector('app-dashboard-metric-group[title="Central de atenção"]') as HTMLElement;
+    expect(attention.querySelectorAll('a.stretched-link').length).toBe(3);
+  });
+
+  it('com tickets:manage, o gráfico usa o Criados x Resolvidos do recorte, com a coluna de resolvidos na tabela', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Criados x Resolvidos');
+    expect(fixture.nativeElement.textContent).toContain('com os filtros acima');
+    fixture.componentInstance.toggleTable();
+    await fixture.whenStable();
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('table thead th') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
+    expect(headers).toEqual(['Período', 'Chamados criados', 'Resolvidos']);
+  });
+
+  it('com tickets:manage, o "Tentar novamente" do gráfico recarrega o gráfico do recorte', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    operationFake.trend.set([]);
+    operationFake.trendError.set('Não foi possível carregar o volume de chamados.');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('.chart-container button') as HTMLButtonElement).click();
+    expect(operationFake.reloadTrend).toHaveBeenCalled();
+    expect(ticketsStoreFake.load).toHaveBeenCalledTimes(1);
   });
 
   it('sem tickets:manage, não mostra os widgets operacionais nem a barra de filtros', async () => {
@@ -375,15 +467,15 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.querySelector('.card-header [aria-live="polite"]').textContent.trim()).toBe('Últimas 12 semanas');
   });
 
-  it('usa uma hierarquia de títulos sem saltos: h1 na saudação, h2 nos cards', async () => {
+  it('usa uma hierarquia de títulos sem saltos: h1 na saudação, h2 nas seções e h3 só dentro delas', async () => {
     hasPermission.and.returnValue(true);
     const fixture = TestBed.createComponent(DashboardComponent);
     await fixture.whenStable();
 
     const levels = Array.from(fixture.nativeElement.querySelectorAll('h1, h2, h3, h4, h5, h6') as NodeListOf<HTMLElement>)
-      .map(h => h.tagName);
-    expect(levels[0]).toBe('H1');
-    expect(levels.slice(1).every(tag => tag === 'H2')).toBeTrue();
+      .map(h => Number(h.tagName.slice(1)));
+    expect(levels[0]).toBe(1);
+    expect(levels.slice(1).every((level, i) => level >= 2 && level <= levels[i] + 1)).toBeTrue();
   });
 
   it('pluraliza corretamente a legenda de detalhamento quando há mais de um fechado e mais de um cancelado', async () => {

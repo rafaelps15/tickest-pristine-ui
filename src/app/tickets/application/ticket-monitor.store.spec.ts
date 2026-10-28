@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { TicketMonitorStore } from './ticket-monitor.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -126,11 +127,32 @@ describe('TicketMonitorStore', () => {
   it('filtra por setor e refaz o resumo de SLA só para esse setor', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.setSectorId('s1');
+    store.setSectorIds(['s1']);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorId: 's1' }));
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
     expect(dataService.getSlaSummary).toHaveBeenCalledWith('s1');
+  });
+
+  it('com vários setores, filtra a lista por todos e o resumo de SLA fica com a empresa toda (ele aceita um setor só)', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.setSectorIds(['s1', 's2']);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
+    expect(dataService.getSlaSummary).toHaveBeenCalledWith(undefined);
+  });
+
+  it('filtra pelo período de abertura e por "aguardando", voltando pra página 1', async () => {
+    store.goToPage(3);
+    store.setCreatedRange('2026-10-01', '2026-10-28');
+    store.setAwaiting(TicketAwaiting.Agent);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({
+      createdFrom: '2026-10-01', createdTo: '2026-10-28', awaiting: TicketAwaiting.Agent, page: 1
+    }));
   });
 
   it('filtra por situação de SLA', async () => {

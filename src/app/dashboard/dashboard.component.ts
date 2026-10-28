@@ -2,13 +2,14 @@ import { Component, inject, Injector, OnInit, OnDestroy, ElementRef, PLATFORM_ID
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import type { Chart as ChartInstance } from 'chart.js';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketDashboardScope, TicketMonitorItem, TicketVolumeGrouping, TicketStatus, TicketSlaStatus, TicketPriority, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketStatus, TicketSlaStatus, TicketPriority, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
 import { DepartmentsStore } from '../departments';
 import { DashboardFiltersService } from './dashboard-filters.service';
-import { toMonitorQueryParams } from './dashboard-filters';
+import { DashboardFilters, resolveDashboardScope, toMonitorQueryParams, todayInSaoPaulo } from './dashboard-filters';
+import { DashboardTimesComponent } from './dashboard-times.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
 import { DashboardMetric, DashboardMetricGroupComponent } from './dashboard-metric-group.component';
-import { SessionService, ToastService, loadChart } from '../shared';
+import { SessionService, ToastService, formatIsoDate, loadChart } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
@@ -56,7 +57,7 @@ const MONTH_LABELS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 's
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent],
+    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, EmptyStateComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DashboardFiltersService],
@@ -74,13 +75,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly filters = inject(DashboardFiltersService);
   /** Departamentos e setores pra opção de setor do filtro (GET /departments, só os ativos). */
   protected readonly departmentsStore = inject(DepartmentsStore);
+  /** Responsáveis elegíveis pro filtro de responsável (GET /tickets/assignees). */
+  protected readonly assigneesStore = inject(TicketAssigneesStore);
+
+  /** Hoje no horário de Brasília — base dos períodos prontos ("Últimos 30 dias"), calculado por visita à tela. */
+  protected readonly today = todayInSaoPaulo();
+
+  /**
+   * Recorte da API a partir dos filtros da URL (departamento → setores, período → datas); null
+   * enquanto um departamento da URL espera a lista de departamentos.
+   */
+  protected readonly scope = computed(() => resolveDashboardScope(
+    this.filters.filters(), this.departmentsStore.departments(), this.departmentsStore.listState().loading, this.today));
+
+  /** Se há período escolhido (muda os textos de apoio de SLA, tempos e gráfico). */
+  protected readonly hasPeriod = computed(() => !!(this.scope()?.from || this.scope()?.to));
 
   /** Mostra os widgets operacionais filtráveis: só pra quem atende a fila (a API exige `tickets:manage`). */
   protected readonly showOperation = computed(() => this.sessionService.hasPermission('tickets:manage'));
 
   /** Volume do recorte; cada card leva ao Monitor com o mesmo recorte e o status do card. */
   protected readonly volumeMetrics = computed((): DashboardMetric[] => {
-    const scope = this.filters.filters();
+    const scope = this.scope() ?? {};
     const volume = this.operation.volume();
     return [
       { key: 'total', label: 'Total', icon: 'bx-receipt', tone: 'primary', value: volume?.total ?? null, ariaNoun: 'chamados no total', hint: 'Todos os status', queryParams: toMonitorQueryParams(scope) },
@@ -93,28 +109,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** SLA do recorte, do mais grave ao cumprido. */
   protected readonly slaMetrics = computed((): DashboardMetric[] => {
-    const scope = this.filters.filters();
+    const scope = this.scope() ?? {};
     const sla = this.operation.sla();
+    const since = this.hasPeriod() ? 'abertos no período' : 'desde o início';
     return [
       { key: 'breached', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: sla?.breached ?? null, ariaNoun: 'chamados com o prazo vencido', hint: 'Prazo vencido, ainda ativos', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
       { key: 'atRisk', label: 'Vencem em breve', icon: 'bx-time', tone: 'warning', value: sla?.atRisk ?? null, ariaNoun: 'chamados perto de vencer', hint: 'Já usaram 75% do prazo', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.AtRisk }) },
-      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: sla?.met ?? null, ariaNoun: 'chamados resolvidos no prazo', hint: 'Resolvidos no prazo, desde o início', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Met }) }
+      { key: 'onTime', label: 'No prazo', icon: 'bx-timer', tone: 'info', value: sla?.onTime ?? null, ariaNoun: 'chamados ativos dentro do prazo', hint: 'Ativos, com folga', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.OnTime }) },
+      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: sla?.met ?? null, ariaNoun: 'chamados resolvidos no prazo', hint: `Resolvidos no prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Met }) },
+      { key: 'missed', label: 'Resolvidos com atraso', icon: 'bx-calendar-x', tone: 'danger', value: sla?.missed ?? null, ariaNoun: 'chamados resolvidos depois do prazo', hint: `Fora do prazo, ${since}`, queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Missed }) }
     ];
   });
 
-  /** Central de atenção, em ordem de gravidade: atrasados, críticos e sem responsável. */
+  /**
+   * Central de atenção, em ordem de gravidade: atrasados, críticos, sem responsável e, quando o
+   * back-end manda (spec 029), os que esperam a equipe e os que esperam o solicitante.
+   */
   protected readonly attentionMetrics = computed((): DashboardMetric[] => {
-    const scope = this.filters.filters();
+    const scope = this.scope() ?? {};
     const attention = this.operation.attention();
+    const awaiting: DashboardMetric[] = [];
+    if (attention?.awaitingAgent !== undefined) {
+      awaiting.push({ key: 'awaitingAgent', label: 'Aguardando a equipe', icon: 'bx-message-square-dots', tone: 'warning', value: attention.awaitingAgent, ariaNoun: 'chamados esperando resposta da equipe', hint: 'A última palavra é do solicitante', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Agent, status: 'active' }) });
+    }
+    if (attention?.awaitingRequester !== undefined) {
+      awaiting.push({ key: 'awaitingRequester', label: 'Aguardando o solicitante', icon: 'bx-user-voice', tone: 'info', value: attention.awaitingRequester, ariaNoun: 'chamados esperando o solicitante', hint: 'A equipe respondeu por último', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Requester, status: 'active' }) });
+    }
     return [
       { key: 'overdue', label: 'Atrasados', icon: 'bx-error', tone: 'danger', value: attention?.overdue ?? null, ariaNoun: 'chamados atrasados', hint: 'Prazo vencido', queryParams: toMonitorQueryParams(scope, { slaStatus: TicketSlaStatus.Breached }) },
       { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.critical ?? null, ariaNoun: 'chamados urgentes ativos', hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
-      { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassigned ?? null, ariaNoun: 'chamados ativos sem responsável', hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) }
+      { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassigned ?? null, ariaNoun: 'chamados ativos sem responsável', hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) },
+      ...awaiting
     ];
   });
 
   /** Troca de um filtro na barra (grava na URL; os widgets seguem a URL). */
-  protected onFilterChange(partial: Partial<TicketDashboardScope>): void {
+  protected onFilterChange(partial: Partial<DashboardFilters>): void {
     this.filters.update(partial);
   }
   private readonly toastService = inject(ToastService);
@@ -232,8 +262,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * (30 dias, 12 semanas, 12 meses).
    */
   protected readonly volumeRangeLabel = computed(() => {
-      const groupBy = this.store.groupBy();
-      const points = this.store.volume().length || VOLUME_DEFAULT_POINTS[groupBy];
+      const groupBy = this.chartGroupBy();
+      const scope = this.scope();
+      if (this.showOperation() && scope?.from && scope.to) return `De ${formatIsoDate(scope.from)} a ${formatIsoDate(scope.to)}`;
+      const points = this.chartPoints().length || VOLUME_DEFAULT_POINTS[groupBy];
       switch (groupBy) {
           case 'Week': return `Últimas ${points} semanas`;
           case 'Month': return `Últimos ${points} meses`;
@@ -243,21 +275,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Rótulos formatados do período atual (um por ponto do volume), para o eixo do gráfico e a tabela acessível. */
   protected readonly periodLabels = computed(() => {
-      const groupBy = this.store.groupBy();
-      return this.store.volume().map(point => this.formatPeriodLabel(point.periodStart, groupBy));
+      const groupBy = this.chartGroupBy();
+      return this.chartPoints().map(point => this.formatPeriodLabel(point.periodStart, groupBy));
+  });
+
+  /**
+   * Fonte do gráfico: pra quem atende a fila, o Criados x Resolvidos com o recorte da barra
+   * (TicketDashboardStore); pros demais, o volume da empresa toda (TicketSummaryStore).
+   */
+  protected readonly chartPoints = computed((): TicketVolumePoint[] => this.showOperation() ? this.operation.trend() : this.store.volume());
+  /** Agrupamento do gráfico, da mesma fonte. */
+  protected readonly chartGroupBy = computed(() => this.showOperation() ? this.operation.groupBy() : this.store.groupBy());
+  /** Carregando o gráfico. */
+  protected readonly chartLoading = computed(() => this.showOperation() ? this.operation.trendLoading() : this.store.volumeLoading());
+  /** O gráfico falhou. */
+  protected readonly chartFailed = computed(() => this.showOperation() ? !!this.operation.trendError() : this.store.volumeFailed());
+  /** O back-end mandou os resolvidos por período (spec 028): o gráfico vira Criados x Resolvidos. */
+  protected readonly chartHasResolved = computed(() => {
+      const points = this.chartPoints();
+      return points.length > 0 && points.every(point => point.resolvedCount !== undefined);
   });
 
   constructor() {
-    // Os widgets operacionais seguem os filtros da URL (trocar um filtro cancela as contagens em voo).
-    effect(() => this.operation.setScope(this.filters.filters()));
+    // Os widgets operacionais seguem os filtros da URL (trocar um filtro cancela as requisições em voo).
+    effect(() => {
+      const scope = this.scope();
+      if (scope) this.operation.setScope(scope);
+    });
 
     // Redesenha o gráfico sempre que o volume ou o agrupamento mudarem, ou o canvas for montado (@defer).
     effect(() => {
-      const volume = this.store.volume();
+      const points = this.chartPoints();
       const canvasRef = this.volumeChartCanvas();
 
       if (isPlatformBrowser(this.platformId) && canvasRef) {
-        void this.renderChart(canvasRef, volume.map(point => point.count), this.periodLabels());
+        const resolved = this.chartHasResolved() ? points.map(point => point.resolvedCount ?? 0) : null;
+        void this.renderChart(canvasRef, points.map(point => point.count), resolved, this.periodLabels());
       }
     });
   }
@@ -307,7 +360,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Muda o agrupamento do gráfico de volume (dia/semana/mês). */
   setGroupBy(groupBy: TicketVolumeGrouping): void {
-    this.store.setGroupBy(groupBy);
+    if (this.showOperation()) {
+      this.operation.setGroupBy(groupBy);
+    } else {
+      this.store.setGroupBy(groupBy);
+    }
+  }
+
+  /** "Tentar novamente" do gráfico, na fonte certa. */
+  reloadChart(): void {
+    if (this.showOperation()) {
+      this.operation.reloadTrend();
+    } else {
+      this.store.load();
+    }
   }
 
   /**
@@ -343,12 +409,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Desenha (ou redesenha) o gráfico de barras do volume de tickets abertos por período.
+   * Desenha (ou redesenha) o gráfico de barras do volume de chamados criados por período — com
+   * `resolved`, duas séries lado a lado (Criados x Resolvidos), cada uma com a sua cor e legenda.
    * Cores de texto/borda são lidas de `data-bs-theme` no momento do desenho — se o SO mudar de
    * tema enquanto o dashboard já está aberto, o gráfico só reflete isso no próximo redesenho
    * (novo volume ou reabertura da tela), não ao vivo.
    */
-  private async renderChart(canvasRef: ElementRef<HTMLCanvasElement>, counts: number[], labels: string[]) {
+  private async renderChart(canvasRef: ElementRef<HTMLCanvasElement>, counts: number[], resolved: number[] | null, labels: string[]) {
     const token = ++this.renderToken;
     const { Chart } = await loadChart();
 
@@ -372,14 +439,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
       type: 'bar',
       data: {
         labels,
-        datasets: [{
-          label: 'Chamados criados',
-          data: counts,
-          backgroundColor: counts.map((_, i) => CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]),
-          borderColor: surfaceColor,
-          borderWidth: 2,
-          borderRadius: 4
-        }]
+        // Uma série: cor por barra (ritmo visual). Duas séries: uma cor por série, pra comparar.
+        datasets: resolved
+          ? [
+              { label: 'Criados', data: counts, backgroundColor: CATEGORICAL_COLORS[0], borderColor: surfaceColor, borderWidth: 2, borderRadius: 4 },
+              { label: 'Resolvidos', data: resolved, backgroundColor: CATEGORICAL_COLORS[2], borderColor: surfaceColor, borderWidth: 2, borderRadius: 4 }
+            ]
+          : [{
+              label: 'Chamados criados',
+              data: counts,
+              backgroundColor: counts.map((_, i) => CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]),
+              borderColor: surfaceColor,
+              borderWidth: 2,
+              borderRadius: 4
+            }]
       },
       options: {
         responsive: true,
@@ -401,7 +474,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
         },
         plugins: {
-          legend: { display: false },
+          legend: { display: !!resolved, labels: { color: textColor } },
           tooltip: { mode: 'index', intersect: false }
         }
       }

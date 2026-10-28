@@ -14,6 +14,9 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
+import { TicketAssignee } from '../entities/ticket-assignee';
+import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { Department, DepartmentsStore } from '../../departments';
 import { SessionService, ToastService } from '../../shared';
 import { UserSummary } from '../../users';
@@ -54,7 +57,9 @@ describe('TicketMonitorComponent', () => {
       clearMutationError: jasmine.createSpy('clearMutationError'),
       setStatus: jasmine.createSpy('setStatus'),
       setPriority: jasmine.createSpy('setPriority'),
-      setSectorId: jasmine.createSpy('setSectorId'),
+      setSectorIds: jasmine.createSpy('setSectorIds'),
+      setCreatedRange: jasmine.createSpy('setCreatedRange'),
+      setAwaiting: jasmine.createSpy('setAwaiting'),
       setSlaStatus: jasmine.createSpy('setSlaStatus'),
       setSearch: jasmine.createSpy('setSearch'),
       setUnassignedOnly: jasmine.createSpy('setUnassignedOnly'),
@@ -103,6 +108,7 @@ describe('TicketMonitorComponent', () => {
         { provide: TicketMonitorStore, useValue: storeFake },
         { provide: TicketQuickInfoStore, useValue: quickInfoStoreFake },
         { provide: DepartmentsStore, useValue: departmentsStoreFake },
+        { provide: TicketAssigneesStore, useValue: { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Suporte' }]) } },
         { provide: SessionService, useValue: sessionServiceFake },
         { provide: ToastService, useValue: toastServiceFake }
       ]
@@ -135,7 +141,8 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
-      status: TicketStatus.Open, activeOnly: undefined, priority: TicketPriority.High, sectorId: 's1',
+      status: TicketStatus.Open, activeOnly: undefined, priority: TicketPriority.High, sectorIds: ['s1'],
+      createdFrom: undefined, createdTo: undefined, awaiting: undefined,
       slaStatus: TicketSlaStatus.AtRisk, unassignedOnly: true, assignedToUserId: undefined,
       sort: TicketSortOrder.DueDate, page: 3, pageSize: 50
     });
@@ -155,9 +162,99 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith({
-      status: undefined, activeOnly: undefined, priority: undefined, sectorId: undefined, slaStatus: undefined,
+      status: undefined, activeOnly: undefined, priority: undefined, sectorIds: undefined,
+      createdFrom: undefined, createdTo: undefined, awaiting: undefined, slaStatus: undefined,
       unassignedOnly: undefined, assignedToUserId: undefined, sort: TicketSortOrder.Newest, page: 1, pageSize: 20
     });
+  });
+
+  it('lê do drill-down do Início vários setores, o período de abertura, "aguardando" e uma pessoa como responsável', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: { snapshot: { queryParamMap: convertToParamMap({
+        sectorId: ['s1', 's2'], createdFrom: '2026-10-01', createdTo: '2026-02-30', awaiting: '2', assignedToUserId: 'u-ana'
+      }) } }
+    });
+    spyOn(TestBed.inject(Router), 'navigate');
+
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith(jasmine.objectContaining({
+      sectorIds: ['s1', 's2'], createdFrom: '2026-10-01', createdTo: undefined, awaiting: TicketAwaiting.Agent, assignedToUserId: 'u-ana'
+    }));
+  });
+
+  it('grava vários setores repetidos e a pessoa responsável na URL; o próprio usuário vira "atribuídos a mim"', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1', 's2'], assignedToUserId: 'u-ana', awaiting: TicketAwaiting.Requester });
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const params = navigate.calls.mostRecent().args[1]!.queryParams!;
+    expect(params['sectorId']).toEqual(['s1', 's2']);
+    expect(params['assignedToUserId']).toBe('u-ana');
+    expect(params['assignedToMe']).toBeNull();
+    expect(params['awaiting']).toBe(TicketAwaiting.Requester);
+
+    storeFake.filters.set({ ...storeFake.filters(), assignedToUserId: 'u-current' });
+    await fixture.whenStable();
+    const mine = navigate.calls.mostRecent().args[1]!.queryParams!;
+    expect(mine['assignedToMe']).toBe('true');
+    expect(mine['assignedToUserId']).toBeNull();
+  });
+
+  it('com vários setores, o seletor mostra "N setores" e o aviso de que os números de SLA são da empresa toda', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1', 's2'] });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
+    expect(sector.value).toBe('many');
+    expect(sector.textContent).toContain('2 setores (vindos do Início)');
+    expect(fixture.nativeElement.querySelector('#monitorSectorHint').textContent).toContain('valem pra empresa toda');
+
+    sector.value = 's1';
+    sector.dispatchEvent(new Event('change'));
+    expect(storeFake.setSectorIds).toHaveBeenCalledWith(['s1']);
+  });
+
+  it('oferece as pessoas da equipe no filtro de responsável e aplica a escolhida', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const responsible = fixture.nativeElement.querySelector('#monitorResponsible') as HTMLSelectElement;
+    expect(responsible.textContent).toContain('Ana Souza');
+    responsible.value = 'u-ana';
+    responsible.dispatchEvent(new Event('change'));
+
+    expect(storeFake.setAssignedToUserId).toHaveBeenCalledWith('u-ana');
+  });
+
+  it('aplica "aguardando" e o período de abertura em "Mais filtros", recusando início depois do fim', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), createdTo: '2026-10-10' });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    const awaiting = fixture.nativeElement.querySelector('#monitorAwaiting') as HTMLSelectElement;
+    awaiting.value = String(TicketAwaiting.Agent);
+    awaiting.dispatchEvent(new Event('change'));
+    expect(storeFake.setAwaiting).toHaveBeenCalledWith(TicketAwaiting.Agent);
+
+    const from = fixture.nativeElement.querySelector('#monitorCreatedFrom') as HTMLInputElement;
+    from.value = '2026-10-20';
+    from.dispatchEvent(new Event('change'));
+    expect(storeFake.setCreatedRange).not.toHaveBeenCalled();
+    from.value = '2026-10-01';
+    from.dispatchEvent(new Event('change'));
+    expect(storeFake.setCreatedRange).toHaveBeenCalledWith('2026-10-01', '2026-10-10');
+  });
+
+  it('mostra de quem o chamado espera ação, quando o back-end manda', async () => {
+    storeFake.tickets.set([{ ...ticket, awaiting: TicketAwaiting.Requester }]);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('td[data-label="Status"]').textContent).toContain('Aguardando o solicitante');
   });
 
   it('"?status=active" (backlog e críticos do Início) vira o grupo Ativos: Aberto + Em Andamento', async () => {

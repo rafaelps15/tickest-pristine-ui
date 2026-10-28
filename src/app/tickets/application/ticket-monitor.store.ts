@@ -8,6 +8,7 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
@@ -48,8 +49,12 @@ export const TicketMonitorStore = signalStore(
     }),
     // Envelopado em objeto: `sectorId` indefinido é um valor válido (= todos os setores), não "ainda sem parâmetros" — um `params` que
     // retornasse `undefined` direto faria o rxResource pular a busca, em vez de buscar o resumo do sistema inteiro.
+    // O resumo aceita um setor só: com vários (drill-down de um departamento), mostra a empresa toda e a tela avisa.
     _slaSummaryResource: rxResource({
-      params: () => ({ sectorId: store.filters().sectorId }),
+      params: () => {
+        const sectorIds = store.filters().sectorIds ?? [];
+        return { sectorId: sectorIds.length === 1 ? sectorIds[0] : undefined };
+      },
       stream: ({ params }) => store._ticketDataService.getSlaSummary(params.sectorId)
     })
   })),
@@ -122,9 +127,19 @@ export const TicketMonitorStore = signalStore(
       patchState(store, { filters: { ...store.filters(), priority, page: 1 } });
     },
 
-    /** Muda o filtro de setor e volta para a primeira página (também refaz o resumo de SLA). */
-    setSectorId(sectorId: string | undefined): void {
-      patchState(store, { filters: { ...store.filters(), sectorId, page: 1 } });
+    /** Muda o filtro de setores e volta para a primeira página (também refaz o resumo de SLA); vazio = todos. */
+    setSectorIds(sectorIds: string[] | undefined): void {
+      patchState(store, { filters: { ...store.filters(), sectorIds: sectorIds?.length ? sectorIds : undefined, page: 1 } });
+    },
+
+    /** Muda o período de abertura (`aaaa-mm-dd`, inclusivo) e volta para a primeira página. */
+    setCreatedRange(createdFrom: string | undefined, createdTo: string | undefined): void {
+      patchState(store, { filters: { ...store.filters(), createdFrom, createdTo, page: 1 } });
+    },
+
+    /** Muda o filtro "aguardando" (de quem o chamado espera ação) e volta para a primeira página. */
+    setAwaiting(awaiting: TicketAwaiting | undefined): void {
+      patchState(store, { filters: { ...store.filters(), awaiting, page: 1 } });
     },
 
     /** Muda o filtro de situação do SLA e volta para a primeira página. */

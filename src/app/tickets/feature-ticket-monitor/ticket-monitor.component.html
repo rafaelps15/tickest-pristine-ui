@@ -11,10 +11,13 @@
 <div class="monitor-scope d-flex align-items-end flex-wrap gap-3 mb-3">
   <div class="monitor-scope-field">
     <label class="form-label small mb-1" for="monitorSector">Setor</label>
-    <select id="monitorSector" class="form-select" [value]="store.filters().sectorId ?? ''"
+    <select #sectorSelect id="monitorSector" class="form-select" [value]="sectorValue()"
             aria-describedby="monitorSectorHint"
-            (change)="store.setSectorId($any($event.target).value || undefined)">
+            (change)="onSectorChange(sectorSelect.value)">
       <option value="">Todos os setores</option>
+      @if (sectorValue() === 'many') {
+        <option value="many" [selected]="true">{{ store.filters().sectorIds?.length }} setores (vindos do Início)</option>
+      }
       @for (department of departmentsStore.departments(); track department.id) {
         <optgroup [label]="department.name">
           @for (sector of department.sectors; track sector.id) {
@@ -24,7 +27,13 @@
       }
     </select>
   </div>
-  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">Vale pros números de SLA e pra tabela. Os números ignoram os outros filtros.</p>
+  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">
+    @if (sectorValue() === 'many') {
+      A tabela mostra só esses setores; os números de SLA valem pra empresa toda (eles aceitam um setor por vez).
+    } @else {
+      Vale pros números de SLA e pra tabela. Os números ignoram os outros filtros.
+    }
+  </p>
 </div>
 
 @if (store.slaSummaryState().error) {
@@ -87,11 +96,18 @@
   <!-- A fila de quem atende: "Atribuídos a mim" e "Sem responsável" são as duas pontas da mesma pergunta. -->
   <div class="col-12 col-md-3">
     <label class="form-label small" for="monitorResponsible">Responsável</label>
-    <select id="monitorResponsible" class="form-select" [value]="responsibleFilter()"
-            (change)="onResponsibleFilterChange($any($event.target).value)">
+    <select #responsibleSelect id="monitorResponsible" class="form-select" [value]="responsibleFilter()"
+            (change)="onResponsibleFilterChange(responsibleSelect.value)">
       <option value="any">Qualquer um</option>
       <option value="me">Atribuídos a mim</option>
       <option value="none">Sem responsável</option>
+      @if (assigneesStore.assignees().length > 0) {
+        <optgroup label="Pessoas da equipe">
+          @for (assignee of assigneesStore.assignees(); track assignee.id) {
+            <option [value]="assignee.id">{{ assignee.fullName }}</option>
+          }
+        </optgroup>
+      }
     </select>
   </div>
 
@@ -107,6 +123,26 @@
             <option [value]="priority">{{ priorityLabels[priority] }}</option>
           }
         </select>
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="monitorAwaiting">Aguardando</label>
+        <select #awaitingSelect id="monitorAwaiting" class="form-select" [value]="store.filters().awaiting ?? ''"
+                (change)="onAwaitingChange(awaitingSelect.value)">
+          <option value="">Qualquer situação</option>
+          @for (awaiting of awaitingOptions; track awaiting) {
+            <option [value]="awaiting">{{ awaitingLabels[awaiting] }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="monitorCreatedFrom">Aberto de</label>
+        <input #createdFromInput id="monitorCreatedFrom" type="date" class="form-control" [value]="store.filters().createdFrom ?? ''"
+               [max]="store.filters().createdTo ?? ''" (change)="onCreatedDateChange('from', createdFromInput)" />
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="monitorCreatedTo">Aberto até</label>
+        <input #createdToInput id="monitorCreatedTo" type="date" class="form-control" [value]="store.filters().createdTo ?? ''"
+               [min]="store.filters().createdFrom ?? ''" (change)="onCreatedDateChange('to', createdToInput)" />
       </div>
       <div class="col-6 col-md-4">
         <label class="form-label small" for="monitorSort">Ordenar</label>
@@ -208,7 +244,12 @@
               </td>
               <td class="small" data-label="Setor">{{ ticket.sectorName }}</td>
               <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
-              <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
+              <td data-label="Status">
+                <span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span>
+                @if (ticket.awaiting) {
+                  <span class="d-block small text-muted mt-1">{{ awaitingLabels[ticket.awaiting] }}</span>
+                }
+              </td>
               <td data-label="SLA"><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
               <td class="text-nowrap small" data-label="Prazo" [class.text-danger]="isOverdue(ticket)">
                 <!-- Ícone e data num item só: no card do celular a célula vira flex e os separaria. -->

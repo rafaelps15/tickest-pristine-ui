@@ -2,130 +2,142 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { Observable, forkJoin, of } from 'rxjs';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { TicketCountQuery } from '../entities/ticket-count-query';
-import { TicketDashboardAttention, TicketDashboardScope, TicketDashboardSla, TicketDashboardVolume } from '../entities/ticket-dashboard';
-import { TicketPriority } from '../entities/ticket-priority';
-import { TicketSlaStatus } from '../entities/ticket-sla-status';
-import { TicketStatus } from '../entities/ticket-status';
+import { TicketStatsQuery } from '../entities/ticket-stats-query';
+import { TicketDashboardScope } from '../entities/ticket-dashboard';
+import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { SessionService, extractErrorMessage } from '../../shared';
-
-/** Status que contam como "ativo" (o relógio do SLA corre). */
-const ACTIVE: TicketStatus[] = [TicketStatus.Open, TicketStatus.InProgress];
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
 function widgetError(error: unknown, fallback: string): string | null {
   return error ? extractErrorMessage(error as HttpErrorResponse, {}, fallback) : null;
 }
 
+/** Se dois recortes pedem exatamente os mesmos chamados (a ordem dos setores importa pouco, mas vem estável da barra). */
+function sameScope(a: TicketDashboardScope, b: TicketDashboardScope): boolean {
+  return a.priority === b.priority && a.assignee === b.assignee && a.assignedToUserId === b.assignedToUserId
+    && a.from === b.from && a.to === b.to && (a.sectorIds ?? []).join() === (b.sectorIds ?? []).join();
+}
+
 /**
- * Store dos widgets operacionais do Início (Volume, SLA e Central de atenção) pra quem atende a
- * fila (`tickets:manage`). Cada widget tem o seu `rxResource`, então carrega, falha e se recupera
- * sozinho. Todos os números são `totalCount` do servidor (GET /tickets com `pageSize=1`), nunca
- * contagem de itens de uma página; trocar o recorte cancela as requisições em voo.
+ * Store dos widgets operacionais do Início pra quem atende a fila (`tickets:manage`): o agregado
+ * (Volume, SLA e Central de atenção numa chamada, GET /tickets/stats/overview), os tempos médios
+ * (GET /tickets/stats/times) e o gráfico Criados x Resolvidos (GET /tickets/stats/volume), todos
+ * com o mesmo recorte. Cada um tem o seu `rxResource`: carrega, falha e se recupera sozinho, e
+ * trocar o recorte cancela as requisições em voo. Todo número vem do servidor.
  */
 export const TicketDashboardStore = signalStore(
   { providedIn: 'root' },
   withState({
-    scope: {} as TicketDashboardScope
+    scope: {} as TicketDashboardScope,
+    /** Agrupamento do gráfico Criados x Resolvidos. */
+    groupBy: 'Day' as TicketVolumeGrouping
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
     _session: inject(SessionService)
   })),
   withProps((store) => {
-    /** Filtro base do recorte; `null` quando o recorte não tem como ter chamados (ex.: "meus" sem usuário). */
-    const base = (): TicketCountQuery | null => {
+    /**
+     * Recorte em filtros da API, sem o período (cada rota aplica o período a uma data diferente);
+     * `null` quando o recorte não tem como ter chamados ("meus" sem usuário logado).
+     */
+    const base = (): TicketStatsQuery | null => {
       const scope = store.scope();
-      const query: TicketCountQuery = { sectorId: scope.sectorId, priority: scope.priority };
+      const query: TicketStatsQuery = { sectorIds: scope.sectorIds, priority: scope.priority };
       if (scope.assignee === 'none') return { ...query, unassignedOnly: true };
       if (scope.assignee === 'me') {
         const userId = store._session.userId();
         return userId ? { ...query, assignedToUserId: userId } : null;
       }
-      return query;
+      return scope.assignedToUserId ? { ...query, assignedToUserId: scope.assignedToUserId } : query;
     };
 
-    /** Conta um recorte, ou devolve 0 sem perguntar à API quando o recorte é vazio por definição. */
-    const count = (query: TicketCountQuery | null): Observable<number> =>
-      query ? store._ticketDataService.count(query) : of(0);
-
-    /** Só pergunta à API com a permissão de ver a fila — sem ela, o resource fica parado (nada de 403 certo). */
-    const params = () => (store._session.hasPermission('tickets:manage') ? { scope: store.scope(), base: base() } : undefined);
+    /** Só pergunta à API com a permissão de ver a fila e um recorte possível — sem isso, o resource fica parado. */
+    const allowed = () => store._session.hasPermission('tickets:manage');
 
     return {
-      _volumeResource: rxResource({
-        params,
-        stream: ({ params: p }): Observable<TicketDashboardVolume> => forkJoin({
-          total: count(p.base),
-          backlog: count(p.base && { ...p.base, statuses: ACTIVE }),
-          inProgress: count(p.base && { ...p.base, statuses: [TicketStatus.InProgress] }),
-          resolved: count(p.base && { ...p.base, statuses: [TicketStatus.Resolved] }),
-          closed: count(p.base && { ...p.base, statuses: [TicketStatus.Closed] })
-        })
+      // Volume, SLA e atenção contam os chamados abertos no período.
+      _overviewResource: rxResource({
+        params: () => {
+          const query = allowed() ? base() : null;
+          return query ? { ...query, createdFrom: store.scope().from, createdTo: store.scope().to } : undefined;
+        },
+        stream: ({ params }) => store._ticketDataService.getOverview(params)
       }),
-      _slaResource: rxResource({
-        params,
-        stream: ({ params: p }): Observable<TicketDashboardSla> => forkJoin({
-          met: count(p.base && { ...p.base, slaStatus: TicketSlaStatus.Met }),
-          breached: count(p.base && { ...p.base, slaStatus: TicketSlaStatus.Breached }),
-          atRisk: count(p.base && { ...p.base, slaStatus: TicketSlaStatus.AtRisk })
-        })
+      // Os tempos médios consideram as conclusões no período (spec 027, DEC-4).
+      _timesResource: rxResource({
+        params: () => {
+          const query = allowed() ? base() : null;
+          return query ? { ...query, resolvedFrom: store.scope().from, resolvedTo: store.scope().to } : undefined;
+        },
+        stream: ({ params }) => store._ticketDataService.getTimes(params)
       }),
-      _attentionResource: rxResource({
-        params,
-        stream: ({ params: p }): Observable<TicketDashboardAttention> => {
-          // Interseções: com outra prioridade filtrada não há urgentes; com "meus", não há sem responsável.
-          const otherPriority = p.scope.priority !== undefined && p.scope.priority !== TicketPriority.Urgent;
-          return forkJoin({
-            overdue: count(p.base && { ...p.base, slaStatus: TicketSlaStatus.Breached }),
-            critical: count(p.base && !otherPriority ? { ...p.base, priority: TicketPriority.Urgent, statuses: ACTIVE } : null),
-            unassigned: count(p.base && p.scope.assignee !== 'me'
-              ? { sectorId: p.base.sectorId, priority: p.base.priority, unassignedOnly: true, statuses: ACTIVE }
-              : null)
-          });
-        }
+      // O período define o intervalo do gráfico; sem período, as janelas padrão do back-end.
+      _trendResource: rxResource({
+        params: () => {
+          const query = allowed() ? base() : null;
+          return query
+            ? { groupBy: store.groupBy(), query: { ...query, createdFrom: store.scope().from, createdTo: store.scope().to } }
+            : undefined;
+        },
+        stream: ({ params }) => store._ticketDataService.getVolume(params.groupBy, params.query)
       })
     };
   }),
   withComputed((store) => ({
-    /** Volume do recorte, ou null enquanto carrega/em erro (hasValue() evita a exceção de value()). */
-    volume: computed(() => store._volumeResource.hasValue() ? store._volumeResource.value() : null),
-    volumeLoading: computed(() => store._volumeResource.isLoading()),
-    volumeError: computed(() => widgetError(store._volumeResource.error(), 'Não foi possível carregar o volume de chamados.')),
+    /** Agregado do recorte, ou null enquanto carrega/em erro (hasValue() evita a exceção de value()). */
+    overview: computed(() => store._overviewResource.hasValue() ? store._overviewResource.value() : null),
+    /** Volume do recorte, ou null. */
+    volume: computed(() => store._overviewResource.hasValue() ? store._overviewResource.value().volume : null),
+    /** SLA do recorte, ou null. */
+    sla: computed(() => store._overviewResource.hasValue() ? store._overviewResource.value().sla : null),
+    /** Central de atenção do recorte, ou null. */
+    attention: computed(() => store._overviewResource.hasValue() ? store._overviewResource.value().attention : null),
+    /** O agregado está carregando. */
+    overviewLoading: computed(() => store._overviewResource.isLoading()),
+    /** Erro do agregado (vale pros três grupos que dependem dele). */
+    overviewError: computed(() => widgetError(store._overviewResource.error(), 'Não foi possível carregar os números da operação.')),
 
-    /** SLA do recorte, ou null enquanto carrega/em erro. */
-    sla: computed(() => store._slaResource.hasValue() ? store._slaResource.value() : null),
-    slaLoading: computed(() => store._slaResource.isLoading()),
-    slaError: computed(() => widgetError(store._slaResource.error(), 'Não foi possível carregar o SLA.')),
+    /** Tempos médios do recorte, ou null. */
+    times: computed(() => store._timesResource.hasValue() ? store._timesResource.value() : null),
+    /** Os tempos médios estão carregando. */
+    timesLoading: computed(() => store._timesResource.isLoading()),
+    /** Erro dos tempos médios. */
+    timesError: computed(() => widgetError(store._timesResource.error(), 'Não foi possível carregar os tempos médios.')),
 
-    /** Central de atenção do recorte, ou null enquanto carrega/em erro. */
-    attention: computed(() => store._attentionResource.hasValue() ? store._attentionResource.value() : null),
-    attentionLoading: computed(() => store._attentionResource.isLoading()),
-    attentionError: computed(() => widgetError(store._attentionResource.error(), 'Não foi possível carregar a central de atenção.'))
+    /** Pontos do gráfico Criados x Resolvidos, do mais antigo pro mais novo (vazio enquanto não há resposta). */
+    trend: computed(() => store._trendResource.hasValue() ? store._trendResource.value() : []),
+    /** O gráfico está carregando. */
+    trendLoading: computed(() => store._trendResource.isLoading()),
+    /** Erro do gráfico. */
+    trendError: computed(() => widgetError(store._trendResource.error(), 'Não foi possível carregar o volume de chamados.'))
   })),
   withMethods((store) => ({
-    /** Troca o recorte dos três widgets (vindo dos filtros da URL); recorte igual não refaz nada. */
+    /** Troca o recorte de todos os widgets (vindo dos filtros da URL); recorte igual não refaz nada. */
     setScope(scope: TicketDashboardScope): void {
-      const current = store.scope();
-      if (current.sectorId === scope.sectorId && current.priority === scope.priority && current.assignee === scope.assignee) return;
+      if (sameScope(store.scope(), scope)) return;
       patchState(store, { scope: { ...scope } });
     },
 
-    /** "Tentar novamente" do Volume. */
-    reloadVolume(): void {
-      store._volumeResource.reload();
+    /** Muda o agrupamento do gráfico (dia/semana/mês). */
+    setGroupBy(groupBy: TicketVolumeGrouping): void {
+      patchState(store, { groupBy });
     },
 
-    /** "Tentar novamente" do SLA. */
-    reloadSla(): void {
-      store._slaResource.reload();
+    /** "Tentar novamente" do agregado (Volume, SLA e Central de atenção). */
+    reloadOverview(): void {
+      store._overviewResource.reload();
     },
 
-    /** "Tentar novamente" da Central de atenção. */
-    reloadAttention(): void {
-      store._attentionResource.reload();
+    /** "Tentar novamente" dos tempos médios. */
+    reloadTimes(): void {
+      store._timesResource.reload();
+    },
+
+    /** "Tentar novamente" do gráfico. */
+    reloadTrend(): void {
+      store._trendResource.reload();
     }
   }))
 );
