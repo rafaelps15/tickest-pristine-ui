@@ -326,6 +326,20 @@ body {
   --bs-btn-disabled-color: #b3b5ff;
 }
 
+/* O botão-link também vinha no azul de fábrica: mesmo Índigo Profundo do contornado, e o claro no escuro. */
+.btn-link {
+  --bs-btn-color: var(--tk-primary-darker);
+  --bs-btn-hover-color: var(--tk-primary-dark);
+  --bs-btn-active-color: var(--tk-primary-darker);
+  --bs-btn-focus-shadow-rgb: var(--tk-primary-rgb);
+}
+
+[data-bs-theme="dark"] .btn-link {
+  --bs-btn-color: #b3b5ff;
+  --bs-btn-hover-color: #b3b5ff;
+  --bs-btn-active-color: #b3b5ff;
+}
+
 .btn-outline-secondary:hover, .btn-outline-primary:hover {
   transform: translateY(-1px);
 }
