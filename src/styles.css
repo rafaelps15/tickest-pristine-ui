@@ -10,6 +10,8 @@
   --tk-primary-dark: #5f61e6;
   --tk-primary-darker: #3a3ca3;
   --tk-primary-rgb: 105, 108, 255;
+  /* Índigo como texto (link ativo, menu): o --tk-primary puro dá só ~4:1 sobre fundo claro. */
+  --tk-primary-text: var(--tk-primary-darker);
 
   --tk-page-bg: #f5f5f9;
   --tk-surface: #ffffff;
@@ -67,6 +69,7 @@
   --tk-warning-text: #ffc670;
   --tk-info-text: #5fd9f2;
   --tk-danger-text: #ff8669;
+  --tk-primary-text: #b3b5ff;
 
   --tk-shadow-sm: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.3);
   --tk-shadow-md: 0 0.375rem 1.25rem rgba(0, 0, 0, 0.4);
@@ -282,8 +285,12 @@ body {
   transition: transform var(--tk-transition), box-shadow var(--tk-transition), background-color var(--tk-transition);
 }
 
+/*
+ * Gradiente a partir do índigo escuro: branco sobre o --tk-primary puro dava 4,0:1 (abaixo do AA);
+ * sobre a ponta mais clara agora dá 4,8:1. A outra ponta é o escuro misturado ao "darker".
+ */
 .btn-primary {
-  background: linear-gradient(to right, var(--tk-primary), var(--tk-primary-dark));
+  background: linear-gradient(to right, var(--tk-primary-dark), color-mix(in srgb, var(--tk-primary-dark) 75%, var(--tk-primary-darker)));
   border: none;
   box-shadow: 0 0.25rem 0.75rem rgba(var(--tk-primary-rgb), 0.3);
 }
@@ -291,7 +298,13 @@ body {
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 0.5rem 1.1rem rgba(var(--tk-primary-rgb), 0.4);
-  background: linear-gradient(to right, var(--tk-primary-dark), var(--tk-primary));
+  background: linear-gradient(to right, color-mix(in srgb, var(--tk-primary-dark) 75%, var(--tk-primary-darker)), var(--tk-primary-dark));
+}
+
+/* No escuro, a sombra índigo virava brilho em volta do botão: sombra neutra do tema. */
+[data-bs-theme="dark"] .btn-primary,
+[data-bs-theme="dark"] .btn-primary:hover:not(:disabled) {
+  box-shadow: var(--tk-shadow-sm);
 }
 
 .btn-primary:active:not(:disabled) {

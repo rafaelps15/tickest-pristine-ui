@@ -134,10 +134,13 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 - **Índigo Confiança** (`#696cff`): a cor da marca. Usada em botões primários (como gradiente,
   ver Components), estado ativo do menu lateral, anel de foco de formulário, ícones de destaque.
   Aparece em ≤10% de qualquer tela — ver **The One Accent Rule** abaixo.
-- **Índigo Confiança Escuro** (`#5f61e6`): ponta escura do gradiente do botão primário e seu
-  estado de hover.
-- **Índigo Profundo** (`#3a3ca3`): acento mais escuro, usado só na wordmark da marca
-  ("tickest") no cabeçalho de login/ativação.
+- **Índigo Confiança Escuro** (`#5f61e6`): ponta clara do gradiente do botão primário (branco
+  sobre ele dá 4,8:1; sobre o `#696cff` puro dava só 4,0:1 — trocado na critique 2 de
+  Departamentos, 2026-10-28).
+- **Índigo Profundo** (`#3a3ca3`): acento mais escuro — wordmark ("tickest") no login/ativação,
+  a outra ponta do gradiente do botão primário (misturado ao escuro) e, via `--tk-primary-text`,
+  o índigo usado **como texto** sobre fundo claro (7,5:1). No tema escuro, `--tk-primary-text`
+  vira `#b3b5ff` (6,9:1). Texto em índigo usa `--tk-primary-text`, nunca o `--tk-primary` puro.
 
 ### Neutral
 - **Grafite Texto** (`#2b2c40`): texto principal (claro).
@@ -288,8 +291,9 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 
 ### Buttons
 - **Shape:** `rounded-sm` (0.5rem).
-- **Primary:** gradiente `linear-gradient(to right, índigo, índigo-escuro)`, texto branco, sombra
-  tintada no repouso.
+- **Primary:** gradiente `linear-gradient(to right, índigo-escuro, índigo-escuro misturado ao
+  profundo)`, texto branco (≥4,8:1 em toda a extensão), sombra tintada no repouso — no tema
+  escuro, sombra neutra do tema (a tintada virava brilho).
 - **Hover:** eleva 1px (`translateY(-1px)`) e inverte a direção do gradiente; sombra cresce.
 - **Outline (secondary/danger/success):** transparente com borda, mesmo lift de 1px no hover, sem
   gradiente — reservado para ações secundárias ou destrutivas fora do botão primário da tela.
@@ -330,7 +334,8 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 - **Ícones do menu:** glifo de 1.25rem (`.menu-icon`) — tamanho de ícone, não um passo da escala de texto.
 - **Sidebar:** 260px fixos, fundo `surface`, itens agrupados sob cabeçalhos em maiúsculas
   rastreadas (ex. "ADMINISTRAÇÃO", visível só com a permissão correspondente). Item ativo ganha
-  fundo em gradiente suave da marca + barra vertical de 3px à esquerda + texto em índigo. Hover
+  fundo em gradiente suave da marca + barra vertical de 3px à esquerda + texto em `--tk-primary-text`
+  (o índigo puro sobre o fundo tingido dava 3,4:1 no claro e 3,2:1 no escuro). Hover
   desloca o item 0.15rem para a direita (`transform`, nunca `padding` — ver Named Rule abaixo).
 - **Navbar:** barra flutuante com vidro/blur ancorada no topo do conteúdo, não no topo da viewport.
 - **Mobile (<1199px):** sidebar vira off-canvas deslizante, com overlay escurecido.

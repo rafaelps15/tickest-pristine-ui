@@ -70,7 +70,7 @@
 
 .menu-item.active .menu-link {
   background: linear-gradient(to right, rgba(var(--tk-primary-rgb), 0.14), rgba(var(--tk-primary-rgb), 0.02));
-  color: var(--tk-primary);
+  color: var(--tk-primary-text);
   font-weight: 600;
 }
 
