@@ -53,3 +53,9 @@
 :host-context([data-bs-theme="dark"]) .insights-chip-warning.active {
   background-color: rgba(255, 171, 0, 0.16); /* o âmbar do .bg-label-warning escuro */
 }
+
+/* Totais na linha de apoio do Resumo: o número em peso forte, o resto discreto. */
+.insights-total {
+  color: var(--tk-text-primary);
+  font-weight: 600;
+}

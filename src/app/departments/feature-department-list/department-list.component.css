@@ -98,3 +98,25 @@
     background-color: rgba(var(--tk-primary-rgb), 0.08);
   }
 }
+
+/*
+ * Barra da busca acima da lista (sem card): campo à esquerda, contagem do filtro e "Limpar filtros"
+ * à direita. No celular, o campo ocupa a linha toda e o resto quebra abaixo.
+ */
+.department-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.department-search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+.department-clear {
+  min-height: 2.75rem;
+  margin-inline-start: auto;
+}

@@ -1,15 +1,10 @@
 <app-summary-card [loading]="loading()" [failed]="failed()">
+  <!-- Os totais são contexto, não decisão: uma linha de apoio. O que pede ação são os chips abaixo. -->
   <div class="insights-section">
-    <div class="d-flex gap-4">
-      <div>
-        <div class="insights-stat">{{ departments().length }}</div>
-        <p class="text-muted small mb-0">{{ departments().length === 1 ? 'departamento' : 'departamentos' }}</p>
-      </div>
-      <div>
-        <div class="insights-stat">{{ totalSectors() }}</div>
-        <p class="text-muted small mb-0">{{ totalSectors() === 1 ? 'setor' : 'setores' }}</p>
-      </div>
-    </div>
+    <p class="small text-muted mb-0">
+      <span class="insights-total">{{ departments().length }}</span> {{ departments().length === 1 ? 'departamento' : 'departamentos' }}
+      · <span class="insights-total">{{ totalSectors() }}</span> {{ totalSectors() === 1 ? 'setor' : 'setores' }}
+    </p>
   </div>
 
   <!-- Cada aviso é um filtro: um chip por problema, com a contagem; clicar de novo volta a todos. -->

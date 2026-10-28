@@ -32,13 +32,16 @@ describe('DepartmentGuideComponent', () => {
     expect(text).not.toContain('Departamento e setor');
   });
 
-  it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
+  it('começa fechado até na primeira visita (exceção do DESIGN.md) e lembra quando o usuário abre', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 
-    (fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement).click();
+    const toggle = fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    toggle.click();
     await fixture.whenStable();
 
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
   });
 });

@@ -24,16 +24,29 @@
 }
 
 @if (store.departments().length > 0) {
-  <app-filter-bar label="Busca" clearLabel="Limpar filtros" [clearable]="hasFilters()" (clear)="clearFilters()">
-    <div class="col-12 col-md-6 col-lg-4">
+  <!--
+    Busca, contagem e "Limpar filtros" numa linha só, colada na lista que eles afetam — antes a busca
+    ocupava um card inteiro pra um campo de um terço da largura (critique 2 de 2026-10-28).
+  -->
+  <div class="department-toolbar">
+    <div class="input-group department-search">
+      <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
       <label class="visually-hidden" for="departmentSearch">Buscar departamento ou setor</label>
-      <div class="input-group">
-        <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
-        <input id="departmentSearch" type="search" class="form-control" placeholder="Departamento ou setor"
-               [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
-      </div>
+      <input id="departmentSearch" type="search" class="form-control" placeholder="Buscar departamento ou setor"
+             [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
     </div>
-  </app-filter-bar>
+    <!-- A região viva existe sempre (só o texto muda): criada junto com o texto, o leitor de tela não anuncia. -->
+    <p class="small text-muted mb-0" aria-live="polite">
+      @if (hasFilters()) {
+        Mostrando {{ filteredDepartments().length }} de {{ store.departments().length }} departamentos.
+      }
+    </p>
+    @if (hasFilters()) {
+      <button type="button" class="btn btn-sm btn-outline-secondary department-clear" (click)="clearFilters()">
+        <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+      </button>
+    }
+  </div>
 }
 
 @if (store.listState().loading && store.departments().length === 0) {
@@ -69,13 +82,6 @@
     </div>
   </div>
 } @else {
-  <!-- Quantos sobraram depois do filtro: o aviso pressionado no Resumo sozinho não diz que a lista encolheu. -->
-  <!-- A região viva existe sempre (só o texto muda): criada junto com o texto, o leitor de tela não anuncia. -->
-  <p class="small text-muted mb-2" [class.d-none]="!hasFilters()" aria-live="polite">
-    @if (hasFilters()) {
-      Mostrando {{ filteredDepartments().length }} de {{ store.departments().length }} departamentos.
-    }
-  </p>
   <!--
     Uma coluna: cada departamento ocupa a largura toda e os setores dele se distribuem numa grade
     interna. A grade de dois cards por linha deixava buracos sob os cards curtos.

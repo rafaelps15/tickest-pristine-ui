@@ -9,7 +9,6 @@ import { UserSummary } from '../../users';
 import { DepartmentGuideComponent } from './department-guide.component';
 import { DepartmentInsightsComponent, DepartmentIssue } from './department-insights.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
-import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
@@ -23,7 +22,7 @@ const NEW_ITEM_HIGHLIGHT_MS = 4000;
 
 @Component({
     selector: 'app-department-list',
-    imports: [ReactiveFormsModule, PageHeaderComponent, DepartmentGuideComponent, DepartmentInsightsComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, RowActionsComponent],
+    imports: [ReactiveFormsModule, PageHeaderComponent, DepartmentGuideComponent, DepartmentInsightsComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, RowActionsComponent],
     templateUrl: './department-list.component.html',
     styleUrl: './department-list.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush

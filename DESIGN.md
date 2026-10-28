@@ -434,6 +434,12 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
   dos próprios números. Os títulos das seções do Guia não repetem o título de um card da tela
   ("Como ler o gráfico", não "Chamados criados") — no leitor de tela, títulos iguais confundem
   ajuda com conteúdo.
+- **Exceção — Departamentos:** o Guia também começa fechado (critique 2 de 2026-10-28). O
+  subtítulo já traz a regra que importa ("sem setor, o departamento não aparece na abertura de
+  chamados"), e aberto ele empurrava o primeiro departamento pra baixo da dobra no desktop e
+  ocupava a primeira tela do celular. Na mesma rodada, a busca saiu do card próprio e virou uma
+  barra acima da lista (busca, "Mostrando X de Y" e "Limpar filtros" juntos), e o Resumo trocou os
+  números grandes por uma linha de apoio — o que pede ação ali são os chips de filtro.
 - **Sempre no fluxo:** Guia e Resumo ficam no topo da tela, na largura do conteúdo, em qualquer
   resolução e navegador. Nunca `position: fixed` nas margens do `container-xxl`: o antigo modo
   "trilha lateral" (≥1900px, ~130–170px de largura) dependia do viewport real — zoom, escala do
