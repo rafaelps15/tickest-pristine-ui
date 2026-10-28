@@ -41,7 +41,15 @@
 }
 
 .table.is-refreshing {
-  opacity: 0.5;
+  /* Mesmo esmaecimento das recargas do Início: o texto continua legível enquanto a página nova chega. */
+  opacity: 0.6;
   pointer-events: none;
 }
 
+
+/* Toque: o "Ordenar por" do topo da tabela ganha o alvo mínimo de dedo (44px). */
+@media (pointer: coarse) {
+  .monitor-sort {
+    min-height: 44px;
+  }
+}

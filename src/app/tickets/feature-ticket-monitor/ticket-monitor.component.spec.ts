@@ -1013,8 +1013,11 @@ describe('TicketMonitorComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar o resumo de SLA');
 
-    const retryButton = fixture.nativeElement.querySelector('.alert-danger button') as HTMLButtonElement;
-    retryButton.click();
+    // Linha junto dos números (que mostram "—"), não um alerta grande empilhado com os da lista.
+    const line = fixture.nativeElement.querySelector('p[role="alert"]') as HTMLElement;
+    expect(line.textContent).toContain('Erro ao carregar o resumo de SLA');
+    expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+    (line.querySelector('button') as HTMLButtonElement).click();
 
     expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
   });

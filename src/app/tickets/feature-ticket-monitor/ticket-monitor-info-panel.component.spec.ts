@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketDetail } from '../entities/ticket';
@@ -121,6 +122,21 @@ describe('TicketMonitorInfoPanelComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Carlos Souza');
+  });
+
+  it('mostra o prazo relativo recebido da tela, em vermelho e negrito quando atrasado, e de quem é a vez', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('ticket', { ...ticket, awaiting: TicketAwaiting.Agent });
+    fixture.componentRef.setInput('dueRelative', 'venceu há 35 min');
+    fixture.componentRef.setInput('overdue', true);
+    await fixture.whenStable();
+
+    const relative = Array.from(fixture.nativeElement.querySelectorAll('dd span') as NodeListOf<HTMLElement>)
+      .find(span => span.textContent?.includes('venceu há 35 min'))!;
+    expect(relative.classList).toContain('text-danger');
+    expect(relative.classList).toContain('fw-semibold');
+    expect(fixture.nativeElement.textContent).toContain('Aguardando');
+    expect(fixture.nativeElement.textContent).toContain('Aguardando a equipe');
   });
 
   it('mostra a data de resolução só quando o chamado já foi resolvido', async () => {

@@ -34,10 +34,11 @@
 </div>
 
 @if (store.slaSummaryState().error) {
-  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
-    <span>{{ store.slaSummaryState().error }}</span>
-    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.reloadSlaSummary()">Tentar novamente</button>
-  </div>
+  <!-- Erro dos números numa linha junto deles (os cards mostram "—"), não mais um alerta grande empilhado. -->
+  <p class="small text-danger d-flex flex-wrap align-items-center gap-2 mb-2" role="alert">
+    <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.slaSummaryState().error }}</span>
+    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" (click)="store.reloadSlaSummary()">Tentar novamente</button>
+  </p>
 }
 
 <!--
@@ -197,7 +198,7 @@
     </span>
     <div class="d-flex align-items-center gap-2">
       <label class="small text-muted mb-0" for="monitorSort">Ordenar por</label>
-      <select #sortSelect id="monitorSort" class="form-select form-select-sm w-auto"
+      <select #sortSelect id="monitorSort" class="form-select form-select-sm w-auto monitor-sort"
               (change)="store.setSort(+sortSelect.value)">
         @for (sort of sortOptions; track sort) {
           <option [value]="sort" [selected]="store.filters().sort === sort">{{ sortOrderLabels[sort] }}</option>
@@ -358,6 +359,7 @@
     <div class="col-12 col-lg-4 info-panel-col">
       <app-ticket-monitor-info-panel [ticket]="ticket" [modal]="isOverlayViewport()"
                                      [canAssignToMe]="canAssignToMe(ticket)" [canAssignResponsible]="canAssignResponsible(ticket)"
+                                     [dueRelative]="dueRelative(ticket)" [overdue]="isOverdue(ticket)"
                                      [assigningToMe]="store.assigningToMeIds().includes(ticket.id)"
                                      (close)="closeInfoPanel()" (assignToMeClick)="onAssignToMe(ticket.id)"
                                      (assignResponsibleClick)="onOpenAssignResponsibleModal(ticket.id)" />

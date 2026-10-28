@@ -5,6 +5,7 @@ import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
 import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
 
@@ -35,6 +36,10 @@ export class TicketMonitorInfoPanelComponent {
   readonly canAssignResponsible = input(false);
   /** "Atribuir a mim" deste chamado está em andamento. */
   readonly assigningToMe = input(false);
+  /** Prazo relativo ("vence em 2h" / "venceu há 35 min"), calculado pela tela com a hora do servidor; null sem prazo correndo. */
+  readonly dueRelative = input<string | null>(null);
+  /** Se o prazo já passou (pela hora do servidor). */
+  readonly overdue = input(false);
   readonly close = output<void>();
   /** Atalho do painel: atribuir o chamado a quem está logado. */
   readonly assignToMeClick = output<void>();
@@ -49,4 +54,5 @@ export class TicketMonitorInfoPanelComponent {
   protected readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
   protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
   protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+  protected readonly awaitingLabels = TICKET_AWAITING_LABELS;
 }
