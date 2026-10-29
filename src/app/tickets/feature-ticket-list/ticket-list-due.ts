@@ -1,4 +1,5 @@
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
+import { Ticket } from '../entities/ticket';
 
 /** Tom visual da situação do prazo: neutro, de atenção ou de alerta (cor nunca é o único sinal — o texto diz). */
 export type DueTone = 'neutral' | 'warning' | 'danger';
@@ -38,3 +39,23 @@ export const TICKET_LIST_DUE_LEGEND: TicketSlaStatus[] = [
     TicketSlaStatus.Missed,
     TicketSlaStatus.NotApplicable
 ];
+
+/** Prazo e situação que a coluna "Prazo" mostra. */
+export interface TicketDue {
+    /** Prazo (UTC). */
+    dueAtUtc: string;
+    /** Situação em relação ao prazo. */
+    slaStatus: TicketSlaStatus;
+}
+
+/**
+ * O prazo do ciclo de resolução vigente (spec 024): num chamado reaberto, o novo prazo e a situação
+ * calculada sobre ele, como a seção SLA do detalhe. Sem os campos do ciclo vigente (back-end antes
+ * da spec 024), o prazo do primeiro ciclo.
+ */
+export function currentTicketDue(ticket: Ticket): TicketDue {
+    return {
+        dueAtUtc: ticket.currentDueAtUtc ?? ticket.dueAtUtc,
+        slaStatus: ticket.currentSlaStatus ?? ticket.slaStatus
+    };
+}

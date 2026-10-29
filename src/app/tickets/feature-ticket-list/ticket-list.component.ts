@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { MyTicketsSummaryStore } from '../application/my-tickets-summary.store';
-import { TICKET_LIST_DUE_DISPLAY } from './ticket-list-due';
+import { TICKET_LIST_DUE_DISPLAY, currentTicketDue } from './ticket-list-due';
 import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
@@ -71,6 +71,8 @@ export class TicketListComponent implements OnInit {
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
     /** Como a coluna "Prazo" conta cada situação, na voz de quem abriu o chamado. */
     readonly dueDisplay = TICKET_LIST_DUE_DISPLAY;
+    /** Prazo e situação do ciclo vigente de cada chamado (o novo, depois de reabrir). */
+    readonly currentDue = currentTicketDue;
 
     /** Opções do seletor de grupo, na ordem da tela; "Em aberto" é o padrão. */
     readonly statusGroupOptions: { key: keyof typeof TICKET_STATUS_GROUP_URL_VALUES; label: string; value: TicketStatusGroup | null }[] = [

@@ -152,11 +152,13 @@
                 </div>
               </td>
               <td data-label="Prazo">
-                @let due = dueDisplay[ticket.slaStatus];
+                <!-- O ciclo vigente: num chamado reaberto, o prazo novo (o mesmo da seção SLA do detalhe). -->
+                @let current = currentDue(ticket);
+                @let due = dueDisplay[current.slaStatus];
                 <div class="due" [class.due-warning]="due.tone === 'warning'" [class.due-danger]="due.tone === 'danger'">
                   <span class="due-label"><i class="bx {{ due.icon }}" aria-hidden="true"></i>{{ due.label }}</span>
                   @if (due.showDate) {
-                    <span class="due-date small num">{{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                    <span class="due-date small num">{{ current.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
                   }
                 </div>
               </td>

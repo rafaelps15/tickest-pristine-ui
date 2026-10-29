@@ -137,6 +137,22 @@ describe('TicketListComponent', () => {
     expect(time.getAttribute('datetime')).toBe(openTicket.lastActivityAtUtc);
   });
 
+  it('num chamado reaberto, a coluna Prazo mostra o prazo e a situação do ciclo vigente, não os do primeiro ciclo', async () => {
+    // Resolvido no prazo, reaberto: o primeiro ciclo continua "Met", o ciclo novo já passou do prazo.
+    storeFake.tickets.set([{
+      ...resolvedTicket, status: TicketStatus.Open,
+      currentDueAtUtc: '2026-01-05T18:30:00Z', currentSlaStatus: TicketSlaStatus.Breached
+    }]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const due = fixture.nativeElement.querySelector('td[data-label="Prazo"]') as HTMLElement;
+    expect(due.textContent).toContain('Atrasado');
+    expect(due.textContent).not.toContain('Resolvido no prazo');
+    expect(due.querySelector('.due-danger, .due')?.classList).toContain('due-danger');
+    expect(due.querySelector('.due-date')?.textContent).toContain('05/01/2026');
+  });
+
   it('diz "Sem responsável" (e não "Aguardando atendimento") num chamado encerrado que ninguém assumiu', async () => {
     storeFake.tickets.set([{ ...resolvedTicket, assignedToName: null }]);
     const fixture = TestBed.createComponent(TicketListComponent);

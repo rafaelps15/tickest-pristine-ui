@@ -19,10 +19,14 @@ export interface Ticket {
   /** Nome do setor de destino. */
   sectorName: string;
   createdAtUtc: string;
-  /** Prazo atual de resolução (UTC). */
+  /** Prazo de resolução do primeiro ciclo (UTC) — congelado depois de reabrir; a lista usa {@link currentDueAtUtc}. */
   dueAtUtc: string;
-  /** Situação do chamado em relação ao prazo, pela mesma regra do Monitor. */
+  /** Situação do chamado em relação ao prazo do primeiro ciclo, pela mesma regra do Monitor. */
   slaStatus: TicketSlaStatus;
+  /** Prazo do ciclo de resolução vigente (UTC): o novo, depois de reabrir (spec 024; ausente enquanto o back-end não manda). */
+  currentDueAtUtc?: string;
+  /** Situação do ciclo de resolução vigente (spec 024; ausente enquanto o back-end não manda). */
+  currentSlaStatus?: TicketSlaStatus;
   /** Data da ação mais recente registrada no histórico do chamado (UTC). */
   lastActivityAtUtc: string;
   /** Se quem está logado pode cancelar agora (dono na janela de 15 min, ou `tickets:cancel`). */
