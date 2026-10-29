@@ -10,6 +10,7 @@ target_fingerprint: "sha256:90f44c1f8426b2b5e577ca18dec9d300fdb9c6de7fef3f18d958
 target_path: "C:\\dev\\tickest-pristine-front\\src\\app\\roles\\feature-role-list\\role-list.component.html"
 timestamp: 2026-10-05T03-53-19Z
 slug: eature-role-list-role-list-component-html-185d21a7
+closed: true
 ---
 Method: dual-agent (A: a804fd38aa6d90f30 · B: adfe84c3e1dac4610)
 

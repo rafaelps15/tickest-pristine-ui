@@ -217,9 +217,46 @@ Cancelado não tem cor de área: não é fila nem entrega. No gráfico do Iníci
 da marca (não é status) e "Resolvidos" o verde de Resolvido. A paleta categórica de 5 cores que o
 gráfico antigo usava como ritmo visual foi aposentada no redesenho de 2026-10-28.
 
+### Tokens semânticos de status e de risco de SLA
+Toda cor com significado operacional vem de um token; cor nunca é o único sinal — vem sempre com
+rótulo, número ou ícone. Duas escalas, que não se misturam no mesmo gráfico:
+
+**Status do chamado** (estado atual; áreas como barra, fatia e marcador):
+
+| Significado | Token de área | Contorno (≥3:1) | Texto sobre a área | Onde aparece |
+|---|---|---|---|---|
+| Aberto | `--tk-status-open` (#ffab00) | `--tk-status-open-edge` | `--tk-status-label` | marcador do KPI, fatia, legenda |
+| Em andamento | `--tk-status-in-progress` (#03c3ec) | `--tk-status-in-progress-edge` | `--tk-status-label` | idem |
+| Resolvido | `--tk-status-resolved` (#71dd37) | `--tk-status-resolved-edge` | `--tk-status-label` | idem; série "Resolvidos" do gráfico |
+| Fechado | `--tk-status-closed` (= `--tk-text-muted`) | `--tk-status-closed-edge` | `--tk-status-closed-label` (branco no claro, `--tk-page-bg` no escuro) | idem |
+| Cancelado | sem cor de área | — | texto secundário | "+ N cancelados" fora da barra |
+
+Os contornos são o mesmo matiz escurecido (`color-mix` 55% com preto; no canvas, `edgeColor()`),
+porque âmbar, ciano e verde puros ficam ~2:1 contra o branco (WCAG 1.4.11). "Criados", no gráfico,
+é o índigo da marca (`--tk-primary`): evento, não status.
+
+**Risco de SLA** (prazo dos chamados ativos; regra do back-end em `TicketSlaFilters`):
+
+| Significado | Token | Observação |
+|---|---|---|
+| No prazo | `--tk-text-muted` (neutro) | calmo de propósito: não pede ação |
+| Em risco (≥ 75% do prazo) | `--tk-warning-text` (âmbar escuro) | mais escuro que o âmbar de Aberto, pra os dois não se confundirem quando aparecem juntos |
+| Atrasado (prazo vencido) | `--tk-danger-text` (vermelho) | o único vermelho de risco; só com contagem acima de zero |
+| Cumprido / perdido | `--tk-success-text` / `--tk-danger-text` | resolvidos dentro / fora do prazo |
+
+Vermelho é só risco operacional: falha técnica (erro de leitura) fica em texto secundário.
+
+**Estados de interação:** foco visível com `--tk-primary` (anel de 2px, afastado do elemento);
+hover/selecionado em card com a sombra `--tk-shadow-md`; barra destacada no gráfico (hover ou
+teclado) com contorno de 2px em `--tk-text-primary`; desabilitado-mas-focável com `aria-disabled` e
+opacidade 0.65 e o motivo num tooltip de hover/foco ("Em breve", "Período longo demais").
+
 **The RGB Token Rule.** Fundo ou realce translúcido de marca/alerta usa os tokens em RGB —
-`rgba(var(--tk-primary-rgb), α)` e `rgba(var(--tk-danger-rgb), α)` — nunca o valor literal
-(`rgba(105, 108, 255, …)`). Consolidado em 2026-10-27.
+`rgba(var(--tk-primary-rgb), α)`, `rgba(var(--tk-danger-rgb), α)` e `rgba(var(--tk-success-rgb), α)`
+(o verde, desde 2026-10-28: hover do "Reativar" e badge escuro) — nunca o valor literal
+(`rgba(105, 108, 255, …)`). Consolidado em 2026-10-27. O fundo âmbar "soft" do badge de aviso tem
+token próprio, `--tk-warning-soft-bg` (`#fff2e2` no claro; o âmbar a 16% no escuro), usado pelo
+`.bg-label-warning` e pelo chip "sem setor" pressionado (2026-10-28).
 
 **The Badge Pair Rule.** Toda cor semântica (success/warning/info/danger) existe em dois pares:
 um "soft" (fundo pastel claro + texto na variante escurecida do matiz, ver **Semantic Text**
@@ -333,13 +370,18 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 - **Uso:** status de usuário/ticket, prioridade de ticket, papel/função atribuída. Uma célula com
   múltiplos badges (ex. funções de um usuário) mostra no máximo 2 e agrupa o resto num badge
   "+N" neutro com tooltip nativo — nunca deixa a linha da tabela esticar.
-- **Cor de função (prévia local):** o admin escolhe a cor de cada função na tela Funções
-  (`.badge-role-custom`, fundo `cor 15% + branco`, texto `cor 65% + preto`). Cor sem contraste AA
-  nesse par é recusada na escolha e na criação, e `getRoleColor` devolve `null` (índigo) pra qualquer
-  cor salva que não passe — nenhuma tela que mostra o badge revalida por conta própria.
+- **Cor de função:** todas as funções usam o badge índigo (`bg-label-primary`). A prévia de cor
+  por função guardada no navegador foi removida na auditoria de 2026-10-29 (era persistência
+  simulada de um atributo da função que o back-end não tem); volta quando o back-end guardar a
+  cor (`docs/audit/BACKEND_RECONSTRUCTION.md`, BR-001).
+- **Status do usuário** (`<app-user-status-badge>`, `users/feature-user-list`): Ativo (verde),
+  Convite pendente (âmbar), Inativo (neutro), com o ponto `.badge-dot` — o mesmo componente na
+  tabela, no painel e no Guia. (`.badge-dot`, não `.status-dot`: esse é o marcador de status de
+  chamado do Início, e o nome repetido fazia uma regra sobrescrever a outra.)
 - **Convite pendente** (conta cadastrada, ainda sem senha): `bg-label-warning` — âmbar é "esperando
   alguém", o mesmo raciocínio do "Aberto" nos chamados. Abaixo do badge, uma linha pequena diz a
-  validade do convite ("Vale até 01/11 15:00") ou "Convite expirado".
+  validade do convite ("Vale até 01/11/2026 15:00", com ano também na tabela) ou, vencido, "Convite
+  expirado: reenvie pelo ⋮" em âmbar AA e peso 600 — vencido pede ação, não é só espera.
 
 ### Cards / Containers
 - **Corner Style:** `rounded-md` (0.75rem); modais usam `rounded-lg` (1.25rem).
@@ -380,8 +422,11 @@ pra não ficarem cortados pelo scroll. Implementação: `<app-row-actions [label
 ### Tabelas no celular (`.table-stack`)
 Utilitário global: abaixo de `md`, cada linha vira um card; cada célula com `data-label` vira um
 par rótulo/valor; a célula `.table-stack-actions` (o "⋮") vai pro canto superior direito do card.
-Usado em Meus Chamados e Monitorar Chamados. Texto que não quebra linha (`text-truncate`) dentro do
-card precisa de `width: 0; min-width: 100%`, senão alarga a página inteira.
+Usado em Meus Chamados, Monitorar Chamados e Usuários. Texto que não quebra linha (`text-truncate`) dentro do
+card precisa de `width: 0; min-width: 100%`, senão alarga a página inteira. A célula do título leva
+`.table-stack-title` quando não é a primeira (em Usuários a primeira é o checkbox, vazio nas linhas
+fora do lote): sem isso, o nome subia pra baixo do "⋮". Valor com mais de um elemento (badge +
+validade do convite) vai num `.cell-value`, senão o flex do par rótulo/valor os separa.
 
 ### Icon Tile (`.icon-tile`)
 Ícone centralizado num quadrado/círculo de fundo suave — sempre junto de `.badge.bg-label-*` e
@@ -428,6 +473,18 @@ O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
   painel da linha.
 - **Item inativo** (usuário desativado): nunca `opacity` na linha — derruba e-mail, data e badge
   abaixo de AA. O estado é dito pelo badge; a linha só recua o nome pra `text-secondary`.
+- **Linha sem checkbox** (a própria conta, quem já está inativo): a célula diz o motivo em
+  `.visually-hidden`, nunca fica muda. A própria conta leva o badge "Você" ao lado do nome, e o ⋮
+  troca "Desativar" por uma linha neutra ("Sua própria conta não pode ser desativada.").
+- **"Selecionar todos" no celular:** o cabeçalho da tabela some no `.table-stack`, então o checkbox
+  ganha uma linha visível acima dos cards (`.select-all-mobile`, com texto); o do cabeçalho fica
+  `d-none` abaixo de `md` — invisível e focável seria armadilha de teclado.
+- **Linha com o painel aberto:** tinge pela camada de estado da tabela (`--bs-table-bg-state`, a
+  mesma do hover) e o nome vai pro índigo de texto. `background-color` no `<tr>` não aparece: o
+  fundo das células cobre (dava 1,07:1).
+- **Foco depois de uma ação da linha:** o "⋮" leva `[rowKey]` e `[busy]` (spinner enquanto conta
+  chamados, desativa, reativa ou reenvia convite); confirmação cancelada ou ação concluída devolvem
+  o foco a ele. "Limpar seleção" e o fim do lote levam o foco ao "selecionar todos" visível.
 
 ### Painel lateral "Informações do X" (`appSidePanel`)
 Consulta rápida do item selecionado na tabela (Usuários, Monitorar Chamados), sem sair da tela.
@@ -478,6 +535,15 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
   ocupava a primeira tela do celular. Na mesma rodada, a busca saiu do card próprio e virou uma
   barra acima da lista (busca, "Mostrando X de Y" e "Limpar filtros" juntos), e o Resumo trocou os
   números grandes por uma linha de apoio — o que pede ação ali são os chips de filtro.
+- **Exceção — Usuários (mesmo padrão de Departamentos, critique de 2026-10-28):** Guia fechado até
+  na 1ª visita (aberto, a primeira linha da tabela ficava a 1086px num 1366×768; agora 483px).
+  Resumo numa linha de apoio: total, ativos, **com convite pendente** (ícone âmbar, só quando há) e
+  inativos, do `GET /users/stats/status` (spec 020) — convite pendente não conta mais como ativo.
+  Sem chip de filtro pros pendentes enquanto a lista não filtra por isso no back-end. Filtros numa
+  barra colada à tabela (`.user-toolbar`): busca, status, botão "Período de cadastro" (recolhido;
+  os campos "De"/"Até" ficam sempre à vista quando há um período aplicado), o resultado ("N
+  usuários encontrados.", `aria-live`) e "Limpar filtros" só com filtro aplicado. Recarga não
+  esmaece a tabela: a barra diz "Atualizando…".
 - **Sempre no fluxo:** Guia e Resumo ficam no topo da tela, na largura do conteúdo, em qualquer
   resolução e navegador. Nunca `position: fixed` nas margens do `container-xxl`: o antigo modo
   "trilha lateral" (≥1900px, ~130–170px de largura) dependia do viewport real — zoom, escala do
@@ -538,7 +604,13 @@ cada card levando a Meus Chamados — com título de card (`h2.h5`, passo headin
   abaixo da dobra — decisão de 2026-10-28) e um rodapé com o intervalo e o que ainda vem. Frase de
   destaque com regras e limiares em `dashboard-insight-rules.ts`; sem amostra, nenhuma frase; a regra
   de fila só com a flag dos resolvidos. No celular, uma série só.
-  **Legenda da barra:** os itens também
+  Referências desenhadas no gráfico (P0 de 2026-10-28): linha tracejada da **média dos períodos
+  completos** (o período atual, pela metade, fica fora; rótulo "Média 4,3 por dia"), **faixas claras
+  nos sábados e domingos** (só no agrupamento por dia; o dia da semana também aparece no tooltip e na
+  tabela) e o **valor do maior período** escrito acima da barra. O rodapé diz o que o tracejado e as
+  faixas significam. **Teclado:** a área do gráfico é focável; setas percorrem os períodos (barra
+  destacada + tooltip + anúncio no leitor de tela), Home/End vão pras pontas, Enter abre a lista do
+  período e Esc tira o destaque. **Legenda da barra:** os itens também
   abrem a lista do status, abaixo de 1200px e, no toque, em qualquer largura (alvo de 44px); cada fatia tem pelo menos
   24px de largura (WCAG 2.5.8). **Tema:** trocar o tema
   com a tela aberta redesenha o canvas com as cores novas (as cores vêm dos tokens no desenho).
@@ -577,13 +649,19 @@ cada card levando a Meus Chamados — com título de card (`h2.h5`, passo headin
   aparece e a atualização pedida anuncia a falha ("Não foi possível atualizar os números" na parcial,
   "Não foi possível carregar os números" na total), nunca "Atualizado agora"; a primeira carga não
   anuncia nada sozinha (os avisos de erro dos blocos já falam). Revisão visual de 2026-10-29.
+  **Anúncio da atualização, manual x automática:** o botão "Atualizar" anuncia o resultado de cada
+  pedido ("Atualizado agora" ou a falha), mesmo sem mudança. A atualização automática (a cada 2 min)
+  só fala quando o resultado muda: uma falha nova, a troca entre falha total e parcial, ou a volta
+  ("Números de volta: atualizado agora"). Sucesso contínuo e falha que persiste ficam em silêncio. Um
+  pedido manual durante uma automática em curso vale como manual, e uma troca de escopo no meio fala
+  só o resumo do recorte (decisão de 2026-10-29).
   Enquanto a nova tentativa
   carrega, o aviso de erro fica (o resource do Angular mantém o erro num `reload()` com os mesmos
   parâmetros; trocar o recorte zera e mostra o esqueleto): não pisca pro esqueleto nem é lido
   de novo a cada 2 min. Nos Alertas, o botão do aviso gira ("Tentando…", `aria-disabled`); se a
   tentativa pedida no botão falha de novo, o leitor de tela ouve "Ainda não foi possível" uma vez (a
   atualização automática não anuncia); se dá certo, o foco vai pro título do card, sem tirar o foco de
-  quem já foi pra outro lugar. Na atualização, o leitor de tela ouve só "Atualizado agora", nunca os números;
+  quem já foi pra outro lugar. Na atualização, o leitor de tela nunca ouve os números (só as frases acima);
   ao trocar um filtro ou o escopo, ouve um resumo curto dos números novos ("Números com os filtros: 3
   atrasados, 12 na fila."). Os botões de atualizar usam `aria-disabled` (não `disabled`) enquanto
   carregam, pra não tirar o foco de quem usa teclado.
@@ -607,9 +685,12 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
   campos visíveis; os de uso raro vão numa linha "Mais filtros (n)" recolhida (Monitorar; no Início,
   período, departamento e setor à vista e prioridade/responsável em "Mais filtros").
 - **Escopo da tela:** um filtro que muda *também* os números do topo (o Setor do Monitorar) fica
-  acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta. No Monitorar, os
+  acima deles, fora da barra de filtros, com uma linha dizendo o que ele afeta. No Monitorar, o Setor
+  mora nas ações do cabeçalho (`pageActions`) e uma linha só acima dos cards diz o escopo — antes eram
+  uma linha própria pro Setor e duas frases, e a fila caía abaixo da dobra (critique de 2026-10-28). Os
   números vêm do agregado da operação (spec 026) e seguem setores, prioridade, responsável e período;
   quando há busca, Status, SLA ou Aguardando aplicados, a linha acima dos cards diz que esses não valem pra eles.
+  "Limpar filtros" limpa a barra e mantém o Setor e o "Por página" (escopo e preferência, não filtro).
 - **Responsável (Monitorar):** "Qualquer um", "Atribuídos a mim" (a fila pessoal de quem atende) ou
   "Sem responsável" — um select visível ao lado de Status e SLA, não um switch escondido. O Início
   leva direto pra "Atribuídos a mim" (`?assignedToMe=true`; o id de quem está logado não vai pra URL).
@@ -619,7 +700,16 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
   "Mais filtros". Os filtros de "Mais filtros" aplicados aparecem em texto ao lado do botão.
 - **SLA e prazo numa célula (Monitorar):** etiqueta e, pros ativos, o prazo relativo ("vence em 2h" /
   "venceu há 35 min") pela hora do servidor (`serverNowUtc` do resumo de SLA), recalculado a cada
-  30s; atrasado também em texto e peso, não só cor; a data exata no `title`.
+  30s; atrasado também em texto e peso, não só cor; a data exata no `title`. O selo acompanha o
+  relógio: um ativo "No prazo"/"Em risco" que vence com a tela aberta vira "Atrasado" na linha e no
+  painel sem esperar recarga. O topo da tabela diz "Atualizado às HH:mm" com um "Atualizar" discreto,
+  e a lista recarrega sozinha ao voltar pra aba depois de 5 minutos (não é polling).
+- **Tabela com o painel aberto (Monitorar):** Solicitante, Atendente e Setor saem (o painel mostra os
+  três) e o título tem largura mínima de 13rem, quebrando só entre palavras — nunca `.text-break` num
+  título de coluna estreita, que deixava uma letra por linha. A rolagem horizontal, quando houver, fica
+  dentro do `.table-responsive` (`width: 0; min-width: 100%`), nunca na página.
+- **Cards de filtro (Monitorar):** o nome acessível leva o número ("Atrasados: 86. Filtrar a tabela"),
+  e o segundo clique no card pressionado desfaz o filtro de SLA.
 - **Selects que dependem de lista assíncrona** (setor, responsável): a seleção vai no `[selected]` de
   cada opção, não no `[value]` do select — as opções chegam depois e o `[value]` ficaria em "Todos".
 - **Paginação (`<app-pagination>`, `shared/ui/pagination`):** rodapé do card da tabela — "Exibindo
@@ -660,7 +750,7 @@ travada e foco devolvido a quem abriu. Formulário: `<form dialogContent>` envol
 e `.modal-footer`. Todo diálogo que envia algo passa `[busy]` com o estado de envio — X, Esc e
 clique fora não fecham no meio do salvamento. Cancelar fica à esquerda do primário no rodapé.
 
-### Atribuir responsável (`<app-ticket-assign-dialog>`, `tickets/ui`)
+### Atribuir responsável (`<app-ticket-assign-dialog>`, `shared/ui`)
 Igual no detalhe e no Monitorar: busca com debounce, candidatos como listbox navegável por setas,
 marca um e só atribui no botão "Atribuir"/"Reatribuir" — com o aviso "Isso substitui X por Y"
 quando já há responsável. Nunca atribuir no primeiro clique.
@@ -680,11 +770,33 @@ direita, num `<aside>`, o apoio (SLA e histórico). Abaixo disso, coluna única 
   departamento da abertura de chamados), o resto neutro.
 - **Item recém-criado** (`.item-new`): realce índigo que se desfaz em 4s e rolagem até ele — a
   lista reordena por nome e o item novo podia nascer fora da tela. Com `prefers-reduced-motion`,
-  só o fundo, sem animação. Mesmo tempo da linha nova de Usuários.
+  só o fundo, sem animação, e a rolagem salta direto. Mesmo tempo da linha nova de Usuários. O
+  realce vai do tingido à superfície do card (`--bs-card-bg`), nunca a `transparent`, que mostrava
+  o fundo da página por 4s.
+- **Sem setor primeiro** (critique 3 de 2026-10-28): os departamentos sem nenhum setor — os únicos
+  que somem da abertura de chamados — vêm no topo; o resto segue em ordem alfabética.
+- **Busca que acha um setor** marca o nome dele (tingido índigo + "encontrado pela busca" pro leitor
+  de tela), pra mostrar o que a busca encontrou dentro do card.
+- **"Criar e adicionar outro"** no diálogo de setor novo: cria, limpa o formulário e diz no próprio
+  diálogo o que criou (região viva fixa); o botão de fechar vira "Concluir". Os botões de enviar
+  dizem a ação: "Criar departamento", "Criar setor", "Salvar alterações".
+- **Erros no lugar certo:** falha de leitura da lista num aviso neutro acima dela (com "Tentar
+  novamente" contornado em cinza); falha de salvar só dentro do diálogo, descartada ao fechar; falha
+  de excluir no card.
+- **Responsável na edição:** sem responsável na listagem, não busca o detalhe (o "Salvar
+  alterações" já vale). Se a busca do atual falha, o aviso oferece "Tentar de novo" e "Remover
+  responsável", e o botão desabilitado aponta pra ele (`aria-describedby`).
 
-### Cor da função
-A cor do badge (prévia só neste navegador) se escolhe no diálogo "Cor do badge…" do "⋮" da linha,
-com prévia ao vivo e a checagem de contraste; a linha da tabela mostra só a amostra da cor.
+### Funções (catálogo fixo)
+As funções vêm do back-end como catálogo fixo (identificadas pelo nome): a tela não cria, renomeia
+nem exclui — e por isso não tem "Nova Função" (critique de 2026-10-28; o `POST /roles` não existe).
+- **Permissões** no "⋮" da linha: "Editar permissões" abre o diálogo com o total marcado, os grupos
+  em `<fieldset>` com uma caixa "Todas" (indeterminada com parte marcada), realce índigo leve em cada
+  opção que difere do salvo e, no rodapé, o resumo do que mudou ("2 adicionadas e 1 removida"). O
+  "Salvar" só habilita com mudança; fechar com marcações não salvas pede "Descartar as alterações?".
+  O Administrador tem "Ver permissões": o mesmo diálogo, só leitura, com o motivo à vista.
+- **Catálogo que não carregou:** o diálogo diz o que falhou, com "Tentar novamente", e trava o "Salvar".
+- **Cor do badge:** removida em 2026-10-29 (ver "Cor de função" acima e BR-001).
 
 ### Confirm Dialog
 Toda confirmação de ação sensível (excluir, desativar, reativar) usa o modal de confirmação
@@ -717,6 +829,13 @@ Ninguém define a senha de outra pessoa (spec 008 do back-end):
 - **Desativar quem atende chamados:** a confirmação diz quantos chamados em aberto a pessoa atende
   ("atende 3 chamados em aberto, que continuam atribuídos a essa pessoa: reatribua em Monitorar
   Chamados"). Se a contagem falhar, a confirmação sai sem o aviso — nunca bloqueia a desativação.
+- **Desativar em lote** tem o mesmo amparo do individual (critique de 2026-10-28): soma os chamados
+  em aberto dos selecionados ("2 dessas pessoas atendem 5 chamados em aberto…"), lista até 8 nomes
+  ("e mais N" depois), oferece "Desfazer" no toast (reativa só quem foi desativado agora) e, se algo
+  falhar, o motivo vai no próprio toast — nunca "o motivo está acima da lista".
+- **Erro na tela de Usuários:** falha de carga é neutra (`alert-secondary` + "Tentar novamente",
+  `btn-outline-secondary`) e a tabela diz "A lista não carregou" em vez do vazio de primeiro uso;
+  erro de uma ação continua `alert-danger`, com "X" pra fechar (recarregar não o resolve).
 - **Reenviar convite:** no ⋮ da linha e no painel, só pra conta pendente e ativa. Recusa do
   back-end (limite de 5 em 24 horas) aparece acima da lista, com o motivo dele.
 
@@ -736,7 +855,7 @@ segunda força recálculo de layout a cada quadro.
 - **"Início"** é o nome da tela inicial — no menu, nas trilhas e nos "Voltar".
 - **"Na fila"** é aberto + em andamento (nunca "backlog"); **"com os filtros"**, nunca "recorte"; tempo de SLA é **"horário útil"**, nunca "minutos úteis".
 - **Título da tela = item do menu** ("Usuários", não "Gestão de Usuários").
-- **Botões de criar** em caixa de título: "Novo Chamado", "Novo Usuário", "Nova Função", "Novo Departamento".
+- **Botões de criar** em caixa de título: "Novo Chamado", "Novo Usuário", "Novo Departamento".
 - **Formulário:** Cancelar à esquerda do primário, alinhados à direita no rodapé; erro de envio logo
   acima do botão de enviar (login, ativar conta e primeiro acesso iguais).
 

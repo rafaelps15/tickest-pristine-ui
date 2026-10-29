@@ -13,6 +13,10 @@
   /* O vermelho de alerta em canais, pros fundos translúcidos (badge "Atrasado", realce de um alerta que acabou de vencer). */
   --tk-danger-rgb: 255, 62, 29;
   --tk-warning-rgb: 255, 171, 0;
+  /* O verde de Resolvido/Ativo em canais, pros realces translúcidos (hover do "Reativar" no menu ⋮, badge escuro). */
+  --tk-success-rgb: 113, 221, 55;
+  /* Fundo âmbar "soft" (badge .bg-label-warning, chip de aviso pressionado); no escuro, o âmbar em baixa opacidade. */
+  --tk-warning-soft-bg: #fff2e2;
   /* Links de texto no índigo do produto, nunca no azul de fábrica do Bootstrap. */
   --bs-link-color: var(--tk-primary-text);
   --bs-link-color-rgb: 58, 60, 163;
@@ -86,6 +90,7 @@
  * visível entre os tokens --tk-* e os componentes nativos (card, modal, dropdown, table).
  */
 [data-bs-theme="dark"] {
+  --tk-warning-soft-bg: rgba(var(--tk-warning-rgb), 0.16);
   --tk-page-bg: #1a1d20;
   --tk-surface: #212529;
   --tk-border: #3a3f44;
@@ -432,6 +437,16 @@ body {
   transform: translateY(-1px);
 }
 
+/*
+ * No escuro, o cinza de fábrica do contornado secundário (#6c757d) dava 3,3:1 sobre a superfície —
+ * a paginação inteira reprovava AA (medido no audit de Usuários, 2026-10-28). Texto no secundário
+ * do tema (~9:1); o hover continua o preenchido do Bootstrap.
+ */
+[data-bs-theme="dark"] .btn-outline-secondary {
+  --bs-btn-color: var(--tk-text-secondary);
+  --bs-btn-border-color: var(--tk-border);
+}
+
 /* Tabelas: cabeçalho discreto, linhas com resposta ao hover */
 .table thead th {
   font-size: 0.75rem;
@@ -529,7 +544,7 @@ body {
 
 .dropdown-item.text-success:hover,
 .dropdown-item.text-success:focus {
-  background-color: rgba(113, 221, 55, 0.1);
+  background-color: rgba(var(--tk-success-rgb), 0.1);
 }
 
 /*
@@ -601,8 +616,9 @@ body {
 /*
  * Tabela que vira lista de cards abaixo de "md": cada linha é um bloco, cada célula com
  * `data-label` vira um par rótulo/valor, a célula `.table-stack-actions` (menu "⋮") vai pro canto
- * superior direito do card. Evita rolar a tabela pro lado no celular. Usado em Meus Tickets e
- * Monitorar Tickets.
+ * superior direito do card. Evita rolar a tabela pro lado no celular. Usado em Meus Chamados,
+ * Monitorar Chamados e Usuários. A célula `.table-stack-title` (o nome/título) recua do "⋮" mesmo
+ * quando não é a primeira — em Usuários, a primeira é o checkbox, vazio nas linhas fora do lote.
  */
 @media (max-width: 767.98px) {
   .table-stack thead {
@@ -638,7 +654,8 @@ body {
     text-align: start !important;
   }
 
-  .table-stack td:first-child {
+  .table-stack td:first-child,
+  .table-stack td.table-stack-title {
     padding-right: 3.25rem;
   }
 
@@ -709,7 +726,7 @@ body {
 }
 
 .bg-label-warning {
-  background-color: #fff2e2 !important;
+  background-color: var(--tk-warning-soft-bg) !important;
   color: var(--tk-warning-text) !important;
 }
 
@@ -735,12 +752,12 @@ body {
 }
 
 [data-bs-theme="dark"] .bg-label-success {
-  background-color: rgba(113, 221, 55, 0.14) !important;
+  background-color: rgba(var(--tk-success-rgb), 0.14) !important;
   color: var(--tk-success-text) !important;
 }
 
 [data-bs-theme="dark"] .bg-label-warning {
-  background-color: rgba(255, 171, 0, 0.16) !important;
+  background-color: var(--tk-warning-soft-bg) !important;
   color: var(--tk-warning-text) !important;
 }
 
@@ -769,30 +786,11 @@ body {
 }
 
 /*
- * Prévia de cor por função (pedido explícito do usuário em 2026-10-25, "pra ver como fica"): o
- * back-end não tem campo de cor na função hoje, então a escolha fica só neste navegador
- * (localStorage, ver `shared/utils/role-colors.util.ts`) — não é dado real ainda. A cor escolhida
- * entra via a variável `--role-color` no próprio elemento; aqui só a mistura que gera o par
- * claro/escuro "soft" (mesmo princípio do Badge Pair Rule do DESIGN.md, com a cor vindo de uma
- * variável em vez de um dos 4 tons semânticos fixos). Usada em mais de uma tela (Gestão de
- * Usuários, atribuição de responsável no chamado), por isso global.
+ * Ponto colorido antes do texto do badge de status do usuário (Ativo/Inativo/Convite) — reforça a
+ * leitura rápida por cor, não só por texto. Nome próprio (era `.status-dot`, que o marcador de
+ * status de chamado do Início também usa e sobrescrevia em silêncio — achado do audit de Usuários).
  */
-.badge-role-custom {
-  background-color: color-mix(in srgb, var(--role-color) 15%, white) !important;
-  color: color-mix(in srgb, var(--role-color) 65%, black) !important;
-}
-
-[data-bs-theme="dark"] .badge-role-custom {
-  background-color: color-mix(in srgb, var(--role-color) 25%, #212529) !important;
-  color: color-mix(in srgb, var(--role-color) 70%, white) !important;
-}
-
-/*
- * Ponto colorido antes do texto do badge de status (Ativo/Inativo) — reforça a leitura rápida por
- * cor, não só por texto. Global porque aparece na tabela, no painel e no Guia de Usuários (três
- * componentes com encapsulamento de view); antes era a mesma regra copiada em cada um.
- */
-.status-dot {
+.badge-dot {
   display: inline-block;
   width: 0.4rem;
   height: 0.4rem;

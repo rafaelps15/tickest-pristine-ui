@@ -10,6 +10,7 @@ target_fingerprint: "sha256:e779044e0e5b57050c2b8d3384bb85ab7c6411d2e6bf2a420ea0
 target_path: "C:\\dev\\tickest-pristine-front\\src\\app\\departments\\feature-department-list\\department-list.component.html"
 timestamp: 2026-10-28T00-48-38Z
 slug: tment-list-department-list-component-html-d611d7fa
+closed: true
 ---
 Method: dual-agent (A: design review · B: detector + browser)
 
