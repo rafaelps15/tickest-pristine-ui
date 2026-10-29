@@ -23,14 +23,33 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    color: var(--tk-text-muted);
+    /* Secundário, não "muted": o cabeçalho fica sobre o fundo da página, onde o muted não chega a 4,5:1. */
+    color: var(--tk-text-secondary);
     font-size: 0.875rem;
     white-space: nowrap;
 }
 
+/* No celular, a frase de falha ("… números de uma visita anterior") quebra linha em vez de passar da tela. */
+@media (max-width: 575.98px) {
+    .freshness {
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+
+    .freshness-label {
+        white-space: normal;
+    }
+}
+
 /* Falha ao atualizar: texto secundário (não é risco operacional, então nada de vermelho). */
+/* A falha se distingue pelo ícone e pelo peso, não por um cinza mais claro. */
 .freshness-failed {
-    color: var(--tk-text-secondary);
+    font-weight: 600;
+}
+
+/* Nome na saudação: o índigo de texto (o --tk-primary puro não chega a 4,5:1). */
+.greeting-name {
+    color: var(--tk-primary-text);
 }
 
 .freshness-spinner {
@@ -95,5 +114,24 @@
         display: inline-flex;
         align-items: center;
         min-height: 2.75rem;
+    }
+}
+
+/* Escopo dos números, acima de tudo que ele muda (indicadores, gráfico, Central e SLA). */
+.scope-row {
+    display: flex;
+    margin-bottom: 0.75rem;
+}
+
+@media (pointer: coarse) {
+    .scope-row .btn {
+        min-height: 44px;
+    }
+
+    /* "Novo Chamado" (no cabeçalho compartilhado, mas declarado aqui) e o convite do primeiro chamado. */
+    .touch-cta {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
     }
 }

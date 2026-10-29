@@ -100,4 +100,16 @@ describe('StatCardComponent', () => {
     expect(plain.querySelector('button')).toBeNull();
     expect(plain.classList).not.toContain('card-stats-clickable');
   });
+  it('zero fica neutro (sem a cor do tom) e o número tem separador de milhar', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.value.set(0);
+    await fixture.whenStable();
+    expect((filterCard(fixture).querySelector('.stat-value') as HTMLElement).classList).not.toContain('text-warning');
+
+    fixture.componentInstance.value.set(1240);
+    await fixture.whenStable();
+    const value = filterCard(fixture).querySelector('.stat-value') as HTMLElement;
+    expect(value.textContent?.trim()).toBe('1.240');
+    expect(value.classList).toContain('text-warning');
+  });
 });

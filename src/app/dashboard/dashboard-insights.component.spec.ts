@@ -169,21 +169,61 @@ describe('DashboardInsightsComponent', () => {
       fixture.componentInstance.refresh.subscribe(refresh);
       await fixture.whenStable();
 
-      expect(fixture.nativeElement.textContent).toContain('Toda a empresa, sem os filtros · atualizado às 14:32');
+      expect(fixture.nativeElement.textContent).toContain('Toda a empresa · atualizado às 14:32');
       (fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement).click();
       expect(refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('gira o botão e o desabilita enquanto atualiza, sem esconder a lista', async () => {
+    it('no escopo "Com filtros", diz que segue os filtros e leva a fila com eles', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [ticket]);
+      fixture.componentRef.setInput('showTotals', false);
+      fixture.componentRef.setInput('filtered', true);
+      fixture.componentRef.setInput('queueParams', { sectorId: ['s1'], status: 'active' });
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.textContent).toContain('Com os filtros');
+      expect(fixture.nativeElement.textContent).not.toContain('Toda a empresa');
+      const queue = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).find(a => a.textContent?.includes('Ver a fila pelo prazo'))!;
+      expect(queue.getAttribute('href')).toContain('sectorId=s1');
+    });
+
+    it('gira o botão e o marca indisponível enquanto atualiza (aria-disabled, sem tirar o foco), sem esconder a lista', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [ticket]);
       fixture.componentRef.setInput('refreshing', true);
+      const refresh = jasmine.createSpy('refresh');
+      fixture.componentInstance.refresh.subscribe(refresh);
       await fixture.whenStable();
 
       const button = fixture.nativeElement.querySelector('button[aria-label="Atualizar alertas de SLA"]') as HTMLButtonElement;
-      expect(button.disabled).toBeTrue();
+      expect(button.disabled).toBeFalse();
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      button.click();
+      expect(refresh).not.toHaveBeenCalled();
       expect(button.querySelector('.spinner-border')).not.toBeNull();
       expect(fixture.nativeElement.querySelectorAll('.critical-ticket-link').length).toBe(1);
+    });
+
+    it('com erro e uma nova tentativa carregando ao mesmo tempo, o aviso fica (sem spinner) e não é recriado nem lido de novo', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
+      await fixture.whenStable();
+      const alertBefore = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+      expect(alertBefore).not.toBeNull();
+
+      // "Tentar novamente" ou a atualização automática: a nova tentativa carrega com o erro ainda valendo.
+      fixture.componentRef.setInput('loading', true);
+      await fixture.whenStable();
+
+      const alertDuring = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
+      expect(alertDuring).toBe(alertBefore);
+      expect(fixture.nativeElement.textContent).not.toContain('Carregando alertas de SLA');
+      expect(fixture.nativeElement.querySelectorAll('[role="alert"]').length).toBe(1);
+
+      fixture.componentRef.setInput('loading', false);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('[role="alert"]')).toBe(alertBefore);
     });
 
     it('oferece "Tentar novamente" no erro, que pede uma nova carga', async () => {

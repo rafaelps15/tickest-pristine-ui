@@ -11,7 +11,7 @@ colors:
   danger: "#ff3e1d"
   text-primary: "#2b2c40"
   text-secondary: "#5f6f82"
-  text-muted: "#6b7684"
+  text-muted: "#65707e"
   surface: "#ffffff"
   page-bg: "#f5f5f9"
   border: "#e7e7ff"
@@ -167,7 +167,7 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 - **Ardósia Secundária** (`#5f6f82`): texto secundário/rótulos de formulário (claro).
   Escurecida em 2026-10-27 (era `#697a8d`: ~4,40:1 sobre branco, ~4,05:1 sobre o fundo de página)
   — agora ~5,1:1 sobre branco e ~4,7:1 sobre `#f5f5f9`; achado do audit de Meus Chamados.
-- **Névoa Terciária** (`#6b7684`): texto terciário/placeholder, cabeçalho de tabela (claro).
+- **Névoa Terciária** (`#65707e`, escurecido em 2026-10-28 pra passar 4,5:1 também sobre o fundo da página): texto terciário/placeholder, cabeçalho de tabela (claro). O `.text-muted` do Bootstrap continua o dele (`--bs-secondary-color`, mais escuro): trocá-lo pelo token derrubava o contraste abaixo de 4,5:1 sobre fundos com tinta no escuro (revisão de 2026-10-29).
   Escurecido em 2026-10-08 (era `#a1acb8`, ~2,31:1) pra passar 4,5:1 WCAG AA — auditado no
   Dashboard.
 - **Branco Superfície** (`#ffffff`): fundo de cards, modais, inputs (claro).
@@ -206,7 +206,7 @@ mede entre 1,6:1 e 3,8:1 de contraste — falha WCAG AA (4,5:1). Auditado e corr
 elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor
 nova inventada para aquela tela.
 
-**The No Factory Blue Rule.** Componente do Bootstrap que usa a cor primária (ex.: `btn-outline-primary`, `text-primary`, `border-primary`) é sobrescrito pro índigo da marca em `styles.css` — nunca aparece o azul de fábrica `#0d6efd`. Texto sobre índigo preenchido usa `--tk-primary-dark` ou mais escuro (o `--tk-primary` não passa AA com texto branco pequeno).
+**The No Factory Blue Rule.** Componente do Bootstrap que usa a cor primária (ex.: `btn-outline-primary`, `text-primary`, `border-primary`) é sobrescrito pro índigo da marca em `styles.css` — nunca aparece o azul de fábrica `#0d6efd`. Links de texto (`<a>` sem classe de botão) também: `--bs-link-color` aponta pro `--tk-primary-text` nos dois temas. Texto sobre índigo preenchido usa `--tk-primary-dark` ou mais escuro (o `--tk-primary` não passa AA com texto branco pequeno). O contornado secundário (`btn-outline-secondary`) também não usa o cinza de fábrica `#6c757d` (4,3:1 sobre o fundo da página): texto, borda e preenchido do hover no `--tk-text-secondary` do tema.
 
 **The Host-Context Dark Rule.** Em CSS de componente (encapsulado), o tema escuro se escreve `:host-context([data-bs-theme="dark"]) .x` — nunca `[data-bs-theme="dark"] .x`, que o Angular prende ao componente e nunca casa com o `<html>` (a barra superior ficava clara no escuro por isso).
 
@@ -319,7 +319,9 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
   escuro, sombra neutra do tema (a tintada virava brilho).
 - **Hover:** eleva 1px (`translateY(-1px)`) e inverte a direção do gradiente; sombra cresce.
 - **Outline (secondary/danger/success):** transparente com borda, mesmo lift de 1px no hover, sem
-  gradiente — reservado para ações secundárias ou destrutivas fora do botão primário da tela.
+  gradiente — reservado para ações secundárias ou destrutivas fora do botão primário da tela. No
+  escuro, o contornado secundário usa `--tk-text-secondary` como texto (o cinza de fábrica dava
+  3,3:1 — a paginação inteira reprovava AA, medido em 2026-10-28).
 - **Link (baixa ênfase):** usado só para ações de frequência muito baixa (ex. "Limpar filtros") —
   sem fundo, sem borda, cor neutra que escurece no hover. Nunca compete visualmente com o botão
   primário da tela.
@@ -391,17 +393,21 @@ uso).
 O SLA é o diferencial do Tickest, e o card que o mostra segue regras próprias:
 - Desde o redesenho de 2026-10-28, fica **logo abaixo do gráfico principal**, ao lado da Central de
   atenção (Central à esquerda, Alertas à direita; no celular, os Alertas vêm primeiro). O número de
-  atrasados mora na primeira tela, como o sexto KPI de quem atende a fila. Com o agregado da
+  atrasados mora na primeira tela, o primeiro KPI de quem atende a fila. Com o agregado da
   operação (spec 026), os Alertas não repetem totais: ficam só com a lista do que agir e "Ver a fila
-  pelo prazo" (decisão de 2026-10-28). Card com espaço (container ≥ 40rem): resumo à esquerda e lista
+  pelo prazo" (decisão de 2026-10-28). **Escopo:** no "Com filtros", a lista segue o mesmo recorte dos
+  números (setores, prioridade, responsável e período de abertura, pela GET /tickets da spec 025) e o
+  subtítulo diz "Com os filtros"; no da empresa, "Toda a empresa" (decisão de 2026-10-28, que substitui
+  a anterior de Alertas sempre da empresa toda). Card com espaço (container ≥ 40rem): resumo à esquerda e lista
   à direita; com a fila em dia, vira uma linha compacta — o tamanho do card é a mensagem, por isso
   ele nunca estica pra casar a altura com o vizinho.
 - Lista atrasados **e** em risco em 5 vagas: até 3 atrasados (o atrasado há mais tempo primeiro) e
   até 2 em risco (o que vence primeiro), e a sobra de um grupo vai pro outro — só por prazo, muitos
   atrasados escondiam os em risco, os únicos que ainda dá pra salvar. Os totais da empresa ficam no
   topo, com o mesmo número grande dos KPIs, cada um levando à fila de Monitorar já filtrada.
-- O card mostra "Atualizado às HH:mm" e tem um botão "Atualizar" que recarrega só os alertas; ao
-  voltar pra aba com uma lista de mais de 5 minutos, recarrega sozinho (não é polling).
+- O card mostra "Atualizado às HH:mm" e tem um botão "Atualizar" que recarrega só os alertas; quem
+  recarrega sozinho é a atualização automática do Início (a cada 2 min com a aba visível). Num erro, o
+  aviso vem antes do carregamento: a nova tentativa não troca o aviso pelo spinner nem o anuncia de novo.
 - Cada item tem etiqueta "Atrasado"/"Em risco" em texto **e** cor, e o prazo relativo vivo ("vence
   em 2h 14min" / "venceu há 35 min"), recalculado a cada 30s com a aba visível e ancorado na hora
   do servidor (`serverNowUtc`), nunca no relógio da máquina.
@@ -484,30 +490,58 @@ lateral "Informações do X" ao lado do conteúdo quando houver.
 
 ### Seus chamados (Início)
 Pra quem abre chamados e não atende a fila (`tickets:view-own` sem `tickets:manage`), o Início
-mostra primeiro "Seus chamados" — em aberto, em andamento e resolvidos, do próprio usuário
-(`MyTicketsSummaryStore`, GET /tickets/mine/summary), cada card levando a Meus Chamados — e só
-depois "Toda a empresa", com os números de sempre, iguais pra todo papel. No Início redesenhado,
-"Seus chamados" fica na linha secundária, com título de card (`h2.h5`, passo heading) como os blocos
-vizinhos — um papel só pra título de bloco, também nos estados "em breve".
+mostra "Seus chamados" — do próprio usuário (`MyTicketsSummaryStore`, GET /tickets/mine/summary),
+cada card levando a Meus Chamados — com título de card (`h2.h5`, passo heading) como os blocos vizinhos.
+- **Os grupos da lista (decisão de 2026-10-28):** Em aberto (abertos e em andamento), Encerrados
+  (resolvidos, fechados e cancelados) e Todos — os mesmos de Meus Chamados, que não filtra por um
+  status só. Cada card tem o número da lista que abre; a divisão fica no apoio ("2 abertos, 1 em
+  andamento"; "5 resolvidos ou fechados, 0 cancelados") e no nome acessível do link.
+- **O conteúdo do papel primeiro (decisão de 2026-10-28):** enquanto os números da empresa não
+  existem pra este papel (spec 031), nada de aviso "em breve" antes dele — "Seus chamados" é a tela,
+  o subtítulo diz "Como estão os seus chamados." e não há card de Ações rápidas ("Ver todos" já leva
+  a Meus Chamados).
+- **Primeiro uso:** sem nenhum chamado, os três zeros dão lugar a um convite ("Você ainda não abriu
+  nenhum chamado." + "Abrir o primeiro chamado").
+- **Quem administra sem atender a fila** vê um card "Administração" com os atalhos que as permissões
+  dão (Usuários, Funções, Departamentos e setores), e não uma página vazia; sem números na tela, o
+  "Atualizado há" e o botão de atualizar não aparecem. O Guia só explica os blocos que o papel vê.
 
 ### Início (gráfico principal, indicadores e operação)
-- **Para todo colaborador, números da empresa:** a faixa de indicadores (total, na fila, em
-  andamento, resolvidos, fechados e, pra quem atende a fila, atrasados — o risco fica na primeira
-  tela; a taxa de SLA cumprido mora no grupo de SLA) e o gráfico principal mostram agregados da empresa
+- **Para todo colaborador, números da empresa:** a faixa de indicadores (ver "Risco primeiro" abaixo:
+  quatro números pra quem atende a fila; total e status pros demais) e o gráfico principal mostram agregados da empresa
   inteira, vindos do servidor; nada é contado a partir de uma página de lista. O drill-down abre a
   lista que a pessoa pode ver; quando ela vê menos que o número, o card diz ("Você tem acesso a 12
   dos 340 chamados").
 - **Faixa de indicadores (`<app-dashboard-kpi-strip>`):** cards densos (~72px), rótulo com o
   marcador da cor do status, número em `stat-value` e apoio curto na mesma linha. Números até 9.999
-  completos ("1.240"), acima compactos ("12,3 mil"), com o completo no `title`.
+  completos ("1.240"), acima compactos ("12,3 mil"), com o completo no `title`. Um título
+  `visually-hidden` ("Indicadores") pra quem navega por títulos. O apoio fica ao lado do número e,
+  quando não cabe (celular, tablet, ou "abertos no período, passaram do prazo"), desce pra linha de
+  baixo e quebra — nunca some nem passa da borda do card.
+- **Risco primeiro, quatro números (decisão de 2026-10-28):** pra quem atende a fila, a faixa é
+  Atrasados, Sem responsável, Na fila e Total — numa linha só a partir de 768px. Acima de zero, os
+  dois primeiros ganham fundo e número na cor do alerta (vermelho e âmbar, `.kpi-alert-*`), e o apoio
+  sobe pro cinza secundário (o muted não chega a 4,5:1 sobre esses fundos); zero
+  fica neutro. A divisão por status (em andamento, resolvidos, fechados) mora só na barra de
+  composição do gráfico, logo abaixo. Pros demais papéis, a faixa de sempre (total, na fila, em
+  andamento, resolvidos, fechados, SLA cumprido).
+- **Escopo dos números:** "Empresa / Com filtros" fica numa linha própria acima dos indicadores (e
+  não dentro do gráfico), porque vale pra faixa, o gráfico, a Central e o SLA. Abrir "Com filtros"
+  mostra a barra logo abaixo e leva o foco ao primeiro filtro. O escopo vem da URL a cada visita (com
+  filtros, "Com filtros"; sem, a empresa toda), nunca da visita anterior; com um departamento da URL
+  esperando a lista, as buscas ficam paradas até ele chegar, em vez de sair com o recorte vazio.
 - **Gráfico principal (`<app-dashboard-hero-chart>`):** uma toolbar só (frase de destaque à
-  esquerda; Empresa/Com filtros, Dia/Semana/Mês e o ícone da tabela à direita; o título do card é
-  `visually-hidden`), a barra de composição com a legenda dentro das fatias (status, número e %
+  esquerda; Dia/Semana/Mês e o ícone da tabela à direita; o título do card é `visually-hidden`; o
+  escopo Empresa/Com filtros não mora aqui, ver acima), a barra de composição com a legenda dentro das fatias (status, número e %
   conforme a largura da fatia; abaixo de 1200px, uma legenda compacta numa linha embaixo) e
   "+ N cancelados" à direita, o fluxo com ~300px de plotagem a 1366×650 (o eixo pode cair um pouco
   abaixo da dobra — decisão de 2026-10-28) e um rodapé com o intervalo e o que ainda vem. Frase de
   destaque com regras e limiares em `dashboard-insight-rules.ts`; sem amostra, nenhuma frase; a regra
   de fila só com a flag dos resolvidos. No celular, uma série só.
+  **Legenda da barra:** os itens também
+  abrem a lista do status, abaixo de 1200px e, no toque, em qualquer largura (alvo de 44px); cada fatia tem pelo menos
+  24px de largura (WCAG 2.5.8). **Tema:** trocar o tema
+  com a tela aberta redesenha o canvas com as cores novas (as cores vêm dos tokens no desenho).
 - **Classes globais do Início:** `.status-fill-{open|inProgress|resolved|closed}` (cor de área +
   contorno `--edge` do mesmo matiz, ≥3:1), `.status-dot` (marcador) e `.tk-skeleton` (esqueleto com
   brilho, parado com movimento reduzido).
@@ -524,17 +558,24 @@ vizinhos — um papel só pra título de bloco, também nos estados "em breve".
   o gráfico pede o menor agrupamento que cabe (semana), sem erro.
 - **Abaixo da dobra:** Central de atenção e Alertas de SLA lado a lado; depois SLA detalhado e tempos
   (quem atende a fila) ou "Seus chamados" (quem abre), e as Ações Rápidas.
-- **Um número, um lugar:** "Atrasados" mora só no topo (sexto KPI); a Central mostra críticos, sem
-  responsável e aguardando; "Em risco" e a taxa de SLA moram no grupo de SLA (a regra dos 75% só na
+- **Um número, um lugar:** "Atrasados" e "Sem responsável" moram só no topo; a Central mostra
+  críticos e aguardando; "Em risco" e a taxa de SLA moram no grupo de SLA (a regra dos 75% só na
   descrição dele); os Alertas, só a lista; as Ações Rápidas não repetem atalhos que a Central já
   mostra com número.
 - **Idade dos números:** "Atualizado há N min" + botão de atualizar nas ações do cabeçalho. A tela
   se atualiza a cada 2 min com a aba visível (pausa com a aba oculta); a recarga mantém os números
   como estão (sem esmaecer) e só gira um indicador discreto no cabeçalho. Uma atualização que falha
   também mantém os números (incluindo os do agregado e os tempos) e o cabeçalho diz "Falha ao atualizar · números
-  das HH:mm"; sem números anteriores, o erro aparece uma vez só (na Central) e os grupos que dependem
-  da mesma leitura dizem "Indisponível no momento — veja o aviso acima". O leitor de tela ouve só
-  "Atualizado agora", nunca os números.
+  das HH:mm"; sem números anteriores, o erro aparece uma vez só (na faixa do topo, com "Tentar novamente") e
+  os grupos que dependem da mesma leitura (Central, SLA, a barra de composição) dizem "Indisponível no
+  momento — veja o aviso acima". "Seus chamados" segue a mesma regra: na recarga, os números ficam; numa
+  falha com números na tela, o cabeçalho diz "Falha ao atualizar". Enquanto a nova tentativa
+  carrega, o aviso de erro fica (o resource do Angular mantém o erro num `reload()` com os mesmos
+  parâmetros; trocar o recorte zera e mostra o esqueleto): não pisca pro esqueleto nem é lido
+  de novo a cada 2 min. Na atualização, o leitor de tela ouve só "Atualizado agora", nunca os números;
+  ao trocar um filtro ou o escopo, ouve um resumo curto dos números novos ("Números com os filtros: 3
+  atrasados, 12 na fila."). Os botões de atualizar usam `aria-disabled` (não `disabled`) enquanto
+  carregam, pra não tirar o foco de quem usa teclado.
 - **Tempos:** mediana em destaque (`stat-value`), média ao lado, "horário útil"; abaixo da amostra
   mínima do back-end (`minimumSampleSize`), "Dados insuficientes" com quantos entraram na conta.
   Carregando, o esqueleto dos dois cards (como nos grupos de números). Com período, entram os
@@ -542,7 +583,9 @@ vizinhos — um papel só pra título de bloco, também nos estados "em breve".
 
 ### Cards de estatística (`<app-stat-card>`, `shared/ui/stat-card`)
 Rótulo, número (`div.stat-value`, nunca heading), legenda e ícone em `.icon-tile` no tom semântico.
-Carregando: spinner no lugar do número; falhou: "—". Interação sempre no card inteiro: `[pressed]`
+Carregando: spinner no lugar do número; falhou: "—". O número tem separador de milhar ("1.240") e
+o zero fica neutro, sem a cor do tom ("Críticos 0" em vermelho anunciaria um alarme que não existe).
+Abaixo de uma faixa de indicadores, use `[compact]="true"`. Interação sempre no card inteiro: `[pressed]`
 vira um botão `aria-pressed` que filtra a própria tela (Monitorar), ou um `<a class="stretched-link">`
 projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve o dado.
 

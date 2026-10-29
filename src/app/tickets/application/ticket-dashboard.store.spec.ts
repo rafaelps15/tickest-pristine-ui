@@ -180,6 +180,24 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getOverview).toHaveBeenCalledWith(jasmine.objectContaining({ assignedToUserId: 'u-ana' }));
   });
 
+  it('com o recorte seguro (departamento esperando a lista), nada é pedido; o setScope solta já com o recorte certo', async () => {
+    const store = createStore();
+    store.holdScope();
+    await settle();
+
+    expect(dataService.getOverview).not.toHaveBeenCalled();
+    expect(dataService.getTimes).not.toHaveBeenCalled();
+    expect(dataService.getVolume).not.toHaveBeenCalled();
+    expect(store.overviewLoading()).toBeFalse();
+
+    store.setScope({ sectorIds: ['s1', 's2'] });
+    await settle();
+
+    expect(dataService.getOverview).toHaveBeenCalledTimes(1);
+    expect(dataService.getOverview).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
+    expect(dataService.getTimes).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
+  });
+
   it('recorte igual não refaz as requisições', async () => {
     const store = createStore();
     store.setScope({ sectorIds: ['s1'] });

@@ -11,20 +11,8 @@
         }
       </div>
 
+      <!-- O escopo (Empresa / Com filtros) não mora aqui: fica numa linha acima dos números, porque vale pra tela toda. -->
       <div class="hero-controls">
-        @if (showScope()) {
-        <!-- No celular, enquanto "Com filtros" não existe, o par some: no toque não há hover nem foco pra mostrar o "Em breve". -->
-        <div class="btn-group btn-group-sm" [class.scope-pending]="!filteredAvailable()" role="group" aria-label="Escopo do gráfico">
-          <button type="button" class="btn" [class.btn-primary]="scope() === 'company'" [class.btn-outline-secondary]="scope() !== 'company'"
-                  [attr.aria-pressed]="scope() === 'company'" (click)="chooseScope('company')">Empresa</button>
-          <!-- Sem back-end ainda: continua na ordem do Tab (aria-disabled, não disabled), com o "Em breve" à vista no foco. -->
-          <button type="button" class="btn scope-soon" [class.btn-primary]="scope() === 'filtered'" [class.btn-outline-secondary]="scope() !== 'filtered'"
-                  [attr.aria-pressed]="scope() === 'filtered'" [attr.aria-disabled]="!filteredAvailable() || null"
-                  [attr.data-tip]="filteredAvailable() ? null : 'Em breve'" (click)="chooseScope('filtered')">
-            Com filtros@if (!filteredAvailable()) {<span class="visually-hidden"> (em breve)</span>}
-          </button>
-        </div>
-        }
         <!-- Agrupamento e tabela andam juntos: no celular, quebram de linha juntos (o botão da tabela não fica sozinho). -->
         <div class="d-flex align-items-center gap-2">
         <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
@@ -53,12 +41,8 @@
           <app-dashboard-notice text="Situação atual dos chamados: disponível em breve." />
         }
         @case ('error') {
-          @if (compositionErrorElsewhere()) {
-            <!-- O aviso com "Tentar novamente" já está nos indicadores acima: aqui, só o estado, sem um segundo alerta. -->
-            <p class="composition-unavailable mb-0">Situação atual indisponível. Use “Tentar novamente” nos indicadores acima.</p>
-          } @else {
-            <app-dashboard-notice kind="error" text="Não foi possível carregar a situação atual dos chamados." (retry)="retryComposition.emit()" />
-          }
+          <!-- O aviso com "Tentar novamente" já está nos indicadores acima (a mesma fonte): aqui, só o estado, sem um segundo alerta. -->
+          <p class="composition-unavailable mb-0">Situação atual indisponível. Use “Tentar novamente” nos indicadores acima.</p>
         }
         @case ('loading') {
           <div class="composition-skeleton" role="status">
@@ -165,7 +149,7 @@
                       <td class="text-end">{{ full(point.resolvedCount) }}</td>
                     }
                     @if (bucketLinks()[i]; as link) {
-                      <td class="text-end"><a [routerLink]="link.route" [queryParams]="link.queryParams" [attr.aria-label]="'Ver os chamados criados em ' + longLabel(point.periodStart)">Ver chamados</a></td>
+                      <td class="text-end"><a [routerLink]="link.route" [queryParams]="link.queryParams" [attr.aria-label]="'Ver os chamados criados em ' + longLabel(point.periodStart)" class="tap-target">Ver chamados</a></td>
                     }
                   </tr>
                 }

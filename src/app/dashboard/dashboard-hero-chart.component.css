@@ -71,9 +71,11 @@
 }
 
 /* "Com filtros" sem back-end: parece desabilitado, mas continua focável, e mostra "Em breve" no hover e no foco. */
+/* Indisponível: texto e borda neutros do tema (nunca opacity, que derruba a leitura). */
 [aria-disabled='true'][data-tip] {
   position: relative;
-  opacity: 0.65;
+  color: var(--tk-text-muted);
+  border-color: var(--tk-input-border);
   cursor: not-allowed;
 }
 
@@ -126,6 +128,10 @@
   .hero-controls .btn-sm {
     min-height: 44px;
   }
+
+  .btn-table-toggle {
+    min-width: 44px;
+  }
 }
 
 /* Celular: a versão simples, mais baixa (composição + uma série). */
@@ -136,10 +142,6 @@
 
   .flow-chart {
     height: 11rem;
-  }
-
-  .scope-pending {
-    display: none;
   }
 
   /* No celular a legenda da composição ocupa duas linhas. */

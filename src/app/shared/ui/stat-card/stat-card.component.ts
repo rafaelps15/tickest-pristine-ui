@@ -1,5 +1,8 @@
 import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
 
+/** Formato dos números do card: inteiro com separador de milhar do pt-BR. */
+const STAT_NUMBER_FORMAT = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+
 /** Tom semântico do número e do ícone — só cores de status, nunca decorativas. */
 export type StatTone = 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -32,7 +35,7 @@ export type StatTone = 'primary' | 'success' | 'warning' | 'danger' | 'info';
             } @else if (failed()) {
               <div class="mb-0 me-2 stat-value text-muted" [class.fs-3]="!compact()" [class.fs-4]="compact()"><span aria-hidden="true">—</span><span class="visually-hidden">indisponível</span></div>
             } @else {
-              <div class="mb-0 me-2 stat-value {{ toneValue() }}" [class.fs-3]="!compact()" [class.fs-4]="compact()">{{ value() ?? '—' }}</div>
+              <div class="mb-0 me-2 stat-value {{ toneValue() }}" [class.fs-3]="!compact()" [class.fs-4]="compact()">{{ displayValue() }}</div>
             }
           </div>
           <small class="text-muted stat-hint"><ng-content select="[statHint]" />{{ hint() }}</small>
@@ -83,6 +86,14 @@ export class StatCardComponent {
   protected readonly clickable = computed(() => this.pressed() !== null || this.linked());
   /** Classe de cor do texto do tom (o tom `primary` mantém o número na cor de texto padrão). */
   protected readonly toneText = computed(() => this.tone() === 'primary' ? 'text-primary' : `text-${this.tone()}`);
-  /** Cor do número: a do tom, exceto `primary`, que mantém a cor de texto padrão. */
-  protected readonly toneValue = computed(() => this.tone() === 'primary' ? '' : `text-${this.tone()}`);
+  /**
+   * Cor do número: a do tom, exceto `primary`, que mantém a cor de texto padrão — e o zero, que fica
+   * neutro ("Críticos 0" em vermelho anunciaria um alarme que não existe).
+   */
+  protected readonly toneValue = computed(() => this.tone() === 'primary' || this.value() === 0 ? '' : `text-${this.tone()}`);
+  /** Número com separador de milhar ("1.240"), ou "—" sem número. */
+  protected readonly displayValue = computed(() => {
+    const value = this.value();
+    return value === null || value === undefined ? '—' : STAT_NUMBER_FORMAT.format(value);
+  });
 }

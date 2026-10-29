@@ -44,11 +44,6 @@ export function formatBusinessMinutes(minutes: number): string {
         <p class="text-muted small mb-0">{{ description() }}</p>
       </div>
 
-      <!-- Resumo pro leitor de tela quando os tempos chegam ou mudam com os filtros (como nos grupos de números). -->
-      @if (announce()) {
-        <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
-      }
-
       @if (error()) {
         <!-- Falha técnica em tom neutro: vermelho fica pro risco operacional (SLA vencido). -->
         <div class="card px-3 py-2"><app-dashboard-notice kind="error" [text]="error()!" (retry)="retry.emit()" /></div>
@@ -124,11 +119,8 @@ export class DashboardTimesComponent {
   readonly error = input<string | null>(null);
   /** Se há período escolhido (muda a explicação de quais chamados entram). */
   readonly hasPeriod = input(false);
-  /**
-   * Se o próprio grupo anuncia os números ao leitor de tela. A tela desliga quando vários grupos
-   * mudam juntos (troca de filtro) e anuncia um resumo só, em vez de uma frase por grupo.
-   */
-  readonly announce = input(true);
+  /** Complemento da descrição dito pela tela (no escopo "Com filtros", que os tempos seguem os filtros). */
+  readonly scopeNote = input('');
 
   /** "Tentar novamente". */
   readonly retry = output<void>();
@@ -137,9 +129,9 @@ export class DashboardTimesComponent {
   protected readonly skeletonKeys = ['firstResponse', 'resolution'];
 
   /** O que entra na conta, conforme o período. */
-  readonly description = computed(() => this.hasPeriod()
+  readonly description = computed(() => (this.hasPeriod()
     ? 'Mediana e média dos chamados respondidos ou resolvidos no período, em horário útil do plano de SLA.'
-    : 'Mediana e média de todos os chamados já respondidos ou resolvidos, em horário útil do plano de SLA.');
+    : 'Mediana e média de todos os chamados já respondidos ou resolvidos, em horário útil do plano de SLA.') + this.scopeNote());
 
   /** Os dois tempos, na ordem da jornada do chamado. */
   readonly cards = computed((): TimeCard[] => {
@@ -149,15 +141,6 @@ export class DashboardTimesComponent {
       { key: 'firstResponse', label: 'Primeira resposta', hint: 'Da abertura até a primeira mensagem de quem atende.', stat: times.firstResponse },
       { key: 'resolution', label: 'Resolução', hint: 'Da abertura até a primeira resolução.', stat: times.resolution }
     ];
-  });
-
-  /** Frase lida pelo leitor de tela quando os tempos chegam ("Tempos médios: primeira resposta, mediana de 1 h 15 min…"). */
-  readonly liveSummary = computed(() => {
-    if (this.loading() || this.error()) return '';
-    const parts = this.cards().map(card => card.stat.medianMinutes !== null
-      ? `${card.label.toLowerCase()}, mediana de ${formatBusinessMinutes(card.stat.medianMinutes)}`
-      : `${card.label.toLowerCase()}, dados insuficientes`);
-    return parts.length ? `Tempos de atendimento: ${parts.join('; ')}.` : '';
   });
 
   /** Formata minutos úteis pro card. */

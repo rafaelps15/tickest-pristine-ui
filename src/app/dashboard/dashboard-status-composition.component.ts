@@ -60,12 +60,17 @@ export interface DashboardLink {
 
     <!--
       Telas estreitas (< 1200px): as fatias ficam pequenas demais pro nome do status, então uma legenda
-      compacta numa linha diz o que é cada cor. Só texto (aria-hidden): os links e os nomes acessíveis
-      continuam nas próprias fatias.
+      compacta numa linha diz o que é cada cor — e cada item abre a mesma lista da fatia, com alvo de
+      toque de 44px (uma fatia pode ter 6px de largura). Fora do Tab e do leitor de tela (aria-hidden,
+      tabindex -1): os links com nome acessível completo continuam nas próprias fatias.
     -->
     <p class="composition-legend mb-0" aria-hidden="true">
       @for (segment of composition().segments; track segment.group) {
-        <span class="legend-item"><span class="status-dot status-fill-{{ segment.group }}"></span>{{ labels[segment.group] }} {{ short(segment.count) }} · {{ segment.percent }}%</span>
+        @if (links()[segment.group]; as link) {
+          <a class="legend-item legend-link tap-target" tabindex="-1" [routerLink]="link.route" [queryParams]="link.queryParams"><span class="status-dot status-fill-{{ segment.group }}"></span>{{ labels[segment.group] }} {{ short(segment.count) }} · {{ segment.percent }}%</a>
+        } @else {
+          <span class="legend-item"><span class="status-dot status-fill-{{ segment.group }}"></span>{{ labels[segment.group] }} {{ short(segment.count) }} · {{ segment.percent }}%</span>
+        }
       }
     </p>
 
@@ -88,9 +93,10 @@ export interface DashboardLink {
       height: 1.5rem;
     }
 
+    /* 24px de largura mínima: cada fatia é um link e precisa de um alvo de pelo menos 24×24 (WCAG 2.5.8). */
     .composition-segment {
       flex-basis: 0;
-      min-width: 6px;
+      min-width: 1.5rem;
       container-type: inline-size;
       box-shadow: inset 0 0 0 1px var(--edge);
       color: var(--tk-status-label);
@@ -153,6 +159,12 @@ export interface DashboardLink {
       gap: 0.3rem;
     }
 
+    /* Só pro toque (fora do Tab e do leitor de tela): sem hover. */
+    .legend-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
     @media (max-width: 1199.98px) {
       .composition-legend { display: flex; }
       .composition-bar { height: 1rem; }
@@ -177,8 +189,10 @@ export interface DashboardLink {
     }
 
     /* Toque: a barra fica com a altura de um alvo de dedo (44px). */
+    /* Toque, em qualquer largura (tablet na horizontal também): a legenda clicável, com alvos de 44px. */
     @media (pointer: coarse) {
       .composition-bar { height: 2.75rem; }
+      .composition-legend { display: flex; }
     }
   `
 })

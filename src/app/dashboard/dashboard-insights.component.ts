@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Params, RouterLink } from '@angular/router';
 import { TicketMonitorItem, TicketSlaStatus } from '../tickets';
 import { formatSlaDuration } from '../shared';
 import { DashboardNoticeComponent } from './dashboard-notice.component';
@@ -61,6 +61,10 @@ export class DashboardInsightsComponent {
    * no topo da tela e no grupo de SLA, e os Alertas ficam só com a lista do que agir.
    */
   readonly showTotals = input(true);
+  /** Os Alertas seguem os filtros do Início (escopo "Com filtros"): o subtítulo e o vazio dizem isso. */
+  readonly filtered = input(false);
+  /** Query params do "Ver a fila pelo prazo" (os filtros, no escopo "Com filtros"). */
+  readonly queueParams = input<Params>({});
 
   /** Pede pra recarregar só os alertas ("Atualizar", "Tentar novamente" ou volta pra aba depois de um tempo). */
   readonly refresh = output<void>();

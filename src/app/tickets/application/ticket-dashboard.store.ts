@@ -62,7 +62,12 @@ export const TicketDashboardStore = signalStore(
     /** Agrupamento do gráfico Criados x Resolvidos. */
     groupBy: 'Day' as TicketVolumeGrouping,
     /** Escopo do gráfico principal; o volume do recorte só é pedido em "filtered". */
-    chartScope: 'company' as TicketDashboardChartScope
+    chartScope: 'company' as TicketDashboardChartScope,
+    /**
+     * A tela ainda não sabe o recorte (um departamento da URL esperando a lista): as buscas ficam
+     * paradas, em vez de sair com o recorte vazio ou o da visita anterior e ser canceladas depois.
+     */
+    scopeHeld: false
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
@@ -86,7 +91,7 @@ export const TicketDashboardStore = signalStore(
     };
 
     /** Só pergunta à API com a permissão de ver a fila e um recorte possível — sem isso, o resource fica parado. */
-    const allowed = () => store._session.hasPermission('tickets:manage');
+    const allowed = () => store._session.hasPermission('tickets:manage') && !store.scopeHeld();
     /** Agregado liberado: permissão e a rota já entregue pelo back-end (flag). */
     const overviewOn = () => allowed() && store._features.operationOverview;
 
@@ -205,8 +210,14 @@ export const TicketDashboardStore = signalStore(
   withMethods((store) => ({
     /** Troca o recorte de todos os widgets (vindo dos filtros da URL); recorte igual não refaz nada. */
     setScope(scope: TicketDashboardScope): void {
+      if (store.scopeHeld()) patchState(store, { scopeHeld: false });
       if (sameScope(store.scope(), scope)) return;
       patchState(store, { scope: { ...scope } });
+    },
+
+    /** Segura as buscas até a tela saber o recorte (o próximo {@link setScope} solta). */
+    holdScope(): void {
+      patchState(store, { scopeHeld: true });
     },
 
     /** Troca o escopo do gráfico principal (empresa toda ou recorte dos filtros). */

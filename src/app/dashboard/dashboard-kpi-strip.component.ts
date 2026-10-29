@@ -12,8 +12,6 @@ export interface DashboardKpi {
   label: string;
   /** Número, ou null sem resposta. */
   value: number | null;
-  /** Texto do valor quando não é uma contagem ("87%"); sem ele, a contagem é formatada. */
-  display?: string | null;
   /** Grupo de status do número — dá a cor do marcador, a mesma da barra e do gráfico. */
   group?: DashboardStatusGroup | null;
   /** Apoio curto ao lado do número ("abertos + em andamento"). */
@@ -26,8 +24,11 @@ export interface DashboardKpi {
   unavailable?: boolean;
   /** Este número vem de outra fonte, ainda carregando (esqueleto só nele). */
   loading?: boolean;
-  /** Risco operacional (ex.: chamados atrasados): o número fica no vermelho de alerta quando passa de zero. */
-  risk?: boolean;
+  /**
+   * Risco operacional: acima de zero, o card ganha o fundo e o número na cor do alerta — vermelho pros
+   * atrasados, âmbar pros sem responsável. Zero fica neutro.
+   */
+  risk?: 'danger' | 'warning';
 }
 
 /**
@@ -47,9 +48,12 @@ export interface DashboardKpi {
         <app-dashboard-notice kind="error" [text]="errorText()" (retry)="retry.emit()" />
       </div>
     } @else {
-      <ul class="list-unstyled kpi-strip mb-0" [attr.aria-busy]="state() === 'loading' || null">
+      <!-- Título pra quem navega por títulos (antes ia do h1 direto ao gráfico, pulando os números). -->
+      <h2 class="visually-hidden">Indicadores</h2>
+      <ul class="list-unstyled kpi-strip mb-0" [class.kpi-strip-4]="kpis().length <= 4" [attr.aria-busy]="state() === 'loading' || null">
         @for (kpi of kpis(); track kpi.key) {
-          <li class="card kpi-card" [class.kpi-linked]="!!kpi.link && !kpi.unavailable && state() !== 'loading' && !kpi.loading">
+          <li class="card kpi-card" [class.kpi-linked]="!!kpi.link && !kpi.unavailable && state() !== 'loading' && !kpi.loading"
+              [class.kpi-alert-danger]="isAlert(kpi, 'danger')" [class.kpi-alert-warning]="isAlert(kpi, 'warning')">
             <span class="kpi-label">
               @if (kpi.group) {
                 <span class="status-dot status-fill-{{ kpi.group }}" aria-hidden="true"></span>
@@ -67,7 +71,7 @@ export interface DashboardKpi {
               <span class="visually-hidden">Carregando {{ kpi.label }}…</span>
             } @else {
               <span class="kpi-value-row">
-                <span class="kpi-value stat-value" [class.kpi-risk]="kpi.risk && (kpi.value ?? 0) > 0"
+                <span class="kpi-value stat-value" [class.kpi-risk]="isAlert(kpi, 'danger')" [class.kpi-risk-warning]="isAlert(kpi, 'warning')"
                       [attr.title]="kpi.value !== null ? full(kpi.value) : null">{{ valueText(kpi) }}</span>
                 @if (kpi.hint || kpi.trend) {
                   <span class="kpi-hint" [attr.title]="hintText(kpi)">{{ hintText(kpi) }}</span>
@@ -90,16 +94,18 @@ export interface DashboardKpi {
 
     .kpi-strip {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(var(--kpi-cols, 2), minmax(0, 1fr));
       gap: 0.75rem;
     }
 
+    /* Quatro números (quem atende a fila): uma linha só a partir do tablet (a classe dupla vence o 6). */
     @media (min-width: 768px) {
-      .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .kpi-strip { --kpi-cols: 3; }
+      .kpi-strip.kpi-strip-4 { --kpi-cols: 4; }
     }
 
     @media (min-width: 1200px) {
-      .kpi-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      .kpi-strip { --kpi-cols: 6; }
     }
 
     .kpi-card {
@@ -110,7 +116,6 @@ export interface DashboardKpi {
       min-height: 4.5rem;
       padding: 0.625rem 1rem;
       min-width: 0;
-      container-type: inline-size;
     }
 
     .kpi-linked:hover,
@@ -159,14 +164,32 @@ export interface DashboardKpi {
       .kpi-linked:focus-within .kpi-go { transform: none; }
     }
 
-    /* Atrasados acima de zero: risco operacional, o único vermelho da faixa. */
+    /* Risco acima de zero: número e fundo na cor do alerta (vermelho = atrasados, âmbar = sem responsável). */
     .kpi-risk { color: var(--tk-danger-text); }
+    .kpi-risk-warning { color: var(--tk-warning-text); }
 
-    /* Número e apoio numa linha só (o apoio corta com reticências e fica inteiro no title): a altura do card não muda com o dado. */
+    /*
+     * O tom de alerta por cima da superfície opaca do card (o background-color do .card fica), e não
+     * sobre o cinza da página. Sobre ele, o apoio sobe pro cinza secundário: o muted cai pra 3,8–4,3:1
+     * (abaixo de AA); o secundário fica em 4,6–4,8:1 no claro e 6,1–6,9:1 no escuro.
+     */
+    .kpi-alert-danger { --kpi-tint: rgba(var(--tk-danger-rgb), 0.08); }
+    .kpi-alert-warning { --kpi-tint: rgba(var(--tk-warning-rgb), 0.1); }
+    [class*='kpi-alert-'] {
+      --kpi-hint-color: var(--tk-text-secondary);
+      background-image: linear-gradient(var(--kpi-tint), var(--kpi-tint));
+    }
+
+    /*
+     * Número e apoio lado a lado; quando o card é estreito (celular, tablet) ou o apoio é longo ("abertos
+     * no período, passaram do prazo"), o apoio desce pra linha de baixo e quebra — nunca some nem passa da
+     * borda. Os cards da mesma linha da grade ficam com a mesma altura.
+     */
     .kpi-value-row {
       display: flex;
+      flex-wrap: wrap;
       align-items: baseline;
-      gap: 0.5rem;
+      column-gap: 0.5rem;
       min-width: 0;
     }
 
@@ -178,17 +201,15 @@ export interface DashboardKpi {
 
     .kpi-hint,
     .kpi-note {
-      color: var(--tk-text-muted);
+      color: var(--kpi-hint-color, var(--tk-text-muted));
       font-size: 0.75rem;
     }
 
-    /* O apoio só aparece quando cabe inteiro (cortado com reticências, lia mal); sempre no title e no nome acessível. */
     .kpi-hint {
-      display: none;
-      white-space: nowrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      line-height: 1.3;
     }
-
-    @container (width >= 12.5rem) { .kpi-hint { display: inline; } }
 
     .kpi-soon {
       color: var(--tk-text-secondary);
@@ -213,9 +234,13 @@ export class DashboardKpiStripComponent {
   /** "Tentar novamente" do erro. */
   readonly retry = output<void>();
 
+  /** O card está em alerta deste tom: risco do tom, número carregado e acima de zero. */
+  protected isAlert(kpi: DashboardKpi, tone: 'danger' | 'warning'): boolean {
+    return kpi.risk === tone && !kpi.loading && this.state() !== 'loading' && (kpi.value ?? 0) > 0;
+  }
+
   /** Texto do número no card ("1.240", "12,3 mil", "87%"). */
   protected valueText(kpi: DashboardKpi): string {
-    if (kpi.display) return kpi.display;
     return kpi.value === null ? '—' : formatCount(kpi.value);
   }
 
@@ -231,7 +256,7 @@ export class DashboardKpiStripComponent {
 
   /** Nome acessível do link do card: rótulo, número completo, apoio, aviso de visibilidade e destino. */
   protected linkLabel(kpi: DashboardKpi): string {
-    const value = kpi.display ?? (kpi.value === null ? 'indisponível' : formatFullCount(kpi.value));
+    const value = kpi.value === null ? 'indisponível' : formatFullCount(kpi.value);
     const hint = this.hintText(kpi);
     const note = kpi.link?.note ? `. ${kpi.link.note}` : '';
     return `${kpi.label}: ${value}${hint ? ` (${hint})` : ''}${note}. Ver a lista`;

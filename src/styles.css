@@ -10,6 +10,14 @@
   --tk-primary-dark: #5f61e6;
   --tk-primary-darker: #3a3ca3;
   --tk-primary-rgb: 105, 108, 255;
+  /* O vermelho de alerta em canais, pros fundos translúcidos (badge "Atrasado", realce de um alerta que acabou de vencer). */
+  --tk-danger-rgb: 255, 62, 29;
+  --tk-warning-rgb: 255, 171, 0;
+  /* Links de texto no índigo do produto, nunca no azul de fábrica do Bootstrap. */
+  --bs-link-color: var(--tk-primary-text);
+  --bs-link-color-rgb: 58, 60, 163;
+  --bs-link-hover-color: var(--tk-primary-darker);
+  --bs-link-hover-color-rgb: 58, 60, 163;
   /* Índigo como texto (link ativo, menu): o --tk-primary puro dá só ~4:1 sobre fundo claro. */
   --tk-primary-text: var(--tk-primary-darker);
 
@@ -22,7 +30,8 @@
   /* Escurecido em 2026-10-27 (era #697a8d, ~4,05:1 sobre --tk-page-bg) — subtítulo de Meus Tickets reprovava AA. */
   --tk-text-secondary: #5f6f82;
   /* Escurecido em 2026-10-08 (era #a1acb8, ~2,31:1) pra passar 4,5:1 WCAG AA sobre --tk-surface — auditado no Dashboard. */
-  --tk-text-muted: #6b7684;
+  /* Escurecido em 2026-10-28 (era #6b7684, 4,24:1 sobre --tk-page-bg): agora 4,63:1 na página e 5,03:1 no card. */
+  --tk-text-muted: #65707e;
 
   /*
    * Variantes escurecidas das cores semânticas "puras" — mesmos hex já usados como texto dos
@@ -92,6 +101,10 @@
   --tk-info-text: #5fd9f2;
   --tk-danger-text: #ff8669;
   --tk-primary-text: #b3b5ff;
+  --bs-link-color: #b3b5ff;
+  --bs-link-color-rgb: 179, 181, 255;
+  --bs-link-hover-color: #d1d2ff;
+  --bs-link-hover-color-rgb: 209, 210, 255;
   /* No escuro, o cinza de Fechado clareia: o texto da fatia passa a ser o fundo escuro do sistema (~5:1). */
   --tk-status-closed-label: var(--tk-page-bg);
 
@@ -356,6 +369,25 @@ body {
 
 .btn-outline-secondary, .btn-outline-primary {
   transition: transform var(--tk-transition), box-shadow var(--tk-transition);
+}
+
+/*
+ * Contornado secundário no cinza secundário do tema, nunca no #6c757d de fábrica: o de fábrica dava
+ * 4,31:1 sobre o fundo da página no claro ("Guia da tela", Empresa/Com filtros, fora de card) e 3,3:1
+ * no escuro. O secundário dá 4,73:1 (página) e 5,14:1 (card) no claro, e 7,4–8,2:1 no escuro; o hover
+ * preenche com ele e o texto vira a superfície (5,1:1 e 7,4:1).
+ */
+.btn-outline-secondary {
+  --bs-btn-color: var(--tk-text-secondary);
+  --bs-btn-border-color: var(--tk-text-secondary);
+  --bs-btn-hover-color: var(--tk-surface);
+  --bs-btn-hover-bg: var(--tk-text-secondary);
+  --bs-btn-hover-border-color: var(--tk-text-secondary);
+  --bs-btn-active-color: var(--tk-surface);
+  --bs-btn-active-bg: var(--tk-text-secondary);
+  --bs-btn-active-border-color: var(--tk-text-secondary);
+  --bs-btn-disabled-color: var(--tk-text-secondary);
+  --bs-btn-disabled-border-color: var(--tk-text-secondary);
 }
 
 /*

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { TicketSummaryStore } from './ticket-summary.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatusCounts } from '../entities/ticket-status-counts';
@@ -92,6 +92,33 @@ describe('TicketSummaryStore', () => {
     expect(store.volumeHasValue()).toBeTrue();
   });
 
+  it('com o agregado da operação no ar, quem atende a fila não pede os totais por status de novo (vêm no agregado)', async () => {
+    TestBed.resetTestingModule();
+    features = { ...features, operationOverview: true };
+    dataService.getStatusCounts.calls.reset();
+    dataService.getVolume.calls.reset();
+    configure();
+    store = await createStore();
+
+    expect(dataService.getStatusCounts).not.toHaveBeenCalled();
+    expect(dataService.getVolume).toHaveBeenCalledWith('Day');
+  });
+
+  it('um erro dos totais continua valendo enquanto a nova tentativa carrega (o resource do Angular mantém o erro no reload)', async () => {
+    TestBed.resetTestingModule();
+    dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    configure();
+    store = await createStore();
+    expect(store.statusCountsFailed()).toBeTrue();
+
+    // A nova tentativa fica pendurada (nunca responde): o erro anterior continua.
+    dataService.getStatusCounts.and.returnValue(NEVER);
+    store.load();
+    TestBed.tick();
+    expect(store.statusCountsLoading()).toBeTrue();
+    expect(store.statusCountsFailed()).toBeTrue();
+  });
+
   it('quem não atende a fila não pede os números da empresa enquanto o back-end exige tickets:manage (evita o 403 certo)', async () => {
     TestBed.resetTestingModule();
     sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
@@ -122,13 +149,8 @@ describe('TicketSummaryStore', () => {
       expect(dataService.getVolume).toHaveBeenCalledWith('Day');
     });
 
-    it('expõe os totais dos cards a partir dos totais por status', () => {
-      expect(store.total()).toBe(10);
-      expect(store.openCount()).toBe(3);
-      expect(store.inProgressCount()).toBe(2);
-      expect(store.resolvedCount()).toBe(4);
-      expect(store.closedCount()).toBe(1);
-      expect(store.canceledCount()).toBe(0);
+    it('expõe os totais por status da empresa', () => {
+      expect(store.statusCounts()).toEqual(statusCounts);
     });
 
     it('expõe os pontos de volume retornados pela API', () => {
@@ -154,9 +176,8 @@ describe('TicketSummaryStore', () => {
       expect(store.summaryError()).toBe('Erro ao carregar o resumo dos chamados');
       expect(store.statusCountsFailed()).toBeTrue();
       expect(store.volumeFailed()).toBeFalse();
-      // Os totais em erro não podem lançar — o template os lê sempre, mesmo mostrando "—".
-      expect(store.total()).toBe(0);
-      expect(store.closedCount()).toBe(0);
+      // Os totais em erro não podem lançar — a tela os lê sempre, mostrando "—".
+      expect(store.statusCounts()).toBeNull();
     });
 
     it('sem permissão (403), diz o motivo em vez da mensagem genérica', async () => {
@@ -186,13 +207,40 @@ describe('TicketSummaryStore', () => {
     });
   });
 
+  it('no escopo "Com filtros", os alertas seguem o recorte (setores, prioridade, sem responsável e período); recorte igual não refaz a busca', async () => {
+    dataService.getAll.calls.reset();
+    store.setCriticalScope({ sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, assignee: 'none', from: '2026-10-01', to: '2026-10-28' });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    const expected = { sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, unassignedOnly: true, createdFrom: '2026-10-01', createdTo: '2026-10-28' };
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ ...expected, slaStatus: TicketSlaStatus.Breached }));
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ ...expected, slaStatus: TicketSlaStatus.AtRisk }));
+
+    dataService.getAll.calls.reset();
+    store.setCriticalScope({ sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, assignee: 'none', from: '2026-10-01', to: '2026-10-28' });
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(dataService.getAll).not.toHaveBeenCalled();
+  });
+
+  it('com o recorte dos Alertas seguro, a lista não é pedida; o setCriticalScope solta já com o recorte certo', async () => {
+    dataService.getAll.calls.reset();
+    store.holdCriticalScope();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(dataService.getAll).not.toHaveBeenCalled();
+
+    store.setCriticalScope({ sectorIds: ['s9'] });
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s9'], slaStatus: TicketSlaStatus.Breached }));
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s9'], slaStatus: TicketSlaStatus.AtRisk }));
+  });
+
   it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem chamados:manage', () => {
-    expect(dataService.getAll).toHaveBeenCalledWith({
-      slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5
-    });
-    expect(dataService.getAll).toHaveBeenCalledWith({
-      slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5
-    });
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({
+      slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5, sectorIds: undefined
+    }));
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({
+      slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5, sectorIds: undefined
+    }));
     // O vencido (prazo mais antigo) vem primeiro.
     expect(store.criticalTickets()).toEqual([breachedTicket, criticalTicket]);
   });

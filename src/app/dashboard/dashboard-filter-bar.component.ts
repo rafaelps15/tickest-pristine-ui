@@ -27,34 +27,35 @@ const CUSTOM_PERIOD = 'custom';
     <app-filter-bar label="Filtrar a operação" [clearable]="chips().length > 0" (clear)="clear.emit()">
       <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardPeriod">Período de abertura</label>
-        <select #periodSelect id="dashboardPeriod" class="form-select" [value]="periodValue()"
+        <!-- [selected] em cada opção, não [value] no select: a opção certa fica marcada mesmo quando a lista chega depois (DESIGN.md). -->
+        <select #periodSelect id="dashboardPeriod" class="form-select"
                 (change)="change.emit(toPeriod(periodSelect.value))">
-          <option value="">Todo o período</option>
+          <option value="" [selected]="periodValue() === ''">Todo o período</option>
           @for (period of periodOptions; track period) {
-            <option [value]="period">{{ periodLabels[period] }}</option>
+            <option [value]="period" [selected]="periodValue() === period">{{ periodLabels[period] }}</option>
           }
-          <option value="custom">Personalizado</option>
+          <option value="custom" [selected]="periodValue() === 'custom'">Personalizado</option>
         </select>
       </div>
       <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardDepartment">Departamento</label>
-        <select #departmentSelect id="dashboardDepartment" class="form-select" [value]="filters().departmentId ?? ''"
+        <select #departmentSelect id="dashboardDepartment" class="form-select"
                 (change)="change.emit(toDepartment(departmentSelect.value))">
-          <option value="">Todos os departamentos</option>
+          <option value="" [selected]="!filters().departmentId">Todos os departamentos</option>
           @for (department of departmentOptions(); track department.id) {
-            <option [value]="department.id">{{ department.name }}</option>
+            <option [value]="department.id" [selected]="department.id === filters().departmentId">{{ department.name }}</option>
           }
         </select>
       </div>
       <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardSector">Setor</label>
-        <select #sectorSelect id="dashboardSector" class="form-select" [value]="filters().sectorId ?? ''"
+        <select #sectorSelect id="dashboardSector" class="form-select"
                 (change)="change.emit({ sectorId: sectorSelect.value || undefined })">
-          <option value="">{{ selectedDepartment() ? 'Todos do departamento' : 'Todos os setores' }}</option>
+          <option value="" [selected]="!filters().sectorId">{{ selectedDepartment() ? 'Todos do departamento' : 'Todos os setores' }}</option>
           @for (department of sectorGroups(); track department.id) {
             <optgroup [label]="department.name">
               @for (sector of department.sectors; track sector.id) {
-                <option [value]="sector.id">{{ sector.name }}</option>
+                <option [value]="sector.id" [selected]="sector.id === filters().sectorId">{{ sector.name }}</option>
               }
             </optgroup>
           }
@@ -64,25 +65,25 @@ const CUSTOM_PERIOD = 'custom';
         <div class="row g-3">
       <div class="col-6 col-md-4">
         <label class="form-label small" for="dashboardPriority">Prioridade</label>
-        <select #prioritySelect id="dashboardPriority" class="form-select" [value]="filters().priority ?? ''"
+        <select #prioritySelect id="dashboardPriority" class="form-select"
                 (change)="change.emit({ priority: toPriority(prioritySelect.value) })">
-          <option value="">Todas</option>
+          <option value="" [selected]="filters().priority === undefined">Todas</option>
           @for (priority of priorityOptions; track priority) {
-            <option [value]="priority">{{ priorityLabels[priority] }}</option>
+            <option [value]="priority" [selected]="filters().priority === priority">{{ priorityLabels[priority] }}</option>
           }
         </select>
       </div>
       <div class="col-6 col-md-4">
         <label class="form-label small" for="dashboardAssignee">Responsável</label>
-        <select #assigneeSelect id="dashboardAssignee" class="form-select" [value]="assigneeValue()"
+        <select #assigneeSelect id="dashboardAssignee" class="form-select"
                 (change)="change.emit(toAssignee(assigneeSelect.value))">
-          <option value="">Qualquer um</option>
-          <option value="me">Atribuídos a mim</option>
-          <option value="none">Sem responsável</option>
+          <option value="" [selected]="assigneeValue() === ''">Qualquer um</option>
+          <option value="me" [selected]="assigneeValue() === 'me'">Atribuídos a mim</option>
+          <option value="none" [selected]="assigneeValue() === 'none'">Sem responsável</option>
           @if (assignees().length > 0) {
             <optgroup [label]="assigneeGroupLabel()">
               @for (assignee of assignees(); track assignee.id) {
-                <option [value]="assignee.id">{{ assignee.fullName }}</option>
+                <option [value]="assignee.id" [selected]="assigneeValue() === assignee.id">{{ assignee.fullName }}</option>
               }
             </optgroup>
           }
@@ -151,11 +152,20 @@ const CUSTOM_PERIOD = 'custom';
       border-color: var(--tk-primary);
     }
 
-    /* Toque: o chip inteiro remove o filtro, então ele ganha a altura mínima de um alvo de dedo (44px). */
+    /*
+     * Toque: o chip inteiro remove o filtro, então ele ganha a altura mínima de um alvo de dedo (44px);
+     * os campos e o "Mais filtros" também (o .form-select e o botão-link do Bootstrap ficam em ~38px).
+     */
     @media (pointer: coarse) {
       .filter-chip {
         min-height: 44px;
         padding-inline: 0.875rem;
+      }
+
+      .form-select,
+      .form-control,
+      .btn-more-filters {
+        min-height: 44px;
       }
     }
   `

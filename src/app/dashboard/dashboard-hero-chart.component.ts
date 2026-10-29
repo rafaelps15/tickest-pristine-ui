@@ -52,10 +52,6 @@ export class DashboardHeroChartComponent implements OnDestroy {
 
   /** Escopo exibido: a empresa toda ou o recorte dos filtros. */
   readonly scope = input<TicketDashboardChartScope>('company');
-  /** Mostra o alternador de escopo (só quem atende a fila tem filtros). */
-  readonly showScope = input(true);
-  /** O escopo "Com filtros" já tem back-end (senão o botão fica desabilitado, "Em breve"). */
-  readonly filteredAvailable = input(false);
   /**
    * O fluxo segue o escopo. Em "Com filtros" sem o volume do recorte (spec 028), os números seguem os
    * filtros e o fluxo continua o da empresa toda — o rodapé diz isso.
@@ -86,17 +82,8 @@ export class DashboardHeroChartComponent implements OnDestroy {
   /** Período escolhido nos filtros (escopo "Com filtros"); com as duas pontas, o subtítulo mostra as datas. */
   readonly range = input<{ from?: string; to?: string } | null>(null);
 
-  /** Troca de escopo. */
-  readonly scopeChange = output<TicketDashboardChartScope>();
   /** Troca de agrupamento (Dia/Semana/Mês). */
   readonly groupByChange = output<TicketVolumeGrouping>();
-  /** "Tentar novamente" da composição. */
-  readonly retryComposition = output<void>();
-  /**
-   * O erro dos totais já tem aviso com "Tentar novamente" em outro lugar (a faixa de indicadores lê a
-   * mesma fonte): a composição só diz que está indisponível, sem um segundo alerta nem botão.
-   */
-  readonly compositionErrorElsewhere = input(false);
   /** "Tentar novamente" do fluxo. */
   readonly retryFlow = output<void>();
 
@@ -112,6 +99,8 @@ export class DashboardHeroChartComponent implements OnDestroy {
   private chartShape = '';
   /** Último redesenho pedido — descarta o que terminar fora de ordem (o Chart.js carrega assíncrono). */
   private renderToken = 0;
+  /** Tema do documento (`data-bs-theme`), acompanhado ao vivo: as cores do canvas são lidas dos tokens no desenho. */
+  private readonly theme = signal('light');
 
   /** Mostra a tabela no lugar do gráfico. */
   readonly showTable = signal(false);
@@ -178,17 +167,30 @@ export class DashboardHeroChartComponent implements OnDestroy {
       const onChange = (event: MediaQueryListEvent) => this.compact.set(event.matches);
       query.addEventListener('change', onChange);
       this.destroyRef.onDestroy(() => query.removeEventListener('change', onChange));
+
+      // Trocar o tema com a tela aberta redesenha o gráfico com as cores novas (antes, só na próxima carga).
+      const root = document.documentElement;
+      this.theme.set(root.getAttribute('data-bs-theme') ?? 'light');
+      const observer = new MutationObserver(() => this.theme.set(root.getAttribute('data-bs-theme') ?? 'light'));
+      observer.observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
+      this.destroyRef.onDestroy(() => observer.disconnect());
     }
 
-    // Redesenha o fluxo quando os pontos, o agrupamento, a versão (celular) ou o canvas mudam.
+    // Redesenha o fluxo quando os pontos, o agrupamento, a versão (celular), o tema ou o canvas mudam.
     effect(() => {
       const points = this.points();
       const canvasRef = this.flowCanvas();
       const labels = this.periodLabels();
       const resolved = this.hasResolved() && !this.compact();
+      this.theme();
       this.drawAttempt();
-      if (isPlatformBrowser(this.platformId) && canvasRef) {
+      if (!isPlatformBrowser(this.platformId)) return;
+      if (canvasRef) {
         void this.renderChart(canvasRef, points, labels, resolved);
+      } else if (this.chart) {
+        // O canvas saiu (carregando, vazio ou erro): libera o gráfico e o observador de tamanho dele.
+        this.chart.destroy();
+        this.chart = null;
       }
     });
   }
@@ -210,12 +212,6 @@ export class DashboardHeroChartComponent implements OnDestroy {
   protected retryDraw(): void {
     this.drawFailed.set(false);
     this.drawAttempt.update(attempt => attempt + 1);
-  }
-
-  /** Clique no botão de escopo: "Com filtros" sem back-end não faz nada (está `aria-disabled`). */
-  protected chooseScope(scope: TicketDashboardChartScope): void {
-    if (scope === 'filtered' && !this.filteredAvailable()) return;
-    if (scope !== this.scope()) this.scopeChange.emit(scope);
   }
 
   /** Clique num agrupamento: um que não cabe no período não faz nada (está `aria-disabled`). */

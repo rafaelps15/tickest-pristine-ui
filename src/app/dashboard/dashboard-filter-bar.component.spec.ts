@@ -6,18 +6,18 @@ import { Department } from '../departments';
 import { TicketAssignee } from '../tickets';
 
 @Component({
-  template: `<app-dashboard-filter-bar [filters]="filters()" [departments]="departments" [assignees]="assignees" [assigneesTotal]="assigneesTotal" today="2026-10-28"
+  template: `<app-dashboard-filter-bar [filters]="filters()" [departments]="departments()" [assignees]="assignees()" [assigneesTotal]="assigneesTotal" today="2026-10-28"
                                        (change)="changes.push($event)" (clear)="cleared = true" />`,
   imports: [DashboardFilterBarComponent]
 })
 class HostComponent {
   filters = signal<DashboardFilters>({});
-  departments: Department[] = [
+  departments = signal<Department[]>([
     { id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }] },
     { id: 'd2', name: 'RH', description: '', responsibleUserName: null, sectors: [{ id: 's2', name: 'Folha', description: null }] },
     { id: 'd3', name: 'Vazio', description: '', responsibleUserName: null, sectors: [] }
-  ];
-  assignees: TicketAssignee[] = [{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }];
+  ]);
+  assignees = signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]);
   assigneesTotal = 1;
   changes: Partial<DashboardFilters>[] = [];
   cleared = false;
@@ -46,6 +46,27 @@ describe('DashboardFilterBarComponent', () => {
     expect(groups.map(g => g.label)).toEqual(['TI', 'RH']);
     const departments = Array.from(fixture.nativeElement.querySelectorAll('#dashboardDepartment option') as NodeListOf<HTMLOptionElement>);
     expect(departments.map(o => o.textContent?.trim())).toEqual(['Todos os departamentos', 'TI', 'RH']);
+  });
+
+  it('com o filtro aplicado e a lista chegando depois, os seletores mostram a opção certa (não "Todos")', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    const host = fixture.componentInstance;
+    const departments = host.departments();
+    const assignees = host.assignees();
+    host.departments.set([]);
+    host.assignees.set([]);
+    host.filters.set({ departmentId: 'd2', sectorId: 's2', assignedToUserId: 'u-ana' });
+    await fixture.whenStable();
+
+    // As listas chegam depois (como o GET /departments e o GET /tickets/assignees).
+    host.departments.set(departments);
+    host.assignees.set(assignees);
+    await fixture.whenStable();
+
+    const selected = (id: string) => (fixture.nativeElement.querySelector(id) as HTMLSelectElement).selectedOptions[0]?.textContent?.trim();
+    expect(selected('#dashboardDepartment')).toBe('RH');
+    expect(selected('#dashboardSector')).toBe('Folha');
+    expect(selected('#dashboardAssignee')).toBe('Ana Souza');
   });
 
   it('com um departamento escolhido, o seletor de setor mostra só os setores dele', async () => {

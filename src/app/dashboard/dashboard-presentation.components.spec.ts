@@ -87,19 +87,6 @@ describe('componentes de apresentação do Início', () => {
       expect(edgeColor('rgb(1, 2, 3)')).toBe('rgb(1, 2, 3)');
     });
 
-    it('com o back-end pronto, "Com filtros" troca o escopo', async () => {
-      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
-      fixture.componentRef.setInput('filteredAvailable', true);
-      const chosen: string[] = [];
-      fixture.componentInstance.scopeChange.subscribe(scope => chosen.push(scope));
-      await fixture.whenStable();
-
-      const filtered = fixture.nativeElement.querySelector('.scope-soon') as HTMLButtonElement;
-      expect(filtered.getAttribute('aria-disabled')).toBeNull();
-      filtered.click();
-      expect(chosen).toEqual(['filtered']);
-    });
-
     it('um agrupamento que não cabe no período fica indisponível, diz o motivo e não troca', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('groupBy', 'Week');
@@ -180,8 +167,8 @@ describe('componentes de apresentação do Início', () => {
 
     it('risco em vermelho só acima de zero', async () => {
       const fixture = await strip([
-        { key: 'a', label: 'Atrasados', value: 4, risk: true, link },
-        { key: 'b', label: 'Atrasados', value: 0, risk: true, link }
+        { key: 'a', label: 'Atrasados', value: 4, risk: 'danger', link },
+        { key: 'b', label: 'Atrasados', value: 0, risk: 'danger', link }
       ]);
       const values = fixture.nativeElement.querySelectorAll('.kpi-value');
       expect(values[0].classList).toContain('kpi-risk');
@@ -210,7 +197,6 @@ describe('componentes de apresentação do Início', () => {
     it('a composição diz que está indisponível, sem um segundo alerta', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('compositionState', 'error');
-      fixture.componentRef.setInput('compositionErrorElsewhere', true);
       fixture.componentRef.setInput('flowState', 'unavailable');
       await fixture.whenStable();
 

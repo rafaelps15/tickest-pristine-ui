@@ -18,8 +18,6 @@ export interface DashboardMetric {
   value: number | null;
   /** Linha de apoio abaixo do número. */
   hint?: string;
-  /** Comparação com o período anterior ("12 a mais que no período anterior"), quando há. */
-  trend?: string | null;
   /** Query params do Monitor pro drill-down; null quando o indicador não leva a lugar nenhum. */
   queryParams: Params | null;
 }
@@ -66,40 +64,20 @@ export interface DashboardMetricLead {
         }
       }
 
-      <!-- Resumo pro leitor de tela quando os números chegam ou mudam com os filtros. -->
-      @if (announce()) {
-        <p class="visually-hidden" aria-live="polite">{{ liveSummary() }}</p>
-      }
-
       @if (unavailable()) {
         <!-- O aviso de erro (com "Tentar novamente") fica uma vez só, acima dos grupos que dependem da mesma leitura. -->
         <p class="text-muted small mb-0"><i class="bx bx-info-circle me-1" aria-hidden="true"></i>Indisponível no momento — veja o aviso acima.</p>
       } @else if (error()) {
         <!-- Falha técnica em tom neutro: vermelho fica pro risco operacional (SLA vencido). -->
         <div class="card px-3 py-2"><app-dashboard-notice kind="error" [text]="error()!" (retry)="retry.emit()" /></div>
-      } @else if (loading() && !hasValues() && variant() === 'strip') {
-        <!-- Esqueleto no formato da faixa: a tela não pula quando os números chegam. -->
-        <div class="card metric-strip-card" role="status">
-          <span class="visually-hidden">Carregando {{ title() }}…</span>
-          <ul class="list-unstyled d-flex flex-wrap mb-0 metric-strip" aria-hidden="true">
-            @for (metric of metrics(); track metric.key) {
-              <li class="metric-strip-item">
-                <span class="metric-strip-link">
-                  <span class="skeleton-line skeleton-label"></span>
-                  <span class="skeleton-line skeleton-value"></span>
-                </span>
-              </li>
-            }
-          </ul>
-        </div>
       } @else if (loading() && !hasValues()) {
         <div class="row g-3" role="status">
           <span class="visually-hidden">Carregando {{ title() }}…</span>
           @for (metric of metrics(); track metric.key) {
             <div [class]="columnClass()">
               <div class="card metric-skeleton" aria-hidden="true">
-                <span class="skeleton-line skeleton-label"></span>
-                <span class="skeleton-line skeleton-value"></span>
+                <span class="tk-skeleton skeleton-label"></span>
+                <span class="tk-skeleton skeleton-value"></span>
               </div>
             </div>
           }
@@ -108,41 +86,14 @@ export interface DashboardMetricLead {
         <div class="card">
           <app-empty-state [icon]="emptyIcon()" [title]="emptyTitle()" [hint]="emptyHint()" />
         </div>
-      } @else if (variant() === 'strip') {
-        <!-- Faixa: números de contexto numa linha só, sem ícone nem card por número — menos peso que os grupos de ação. -->
-        <div class="card metric-strip-card">
-          <ul class="list-unstyled d-flex flex-wrap mb-0 metric-strip">
-            @for (metric of metrics(); track metric.key) {
-              <li class="metric-strip-item">
-                @if (metric.queryParams !== null) {
-                  <a class="metric-strip-link" routerLink="/tickets/monitorar" [queryParams]="metric.queryParams"
-                     [attr.aria-label]="linkLabel(metric)">
-                    <span class="text-muted small">{{ metric.label }}</span>
-                    <span class="fs-4 stat-value">{{ metric.value ?? '—' }}</span>
-                    @if (metric.hint) {
-                      <span class="text-muted small">{{ metric.hint }}</span>
-                    }
-                    @if (metric.trend) {
-                      <span class="text-muted small">{{ metric.trend }}</span>
-                    }
-                  </a>
-                } @else {
-                  <span class="metric-strip-link">
-                    <span class="text-muted small">{{ metric.label }}</span>
-                    <span class="fs-4 stat-value">{{ metric.value ?? '—' }}</span>
-                  </span>
-                }
-              </li>
-            }
-          </ul>
-        </div>
       } @else {
         <!-- Numa recarga, os números ficam como estão: o indicador de atualização é o do cabeçalho da tela. -->
         <div class="row g-3">
           @for (metric of metrics(); track metric.key) {
             <div [class]="columnClass()">
+              <!-- Compactos: são o detalhe abaixo da faixa do topo e não podem ganhar dela na hierarquia. -->
               <app-stat-card [label]="metric.label" [icon]="metric.icon" [tone]="metric.tone" [value]="metric.value"
-                             [hint]="cardHint(metric)" [linked]="metric.queryParams !== null">
+                             [hint]="cardHint(metric)" [linked]="metric.queryParams !== null" [compact]="true">
                 <!-- Dois @if separados: um nó por bloco, pra o "Ver na fila" cair no slot [statHint] do card. -->
                 @if (metric.queryParams !== null) {
                   <span statHint class="kpi-cta">Ver na fila <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
@@ -164,84 +115,19 @@ export interface DashboardMetricLead {
       flex-direction: column;
       gap: 0.75rem;
       padding: 1.25rem;
-      min-height: 7rem;
-    }
-
-    .skeleton-line {
-      display: block;
-      border-radius: var(--tk-radius-sm);
-      background: linear-gradient(90deg, var(--tk-border) 25%, var(--tk-page-bg) 50%, var(--tk-border) 75%);
-      background-size: 200% 100%;
-      animation: metric-shimmer 1.4s ease-in-out infinite;
+      min-height: 6rem;
     }
 
     .skeleton-label {
+      display: block;
       width: 55%;
       height: 0.75rem;
     }
 
     .skeleton-value {
+      display: block;
       width: 30%;
-      height: 1.75rem;
-    }
-
-    @keyframes metric-shimmer {
-      from { background-position: 100% 0; }
-      to { background-position: -100% 0; }
-    }
-
-    /* Movimento reduzido: o esqueleto fica parado, sem brilho correndo. */
-    @media (prefers-reduced-motion: reduce) {
-      .skeleton-line {
-        animation: none;
-      }
-    }
-
-    /*
-     * Fio entre os números: todo item tem o fio à esquerda e a lista sobra 1px pra fora do card, que
-     * corta o excesso — o primeiro de cada linha nunca fica com fio solto, em qualquer quebra.
-     */
-    .metric-strip-card {
-      overflow: hidden;
-    }
-
-    .metric-strip {
-      margin-left: -1px;
-    }
-
-    .metric-strip-item {
-      flex: 1 1 9rem;
-      min-width: 0;
-      border-left: 1px solid var(--tk-border);
-    }
-
-    .metric-strip-link {
-      display: flex;
-      flex-direction: column;
-      gap: 0.125rem;
-      min-height: 2.75rem;
-      height: 100%;
-      padding: 0.875rem 1.25rem;
-      color: var(--tk-text-primary);
-      text-decoration: none;
-      transition: background-color var(--tk-transition);
-    }
-
-    a.metric-strip-link:hover,
-    a.metric-strip-link:focus-visible {
-      background-color: rgba(var(--tk-primary-rgb), 0.06);
-    }
-
-    a.metric-strip-link:focus-visible {
-      outline: 2px solid var(--tk-primary);
-      outline-offset: -2px;
-    }
-
-    /* Celular: dois por linha. */
-    @media (max-width: 575.98px) {
-      .metric-strip-item {
-        flex-basis: 50%;
-      }
+      height: 1.5rem;
     }
   `
 })
@@ -261,16 +147,6 @@ export class DashboardMetricGroupComponent {
    * grupos vindos da mesma leitura) — aqui fica só uma linha neutra, sem repetir o alerta.
    */
   readonly unavailable = input(false);
-  /**
-   * Se o próprio grupo anuncia os números ao leitor de tela. A tela desliga quando vários grupos
-   * mudam juntos (troca de filtro) e anuncia um resumo só, em vez de uma frase por grupo.
-   */
-  readonly announce = input(true);
-  /**
-   * Forma do grupo: `cards` (um stat-card por número, pros grupos de ação) ou `strip` (uma faixa
-   * compacta, pros números de contexto como o Volume — menos peso visual, mesmo drill-down).
-   */
-  readonly variant = input<'cards' | 'strip'>('cards');
   /** Número de destaque acima dos indicadores, ou null. */
   readonly lead = input<DashboardMetricLead | null>(null);
   /** Título do estado vazio (todos os indicadores zerados). */
@@ -294,24 +170,17 @@ export class DashboardMetricGroupComponent {
   /** Vazio: todos os números chegaram e são zero. */
   readonly isEmpty = computed(() => this.hasValues() && this.metrics().every(metric => metric.value === 0));
 
-  /** Frase lida pelo leitor de tela quando os números chegam ("Volume: 12 no total, 5 na fila."). */
-  readonly liveSummary = computed(() => {
-    if (!this.hasValues() || this.loading() || this.error() || this.unavailable()) return '';
-    return `${this.title()}: ` + this.metrics().map(metric => `${metric.label.toLowerCase()} ${metric.value}`).join(', ') + '.';
-  });
-
   /**
    * Nome do link do drill-down pro leitor de tela: rótulo, número e legenda do card, sem montar
    * plural ("Críticos: 1, urgentes, ainda ativos. Ver na fila de monitoramento").
    */
   linkLabel(metric: DashboardMetric): string {
     const hint = metric.hint ? `, ${metric.hint.charAt(0).toLowerCase()}${metric.hint.slice(1)}` : '';
-    const trend = metric.trend ? `, ${metric.trend}` : '';
-    return `${metric.label}: ${metric.value ?? 'indisponível'}${hint}${trend}. Ver na fila de monitoramento`;
+    return `${metric.label}: ${metric.value ?? 'indisponível'}${hint}. Ver na fila de monitoramento`;
   }
 
-  /** Legenda do stat-card: a dica e, quando há, a comparação com o período anterior. */
+  /** Legenda do stat-card: a dica do indicador (vazia sem dica). */
   cardHint(metric: DashboardMetric): string {
-    return [metric.hint, metric.trend].filter(Boolean).join(' · ');
+    return metric.hint ?? '';
   }
 }

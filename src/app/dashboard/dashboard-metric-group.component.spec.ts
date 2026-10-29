@@ -66,18 +66,6 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('button')).toBeNull();
   });
 
-  it('faixa: números numa linha só, cada um levando à fila, sem stat-card', async () => {
-    TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="Volume" variant="strip" [metrics]="metrics()" />` } });
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.metrics.set(metrics(4, 2));
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelectorAll('app-stat-card').length).toBe(0);
-    const link = fixture.nativeElement.querySelector('a.metric-strip-link') as HTMLAnchorElement;
-    expect(link.getAttribute('aria-label')).toBe('Atrasados: 4. Ver na fila de monitoramento');
-    expect(fixture.nativeElement.querySelectorAll('.metric-strip-item').length).toBe(2);
-  });
-
   it('o nome do link não monta plural: rótulo, número e legenda ("Críticos: 1, urgentes…")', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set([
@@ -89,30 +77,20 @@ describe('DashboardMetricGroupComponent', () => {
       .toBe('Críticos: 1, urgentes, ainda ativos. Ver na fila de monitoramento');
   });
 
-  it('mostra o número de destaque e a comparação com o período anterior, no card e no nome do link', async () => {
+  it('mostra o número de destaque com a comparação com o período anterior, e a legenda do card no nome do link', async () => {
     TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="SLA" [metrics]="metrics()" [lead]="{ value: '87%', text: 'resolvidos no prazo (7 de 8)', trend: '5 pontos acima do período anterior' }" />` } });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set([
-      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: 7, trend: '2 a mais que no período anterior', queryParams: { slaStatus: 4 } }
+      { key: 'met', label: 'Cumpridos', icon: 'bx-check-circle', tone: 'success', value: 7, hint: 'Resolvidos no prazo', queryParams: { slaStatus: 4 } }
     ]);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('87%');
     expect(fixture.nativeElement.textContent).toContain('resolvidos no prazo (7 de 8)');
     expect(fixture.nativeElement.textContent).toContain('5 pontos acima do período anterior');
-    expect(fixture.nativeElement.querySelector('app-stat-card').textContent).toContain('2 a mais que no período anterior');
+    expect(fixture.nativeElement.querySelector('app-stat-card').textContent).toContain('Resolvidos no prazo');
     expect(fixture.nativeElement.querySelector('a.stretched-link').getAttribute('aria-label'))
-      .toBe('Cumpridos: 7, 2 a mais que no período anterior. Ver na fila de monitoramento');
-  });
-
-  it('carregando a faixa: o esqueleto já tem o formato da faixa', async () => {
-    TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="Volume" variant="strip" [metrics]="metrics()" [loading]="true" />` } });
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.metrics.set(metrics(null, null));
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelectorAll('.metric-strip-item .skeleton-line').length).toBe(4);
-    expect(fixture.nativeElement.querySelector('.metric-skeleton')).toBeNull();
+      .toBe('Cumpridos: 7, resolvidos no prazo. Ver na fila de monitoramento');
   });
 
   it('vazio (tudo zero): explica por quê, em vez de cards zerados', async () => {
@@ -124,7 +102,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('app-stat-card')).toBeNull();
   });
 
-  it('sucesso: mostra os números, o link do drill-down e o resumo pro leitor de tela', async () => {
+  it('sucesso: mostra os números e o link do drill-down, sem região de anúncio própria (a tela anuncia um resumo só)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(2, 7));
     await fixture.whenStable();
@@ -133,7 +111,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(links.length).toBe(1);
     expect(links[0].getAttribute('href')).toBe('/tickets/monitorar?slaStatus=3');
     expect(links[0].getAttribute('aria-label')).toBe('Atrasados: 2. Ver na fila de monitoramento');
-    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toContain('SLA: atrasados 2, cumpridos 7.');
+    expect(fixture.nativeElement.querySelector('[aria-live]')).toBeNull();
   });
 
   it('recarregando com números na tela: mantém os cards como estão, sem esqueleto nem esmaecer', async () => {

@@ -13,11 +13,13 @@
         <div>
           <h2 id="slaAlertsTitle" class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
           <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
-          <!-- A faixa é sempre da empresa toda: os filtros da operação, abaixo, não valem pra ela. -->
-          <p class="text-muted small mb-0">Toda a empresa, sem os filtros@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
+          <!-- No escopo "Com filtros", os Alertas seguem os filtros (o mesmo recorte do topo); no da empresa, a empresa toda. -->
+          <p class="text-muted small mb-0">{{ filtered() ? 'Com os filtros' : 'Toda a empresa' }}@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
         </div>
+        <!-- aria-disabled, não disabled: o foco não sai do botão enquanto recarrega. -->
         <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
-                [disabled]="loading() || refreshing()" aria-label="Atualizar alertas de SLA" (click)="refresh.emit()">
+                [attr.aria-disabled]="loading() || refreshing() || null" aria-label="Atualizar alertas de SLA"
+                (click)="loading() || refreshing() || refresh.emit()">
           @if (refreshing()) {
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
           } @else {
@@ -26,25 +28,26 @@
         </button>
       </div>
 
-      @if (loading()) {
+      <!-- O erro vem antes do carregamento: numa nova tentativa, o aviso fica (não pisca pro spinner nem é lido de novo). -->
+      @if (error(); as errorMessage) {
+        <app-dashboard-notice kind="error" [text]="errorMessage" (retry)="refresh.emit()" />
+      } @else if (loading()) {
         <div class="d-flex justify-content-center py-2">
           <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando alertas de SLA…</span>
         </div>
-      } @else if (error(); as errorMessage) {
-        <app-dashboard-notice kind="error" [text]="errorMessage" (retry)="refresh.emit()" />
       } @else if (criticalTickets().length === 0) {
         <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
         <div class="d-flex align-items-center gap-3 sla-all-clear">
           <span class="badge bg-label-success rounded-circle icon-tile" aria-hidden="true"><i class="bx bx-check fs-4"></i></span>
           <div>
             <p class="fw-semibold mb-0">Fila em dia</p>
-            <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco agora.</p>
+            <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco{{ filtered() ? ' com estes filtros' : '' }} agora.</p>
           </div>
         </div>
       } @else if (!showTotals()) {
         <!-- Só a lista: os totais estão no topo da tela e no grupo de SLA. A fila inteira, pelo prazo, fica a um clique. -->
         <p class="small text-muted mb-1">Os mais perto do prazo primeiro.</p>
-        <a class="small fw-semibold tap-target" routerLink="/tickets/monitorar">Ver a fila pelo prazo <i class="bx bx-chevron-right" aria-hidden="true"></i></a>
+        <a class="small fw-semibold tap-target" routerLink="/tickets/monitorar" [queryParams]="queueParams()">Ver a fila pelo prazo <i class="bx bx-chevron-right" aria-hidden="true"></i></a>
       } @else {
         <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
         <div class="sla-totals">

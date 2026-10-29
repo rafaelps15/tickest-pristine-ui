@@ -32,8 +32,8 @@ describe('DashboardTimesComponent', () => {
     expect(cards[1].textContent).toContain('Dados insuficientes');
     expect(cards[1].textContent).toContain('Só 4 chamados entraram na conta');
     expect(cards[1].textContent).toContain('pelo menos 5');
-    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent)
-      .toBe('Tempos de atendimento: primeira resposta, mediana de 1 h 15 min; resolução, dados insuficientes.');
+    // Sem região de anúncio própria: a tela anuncia um resumo só.
+    expect(fixture.nativeElement.querySelector('[aria-live]')).toBeNull();
   });
 
   it('recarregando com tempos na tela: mantém os cards como estão em vez de voltar ao carregamento', async () => {
@@ -47,7 +47,6 @@ describe('DashboardTimesComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('1 h 15 min');
-    expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toBe('');
   });
 
   it('mostra o erro com "Tentar novamente"', async () => {

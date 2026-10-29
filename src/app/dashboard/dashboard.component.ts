@@ -1,7 +1,7 @@
-import { Component, inject, Injector, OnInit, ChangeDetectionStrategy, signal, computed, effect, linkedSignal, untracked, DestroyRef, DOCUMENT, PLATFORM_ID } from '@angular/core';
+import { Component, afterNextRender, inject, Injector, OnInit, ChangeDetectionStrategy, signal, computed, effect, linkedSignal, untracked, DestroyRef, DOCUMENT, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Params, RouterLink } from '@angular/router';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketSlaStatus, TicketPriority, TicketStatusCounts, TicketDashboardChartScope } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketSlaStatus, TicketPriority, TicketStatusCounts, TicketDashboardChartScope, TicketDashboardScope } from '../tickets';
 import { DepartmentsStore } from '../departments';
 import { DashboardFiltersService } from './dashboard-filters.service';
 import { DashboardFilters, dashboardFilterChips, resolveDashboardScope, toMonitorQueryParams, todayInSaoPaulo } from './dashboard-filters';
@@ -19,6 +19,7 @@ import { DashboardStatusGroup, DASHBOARD_STATUS_GROUP_STATUS, accessNote, bucket
 import { DashboardAutoRefresh, startDashboardAutoRefresh } from './dashboard-auto-refresh';
 import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
+import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
 // O shell pode ligar peças de um domínio direto (como faz com as telas feature-*): o diálogo depende de
 // UserSummary (domínio users), por isso mora em tickets/ui e não em shared/ui.
 import { TicketAssignDialogComponent } from '../tickets/ui/ticket-assign-dialog/ticket-assign-dialog.component';
@@ -53,6 +54,23 @@ export function greetingForHour(hour: number): string {
   return 'Boa noite';
 }
 
+/** Quantidade com o substantivo no número certo ("1 aberto", "3 abertos"). */
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** Atalho do card de Administração do Início (quem administra sem atender a fila). */
+interface DashboardAdminLink {
+  /** Rota da tela. */
+  route: string;
+  /** Nome da tela, como no menu. */
+  label: string;
+  /** O que se faz lá. */
+  hint: string;
+  /** Ícone Boxicons, o mesmo do menu. */
+  icon: string;
+}
+
 /**
  * Tela de Início: como a operação de chamados da empresa inteira está andando, pra qualquer
  * colaborador (decisão do produto). Hierarquia, de cima pra baixo: cabeçalho (saudação, idade dos
@@ -63,7 +81,7 @@ export function greetingForHour(hour: number): string {
  */
 @Component({
     selector: 'app-dashboard',
-    imports: [RouterLink, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent, DashboardHeroChartComponent, DashboardKpiStripComponent, DashboardNoticeComponent],
+    imports: [RouterLink, EmptyStateComponent, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent, DashboardHeroChartComponent, DashboardKpiStripComponent, DashboardNoticeComponent],
     templateUrl: './dashboard.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DashboardFiltersService],
@@ -96,12 +114,24 @@ export class DashboardComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   /** Documento, pra saber se a aba está visível. */
   private readonly document = inject(DOCUMENT);
+  /** Injetor pro `afterNextRender` do foco ao abrir os filtros. */
+  private readonly injector = inject(Injector);
   /** Plataforma: relógio e atualização automática só no navegador (não no SSR). */
   private readonly platformId = inject(PLATFORM_ID);
   /** Atualização automática ligada (null no SSR). */
   private autoRefresh: DashboardAutoRefresh | null = null;
   /** A recarga em curso veio de uma atualização (automática ou do botão): ao terminar, avisa o leitor de tela. */
   private announceNext = false;
+  /**
+   * O recorte mudou (filtro ou escopo) e o resumo ainda não foi dito ao leitor de tela. Signal, e não
+   * campo: quando a troca não dispara nenhuma busca (ex.: "Com filtros" sem filtro, com o volume do
+   * recorte desligado), o anúncio sai na hora, em vez de ficar pendurado até a próxima atualização.
+   */
+  private readonly pendingScopeAnnouncement = signal(false);
+  /** Recorte aplicado por último, pra saber quando ele muda (o primeiro não é anunciado). */
+  private lastScopeKey: string | null = null;
+  /** Atraso do anúncio "Atualizado agora" (limpo ao sair da tela). */
+  private announceTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Hoje no horário de Brasília — base dos períodos prontos ("Últimos 30 dias"), calculado por visita à tela. */
   protected readonly today = todayInSaoPaulo();
@@ -168,9 +198,15 @@ export class DashboardComponent implements OnInit {
 
   // ── Números da empresa ou do recorte ──────────────────────────────────────────────────────────
 
+  /**
+   * Os totais vêm do agregado da operação (spec 026): no escopo "Com filtros", o do recorte; no da
+   * empresa, o mesmo agregado com escopo vazio. Sem ele (quem não atende a fila), dos totais por status.
+   */
+  private readonly countsFromOverview = computed(() => this.filteredAvailable());
+
   /** Totais por status do escopo, como a fonte responde agora (null carregando ou em erro). */
   private readonly liveCounts = computed((): TicketStatusCounts | null => {
-    if (this.chartScope() === 'company') return this.store.statusCounts();
+    if (!this.countsFromOverview()) return this.store.statusCounts();
     const volume = this.operation.volume();
     return volume
       ? { totalCount: volume.totalCount, openCount: volume.openCount, inProgressCount: volume.inProgressCount, resolvedCount: volume.resolvedCount, closedCount: volume.closedCount, canceledCount: volume.canceledCount }
@@ -178,7 +214,7 @@ export class DashboardComponent implements OnInit {
   });
 
   /** A leitura dos totais falhou agora. */
-  private readonly countsFailed = computed(() => this.chartScope() === 'company' ? this.store.statusCountsFailed() : !!this.operation.overviewError());
+  private readonly countsFailed = computed(() => this.countsFromOverview() ? this.operation.overviewError() !== null : this.store.statusCountsFailed());
 
   /**
    * Totais exibidos: os de agora ou, se uma atualização falhou (rede caiu), os últimos bons do mesmo
@@ -191,11 +227,11 @@ export class DashboardComponent implements OnInit {
 
   /** Mensagem do erro dos totais: a do servidor quando ele explica (ex.: sem permissão), senão a padrão. */
   protected readonly countsErrorText = computed(() =>
-    (this.chartScope() === 'company' ? this.store.summaryError() : this.operation.overviewError()) ?? 'Não foi possível carregar os números.');
+    (this.countsFromOverview() ? this.operation.overviewError() : this.store.summaryError()) ?? 'Não foi possível carregar os números.');
 
   /** Estado dos totais por status (indicadores e composição); com números antigos na tela, não é erro. */
   protected readonly countsState = computed(() => widgetState({
-    available: this.chartScope() === 'company' ? this.store.companyStatsAvailable() : true,
+    available: this.countsFromOverview() || this.store.companyStatsAvailable(),
     failed: this.countsFailed() && this.counts() === null,
     hasValue: this.counts() !== null
   }));
@@ -208,6 +244,13 @@ export class DashboardComponent implements OnInit {
 
   /** Agrupamento do fluxo, do escopo. */
   protected readonly flowGroupBy = computed(() => this.flowScope() === 'company' ? this.store.groupBy() : this.operation.trendGroupBy());
+
+  /** Complemento das descrições dos grupos abaixo da dobra: no escopo "Com filtros", diz que eles seguem os filtros. */
+  protected readonly scopeNote = computed(() => this.chartScope() === 'filtered' ? ' Com os filtros escolhidos acima.' : '');
+
+  /** Destino de "Ver a fila pelo prazo" dos Alertas: os ativos, com os filtros no escopo "Com filtros". */
+  protected readonly alertsQueueParams = computed((): Params =>
+      this.chartScope() === 'filtered' ? toMonitorQueryParams(this.scope() ?? {}, { status: 'active' }) : {});
 
   /** Agrupamentos que não cabem no período do recorte (só no fluxo filtrado; a empresa usa as janelas padrão). */
   protected readonly unavailableGroupings = computed((): TicketVolumeGrouping[] =>
@@ -246,7 +289,8 @@ export class DashboardComponent implements OnInit {
   protected readonly staleAfterFailure = computed(() =>
     (this.countsFailed() && this.counts() !== null) || (this.flowFailed() && this.shownPoints() !== null)
     || (this.filteredAvailable() && this.operation.overviewStale())
-    || (this.showOperation() && this.features.averageTimes && this.operation.timesStale()));
+    || (this.showOperation() && this.features.averageTimes && this.operation.timesStale())
+    || (this.showMyTickets() && !!this.myTickets?.stale()));
 
   /** Frase de destaque do gráfico, só com o fluxo carregado. */
   protected readonly insight = computed(() => this.flowState() === 'ready' ? volumeInsight(this.flowPoints(), this.flowGroupBy(), this.features.volumeResolved) : null);
@@ -317,44 +361,57 @@ export class DashboardComponent implements OnInit {
     return { value: `${rate}%`, text: 'dos resolvidos cumpriram o prazo', trend };
   });
 
-  /** Faixa do topo: total, na fila, em andamento, resolvidos, fechados e atrasados (ou SLA cumprido, pra quem não atende). */
+  /**
+   * Faixa do topo. Pra quem atende a fila, o risco primeiro: atrasados e sem responsável (com fundo de
+   * alerta quando passam de zero), depois a fila e o total — a divisão por status fica só na barra de
+   * composição, logo abaixo (decisão de 2026-10-28: um número, um lugar). Pros demais, os totais por
+   * status da empresa e o SLA cumprido "em breve".
+   */
   protected readonly kpis = computed((): DashboardKpi[] => {
     const counts = this.counts();
     const mine = this.myTickets;
     const previous = this.chartScope() === 'filtered' ? this.operation.previousOverview()?.volume : undefined;
     const backlog = counts ? counts.openCount + counts.inProgressCount : null;
+    const total: DashboardKpi = { key: 'total', label: 'Total', value: counts?.totalCount ?? null, hint: this.hasPeriod() ? 'abertos no período' : null, trend: countTrend(counts?.totalCount, previous?.totalCount),
+      link: this.link({}, { status: 'all' }, mine?.totalCount() ?? null, counts?.totalCount ?? null) };
+    // Com período (escopo "Com filtros"), o agregado conta pela data de abertura (spec 026): o apoio diz isso.
+    const queue: DashboardKpi = { key: 'backlog', label: 'Na fila', value: backlog, hint: this.hasPeriod() ? 'abertos no período, ainda ativos' : 'abertos e em andamento', trend: countTrend(backlog ?? undefined, previous?.backlogCount),
+      link: this.link({ status: 'active' }, {}, mine?.activeCount() ?? null, backlog) };
+    if (this.showOperation()) {
+      return [this.overdueKpi(), ...(this.filteredAvailable() ? [this.unassignedKpi()] : []), queue, total];
+    }
     return [
-      { key: 'total', label: 'Total', value: counts?.totalCount ?? null, trend: countTrend(counts?.totalCount, previous?.totalCount),
-        link: this.link({}, { status: 'all' }, mine?.totalCount() ?? null, counts?.totalCount ?? null) },
-      { key: 'backlog', label: 'Na fila', value: backlog, hint: 'abertos e em andamento',
-        link: this.link({ status: 'active' }, {}, mine?.activeCount() ?? null, backlog) },
+      total,
+      queue,
       { key: 'inProgress', label: 'Em andamento', group: 'inProgress', value: counts?.inProgressCount ?? null, link: this.statusLinks().inProgress },
       { key: 'resolved', label: 'Resolvidos', group: 'resolved', value: counts?.resolvedCount ?? null, link: this.statusLinks().resolved },
       { key: 'closed', label: 'Fechados', group: 'closed', value: counts?.closedCount ?? null, link: this.statusLinks().closed },
-      this.sixthKpi()
+      { key: 'sla', label: 'SLA cumprido', value: null, unavailable: true, link: null }
     ];
   });
 
   /**
-   * Sexto indicador, pra quem atende a fila: os chamados atrasados — o risco fica na primeira tela, e
-   * a taxa de SLA cumprido mora no grupo de SLA (decisão de 2026-10-28). Com o agregado (spec 026), o
-   * número segue o escopo dos outros; sem ele, vem dos Alertas de SLA (a empresa toda). Pros demais,
-   * "SLA cumprido" em breve.
+   * Atrasados, o primeiro número de quem atende a fila. Com o agregado (spec 026), segue o escopo dos
+   * outros números; sem ele, vem dos Alertas de SLA (a empresa toda).
    */
-  private sixthKpi(): DashboardKpi {
+  private overdueKpi(): DashboardKpi {
+    const link = this.link({ slaStatus: TicketSlaStatus.Breached }, {}, null, null);
     if (this.filteredAvailable()) {
       const overview = this.operation.overview();
-      return { key: 'overdue', label: 'Atrasados', value: overview?.attention.breachedCount ?? null, risk: true,
-        loading: overview === null && !this.operation.overviewFailed(), hint: 'passaram do prazo',
-        link: this.link({ slaStatus: TicketSlaStatus.Breached }, {}, null, null) };
+      return { key: 'overdue', label: 'Atrasados', value: overview?.attention.breachedCount ?? null, risk: 'danger',
+        loading: overview === null && !this.operation.overviewFailed(), hint: this.hasPeriod() ? 'abertos no período, passaram do prazo' : 'passaram do prazo', link };
     }
-    if (this.showOperation()) {
-      const loaded = this.store.criticalTicketsLoadedAtMs() !== null;
-      return { key: 'overdue', label: 'Atrasados', value: loaded ? this.store.breachedCount() : null, risk: true,
-        loading: !loaded && !this.store.criticalTicketsError(), hint: 'passaram do prazo',
-        link: this.link({ slaStatus: TicketSlaStatus.Breached }, {}, null, null) };
-    }
-    return { key: 'sla', label: 'SLA cumprido', value: null, unavailable: true, link: null };
+    const loaded = this.store.criticalTicketsLoadedAtMs() !== null;
+    return { key: 'overdue', label: 'Atrasados', value: loaded ? this.store.breachedCount() : null, risk: 'danger',
+      loading: !loaded && !this.store.criticalTicketsError(), hint: 'passaram do prazo', link };
+  }
+
+  /** Ativos sem responsável, do agregado (spec 026): o segundo risco da fila, logo depois dos atrasados. */
+  private unassignedKpi(): DashboardKpi {
+    const overview = this.operation.overview();
+    return { key: 'unassigned', label: 'Sem responsável', value: overview?.attention.unassignedCount ?? null, risk: 'warning',
+      loading: overview === null && !this.operation.overviewFailed(), hint: this.hasPeriod() ? 'abertos no período, ninguém assumiu' : 'ativos, ninguém assumiu',
+      link: this.link({ unassignedOnly: 'true', status: 'active' }, {}, null, null) };
   }
 
   // ── Operação (abaixo da dobra) ────────────────────────────────────────────────────────────────
@@ -373,9 +430,9 @@ export class DashboardComponent implements OnInit {
   });
 
   /**
-   * Central de atenção, em ordem de gravidade: críticos, sem responsável e, quando o back-end manda
-   * (spec 029), os que esperam a equipe e os que esperam o solicitante. Os atrasados ficam no topo
-   * da tela (sexto indicador), pra não repetir o número.
+   * Central de atenção, em ordem de gravidade: críticos e, quando o back-end manda (spec 029), os que
+   * esperam a equipe e os que esperam o solicitante. Atrasados e sem responsável ficam no topo da tela,
+   * pra não repetir o número.
    */
   protected readonly attentionMetrics = computed((): DashboardMetric[] => {
     const scope = this.scope() ?? {};
@@ -389,7 +446,6 @@ export class DashboardComponent implements OnInit {
     }
     return [
       { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.criticalCount ?? null, hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
-      { key: 'unassigned', label: 'Sem responsável', icon: 'bx-user-x', tone: 'warning', value: attention?.unassignedCount ?? null, hint: 'Ativos, ninguém assumiu', queryParams: toMonitorQueryParams(scope, { unassignedOnly: 'true', status: 'active' }) },
       ...awaiting
     ];
   });
@@ -403,28 +459,76 @@ export class DashboardComponent implements OnInit {
 
   /** A linha secundária tem o que mostrar pra este papel (operação, "Seus chamados" ou os atalhos). */
   protected readonly hasSecondaryRow = computed(() =>
-      this.showOperation() || this.showMyTickets() || !this.isAdministrative());
+      this.showOperation() || this.showMyTickets() || this.adminLinks().length > 0);
+
+  /** Atalhos da fila (Atribuídos a mim e, pra quem também abre chamados, Meus Chamados): só pra quem atende. */
+  protected readonly showQuickActions = computed(() => this.showOperation());
+
+  /** Atalhos de administração, pra quem administra sem atender a fila (o Início dele não fica vazio). */
+  protected readonly adminLinks = computed((): DashboardAdminLink[] => {
+    if (this.showOperation()) return [];
+    const can = (code: string) => this.sessionService.hasPermission(code);
+    const links: DashboardAdminLink[] = [];
+    if (can('users:read')) links.push({ route: '/usuarios', label: 'Usuários', hint: 'Quem usa o Tickest, convites e acessos', icon: 'bx-group' });
+    if (can('roles:manage')) links.push({ route: '/roles', label: 'Funções', hint: 'O que cada função pode fazer', icon: 'bx-shield-quarter' });
+    if (can('departments:manage') || can('sectors:manage')) links.push({ route: '/departamentos', label: 'Departamentos e setores', hint: 'Quem atende cada tipo de pedido', icon: 'bx-sitemap' });
+    return links;
+  });
+
+  /** Subtítulo do cabeçalho, no que este papel vê na tela. */
+  protected readonly subtitle = computed(() => {
+    if (this.showOperation()) return 'Como está a operação e o que pede ação agora.';
+    if (this.companyUnavailable() && this.showMyTickets()) return 'Como estão os seus chamados.';
+    if (this.companyUnavailable() && this.adminLinks().length > 0) return 'Atalhos do que você administra.';
+    return 'Como estão os chamados de toda a empresa.';
+  });
+
+  /** Há números na tela que se atualizam (o "Atualizado há" e o botão de atualizar só aparecem com eles). */
+  protected readonly hasRefreshable = computed(() => !this.companyUnavailable() || this.showMyTickets());
+
+  /** O aviso "números da empresa em breve" só pra quem não teria mais nada na tela. */
+  protected readonly showCompanyNotice = computed(() => !this.showMyTickets() && this.adminLinks().length === 0);
+
+  /** Quem abre chamados ainda não abriu nenhum: "Seus chamados" vira o convite pro primeiro. */
+  protected readonly myTicketsEmpty = computed(() => {
+    const mine = this.myTickets;
+    return !!mine && !mine.loading() && !mine.failed() && mine.totalCount() === 0;
+  });
 
   /** SLA detalhado e tempos estão os dois esperando o back-end: um aviso só pra linha. */
   protected readonly secondaryUnavailable = computed(() => !this.features.operationOverview && !this.features.averageTimes);
 
-  /** Os 3 cards de "Seus chamados", com as contagens do próprio usuário, cada um abrindo Meus Chamados. */
-  protected readonly myTicketCards = computed(() => [
-    { label: 'Em aberto', icon: 'bx-error-circle', tone: 'warning' as StatTone, value: this.myTickets?.openCount() ?? null, queryParams: {} },
-    { label: 'Em andamento', icon: 'bx-time-five', tone: 'info' as StatTone, value: this.myTickets?.inProgressCount() ?? null, queryParams: {} },
-    { label: 'Resolvidos', icon: 'bx-check-double', tone: 'success' as StatTone, value: this.myTickets?.resolvedCount() ?? null, queryParams: { status: 'finished' } }
-  ]);
+  /**
+   * Os 3 cards de "Seus chamados", nos mesmos grupos de Meus Chamados (Em aberto, Encerrados e Todos):
+   * cada número é o da lista que o card abre. A divisão por status fica no apoio, pra não esconder a
+   * diferença (a lista não filtra por um status só).
+   */
+  protected readonly myTicketCards = computed(() => {
+    const mine = this.myTickets;
+    const open = mine?.openCount() ?? 0;
+    const inProgress = mine?.inProgressCount() ?? 0;
+    const resolvedOrClosed = mine?.resolvedCount() ?? 0;
+    const canceled = (mine?.finishedCount() ?? 0) - resolvedOrClosed;
+    return [
+      { label: 'Em aberto', icon: 'bx-time-five', tone: 'info' as StatTone, value: mine?.activeCount() ?? null, queryParams: {},
+        hint: `${plural(open, 'aberto', 'abertos')}, ${inProgress} em andamento` },
+      { label: 'Encerrados', icon: 'bx-check-double', tone: 'success' as StatTone, value: mine?.finishedCount() ?? null, queryParams: { status: 'finished' },
+        hint: `${plural(resolvedOrClosed, 'resolvido ou fechado', 'resolvidos ou fechados')}, ${plural(canceled, 'cancelado', 'cancelados')}` },
+      { label: 'Todos', icon: 'bx-receipt', tone: 'primary' as StatTone, value: mine?.totalCount() ?? null, queryParams: { status: 'all' },
+        hint: 'Desde o primeiro chamado' }
+    ];
+  });
 
   // ── Atualização ───────────────────────────────────────────────────────────────────────────────
 
   /** Alguma fonte ligada está buscando dados. */
   private readonly anyLoading = computed(() =>
       this.store.statusCountsLoading() || this.store.volumeLoading() || this.store.criticalTicketsLoading() || this.store.criticalTicketsRefreshing()
-      || this.operation.overviewLoading() || this.operation.timesLoading() || this.operation.trendLoading() || !!this.myTickets?.loading());
+      || this.operation.overviewLoading() || this.operation.timesLoading() || this.operation.trendLoading() || !!this.myTickets?.busy());
 
   /** Já há algum número na tela (a primeira carga terminou com dado). */
   private readonly hasAnyData = computed(() =>
-      this.store.statusCounts() !== null || this.store.criticalTicketsLoadedAtMs() !== null || (this.myTickets?.totalCount() ?? null) !== null);
+      this.store.statusCounts() !== null || this.operation.overview() !== null || this.store.criticalTicketsLoadedAtMs() !== null || (this.myTickets?.totalCount() ?? null) !== null);
 
   /** Quando os números foram atualizados pela última vez (ms), ou null antes da primeira carga. */
   protected readonly updatedAtMs = signal<number | null>(null);
@@ -433,14 +537,21 @@ export class DashboardComponent implements OnInit {
   /** Texto da idade dos números; depois de uma atualização que falhou, diz de quando são os que estão na tela. */
   protected readonly freshness = computed(() => {
     const updatedAt = this.updatedAtMs();
-    if (this.staleAfterFailure() && updatedAt !== null) {
+    if (this.staleAfterFailure()) {
+      // Ao voltar à tela, os números na tela são da visita anterior (stores da raiz): sem hora desta visita, diz isso.
+      if (updatedAt === null) return 'Falha ao atualizar · números de uma visita anterior';
       const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(updatedAt);
       return `Falha ao atualizar · números das ${time}`;
     }
+    // Voltando à tela com os números da visita anterior enquanto a recarga não termina: nunca "Atualizado agora".
+    if (updatedAt === null && this.anyLoading() && this.hasAnyData()) return 'Atualizando…';
     return freshnessLabel(updatedAt, this.nowMs());
   });
-  /** Recarregando com os números anteriores na tela: só um indicador discreto no "Atualizado há". */
-  protected readonly refreshing = computed(() => this.anyLoading() && this.updatedAtMs() !== null);
+  /**
+   * Recarregando com números na tela (os desta visita ou, ao voltar, os da anterior): só um indicador
+   * discreto no "Atualizado há".
+   */
+  protected readonly refreshing = computed(() => this.anyLoading() && (this.updatedAtMs() !== null || this.hasAnyData()));
   /** Aviso pro leitor de tela a cada atualização — só "Atualizado agora", nunca os números. */
   protected readonly liveAnnouncement = signal('');
 
@@ -449,16 +560,16 @@ export class DashboardComponent implements OnInit {
 
   /** Liga o escopo, os widgets à URL, a hora da última atualização e a atualização automática. */
   constructor() {
-    // Com a URL trazendo filtros e o escopo "Com filtros" disponível, a tela abre nele.
-    if (this.filteredAvailable() && this.filters.active()) this.operation.setChartScope('filtered');
+    // O escopo vem da URL a cada visita: com filtros, "Com filtros"; sem, a empresa toda. O store é da
+    // raiz e, sem isso, reabria a tela no escopo da visita anterior, com a barra vazia.
+    this.operation.setChartScope(this.filteredAvailable() && this.filters.active() ? 'filtered' : 'company');
 
     // Os widgets operacionais seguem o escopo: recorte da URL em "Com filtros", empresa toda no outro
-    // (trocar um filtro cancela as requisições em voo).
-    effect(() => {
-      const scope = this.scope();
-      if (!scope) return;
-      this.operation.setScope(this.chartScope() === 'filtered' ? scope : {});
-    });
+    // (trocar um filtro cancela as requisições em voo). Os Alertas de SLA seguem o mesmo recorte (decisão
+    // de 2026-10-28): a lista bate com o "Atrasados" do topo. Aplicado já aqui, antes da primeira busca
+    // dos stores da raiz, pra nada sair com o recorte vazio (ou o da visita anterior) e ser cancelado.
+    untracked(() => this.applyScope(this.scope()));
+    effect(() => this.applyScope(this.scope()));
 
     // Marca a hora de cada carga concluída. Depois de uma atualização, avisa o leitor de tela: limpa e
     // escreve de novo, pra a mesma frase ser lida toda vez (uma região que não muda não é anunciada).
@@ -470,21 +581,77 @@ export class DashboardComponent implements OnInit {
         if (!failed) this.updatedAtMs.set(Date.now());
         if (!this.announceNext) return;
         this.announceNext = false;
-        this.liveAnnouncement.set('');
-        setTimeout(() => this.liveAnnouncement.set(failed ? 'Não foi possível atualizar os números' : 'Atualizado agora'), 100);
+        // Com uma troca de recorte pendente, quem fala é o resumo dela (efeito abaixo), não o "Atualizado agora".
+        if (this.pendingScopeAnnouncement()) return;
+        this.announce(failed ? 'Não foi possível atualizar os números' : 'Atualizado agora');
+      });
+    });
+
+    // Troca de filtro ou de escopo: um resumo curto dos números novos, assim que não há carga em andamento
+    // (na hora, se a troca não disparou nenhuma busca). Não marca a hora: isso é da atualização, acima.
+    effect(() => {
+      if (!this.pendingScopeAnnouncement() || this.anyLoading() || !this.hasAnyData()) return;
+      const failed = this.staleAfterFailure();
+      untracked(() => {
+        this.pendingScopeAnnouncement.set(false);
+        this.announce(failed ? 'Não foi possível atualizar os números' : this.scopeSummary());
       });
     });
 
     if (isPlatformBrowser(this.platformId)) {
-      const tick = setInterval(() => this.nowMs.set(Date.now()), FRESHNESS_TICK_MS);
+      // Com a aba oculta, ninguém lê o "Atualizado há": o relógio não avança (volta certo ao reaparecer, no próximo tick).
+      const tick = setInterval(() => { if (!this.document.hidden) this.nowMs.set(Date.now()); }, FRESHNESS_TICK_MS);
+      this.destroyRef.onDestroy(() => clearTimeout(this.announceTimer));
       this.destroyRef.onDestroy(() => clearInterval(tick));
       this.autoRefresh = startDashboardAutoRefresh(this.document, () => this.updatedAtMs(), () => this.refresh(), this.destroyRef);
     }
   }
 
-  /** Carrega os totais, o volume e os alertas ao abrir a tela. */
+  /**
+   * Passa o recorte da tela pros widgets operacionais e pros Alertas. Em "Com filtros", sem o recorte
+   * resolvido ainda (um departamento da URL esperando a lista), segura as buscas até ele chegar.
+   */
+  private applyScope(scope: TicketDashboardScope | null): void {
+    const filtered = this.chartScope() === 'filtered';
+    if (filtered && !scope) {
+      this.operation.holdScope();
+      this.store.holdCriticalScope();
+      return;
+    }
+    const effective = filtered && scope ? scope : {};
+    const key = JSON.stringify([filtered, effective]);
+    if (this.lastScopeKey !== null && key !== this.lastScopeKey) this.pendingScopeAnnouncement.set(true);
+    this.lastScopeKey = key;
+    this.operation.setScope(effective);
+    this.store.setCriticalScope(effective);
+  }
+
+  /** Escreve na região `aria-live` do cabeçalho: limpa e escreve de novo, pra a mesma frase ser lida toda vez. */
+  private announce(message: string): void {
+    this.liveAnnouncement.set('');
+    clearTimeout(this.announceTimer);
+    this.announceTimer = setTimeout(() => this.liveAnnouncement.set(message), 100);
+  }
+
+  /** Resumo dito ao leitor de tela depois de uma troca de filtro ou de escopo ("Números com os filtros: 3 atrasados, 12 na fila."). */
+  private scopeSummary(): string {
+    const value = (key: string) => this.kpis().find(kpi => kpi.key === key)?.value ?? null;
+    const overdue = value('overdue');
+    const queue = value('backlog');
+    const parts = [overdue === null ? null : plural(overdue, 'atrasado', 'atrasados'), queue === null ? null : `${queue} na fila`].filter(Boolean);
+    const scope = this.chartScope() === 'filtered' ? 'Números com os filtros' : 'Números da empresa';
+    return parts.length ? `${scope}: ${parts.join(', ')}.` : `${scope} atualizados.`;
+  }
+
+  /**
+   * Carrega tudo ao abrir a tela. Os stores são da raiz e guardam os números da visita anterior: ao
+   * voltar, todos recarregam (sem anunciar), e o "Atualizado" só é marcado quando terminam. Na primeira
+   * visita, os recursos já estão carregando e o `reload()` do Angular não repete a requisição.
+   */
   ngOnInit() {
     this.store.load();
+    this.operation.refresh();
+    if (this.showMyTickets()) this.myTickets?.reload();
   }
 
   /** Atualiza tudo que está ligado (automático a cada 2 min), mantendo os números na tela. */
@@ -512,6 +679,18 @@ export class DashboardComponent implements OnInit {
     this.operation.setChartScope(scope);
   }
 
+  /**
+   * Botões de escopo acima dos números. Ao abrir "Com filtros", o foco vai pro primeiro filtro da barra
+   * que acabou de aparecer (antes ficava no botão, com controles novos surgindo antes dele no Tab).
+   */
+  protected chooseScope(scope: TicketDashboardChartScope): void {
+    if (scope === this.chartScope()) return;
+    this.setChartScope(scope);
+    if (scope === 'filtered') {
+      afterNextRender(() => this.document.getElementById('dashboardPeriod')?.focus(), { injector: this.injector });
+    }
+  }
+
   /** Muda o agrupamento do fluxo (dia/semana/mês), na fonte do escopo. */
   setGroupBy(groupBy: TicketVolumeGrouping): void {
     if (this.flowScope() === 'filtered') {
@@ -523,7 +702,7 @@ export class DashboardComponent implements OnInit {
 
   /** "Tentar novamente" dos totais por status, na fonte do escopo. */
   reloadCounts(): void {
-    if (this.chartScope() === 'filtered') {
+    if (this.countsFromOverview()) {
       this.operation.reloadOverview();
     } else {
       this.store.load();

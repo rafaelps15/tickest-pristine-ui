@@ -4,6 +4,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, forkJoin, map } from 'rxjs';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
+import { TicketDashboardScope } from '../entities/ticket-dashboard';
+import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
@@ -12,6 +14,21 @@ import { UserDataService, UserSummary } from '../../users';
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
 const CRITICAL_TICKETS_LIMIT = 5;
+
+/**
+ * Recorte dos Alertas de SLA nos filtros da listagem (GET /tickets, spec 025): setores, prioridade,
+ * responsável e período de abertura — o mesmo recorte do agregado da operação, pra lista bater com o
+ * "Atrasados" do topo. "Meus" vira o id de quem está logado; sem ele, null (a lista não é pedida).
+ */
+function criticalFilters(scope: TicketDashboardScope, userId: () => string | null | undefined): Partial<TicketMonitorFilters> | null {
+  const filters: Partial<TicketMonitorFilters> = { sectorIds: scope.sectorIds, priority: scope.priority, createdFrom: scope.from, createdTo: scope.to };
+  if (scope.assignee === 'none') return { ...filters, unassignedOnly: true };
+  if (scope.assignee === 'me') {
+    const id = userId();
+    return id ? { ...filters, assignedToUserId: id } : null;
+  }
+  return scope.assignedToUserId ? { ...filters, assignedToUserId: scope.assignedToUserId } : filters;
+}
 
 /** Vagas reservadas pros vencidos na lista — as outras ficam pros em risco (se houver), ainda salváveis. */
 const BREACHED_RESERVED_SLOTS = 3;
@@ -26,6 +43,10 @@ export const TicketSummaryStore = signalStore(
   { providedIn: 'root' },
   withState({
     groupBy: 'Day' as TicketVolumeGrouping,
+    /** Recorte dos Alertas de SLA: vazio = a empresa toda; no escopo "Com filtros" do Início, o dos filtros. */
+    criticalScope: {} as TicketDashboardScope,
+    /** A tela ainda não sabe o recorte dos Alertas (departamento da URL esperando a lista): a busca fica parada. */
+    criticalScopeHeld: false,
     /** Candidatos a responsável do diálogo "Atribuir" dos Alertas de SLA. */
     assigneeCandidates: [] as UserSummary[],
     /** Buscando candidatos a responsável. */
@@ -53,8 +74,10 @@ export const TicketSummaryStore = signalStore(
     return {
       /** Os números da empresa podem ser pedidos por quem está logado (permissão ou back-end liberado). */
       companyStatsAvailable,
+      // Quem atende a fila já recebe os totais da empresa no agregado da operação (spec 026, escopo
+      // vazio): não pede a mesma conta duas vezes a cada atualização.
       _statusCountsResource: rxResource({
-        params: () => (companyStatsAvailable() ? true : undefined),
+        params: () => (companyStatsAvailable() && !(store._sessionService.hasPermission('tickets:manage') && store._features.operationOverview) ? true : undefined),
         stream: () => store._ticketDataService.getStatusCounts()
       }),
       _volumeResource: rxResource({
@@ -68,14 +91,16 @@ export const TicketSummaryStore = signalStore(
        * `rxResource` nem chamar a API (evita um 403 certo pra Solicitante).
        */
       _criticalTicketsResource: rxResource({
-        params: () => (store._sessionService.hasPermission('tickets:manage') ? true : undefined),
+        params: () => (store._sessionService.hasPermission('tickets:manage') && !store.criticalScopeHeld()
+          ? criticalFilters(store.criticalScope(), () => store._sessionService.userId()) ?? undefined
+          : undefined),
         // Vencidos (Breached) e em risco (AtRisk) — o filtro da API aceita um status por vez. Antes só
         // AtRisk: os chamados que já estouraram o prazo, os mais graves, ficavam fora do alerta.
         // `slaSummary` só pra ler a hora do servidor (`serverNowUtc`): o prazo relativo do card ("vence em
         // 2h") anda sozinho no navegador, mas ancorado no relógio do servidor, não no da máquina.
-        stream: () => forkJoin({
-          breached: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
-          atRisk: store._ticketDataService.getAll({ slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
+        stream: ({ params }) => forkJoin({
+          breached: store._ticketDataService.getAll({ ...params, slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
+          atRisk: store._ticketDataService.getAll({ ...params, slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
           slaSummary: store._ticketDataService.getSlaSummary()
         }).pipe(map(result => ({ ...result, receivedAtMs: Date.now() })))
       })
@@ -111,18 +136,6 @@ export const TicketSummaryStore = signalStore(
     })
   })),
   withComputed((store) => ({
-    /** Total de tickets da empresa (todos os status, incluindo Fechados e Cancelados). */
-    total: computed(() => valueOf(store._statusCountsResource)?.totalCount ?? 0),
-    /** Quantidade de tickets com status Aberto, de toda a empresa. */
-    openCount: computed(() => valueOf(store._statusCountsResource)?.openCount ?? 0),
-    /** Quantidade de tickets com status Em Andamento, de toda a empresa. */
-    inProgressCount: computed(() => valueOf(store._statusCountsResource)?.inProgressCount ?? 0),
-    /** Quantidade de tickets com status Resolvido, de toda a empresa. */
-    resolvedCount: computed(() => valueOf(store._statusCountsResource)?.resolvedCount ?? 0),
-    /** Quantidade de tickets com status Fechado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
-    closedCount: computed(() => valueOf(store._statusCountsResource)?.closedCount ?? 0),
-    /** Quantidade de tickets com status Cancelado, de toda a empresa — não tem card próprio, só explica a diferença entre Total e os 3 cards visíveis. */
-    canceledCount: computed(() => valueOf(store._statusCountsResource)?.canceledCount ?? 0),
     /**
      * Chamados com SLA vencido ou em risco (até 5: até 3 vencidos, do mais antigo, e até 2 em risco, do
      * mais urgente; a sobra de um grupo vai pro outro) — vazio para quem não tem `tickets:manage`.
@@ -252,6 +265,18 @@ export const TicketSummaryStore = signalStore(
     /** Muda o agrupamento do gráfico de volume (dia/semana/mês). */
     setGroupBy(groupBy: TicketVolumeGrouping): void {
       patchState(store, { groupBy });
+    },
+
+    /** Troca o recorte dos Alertas de SLA (vazio = empresa toda); recorte igual não refaz a busca. */
+    setCriticalScope(scope: TicketDashboardScope): void {
+      if (store.criticalScopeHeld()) patchState(store, { criticalScopeHeld: false });
+      if (JSON.stringify(scope) === JSON.stringify(store.criticalScope())) return;
+      patchState(store, { criticalScope: scope });
+    },
+
+    /** Segura a busca dos Alertas até a tela saber o recorte (o próximo {@link setCriticalScope} solta). */
+    holdCriticalScope(): void {
+      patchState(store, { criticalScopeHeld: true });
     }
   }))
 );

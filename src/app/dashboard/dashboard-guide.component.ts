@@ -41,6 +41,10 @@ export class DashboardGuideComponent {
   readonly flowFilteredAvailable = input(false);
   /** Os tempos médios de atendimento já estão no ar (spec 027). */
   readonly timesAvailable = input(false);
+  /** Quem usa vê os números e o gráfico da empresa (senão, as seções deles não aparecem). */
+  readonly showCompany = input(true);
+  /** Há números que se atualizam na tela (sem eles, a seção "Atualização" não aparece). */
+  readonly showRefresh = input(true);
 
   /** O diálogo está aberto. */
   readonly open = signal(false);

@@ -58,6 +58,7 @@ describe('DashboardComponent', () => {
       setScope: jasmine.createSpy('setScope'),
       setGroupBy: jasmine.createSpy('setGroupBy'),
       setChartScope: jasmine.createSpy('setChartScope'),
+      holdScope: jasmine.createSpy('holdScope'),
       refresh: jasmine.createSpy('refresh'),
       reloadOverview: jasmine.createSpy('reloadOverview'),
       reloadTimes: jasmine.createSpy('reloadTimes'),
@@ -87,6 +88,8 @@ describe('DashboardComponent', () => {
       criticalTicketsLoadedAtMs: signal<number | null>(null),
       criticalTicketsRefreshing: signal(false),
       reloadCritical: jasmine.createSpy('reloadCritical'),
+      setCriticalScope: jasmine.createSpy('setCriticalScope'),
+      holdCriticalScope: jasmine.createSpy('holdCriticalScope'),
       assigneeCandidates: signal([]),
       searchingAssignees: signal(false),
       assigneeSearchError: signal<string | null>(null),
@@ -106,8 +109,8 @@ describe('DashboardComponent', () => {
     return {
       openCount: signal<number | null>(2), inProgressCount: signal<number | null>(1), resolvedCount: signal<number | null>(5),
       resolvedOnlyCount: signal<number | null>(4), closedCount: signal<number | null>(1),
-      activeCount: signal<number | null>(3), totalCount: signal<number | null>(8),
-      loading: signal(false), failed: signal(false), reload: jasmine.createSpy('reload')
+      activeCount: signal<number | null>(3), finishedCount: signal<number | null>(5), totalCount: signal<number | null>(8),
+      loading: signal(false), busy: signal(false), failed: signal(false), stale: signal(false), reload: jasmine.createSpy('reload')
     };
   }
 
@@ -202,6 +205,50 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.load).toHaveBeenCalled();
     });
 
+    it('ao abrir (ou voltar à tela), recarrega todas as fontes, não só os totais — os stores guardam a visita anterior', async () => {
+      asRequester();
+      await render();
+      expect(ticketsStoreFake.load).toHaveBeenCalledTimes(1);
+      expect(operationFake.refresh).toHaveBeenCalledTimes(1);
+      expect(myTicketsFake.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('voltando à tela com os números da visita anterior, diz "Atualizando…" (nunca "Atualizado agora") até a recarga terminar', async () => {
+      asRequester();
+      features.companyStatsForAll = true;
+      ticketsStoreFake.statusCountsLoading.set(true);
+      const fixture = await render();
+      const label = () => (fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent?.trim();
+      expect(label()).toContain('Atualizando…');
+      expect(fixture.nativeElement.querySelector('.freshness-spinner')).not.toBeNull();
+
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+      expect(label()).toContain('Atualizado agora');
+    });
+
+    it('se a recarga ao voltar falha, diz que os números são de uma visita anterior', async () => {
+      asRequester();
+      features.companyStatsForAll = true;
+      ticketsStoreFake.statusCountsFailed.set(true);
+      const fixture = await render();
+      expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Falha ao atualizar · números de uma visita anterior');
+    });
+
+    it('o botão de atualizar fica aria-disabled (não disabled) enquanto atualiza, pra não tirar o foco', async () => {
+      asRequester();
+      const fixture = await render();
+      const button = fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement;
+      myTicketsFake.busy.set(true);
+      await fixture.whenStable();
+
+      expect(button.disabled).toBeFalse();
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      ticketsStoreFake.load.calls.reset();
+      button.click();
+      expect(ticketsStoreFake.load).not.toHaveBeenCalled();
+    });
+
     it('tem o botão "Guia da tela" no cabeçalho, e o guia não ocupa mais o corpo da tela', async () => {
       const fixture = await render();
       const header = fixture.nativeElement.querySelector('app-page-header') as HTMLElement;
@@ -214,6 +261,8 @@ describe('DashboardComponent', () => {
       const fixture = await render();
       expect(fixture.nativeElement.textContent).toContain('Atualizado agora');
       ticketsStoreFake.load.calls.reset();
+      operationFake.refresh.calls.reset();
+      myTicketsFake.reload.calls.reset();
 
       (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
 
@@ -252,34 +301,50 @@ describe('DashboardComponent', () => {
   });
 
   describe('indicadores do topo (empresa toda)', () => {
-    it('mostra total, na fila, em andamento, resolvidos, fechados e, pra quem atende a fila, os atrasados', async () => {
+    it('pra quem atende a fila, sem o agregado: atrasados primeiro (dos Alertas), depois a fila e o total', async () => {
       asAgent();
       ticketsStoreFake.criticalTicketsLoadedAtMs.set(Date.now());
       ticketsStoreFake.breachedCount.set(86);
       const fixture = await render();
 
       const texts = kpiTexts(fixture.nativeElement);
-      expect(texts.length).toBe(6);
-      expect(texts[0]).toContain('Total 12');
+      expect(texts.length).toBe(3);
+      expect(texts[0]).toContain('Atrasados 86');
       expect(texts[1]).toContain('Na fila 5');
-      expect(texts[2]).toContain('Em andamento 2');
-      expect(texts[3]).toContain('Resolvidos 4');
-      expect(texts[4]).toContain('Fechados 1');
-      // Sem o agregado no back-end, no lugar da taxa de SLA ("em breve") entra o risco: os atrasados, em vermelho.
-      expect(texts[5]).toContain('Atrasados 86');
-      expect(fixture.nativeElement.querySelectorAll('.kpi-value')[5].classList).toContain('kpi-risk');
+      expect(texts[2]).toContain('Total 12');
+      expect(fixture.nativeElement.querySelectorAll('.kpi-value')[0].classList).toContain('kpi-risk');
+      expect(fixture.nativeElement.querySelectorAll('.kpi-card')[0].classList).toContain('kpi-alert-danger');
       expect(kpiLink(fixture.nativeElement, 'Atrasados').getAttribute('href')).toContain('slaStatus=3');
+    });
+
+    it('com o agregado: atrasados e sem responsável primeiro, com fundo de alerta, e a divisão por status só na barra', async () => {
+      asAgent();
+      features.operationOverview = true;
+      const fixture = await render();
+
+      const texts = kpiTexts(fixture.nativeElement);
+      expect(texts.length).toBe(4);
+      expect(texts[0]).toContain('Atrasados 2');
+      expect(texts[1]).toContain('Sem responsável 3');
+      expect(texts[2]).toContain('Na fila 5');
+      expect(texts[3]).toContain('Total 10');
+      const cards = fixture.nativeElement.querySelectorAll('.kpi-card');
+      expect(cards[0].classList).toContain('kpi-alert-danger');
+      expect(cards[1].classList).toContain('kpi-alert-warning');
+      expect(kpiLink(fixture.nativeElement, 'Sem responsável').getAttribute('href')).toContain('unassignedOnly=true');
+      expect(texts.some(text => text.includes('Fechados'))).toBeFalse();
     });
 
     it('zero atrasados fica neutro, e o card carrega sozinho enquanto os alertas não chegam', async () => {
       asAgent();
       const fixture = await render();
-      expect(fixture.nativeElement.querySelectorAll('.kpi-card')[5].querySelector('.kpi-skeleton')).not.toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.kpi-card')[0].querySelector('.kpi-skeleton')).not.toBeNull();
 
       ticketsStoreFake.criticalTicketsLoadedAtMs.set(Date.now());
       await fixture.whenStable();
-      expect(kpiTexts(fixture.nativeElement)[5]).toContain('Atrasados 0');
-      expect(fixture.nativeElement.querySelectorAll('.kpi-value')[5].classList).not.toContain('kpi-risk');
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Atrasados 0');
+      expect(fixture.nativeElement.querySelectorAll('.kpi-value')[0].classList).not.toContain('kpi-risk');
+      expect(fixture.nativeElement.querySelectorAll('.kpi-card')[0].classList).not.toContain('kpi-alert-danger');
     });
 
     it('pra quem não atende a fila, a taxa de SLA diz "em breve" (neutro, sem erro)', async () => {
@@ -299,7 +364,6 @@ describe('DashboardComponent', () => {
       expect(backlog).toContain('status=active');
       expect(backlog).toContain('sectorId=s1');
       expect(backlog).toContain('priority=4');
-      expect(kpiLink(fixture.nativeElement, 'Em andamento').getAttribute('href')).toContain('status=2');
       expect(kpiLink(fixture.nativeElement, 'Total').getAttribute('href')).toContain('status=all');
     });
 
@@ -471,23 +535,32 @@ describe('DashboardComponent', () => {
       fixture.nativeElement.remove();
     });
 
-    it('"Com filtros" continua focável, mas desabilitado e "Em breve" enquanto o back-end não entrega', async () => {
+    it('sem o agregado no back-end, não há escolha de escopo (nem no gráfico, nem acima dos números)', async () => {
       asAgent();
       const fixture = await render();
-      const filtered = fixture.nativeElement.querySelector('.scope-soon') as HTMLButtonElement;
+      expect(fixture.nativeElement.querySelector('.scope-row')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.scope-soon')).toBeNull();
+    });
 
-      expect(filtered.disabled).toBeFalse();
-      expect(filtered.getAttribute('aria-disabled')).toBe('true');
-      expect(filtered.getAttribute('data-tip')).toBe('Em breve');
-      expect(filtered.textContent).toContain('(em breve)');
+    it('com o agregado, Empresa e Com filtros ficam acima dos números (fora do gráfico) e trocam o escopo', async () => {
+      asAgent();
+      features.operationOverview = true;
+      const fixture = await render();
+
+      const group = fixture.nativeElement.querySelector('.scope-row [role="group"]') as HTMLElement;
+      expect(group.getAttribute('aria-label')).toBe('Escopo dos números');
+      expect(fixture.nativeElement.querySelector('app-dashboard-hero-chart .scope-soon')).toBeNull();
+      const [company, filtered] = Array.from(group.querySelectorAll('button')) as HTMLButtonElement[];
+      expect(company.getAttribute('aria-pressed')).toBe('true');
       filtered.click();
-      expect(operationFake.setChartScope).not.toHaveBeenCalled();
+      expect(operationFake.setChartScope).toHaveBeenCalledWith('filtered');
     });
 
     it('quem não atende a fila não vê o alternador de escopo', async () => {
       asRequester();
       features.companyStatsForAll = true;
       const fixture = await render();
+      expect(fixture.nativeElement.querySelector('.scope-row')).toBeNull();
       expect(fixture.nativeElement.querySelector('.scope-soon')).toBeNull();
     });
   });
@@ -513,11 +586,113 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.applied-filters')).toBeNull();
     });
 
+    it('sem filtros na URL, o Início abre na empresa toda, mesmo que a visita anterior tenha ficado em "Com filtros"', async () => {
+      asAgent();
+      features.operationOverview = true;
+      operationFake.chartScope.set('filtered');
+      await render();
+      expect(operationFake.setChartScope).toHaveBeenCalledWith('company');
+    });
+
+    it('com um departamento na URL esperando a lista, as buscas ficam seguras (nada sai com o recorte vazio)', async () => {
+      asAgent();
+      features.operationOverview = true;
+      operationFake.chartScope.set('filtered');
+      departmentsFake.departments.set([]);
+      departmentsFake.listState.set({ loading: true });
+      await TestBed.inject(Router).navigateByUrl('/?departmentId=d1');
+      const fixture = await render();
+      expect(operationFake.holdScope).toHaveBeenCalled();
+      expect(ticketsStoreFake.holdCriticalScope).toHaveBeenCalled();
+      expect(operationFake.setScope).not.toHaveBeenCalled();
+
+      // A lista chega: o recorte (os setores do departamento) vale pros números e pros Alertas.
+      departmentsFake.departments.set([{ id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] }]);
+      departmentsFake.listState.set({ loading: false });
+      await fixture.whenStable();
+      expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
+      expect(ticketsStoreFake.setCriticalScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
+    });
+
+    describe('anúncio ao leitor de tela', () => {
+      /** Texto da região aria-live do cabeçalho, depois do atraso do "limpa e escreve de novo". */
+      async function liveAfter(fixture: { whenStable(): Promise<unknown>; nativeElement: HTMLElement }): Promise<string | undefined> {
+        await fixture.whenStable();
+        await new Promise(resolve => setTimeout(resolve, 150));
+        return (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
+      }
+
+      it('a primeira carga não anuncia nada', async () => {
+        asAgent();
+        features.operationOverview = true;
+        const fixture = await render();
+        expect(await liveAfter(fixture)).toBe('');
+      });
+
+      it('trocar o escopo pelos botões anuncia o resumo na hora, mesmo sem nenhuma busca (Com filtros sem filtro, sem o volume do recorte)', async () => {
+        asAgent();
+        features = { operationOverview: true, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
+        const fixture = await render();
+        expect(await liveAfter(fixture)).toBe('');
+
+        const filtered = Array.from(fixture.nativeElement.querySelectorAll('.scope-row button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.includes('Com filtros'))!;
+        filtered.click();
+        expect(operationFake.setChartScope).toHaveBeenCalledWith('filtered');
+        operationFake.chartScope.set('filtered');
+
+        expect(await liveAfter(fixture)).toBe('Números com os filtros: 2 atrasados, 5 na fila.');
+
+        const company = Array.from(fixture.nativeElement.querySelectorAll('.scope-row button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.includes('Empresa'))!;
+        company.click();
+        operationFake.chartScope.set('company');
+        expect(await liveAfter(fixture)).toBe('Números da empresa: 2 atrasados, 5 na fila.');
+      });
+
+      it('depois do resumo de uma troca de filtro, a atualização seguinte diz só "Atualizado agora"', async () => {
+        asAgent();
+        features.operationOverview = true;
+        operationFake.chartScope.set('filtered');
+        await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
+        const fixture = await render();
+
+        await TestBed.inject(Router).navigateByUrl('/?sectorId=s2');
+        operationFake.overviewLoading.set(true);
+        await fixture.whenStable();
+        operationFake.overviewLoading.set(false);
+        expect(await liveAfter(fixture)).toBe('Números com os filtros: 2 atrasados, 5 na fila.');
+
+        (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+        operationFake.overviewLoading.set(true);
+        await fixture.whenStable();
+        operationFake.overviewLoading.set(false);
+        expect(await liveAfter(fixture)).toBe('Atualizado agora');
+      });
+    });
+
+    it('trocar um filtro diz ao leitor de tela um resumo curto dos números novos', async () => {
+      asAgent();
+      features.operationOverview = true;
+      operationFake.chartScope.set('filtered');
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
+      const fixture = await render();
+      const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
+
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s2');
+      operationFake.overviewLoading.set(true);
+      await fixture.whenStable();
+      operationFake.overviewLoading.set(false);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      expect(live()).toBe('Números com os filtros: 2 atrasados, 5 na fila.');
+    });
+
     it('os widgets operacionais seguem a empresa toda no escopo da empresa (os filtros valem só pras listas)', async () => {
       asAgent();
       await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
       await render();
       expect(operationFake.setScope).toHaveBeenCalledWith({});
+      expect(ticketsStoreFake.setCriticalScope).toHaveBeenCalledWith({});
     });
 
     it('com o back-end pronto e filtros na URL, abre no escopo "Com filtros", com a barra e os números do recorte', async () => {
@@ -529,10 +704,27 @@ describe('DashboardComponent', () => {
 
       expect(operationFake.setChartScope).toHaveBeenCalledWith('filtered');
       expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
+      // Os Alertas de SLA seguem o mesmo recorte dos números.
+      expect(ticketsStoreFake.setCriticalScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
       expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).not.toBeNull();
-      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 10');
-      expect(kpiTexts(fixture.nativeElement)[5]).toContain('Atrasados 2');
+      expect(kpiTexts(fixture.nativeElement)[3]).toContain('Total 10');
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Atrasados 2');
       expect(fixture.nativeElement.querySelector('#heroTitle').textContent).toContain('Operação com os filtros');
+    });
+
+    it('em "Com filtros" com período, os KPIs dizem que contam pela abertura e os grupos de baixo dizem que seguem os filtros', async () => {
+      asAgent();
+      features = { operationOverview: true, averageTimes: true, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
+      operationFake.chartScope.set('filtered');
+      await TestBed.inject(Router).navigateByUrl('/?period=30d');
+      const fixture = await render();
+
+      const texts = kpiTexts(fixture.nativeElement);
+      expect(texts[0]).toContain('abertos no período, passaram do prazo');
+      expect(texts[2]).toContain('abertos no período, ainda ativos');
+      const groups = Array.from(fixture.nativeElement.querySelectorAll('app-dashboard-metric-group, app-dashboard-times') as NodeListOf<HTMLElement>);
+      expect(groups.length).toBe(3);
+      groups.forEach(group => expect(group.textContent).toContain('Com os filtros escolhidos acima.'));
     });
 
     it('com o agregado mas sem o volume do recorte, a barra e os números seguem os filtros e o fluxo fica o da empresa', async () => {
@@ -544,7 +736,7 @@ describe('DashboardComponent', () => {
 
       expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
       expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).not.toBeNull();
-      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 10');
+      expect(kpiTexts(fixture.nativeElement)[3]).toContain('Total 10');
       expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).toContain('o fluxo ainda é o da empresa toda');
     });
   });
@@ -560,15 +752,16 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('app-dashboard-insights')).not.toBeNull();
     });
 
-    it('com o agregado no ar, os atrasados vão pro topo e a Central mostra críticos e sem responsável', async () => {
+    it('com o agregado no ar, atrasados e sem responsável vão pro topo e a Central fica com os críticos', async () => {
       asAgent();
       features.operationOverview = true;
       const fixture = await render();
 
-      expect(kpiTexts(fixture.nativeElement)[5]).toContain('Atrasados 2');
+      expect(kpiTexts(fixture.nativeElement)[0]).toContain('Atrasados 2');
+      expect(kpiTexts(fixture.nativeElement)[1]).toContain('Sem responsável 3');
       const central = fixture.nativeElement.querySelector('app-dashboard-metric-group') as HTMLElement;
       expect(central.textContent).toContain('Críticos');
-      expect(central.textContent).toContain('Sem responsável');
+      expect(central.textContent).not.toContain('Ativos, ninguém assumiu');
       expect(central.textContent).not.toContain('Passaram do prazo');
     });
 
@@ -590,7 +783,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.freshness-label').textContent).toContain('Falha ao atualizar');
     });
 
-    it('sem números do agregado, o erro aparece uma vez só (na Central) e recarrega o agregado', async () => {
+    it('sem números do agregado, o erro aparece uma vez só (na faixa do topo) e recarrega o agregado', async () => {
       asAgent();
       features.operationOverview = true;
       operationFake.volume.set(null);
@@ -599,9 +792,13 @@ describe('DashboardComponent', () => {
       operationFake.overviewError.set('Não foi possível carregar os números da operação.');
       const fixture = await render();
 
-      const alerts = fixture.nativeElement.querySelectorAll('app-dashboard-metric-group [role="alert"]');
+      const alerts = fixture.nativeElement.querySelectorAll('[role="alert"]');
       expect(alerts.length).toBe(1);
-      expect(fixture.nativeElement.textContent).toContain('Indisponível no momento');
+      expect(alerts[0].closest('app-dashboard-kpi-strip')).not.toBeNull();
+      // A Central e o SLA só remetem ao aviso de cima.
+      const groups = Array.from(fixture.nativeElement.querySelectorAll('app-dashboard-metric-group') as NodeListOf<HTMLElement>);
+      expect(groups.length).toBe(2);
+      groups.forEach(group => expect(group.textContent).toContain('Indisponível no momento'));
       (alerts[0].querySelector('button') as HTMLButtonElement).click();
       expect(operationFake.reloadOverview).toHaveBeenCalled();
     });
@@ -643,11 +840,26 @@ describe('DashboardComponent', () => {
       expect(central.parentElement!.classList).toContain('order-lg-1');
     });
 
-    it('sem nada pra mostrar na linha secundária (administrativo sem a fila), ela não ocupa espaço', async () => {
-      hasPermission.and.callFake((code: string) => code === 'users:read');
+    it('quem administra sem a fila vê os atalhos de Administração (o Início não fica vazio), sem "Atualizado há"', async () => {
+      hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'departments:manage');
+      ticketsStoreFake.companyStatsAvailable.set(false);
+      ticketsStoreFake.statusCounts.set(null);
+      ticketsStoreFake.volumeHasValue.set(false);
+      const fixture = await render();
+
+      expect(fixture.nativeElement.querySelector('#quickActionsTitle')).toBeNull();
+      const admin = fixture.nativeElement.querySelector('section[aria-labelledby="adminTitle"]') as HTMLElement;
+      const links = Array.from(admin.querySelectorAll('a')).map(a => a.getAttribute('href'));
+      expect(links).toEqual(['/usuarios', '/departamentos']);
+      expect(fixture.nativeElement.textContent).not.toContain('disponível em breve');
+      expect(fixture.nativeElement.querySelector('.freshness')).toBeNull();
+    });
+
+    it('sem papel nenhum na tela (nem fila, nem chamados próprios, nem administração), ela não ocupa espaço', async () => {
+      hasPermission.and.returnValue(false);
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('#quickActionsTitle')).toBeNull();
-      expect(fixture.nativeElement.querySelectorAll('.row.g-3.mb-4').length).toBe(0);
+      expect(fixture.nativeElement.querySelector('section[aria-labelledby="adminTitle"]')).toBeNull();
     });
 
     it('não mostra Central nem Alertas de SLA pra quem não atende a fila', async () => {
@@ -659,7 +871,7 @@ describe('DashboardComponent', () => {
   });
 
   describe('quem não atende a fila', () => {
-    it('sem os números da empresa liberados no back-end, um aviso só no lugar dos indicadores e do gráfico', async () => {
+    it('sem os números da empresa liberados no back-end, "Seus chamados" vem primeiro, sem aviso de "em breve"', async () => {
       asRequester();
       ticketsStoreFake.companyStatsAvailable.set(false);
       ticketsStoreFake.statusCounts.set(null);
@@ -668,7 +880,24 @@ describe('DashboardComponent', () => {
 
       expect(fixture.nativeElement.querySelector('app-dashboard-kpi-strip')).toBeNull();
       expect(fixture.nativeElement.querySelector('app-dashboard-hero-chart')).toBeNull();
-      expect(fixture.nativeElement.textContent).toContain('Números de toda a empresa (indicadores e gráfico da operação): disponível em breve.');
+      expect(fixture.nativeElement.textContent).not.toContain('disponível em breve');
+      expect(fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]')).not.toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Como estão os seus chamados.');
+      // "Ver todos" já leva a Meus Chamados: sem o card de Ações rápidas repetindo o mesmo atalho.
+      expect(fixture.nativeElement.querySelector('#quickActionsTitle')).toBeNull();
+    });
+
+    it('no primeiro uso (nenhum chamado aberto), "Seus chamados" convida a abrir o primeiro', async () => {
+      asRequester();
+      myTicketsFake.totalCount.set(0);
+      const fixture = await render();
+
+      const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
+      expect(section.textContent).toContain('Você ainda não abriu nenhum chamado.');
+      const invite = section.querySelector('a.btn-primary') as HTMLAnchorElement;
+      expect(invite.textContent).toContain('Abrir o primeiro chamado');
+      expect(invite.getAttribute('href')).toBe('/tickets/novo');
+      expect(section.querySelector('app-stat-card')).toBeNull();
     });
 
     it('com os números liberados, o drill-down abre Meus Chamados e diz quantos deles a pessoa vê', async () => {
@@ -684,16 +913,22 @@ describe('DashboardComponent', () => {
   });
 
   describe('seus chamados', () => {
-    it('mostra os próprios chamados por situação na linha secundária, ligando a Meus Chamados', async () => {
+    it('mostra os próprios chamados nos grupos de Meus Chamados: cada card com o número da lista que abre', async () => {
       asRequester();
       const fixture = await render();
 
       const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
       expect(section.querySelector('h2')?.textContent).toContain('Seus chamados');
       const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
-      expect(values).toEqual(['2', '1', '5']);
+      // Em aberto = ativos (3, a lista "Em aberto"); Encerrados = resolvidos, fechados e cancelados (5); Todos = 8.
+      expect(values).toEqual(['3', '5', '8']);
       const links = Array.from(section.querySelectorAll('a.stretched-link') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href'));
-      expect(links).toEqual(['/tickets', '/tickets', '/tickets?status=finished']);
+      expect(links).toEqual(['/tickets', '/tickets?status=finished', '/tickets?status=all']);
+      // A divisão por status fica à vista, sem esconder a diferença.
+      expect(section.textContent).toContain('2 abertos, 1 em andamento');
+      expect(section.textContent).toContain('5 resolvidos ou fechados, 0 cancelados');
+      expect(links.length).toBe(3);
+      expect((section.querySelector('a.stretched-link') as HTMLAnchorElement).getAttribute('aria-label')).toBe('Em aberto: 3, 2 abertos, 1 em andamento. Ver em Meus Chamados');
     });
 
     it('não mostra o bloco pra quem atende a fila, nem pede o resumo à API (o store nem é criado)', async () => {
@@ -707,6 +942,30 @@ describe('DashboardComponent', () => {
       asRequester();
       await render();
       expect(myTicketsCreated).toBeTrue();
+    });
+
+    it('numa recarga, os números ficam como estão (sem spinner), e o cabeçalho gira o indicador', async () => {
+      asRequester();
+      const fixture = await render();
+      myTicketsFake.busy.set(true);
+      await fixture.whenStable();
+
+      const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
+      const values = Array.from(section.querySelectorAll('.stat-value') as NodeListOf<HTMLElement>).map(v => v.textContent?.trim());
+      expect(values).toEqual(['3', '5', '8']);
+      expect(section.querySelector('.spinner-border')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.freshness-spinner')).not.toBeNull();
+    });
+
+    it('uma atualização que falha mantém os números e o cabeçalho diz "Falha ao atualizar", sem aviso no bloco', async () => {
+      asRequester();
+      myTicketsFake.stale.set(true);
+      const fixture = await render();
+
+      const section = fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]') as HTMLElement;
+      expect(section.querySelector('[role="alert"]')).toBeNull();
+      expect(section.textContent).toContain('2 abertos, 1 em andamento');
+      expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Falha ao atualizar');
     });
 
     it('falha: aviso neutro com "Tentar novamente"', async () => {

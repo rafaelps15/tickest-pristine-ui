@@ -1,7 +1,8 @@
 import { signalStore, withProps, withComputed, withMethods } from '@ngrx/signals';
-import { inject, computed } from '@angular/core';
+import { inject, computed, linkedSignal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { TicketStatus } from '../entities/ticket-status';
+import { OwnTicketCount } from '../entities/own-ticket-count';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { SessionService } from '../../shared';
 
@@ -18,17 +19,35 @@ export const MyTicketsSummaryStore = signalStore(
     _sessionService: inject(SessionService)
   })),
   withProps((store) => ({
-    /** Só busca com a permissão de ver os próprios chamados — sem ela, nem chama a API (evita um 403 certo). */
+    /**
+     * Só busca com a permissão de ver os próprios chamados — sem ela, nem chama a API (evita um 403
+     * certo). O parâmetro é o id de quem está logado: o store é da raiz e sobrevive ao logout (a troca de
+     * conta não recarrega a página), então outra pessoa entrando refaz a busca em vez de herdar a resposta.
+     */
     _summaryResource: rxResource({
-      params: () => (store._sessionService.hasPermission('tickets:view-own') ? true : undefined),
+      params: () => (store._sessionService.hasPermission('tickets:view-own') ? store._sessionService.userId() ?? undefined : undefined),
       stream: () => store._ticketDataService.getMineSummary()
     })
   })),
   withComputed((store) => {
-    /** Soma as contagens dos status informados, ou `null` enquanto não há resposta (inclusive em erro). */
+    /**
+     * Último resumo bom de quem está logado: numa recarga o resource já mantém o valor, e numa
+     * atualização que falha os números anteriores continuam (o erro fica em `stale`). Trocar de usuário
+     * (ou sair) zera: os números de uma sessão nunca aparecem pra outra. Null antes da primeira resposta.
+     */
+    const shown = linkedSignal<{ userId: string | null; value: OwnTicketCount[] | null }, OwnTicketCount[] | null>({
+      source: () => ({
+        userId: store._sessionService.userId(),
+        value: store._summaryResource.hasValue() ? store._summaryResource.value() : null
+      }),
+      computation: (current, previous) =>
+        current.value ?? (previous && previous.source.userId === current.userId ? previous.value : null)
+    });
+    /** Soma as contagens dos status informados, ou `null` enquanto não há nenhuma resposta. */
     const sum = (statuses: TicketStatus[]) => computed(() => {
-      if (!store._summaryResource.hasValue()) return null;
-      return store._summaryResource.value()
+      const groups = shown();
+      if (!groups) return null;
+      return groups
         .filter(group => statuses.includes(group.status))
         .reduce((total, group) => total + group.count, 0);
     });
@@ -50,10 +69,14 @@ export const MyTicketsSummaryStore = signalStore(
       finishedCount: sum([TicketStatus.Resolved, TicketStatus.Closed, TicketStatus.Canceled]),
       /** Todos os chamados próprios, em qualquer status. */
       totalCount: sum([TicketStatus.Open, TicketStatus.InProgress, TicketStatus.Resolved, TicketStatus.Closed, TicketStatus.Canceled]),
-      /** O resumo está carregando. */
-      loading: computed(() => store._summaryResource.isLoading()),
-      /** O resumo falhou ao carregar. */
-      failed: computed(() => !!store._summaryResource.error())
+      /** Primeira carga, sem nenhum número ainda (numa recarga, os números ficam: ver {@link busy}). */
+      loading: computed(() => store._summaryResource.isLoading() && shown() === null),
+      /** Buscando o resumo, na primeira carga ou numa recarga. */
+      busy: computed(() => store._summaryResource.isLoading()),
+      /** O resumo falhou e não há números anteriores pra mostrar. */
+      failed: computed(() => !!store._summaryResource.error() && shown() === null),
+      /** A última atualização falhou, mas os números anteriores continuam na tela (velhos). */
+      stale: computed(() => !!store._summaryResource.error() && shown() !== null)
     };
   }),
   withMethods((store) => ({
