@@ -1,17 +1,25 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { ChangePasswordRequest, UpdateProfileRequest, UserProfile } from '../entities/user-profile';
+import { UserStatusCounts } from '../entities/user-status-counts';
 import { PagedResponse } from '../../shared';
 import { environment } from '../../../environments/environment';
 
 /** Acesso HTTP aos usuários (listagem, detalhe, edição de perfil, atribuição de roles). */
 @Injectable({ providedIn: 'root' })
 export class UserDataService {
+    /** Cliente HTTP do Angular. */
     private readonly http = inject(HttpClient);
+    /** Base dos endpoints de usuários na API. */
     private readonly apiUrl = `${environment.apiUrl}/users`;
+
+    /** Quantos usuários há em cada situação — ativos, convite pendente, inativos (GET /users/stats/status, requer users:read). */
+    getStatusCounts(): Observable<UserStatusCounts> {
+        return this.http.get<UserStatusCounts>(`${this.apiUrl}/stats/status`);
+    }
 
     /** Busca o perfil de um usuário pelo id (GET /users/{id}). */
     getById(userId: string): Observable<UserProfile> {
@@ -60,7 +68,30 @@ export class UserDataService {
         return this.http.put<void>(`${this.apiUrl}/${userId}/deactivate`, {});
     }
 
-    /** Reativa um usuário, liberando o login dele de novo (PUT /users/{id}/activate). */
+    /**
+     * Quantos chamados ainda em aberto (Aberto ou Em Andamento) estão atribuídos ao usuário — lido
+     * do `totalCount` de GET /tickets com `pageSize=1`, sem trazer a lista. Fica aqui, e não no
+     * domínio de chamados, porque `tickets` já importa `users`: o caminho inverso fecharia um ciclo
+     * entre os barrels. Os status são os números do enum TicketStatus do back-end (1 = Aberto,
+     * 2 = Em Andamento), os mesmos de `TICKET_ACTIVE_STATUSES`.
+     */
+    countOpenAssignedTickets(userId: string): Observable<number> {
+        const params = new HttpParams()
+            .set('assignedToUserId', userId)
+            .append('status', 1)
+            .append('status', 2)
+            .set('page', 1)
+            .set('pageSize', 1);
+        return this.http.get<PagedResponse<unknown>>(`${environment.apiUrl}/tickets`, { params })
+            .pipe(map(page => page.totalCount));
+    }
+
+    /** Reemite o convite de ativação de quem ainda não ativou a conta, revogando o anterior e enviando novo e-mail (POST /users/{id}/invitation). */
+    resendInvitation(userId: string): Observable<void> {
+        return this.http.post<void>(`${this.apiUrl}/${userId}/invitation`, {});
+    }
+
+    /** Reativa um usuário, liberando o acesso de novo (PUT /users/{id}/activate). */
     activate(userId: string): Observable<void> {
         return this.http.put<void>(`${this.apiUrl}/${userId}/activate`, {});
     }

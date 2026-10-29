@@ -1,38 +1,30 @@
 <div class="dropdown">
-  <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" appDropdownFixedPosition>
-    <div class="avatar avatar-online">
-      <img src="https://ui-avatars.com/api/?name=User&background=696cff&color=fff" alt="Foto de perfil do usuário logado" class="w-px-40 h-auto rounded-circle" />
-    </div>
-  </a>
+  <button type="button" class="btn p-0 user-menu-toggle" aria-label="Menu do usuário" aria-expanded="false"
+          data-bs-toggle="dropdown" appDropdownFixedPosition>
+    <span class="avatar-initials" aria-hidden="true">{{ initials() }}</span>
+  </button>
   <ul class="dropdown-menu dropdown-menu-end">
-    <li>
-      <a class="dropdown-item" routerLink="/perfil">
-        <div class="d-flex">
-          <div class="flex-shrink-0 me-3">
-            <div class="avatar avatar-online">
-              <img src="https://ui-avatars.com/api/?name=User&background=696cff&color=fff" alt="Foto de perfil do usuário logado" class="w-px-40 h-auto rounded-circle" />
-            </div>
-          </div>
-          <div class="flex-grow-1">
-            <span class="fw-semibold d-block">{{ displayName() }}</span>
-            <small class="text-muted">{{ sessionService.email() }}</small>
-          </div>
-        </div>
-      </a>
+    <!-- Quem está logado: só informação, não um segundo link pro perfil (o item "Meu Perfil" já é esse link). -->
+    <li class="user-menu-header">
+      <span class="avatar-initials" aria-hidden="true">{{ initials() }}</span>
+      <div class="min-w-0">
+        <span class="fw-semibold d-block text-truncate">{{ displayName() }}</span>
+        <small class="text-muted d-block text-truncate">{{ sessionService.email() }}</small>
+      </div>
     </li>
     <li><div class="dropdown-divider"></div></li>
     <li>
       <a class="dropdown-item" routerLink="/perfil">
-        <i class="bx bx-user me-2"></i>
+        <i class="bx bx-user me-2" aria-hidden="true"></i>
         <span class="align-middle">Meu Perfil</span>
       </a>
     </li>
     <li><div class="dropdown-divider"></div></li>
     <li>
-      <a href="javascript:void(0);" class="dropdown-item cursor-pointer" (click)="logout()">
-        <i class="bx bx-power-off me-2"></i>
+      <button type="button" class="dropdown-item" (click)="logout()">
+        <i class="bx bx-power-off me-2" aria-hidden="true"></i>
         <span class="align-middle">Sair</span>
-      </a>
+      </button>
     </li>
   </ul>
 </div>

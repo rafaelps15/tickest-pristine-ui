@@ -1,31 +1,51 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { createPersistedToggle, writePersistedToggle } from '../shared';
-
-/** Chave usada para lembrar se o Guia da Tela ficou aberto ou fechado, entre sessões. */
-const GUIDE_OPEN_STORAGE_KEY = 'tickest.dashboardGuide.open';
+import { Component, ChangeDetectionStrategy, input, signal } from '@angular/core';
+import { DialogComponent } from '../shared/ui/dialog/dialog.component';
 
 /**
- * Painel "Guia da Tela" do Dashboard: explica o que cada card de estatística representa e como
- * ler o gráfico de volume. Componente de apresentação — não injeta nenhum Store, só texto fixo.
+ * "Guia da tela" do Início: um botão discreto no cabeçalho que abre um diálogo centralizado
+ * (`<app-dialog>`: foco preso, Esc e X fecham, o foco volta pro botão) com a explicação de cada
+ * bloco — filtros, indicadores, gráfico, central de atenção e alertas de SLA. Saiu do corpo da tela,
+ * onde empurrava os números pra baixo da dobra.
  */
 @Component({
   selector: 'app-dashboard-guide',
+  imports: [DialogComponent],
   templateUrl: './dashboard-guide.component.html',
-  styleUrl: './dashboard-guide.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    .guide-dialog {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Medida confortável de leitura no diálogo largo. */
+    .guide-dialog p {
+      max-width: 65ch;
+    }
+
+    /* Alvo de toque mínimo no celular, como os demais controles do cabeçalho. */
+    @media (pointer: coarse) {
+      .guide-trigger { min-height: 44px; }
+    }
+  `
 })
 export class DashboardGuideComponent {
-  /**
-   * Se o painel está aberto — restaurado do localStorage, `false` (fechado) se não houver nada
-   * salvo: o Dashboard é a tela mais visitada do sistema, então o painel explicativo não deveria
-   * empurrar os cards reais pra baixo em toda visita repetida (achado no critique de 2026-10-24).
-   */
-  protected readonly open = createPersistedToggle(GUIDE_OPEN_STORAGE_KEY, false);
+  /** Mostra as seções da operação (filtros, central de atenção, alertas de SLA) — só pra quem atende a fila. */
+  readonly showOperation = input(false);
+  /** Mostra a seção "Seus chamados" — só pra quem abre chamados e não atende a fila. */
+  readonly showMine = input(false);
+  /** O escopo "Com filtros" já tem back-end (muda o que o guia diz sobre filtros e indicadores). */
+  readonly filteredAvailable = input(false);
+  /** O gráfico por período também segue os filtros (spec 028). */
+  readonly flowFilteredAvailable = input(false);
+  /** Os tempos médios de atendimento já estão no ar (spec 027). */
+  readonly timesAvailable = input(false);
+  /** Quem usa vê os números e o gráfico da empresa (senão, as seções deles não aparecem). */
+  readonly showCompany = input(true);
+  /** Há números que se atualizam na tela (sem eles, a seção "Atualização" não aparece). */
+  readonly showRefresh = input(true);
 
-  /** Alterna o painel e salva a preferência, sem quebrar a tela se a escrita falhar. */
-  protected toggle(): void {
-    const next = !this.open();
-    this.open.set(next);
-    writePersistedToggle(GUIDE_OPEN_STORAGE_KEY, next);
-  }
+  /** O diálogo está aberto. */
+  readonly open = signal(false);
 }

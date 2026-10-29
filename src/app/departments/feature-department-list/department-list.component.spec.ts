@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { DepartmentListComponent } from './department-list.component';
 import { DepartmentsStore } from '../application/departments.store';
 import { Department, DepartmentDetail } from '../entities/department';
-import { ConfirmDialogService, SessionService } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { UserSummary } from '../../users';
 
 describe('DepartmentListComponent', () => {
@@ -25,21 +25,32 @@ describe('DepartmentListComponent', () => {
     responsibleUserName: null,
     sectors: []
   };
+  /** TI com responsável: só assim a edição busca o id do responsável atual (GET do detalhe). */
+  const itWithResponsible: Department = { ...informationTechnology, responsibleUserName: 'Carlos Souza' };
+
+  /** Card do departamento pelo id — a lista põe os sem setor primeiro, então a posição não é a da fixture. */
+  function cardOf(root: HTMLElement, departmentId: string): HTMLElement {
+    return root.querySelector(`section.card[data-item-id="${departmentId}"]`) as HTMLElement;
+  }
 
   const candidate: UserSummary = {
     id: 'u-1', email: 'carlos@empresa.com', firstName: 'Carlos', lastName: 'Souza',
-    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   /** Cria um store falso com signals reais, para o template reagir como no store verdadeiro. */
   function createStoreFake() {
     return {
       departments: signal<Department[]>([informationTechnology, commercial]),
-      listState: signal({ data: [informationTechnology, commercial], loading: false, error: null as string | null }),
+      listState: signal({ loading: false, error: null as string | null }),
       mutationError: signal<string | null>(null),
       mutating: signal(false),
+      deletingId: signal<string | null>(null),
+      deleteError: signal<{ targetId: string; message: string } | null>(null),
+      clearDeleteError: jasmine.createSpy('clearDeleteError'),
       responsibleCandidates: signal<UserSummary[]>([]),
       searchingResponsible: signal(false),
+      responsibleSearchTerm: signal<string | null>(null),
       responsibleSearchError: signal<string | null>(null),
       load: jasmine.createSpy('load'),
       create: jasmine.createSpy('create'),
@@ -83,16 +94,234 @@ describe('DepartmentListComponent', () => {
     expect(storeFake.load).toHaveBeenCalled();
   });
 
+  it('falha de carga mostra só o erro com "Tentar novamente", nunca o estado de "nenhum departamento"', async () => {
+    storeFake.departments.set([]);
+    storeFake.listState.set({ loading: false, error: 'Falha no servidor' });
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('Falha no servidor');
+    expect(text).toContain('Tentar novamente');
+    expect(text).not.toContain('Nenhum departamento cadastrado ainda.');
+    expect(fixture.nativeElement.querySelector('app-empty-state')).toBeNull();
+    // Falha técnica é neutra: vermelho fica pro risco operacional (DESIGN.md).
+    expect(fixture.nativeElement.querySelector('.alert-danger, .btn-outline-danger')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.department-load-error .btn-outline-secondary')).not.toBeNull();
+  });
+
   it('mostra os setores dentro do card do departamento', async () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
-    const cards = fixture.nativeElement.querySelectorAll('.row.g-4 .card');
-    expect(cards[0].textContent).toContain('TI');
-    expect(cards[0].textContent).toContain('Helpdesk');
-    expect(cards[0].textContent).toContain('Infraestrutura');
-    expect(cards[0].textContent).toContain('2 setores');
-    expect(cards[1].textContent).toContain('Nenhum setor ainda');
+    const itCard = cardOf(fixture.nativeElement, 'dep-1');
+    expect(itCard.textContent).toContain('TI');
+    expect(itCard.textContent).toContain('Helpdesk');
+    expect(itCard.textContent).toContain('Infraestrutura');
+    expect(itCard.textContent).toContain('2 setores');
+    expect(cardOf(fixture.nativeElement, 'dep-2').textContent).toContain('Nenhum setor ainda');
+  });
+
+  it('põe primeiro os departamentos sem nenhum setor (os que somem da abertura de chamados)', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const ids = Array.from(fixture.nativeElement.querySelectorAll('section.card') as NodeListOf<HTMLElement>)
+      .map(card => card.getAttribute('data-item-id'));
+    expect(ids).toEqual(['dep-2', 'dep-1']);
+  });
+
+  it('marca o setor que bateu com a busca', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.searchInput.set('help');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const helpdesk = fixture.nativeElement.querySelector('[data-item-id="sec-1"]') as HTMLElement;
+    const infra = fixture.nativeElement.querySelector('[data-item-id="sec-2"]') as HTMLElement;
+    expect(helpdesk.classList).toContain('sector-match');
+    expect(helpdesk.textContent).toContain('(encontrado pela busca)');
+    expect(infra.classList).not.toContain('sector-match');
+  });
+
+  it('o título do card é só o nome (o badge de setores fica fora do h2) e rotula a seção', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const card = cardOf(fixture.nativeElement, 'dep-1');
+    const heading = card.querySelector('h2')!;
+    expect(heading.textContent?.trim()).toBe('TI');
+    expect(card.getAttribute('aria-labelledby')).toBe(heading.id);
+  });
+
+  it('destaca em âmbar o departamento sem setor e diz quando não há responsável', async () => {
+    permissions = new Set(['sectors:manage']);
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const itCard = cardOf(fixture.nativeElement, 'dep-1');
+    const commercialCard = cardOf(fixture.nativeElement, 'dep-2');
+    expect(itCard.querySelector('.badge')!.classList).toContain('bg-label-secondary');
+    expect(commercialCard.querySelector('.badge')!.classList).toContain('bg-label-warning');
+    expect(commercialCard.textContent).toContain('Sem responsável');
+  });
+
+  it('para quem gerencia departamentos, "Definir responsável" no card abre a edição com o foco na busca de responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const card = cardOf(fixture.nativeElement, 'dep-1');
+    const button = Array.from(card.querySelectorAll('button')).find(b => b.textContent?.includes('Definir responsável'))!;
+    expect(button.getAttribute('aria-label')).toBe('Definir responsável de TI');
+    button.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.editingDepartment()).toEqual(informationTechnology);
+    const search = document.querySelector('#departmentResponsibleSearch') as HTMLElement;
+    expect(search.hasAttribute('data-dialog-focus')).toBeTrue();
+  });
+
+  it('o "Editar departamento" do "⋮" não leva o foco pra busca de responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(informationTechnology);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect((document.querySelector('#departmentResponsibleSearch') as HTMLElement).hasAttribute('data-dialog-focus')).toBeFalse();
+  });
+
+  it('a região que anuncia "Mostrando X de Y" já existe antes do filtro, pra o leitor de tela anunciar a mudança', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const live = fixture.nativeElement.querySelector('[aria-live="polite"]') as HTMLElement;
+    expect(live).not.toBeNull();
+    expect(live.textContent?.trim()).toBe('');
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('[aria-live="polite"]')).toBe(live);
+    expect(live.textContent).toContain('Mostrando 1 de 2 departamentos.');
+  });
+
+  it('corrigido o último departamento do problema filtrado, o filtro sai sozinho e um toast avisa', async () => {
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const fixed = { ...commercial, sectors: [{ id: 'sec-9', name: 'Vendas', description: null }] };
+    storeFake.departments.set([informationTechnology, fixed]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.issueFilter()).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('section.card').length).toBe(2);
+    expect(toast.show).toHaveBeenCalledWith('Todos os departamentos têm setor agora.');
+  });
+
+  it('com a recarga falhando (lista vazia), o filtro de problema fica e nenhum toast diz que tudo foi corrigido', async () => {
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    storeFake.departments.set([]);
+    storeFake.listState.set({ loading: false, error: 'Falha no servidor' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.issueFilter()).toBe('withoutSectors');
+    expect(toast.show).not.toHaveBeenCalled();
+  });
+
+  it('filtra pelo problema escolhido no Resumo e diz quantos sobraram; "Limpar filtros" volta a todos', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutSectors');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const cards = fixture.nativeElement.querySelectorAll('section.card') as NodeListOf<HTMLElement>;
+    expect(cards.length).toBe(1);
+    expect(cards[0].querySelector('h2')!.textContent).toContain('Comercial');
+    expect(fixture.nativeElement.textContent).toContain('Mostrando 1 de 2 departamentos.');
+
+    fixture.componentInstance.clearFilters();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelectorAll('section.card').length).toBe(2);
+  });
+
+  it('o "Salvar" diz "Salvando…" durante a mutação, com o spinner só decorativo', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    storeFake.mutating.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.textContent?.trim()).toBe('Salvando…');
+    expect(button.querySelector('.spinner-border')!.getAttribute('aria-hidden')).toBe('true');
+    expect(button.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('anuncia quantos candidatos a responsável a busca encontrou, numa região viva que já existia', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const status = fixture.nativeElement.querySelector('#departmentModal .visually-hidden[role="status"]') as HTMLElement;
+    expect(status).not.toBeNull();
+
+    fixture.componentInstance.responsibleSearchInput.set('carlos');
+    storeFake.responsibleSearchTerm.set('carlos');
+    storeFake.responsibleCandidates.set([candidate]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('#departmentModal .visually-hidden[role="status"]')).toBe(status);
+    expect(status.textContent?.trim()).toBe('1 usuário encontrado.');
+  });
+
+  it('enquanto a busca de responsável não respondeu pelo texto digitado, diz "Buscando", nunca "Nenhum usuário encontrado"', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    fixture.componentInstance.responsibleSearchInput.set('carl');
+    storeFake.responsibleSearchTerm.set('car');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#departmentModal') as HTMLElement;
+    expect(modal.textContent).toContain('Buscando usuários…');
+    expect(modal.textContent).not.toContain('Nenhum usuário encontrado.');
+  });
+
+  it('filtra pelos departamentos sem responsável', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.issueFilter.set('withoutResponsible');
+
+    expect(fixture.componentInstance.filteredDepartments().map(d => d.id)).toEqual(['dep-2', 'dep-1']);
   });
 
   it('filtra pelo nome do departamento', async () => {
@@ -133,7 +362,7 @@ describe('DepartmentListComponent', () => {
     fixture.componentInstance.openEditModal(withResponsible);
 
     expect(fixture.componentInstance.selectedResponsibleName()).toBe('Carlos Souza');
-    expect(storeFake.getDepartmentDetail).toHaveBeenCalledWith('dep-1', jasmine.any(Function));
+    expect(storeFake.getDepartmentDetail).toHaveBeenCalledWith('dep-1', jasmine.any(Function), jasmine.any(Function));
     expect(fixture.componentInstance.selectedResponsibleId()).toBe('u-1');
     expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
   });
@@ -182,8 +411,22 @@ describe('DepartmentListComponent', () => {
     expect(fixture.componentInstance.selectedResponsibleName()).toBeNull();
   });
 
-  it('o botão "Salvar" do modal de departamento fica desabilitado enquanto o responsável atual carrega', async () => {
+  it('o botão "Salvar" do modal de departamento fica desabilitado enquanto o responsável atual carrega, e diz por quê', async () => {
     storeFake.getDepartmentDetail.and.callFake(() => {});
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(itWithResponsible);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeTrue();
+    expect(button.getAttribute('aria-describedby')).toBe('departmentResponsibleStatus');
+    expect(document.getElementById('departmentResponsibleStatus')?.textContent).toContain('Carregando responsável atual');
+  });
+
+  it('editar um departamento sem responsável não busca o detalhe e já libera o "Salvar alterações"', async () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
@@ -191,8 +434,149 @@ describe('DepartmentListComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
+    expect(storeFake.getDepartmentDetail).not.toHaveBeenCalled();
     const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
-    expect(button.disabled).toBeTrue();
+    expect(button.disabled).toBeFalse();
+    expect(button.textContent?.trim()).toBe('Salvar alterações');
+  });
+
+  it('quando o responsável atual não carrega, "Remover responsável" libera o "Salvar" e grava sem responsável', async () => {
+    storeFake.getDepartmentDetail.and.callFake((_id: string, _onLoaded: unknown, onError: (m: string) => void) => onError('falhou'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(itWithResponsible);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#departmentModal') as HTMLElement;
+    const remove = [...modal.querySelectorAll('button')].find(b => b.textContent?.includes('Remover responsável'))!;
+    remove.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect((modal.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBeFalse();
+    fixture.componentInstance.onSubmit();
+    expect(storeFake.update).toHaveBeenCalledWith('dep-1', jasmine.objectContaining({ responsibleUserId: undefined }), jasmine.any(Function));
+  });
+
+  it('fechar o diálogo descarta o erro de salvar dele (não sobra na tela)', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openCreateModal();
+    storeFake.clearMutationError.calls.reset();
+
+    fixture.componentInstance.closeDialog();
+
+    expect(storeFake.clearMutationError).toHaveBeenCalled();
+  });
+
+  it('os botões de enviar dizem a ação: "Criar departamento" e "Criar setor"', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openCreateModal();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLElement).textContent?.trim()).toBe('Criar departamento');
+
+    fixture.componentInstance.closeDialog();
+    fixture.componentInstance.openCreateSectorModal(commercial);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((fixture.nativeElement.querySelector('#sectorModal button[type="submit"]') as HTMLElement).textContent?.trim()).toBe('Criar setor');
+  });
+
+  it('"Criar e adicionar outro" cria o setor e deixa o diálogo aberto e limpo, dizendo o que criou', async () => {
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    storeFake.createSector.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('sec-novo'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateSectorModal(commercial);
+    component.sectorForm.setValue({ name: 'Vendas', description: '' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const addAnother = [...(fixture.nativeElement.querySelectorAll('#sectorModal button') as NodeListOf<HTMLButtonElement>)]
+      .find(b => b.textContent?.includes('Criar e adicionar outro'))!;
+    addAnother.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(storeFake.createSector).toHaveBeenCalledWith(jasmine.objectContaining({ name: 'Vendas', departmentId: 'dep-2' }), jasmine.any(Function));
+    expect(fixture.nativeElement.querySelector('#sectorModal')).not.toBeNull();
+    expect(component.sectorForm.value.name).toBe('');
+    expect(component.highlightedId()).toBe('sec-novo');
+    const status = fixture.nativeElement.querySelector('#sectorModal [role="status"]') as HTMLElement;
+    expect(status.textContent).toContain('Setor "Vendas" criado em Comercial. Cadastre o próximo.');
+    expect(toast.show).not.toHaveBeenCalled();
+  });
+
+  it('quando o responsável atual não carrega, encerra o loading e mostra o erro no modal com "Tentar de novo"', async () => {
+    storeFake.getDepartmentDetail.and.callFake((_id: string, _onLoaded: unknown, onError: (m: string) => void) =>
+      onError('Não foi possível carregar o responsável atual.'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(itWithResponsible);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#departmentModal') as HTMLElement;
+    expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
+    expect(modal.textContent).toContain('Não foi possível carregar o responsável atual.');
+    expect(modal.querySelector('.spinner-border')).toBeNull();
+    // Salvar sem saber o responsável o apagaria (o PUT grava o que for enviado).
+    expect((modal.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBeTrue();
+
+    const retry = [...modal.querySelectorAll('button')].find(b => b.textContent?.includes('Tentar de novo'))!;
+    retry.click();
+    expect(storeFake.getDepartmentDetail).toHaveBeenCalledTimes(2);
+  });
+
+  it('libera o "Salvar" depois da falha quando o admin escolhe outro responsável, e envia esse', async () => {
+    storeFake.getDepartmentDetail.and.callFake((_id: string, _onLoaded: unknown, onError: (m: string) => void) => onError('falhou'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(itWithResponsible);
+    fixture.componentInstance.onSelectResponsible(candidate);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('#departmentModal button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeFalse();
+    expect(fixture.componentInstance.currentResponsibleError()).toBeNull();
+
+    fixture.componentInstance.onSubmit();
+    expect(storeFake.update).toHaveBeenCalledWith('dep-1', jasmine.objectContaining({ responsibleUserId: 'u-1' }), jasmine.any(Function));
+  });
+
+  it('não salva enquanto o responsável atual é desconhecido, mesmo chamando o submit direto', async () => {
+    storeFake.getDepartmentDetail.and.callFake(() => {});
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(itWithResponsible);
+    fixture.componentInstance.onSubmit();
+
+    expect(storeFake.update).not.toHaveBeenCalled();
+  });
+
+  it('a escolha do admin feita enquanto carregava vale mais que o responsável que chega depois', async () => {
+    let resolve!: (detail: DepartmentDetail) => void;
+    storeFake.getDepartmentDetail.and.callFake((_id: string, onLoaded: (d: DepartmentDetail) => void) => { resolve = onLoaded; });
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openEditModal(itWithResponsible);
+    fixture.componentInstance.onSelectResponsible(candidate);
+    resolve({ id: 'dep-1', name: 'TI', description: '', responsibleUserId: 'u-outro' });
+
+    expect(fixture.componentInstance.selectedResponsibleId()).toBe('u-1');
+    expect(fixture.componentInstance.loadingCurrentResponsible()).toBeFalse();
   });
 
   it('o botão "Salvar" do modal de departamento fica desabilitado durante a mutação, não por formulário inválido', async () => {
@@ -238,6 +622,30 @@ describe('DepartmentListComponent', () => {
       { name: 'Operações', description: 'Logística', responsibleUserId: 'u-1' },
       jasmine.any(Function)
     );
+  });
+
+  it('depois de criar, o toast oferece "Adicionar setor" e abre o modal de setor no departamento novo', async () => {
+    storeFake.create.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('dep-novo'));
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateModal();
+    component.form.setValue({ name: 'Operações', description: 'Logística' });
+    component.onSubmit();
+
+    const [message, variant, action] = (toast.show as jasmine.Spy).calls.mostRecent().args;
+    expect(message).toContain('Departamento "Operações" criado.');
+    expect(variant).toBe('success');
+    expect(action.label).toBe('Adicionar setor');
+    expect(component['openDialog']()).toBeNull();
+
+    action.run();
+    expect(component['openDialog']()).toBe('sector');
+    expect(component.sectorDepartment()?.id).toBe('dep-novo');
+    expect(component.sectorDepartment()?.name).toBe('Operações');
   });
 
   it('envia responsibleUserId indefinido ao salvar sem nenhum responsável selecionado', async () => {
@@ -295,16 +703,73 @@ describe('DepartmentListComponent', () => {
 
     const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0];
     expect(options.message).toContain('Os 2 setores dele também serão excluídos.');
-    expect(storeFake.delete).toHaveBeenCalledWith('dep-1');
+    expect(options.message).toContain('Se algum setor tiver chamados em andamento, a exclusão é recusada.');
+    expect(options.confirmLabel).toBe('Excluir departamento e 2 setores');
+    expect(storeFake.delete).toHaveBeenCalledWith('dep-1', jasmine.any(Function), jasmine.any(Function));
   });
 
-  it('exclui o setor confirmado', async () => {
+  it('o botão de excluir departamento sem setores não fala em setores', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDelete({ ...informationTechnology, sectors: [] });
+
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].confirmLabel).toBe('Excluir departamento');
+  });
+
+  it('confirma a exclusão do departamento com toast quando dá certo', async () => {
+    storeFake.delete.and.callFake((_id: string, onSuccess: () => void) => onSuccess());
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDelete(informationTechnology);
+
+    expect(toast.show).toHaveBeenCalledWith('Departamento "TI" excluído.');
+  });
+
+  it('exclui o setor confirmado, com toast', async () => {
+    storeFake.deleteSector.and.callFake((_id: string, onSuccess: () => void) => onSuccess());
+    const toast = TestBed.inject(ToastService);
+    spyOn(toast, 'show');
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.onDeleteSector(informationTechnology, informationTechnology.sectors[1]);
 
-    expect(storeFake.deleteSector).toHaveBeenCalledWith('sec-2');
+    expect(storeFake.deleteSector).toHaveBeenCalledWith('sec-2', jasmine.any(Function), jasmine.any(Function));
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].confirmLabel).toBe('Excluir setor');
+    expect(toast.show).toHaveBeenCalledWith('Setor "Infraestrutura" excluído de TI.');
+  });
+
+  it('mostra a falha da exclusão no card do departamento dono do setor, e fecha no X', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    storeFake.deleteError.set({ targetId: 'sec-2', message: 'O setor tem chamados em aberto ou em andamento.' });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const cards = fixture.nativeElement.querySelectorAll('.card') as NodeListOf<HTMLElement>;
+    const itCard = [...cards].find(c => c.querySelector('h2')?.textContent?.includes('TI'))!;
+    const otherCard = [...cards].find(c => c.querySelector('h2') && !c.querySelector('h2')!.textContent!.includes('TI'))!;
+    expect(itCard.querySelector('.alert-danger')?.textContent).toContain('O setor tem chamados em aberto ou em andamento.');
+    expect(otherCard.querySelector('.alert-danger')).toBeNull();
+    // Não vai mais pro alerta solto no topo da página.
+    expect(fixture.nativeElement.querySelector(':scope > .alert-danger')).toBeNull();
+
+    (itCard.querySelector('.alert-danger .btn-close') as HTMLButtonElement).click();
+    expect(storeFake.clearDeleteError).toHaveBeenCalled();
+  });
+
+  it('marca o card como ocupado e o "⋮" com spinner durante a exclusão', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    storeFake.deletingId.set('dep-1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const busyCard = fixture.nativeElement.querySelector('.card[aria-busy="true"]') as HTMLElement;
+    expect(busyCard.querySelector('h2')?.textContent).toContain('TI');
+    expect(busyCard.querySelector('[data-row-actions="dep-1"] .spinner-border')).not.toBeNull();
   });
 
   it('não exclui o setor quando a confirmação é cancelada', async () => {
@@ -323,7 +788,7 @@ describe('DepartmentListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).not.toContain('Adicionar setor');
-    expect(fixture.nativeElement.querySelector('button[data-bs-target="#departmentModal"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.page-actions button')?.textContent).toContain('Novo Departamento');
   });
 
   it('esconde as ações de departamento para quem só gerencia setores', async () => {
@@ -331,8 +796,102 @@ describe('DepartmentListComponent', () => {
     const fixture = TestBed.createComponent(DepartmentListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('button[data-bs-target="#departmentModal"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[aria-label="Excluir o departamento TI"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.page-actions button')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Ações para o departamento TI"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Adicionar setor');
+  });
+
+  it('agrupa editar/excluir de cada departamento e setor num "⋮", sem lixeiras vermelhas soltas', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.card .btn-outline-danger')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[aria-label="Ações para o departamento TI"]')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Excluir departamento');
+  });
+
+  it('"Adicionar setor" é a última célula da grade de cada departamento (e "o primeiro setor" quando não há nenhum)', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('section.card') as NodeListOf<HTMLElement>);
+    for (const card of cards) {
+      const grid = card.querySelector('.sector-grid') as HTMLElement;
+      expect(grid.lastElementChild?.classList).toContain('sector-add-cell');
+    }
+    const empty = cards.find(card => card.textContent?.includes('Nenhum setor ainda'))!;
+    expect(empty.querySelector('.sector-add')?.textContent).toContain('Adicionar o primeiro setor');
+    // O nome acessível contém o texto visível (WCAG 2.5.3), pro comando de voz achar o botão.
+    expect(empty.querySelector('.sector-add')?.getAttribute('aria-label')).toBe('Adicionar o primeiro setor em Comercial');
+    expect(cardOf(fixture.nativeElement, 'dep-1').querySelector('.sector-grid')?.getAttribute('aria-label')).toBe('Setores de TI');
+    expect(fixture.nativeElement.querySelector('.btn-add-sector')).toBeNull();
+  });
+
+  it('destaca o departamento recém-criado e solta o destaque depois de alguns segundos', async () => {
+    jasmine.clock().install();
+    try {
+      storeFake.create.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('dep-1'));
+      const fixture = TestBed.createComponent(DepartmentListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+
+      component.openCreateModal();
+      component.form.setValue({ name: 'TI', description: 'Tecnologia' });
+      component.onSubmit();
+      fixture.detectChanges();
+
+      expect(component.highlightedId()).toBe('dep-1');
+      expect(fixture.nativeElement.querySelector('[data-item-id="dep-1"]')?.classList).toContain('item-new');
+
+      jasmine.clock().tick(4001);
+      expect(component.highlightedId()).toBeNull();
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('só rola até o departamento novo (e só conta o tempo do realce) depois que ele chega na listagem', async () => {
+    jasmine.clock().install();
+    try {
+      const scroll = spyOn(Element.prototype, 'scrollIntoView');
+      storeFake.create.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('dep-novo'));
+      const fixture = TestBed.createComponent(DepartmentListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+
+      component.openCreateModal();
+      component.form.setValue({ name: 'Jurídico', description: 'Contratos' });
+      component.onSubmit();
+      // A listagem ainda está recarregando: nada pra rolar, e o realce não pode começar a expirar.
+      storeFake.listState.set({ loading: true, error: null });
+      fixture.detectChanges();
+      jasmine.clock().tick(5000);
+      expect(scroll).not.toHaveBeenCalled();
+      expect(component.highlightedId()).toBe('dep-novo');
+
+      const created: Department = { id: 'dep-novo', name: 'Jurídico', description: 'Contratos', responsibleUserName: null, sectors: [] };
+      storeFake.departments.set([informationTechnology, commercial, created]);
+      storeFake.listState.set({ loading: false, error: null });
+      fixture.detectChanges();
+
+      expect(scroll).toHaveBeenCalled();
+      jasmine.clock().tick(4001);
+      expect(component.highlightedId()).toBeNull();
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('destaca o setor recém-criado com o id que o store devolve', async () => {
+    storeFake.createSector.and.callFake((_data: unknown, onSuccess: (id: string) => void) => onSuccess('sec-novo'));
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.openCreateSectorModal(commercial);
+    component.sectorForm.setValue({ name: 'Vendas', description: '' });
+    component.onSubmitSector();
+
+    expect(component.highlightedId()).toBe('sec-novo');
   });
 });

@@ -10,22 +10,32 @@ describe('UserListInsightsComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra as três prévias de "Atividade da Equipe", claramente marcadas como "Em breve"', async () => {
+  it('mostra numa linha o total, os ativos, os convites pendentes e os inativos da empresa', async () => {
     const fixture = TestBed.createComponent(UserListInsightsComponent);
+    fixture.componentRef.setInput('counts', { totalCount: 46, activeCount: 42, pendingActivationCount: 3, inactiveCount: 1 });
     await fixture.whenStable();
 
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Atividade da Equipe');
-    expect(text).toContain('Em breve');
-    expect(text).toContain('Cadastros recentes');
-    expect(text).toContain('Distribuição por função');
-    expect(text).toContain('Atividade de login');
+    const text = (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
+    expect(text).toContain('46 usuários');
+    expect(text).toContain('42 ativos');
+    expect(text).toContain('3 com convite pendente');
+    expect(text).toContain('1 inativo (login bloqueado)');
   });
 
-  it('não promete as métricas como roadmap confirmado, só como exemplo', async () => {
+  it('omite os convites pendentes quando não há nenhum', async () => {
     const fixture = TestBed.createComponent(UserListInsightsComponent);
+    fixture.componentRef.setInput('counts', { totalCount: 10, activeCount: 10, pendingActivationCount: 0, inactiveCount: 0 });
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('exemplos do que poderia vir aqui');
+    expect(fixture.nativeElement.textContent).not.toContain('convite pendente');
+  });
+
+  it('mostra "—" em vez de 0 enquanto carrega ou quando falhou', async () => {
+    const fixture = TestBed.createComponent(UserListInsightsComponent);
+    fixture.componentRef.setInput('failed', true);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.insights-stat').textContent).toBe('—');
+    expect(fixture.nativeElement.textContent).toContain('Resumo indisponível');
   });
 });

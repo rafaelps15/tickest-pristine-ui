@@ -37,7 +37,7 @@ describe('TicketAttachmentsStore', () => {
     store = TestBed.inject(TicketAttachmentsStore);
   });
 
-  it('carrega os anexos do ticket informado', async () => {
+  it('carrega os anexos do chamado informado', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -45,7 +45,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.attachments()).toEqual([attachment]);
   });
 
-  it('não chama a API antes de um ticket ser definido', () => {
+  it('não chama a API antes de um chamado ser definido', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
@@ -119,11 +119,11 @@ describe('TicketAttachmentsStore', () => {
     store.upload(file);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.uploadError()).toBe('Você não tem permissão para anexar arquivos a este ticket.');
+    expect(store.uploadError()).toBe('Você não tem permissão para anexar arquivos a este chamado.');
     expect(store.uploading()).toBeFalse();
   });
 
-  it('não envia o upload sem um ticket definido', () => {
+  it('não envia o upload sem um chamado definido', () => {
     const file = new File(['x'], 'arquivo.pdf', { type: 'application/pdf' });
     store.upload(file);
 

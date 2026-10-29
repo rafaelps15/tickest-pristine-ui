@@ -9,9 +9,10 @@
           </span>
         </a>
 
-        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none" (click)="closeMenu()">
-          <i class="bx bx-chevron-left bx-sm align-middle"></i>
-        </a>
+        <button type="button" class="menu-toggle-btn btn btn-icon rounded-circle ms-auto d-xl-none"
+                aria-label="Fechar menu" aria-controls="layout-menu" (click)="closeMenu()">
+          <i class="bx bx-chevron-left bx-sm" aria-hidden="true"></i>
+        </button>
       </div>
 
       <div class="menu-inner-shadow"></div>
@@ -24,14 +25,14 @@
         <li class="menu-item" routerLinkActive="active">
           <a routerLink="/dashboard" class="menu-link">
             <i class="menu-icon tf-icons bx bx-home-circle"></i>
-            <div>Dashboard</div>
+            <div>Início</div>
           </a>
         </li>
 
         <li class="menu-item" [class.active]="activeTicketsItem() === 'mine'">
           <a routerLink="/tickets" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'mine' ? 'page' : null">
             <i class="menu-icon tf-icons bx bx-receipt"></i>
-            <div>Meus Tickets</div>
+            <div>Meus Chamados</div>
           </a>
         </li>
 
@@ -48,7 +49,7 @@
           <li class="menu-item" [class.active]="activeTicketsItem() === 'monitor'">
             <a routerLink="/tickets/monitorar" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'monitor' ? 'page' : null">
               <i class="menu-icon tf-icons bx bx-list-check"></i>
-              <div>Monitorar Tickets</div>
+              <div>Monitorar Chamados</div>
             </a>
           </li>
         }
@@ -80,12 +81,6 @@
           </li>
         }
 
-        <li class="menu-item mt-4">
-          <a href="javascript:void(0);" class="menu-link text-danger" (click)="userMenu.logout()">
-            <i class="menu-icon tf-icons bx bx-power-off"></i>
-            <div>Sair</div>
-          </a>
-        </li>
       </ul>
     </aside>
     <!-- / Menu -->
@@ -95,12 +90,13 @@
       <!-- Navbar -->
       <nav class="layout-navbar container-xxl navbar navbar-expand-xl align-items-center" id="layout-navbar">
         <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
-          <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)" (click)="toggleMenu()">
-            <i class="bx bx-menu bx-sm"></i>
-          </a>
+          <button type="button" class="menu-toggle-btn btn btn-icon rounded-circle"
+                  aria-label="Abrir menu" aria-controls="layout-menu" [attr.aria-expanded]="menuOpen()" (click)="toggleMenu()">
+            <i class="bx bx-menu bx-sm" aria-hidden="true"></i>
+          </button>
         </div>
 
-        <app-user-menu #userMenu />
+        <app-user-menu />
       </nav>
       <!-- / Navbar -->
 

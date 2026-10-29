@@ -33,6 +33,9 @@ export class ConfirmDialogService {
 
   /** Abre o modal de confirmação e devolve `true`/`false` conforme a escolha do usuário. */
   confirm(options: ConfirmDialogOptions): Observable<boolean> {
+    // Um pedido novo substitui o modal aberto; o anterior conta como cancelado em vez de ficar sem resposta.
+    this.resultSubject?.next(false);
+    this.resultSubject?.complete();
     this.resultSubject = new Subject<boolean>();
     this._options.set(options);
     return this.resultSubject.asObservable();

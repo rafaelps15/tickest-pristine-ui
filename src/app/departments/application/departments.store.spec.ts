@@ -22,7 +22,7 @@ describe('DepartmentsStore', () => {
 
   const candidate: UserSummary = {
     id: 'u-1', email: 'carlos@empresa.com', firstName: 'Carlos', lastName: 'Souza',
-    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    roles: [], isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   function pageOf(items: UserSummary[]): PagedResponse<UserSummary> {
@@ -57,6 +57,15 @@ describe('DepartmentsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.departments()).toEqual(departments);
+  });
+
+  it('entrega o id do departamento criado pro onSuccess', () => {
+    departmentDataService.create.and.returnValue(of('dep-novo'));
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.create({ name: 'Operações', description: 'Logística' }, onSuccess);
+
+    expect(onSuccess).toHaveBeenCalledWith('dep-novo');
   });
 
   it('marca mutating durante a criação de departamento, e libera ao terminar', async () => {
@@ -107,7 +116,7 @@ describe('DepartmentsStore', () => {
 
     expect(sectorDataService.create).toHaveBeenCalledWith({ name: 'Sistemas', departmentId: 'dep-1' });
     expect(departmentDataService.getAll).toHaveBeenCalled();
-    expect(onSuccess).toHaveBeenCalled();
+    expect(onSuccess).toHaveBeenCalledWith('sec-2');
   });
 
   it('expõe a mensagem da API quando o nome do setor já existe no departamento', () => {
@@ -149,16 +158,20 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('expõe a mensagem da API quando o setor tem chamados em aberto', () => {
+  it('põe a falha da exclusão do setor no deleteError, com o id dele, sem sujar o erro da página', () => {
     const conflict = new HttpErrorResponse({
       status: 409,
       error: { detail: 'O setor tem chamados em aberto ou em andamento.' }
     });
     sectorDataService.delete.and.returnValue(throwError(() => conflict));
+    const onSuccess = jasmine.createSpy('onSuccess');
 
-    store.deleteSector('sec-1');
+    store.deleteSector('sec-1', onSuccess);
 
-    expect(store.mutationError()).toBe('O setor tem chamados em aberto ou em andamento.');
+    expect(store.deleteError()).toEqual({ targetId: 'sec-1', message: 'O setor tem chamados em aberto ou em andamento.' });
+    expect(store.mutationError()).toBeNull();
+    expect(store.deletingId()).toBeNull();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it('usa a mensagem padrão quando a API não devolve detalhe', () => {
@@ -166,7 +179,50 @@ describe('DepartmentsStore', () => {
 
     store.deleteSector('sec-1');
 
-    expect(store.mutationError()).toBe('Erro ao excluir setor');
+    expect(store.deleteError()?.message).toBe('Não foi possível excluir o setor.');
+  });
+
+  it('exclui o departamento, chama o onSuccess e libera o deletingId', () => {
+    const pending = new Subject<void>();
+    departmentDataService.delete.and.returnValue(pending.asObservable());
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.delete('dep-1', onSuccess);
+    expect(store.deletingId()).toBe('dep-1');
+
+    pending.next();
+    pending.complete();
+
+    expect(departmentDataService.delete).toHaveBeenCalledWith('dep-1');
+    expect(onSuccess).toHaveBeenCalled();
+    expect(store.deletingId()).toBeNull();
+  });
+
+  it('ignora uma segunda exclusão enquanto a primeira está em voo (clique duplo)', () => {
+    departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
+    sectorDataService.delete.and.returnValue(of(undefined));
+
+    store.delete('dep-1');
+    store.delete('dep-1');
+    store.deleteSector('sec-1');
+
+    expect(departmentDataService.delete).toHaveBeenCalledTimes(1);
+    expect(sectorDataService.delete).not.toHaveBeenCalled();
+  });
+
+  it('põe a falha da exclusão do departamento no deleteError e limpa ao tentar de novo ou fechar', () => {
+    departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Tem chamados.' } })));
+
+    store.delete('dep-1');
+    expect(store.deleteError()).toEqual({ targetId: 'dep-1', message: 'Tem chamados.' });
+
+    departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
+    store.delete('dep-1');
+    expect(store.deleteError()).toBeNull();
+
+    departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    store.clearDeleteError();
+    expect(store.deleteError()).toBeNull();
   });
 
   it('busca o detalhe de um departamento e devolve pro callback', async () => {
@@ -180,14 +236,26 @@ describe('DepartmentsStore', () => {
     expect(onLoaded).toHaveBeenCalledWith(detail);
   });
 
-  it('expõe a mensagem de erro quando buscar o detalhe do departamento falhar, sem chamar o callback', () => {
-    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+  it('entrega a falha do detalhe pro onError, sem chamar o onLoaded nem sujar o erro da página', () => {
+    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const onLoaded = jasmine.createSpy('onLoaded');
+    const onError = jasmine.createSpy('onError');
 
-    store.getDepartmentDetail('dep-1', onLoaded);
+    store.getDepartmentDetail('dep-1', onLoaded, onError);
 
-    expect(store.mutationError()).toBe('Erro ao carregar o departamento');
+    expect(onError).toHaveBeenCalledWith('Não foi possível carregar o responsável atual.');
     expect(onLoaded).not.toHaveBeenCalled();
+    expect(store.mutationError()).toBeNull();
+    expect(store.listState().error).toBeNull();
+  });
+
+  it('avisa no onError quando não há conexão com o servidor', () => {
+    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    const onError = jasmine.createSpy('onError');
+
+    store.getDepartmentDetail('dep-1', () => {}, onError);
+
+    expect(onError).toHaveBeenCalledWith('Não foi possível conectar ao servidor. Verifique sua conexão.');
   });
 
   it('busca candidatos a responsável por nome/e-mail', async () => {
@@ -229,12 +297,61 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleSearchError()).toBeNull();
   });
 
+  it('uma busca de responsável nova cancela a anterior: a resposta antiga e lenta não sobrescreve a atual', () => {
+    const slow = new Subject<PagedResponse<UserSummary>>();
+    const other: UserSummary = { ...candidate, id: 'u-2', firstName: 'Carla' };
+    userDataService.getAll.and.returnValues(slow, of(pageOf([other])));
+
+    store.searchResponsibleCandidates('car');
+    expect(store.searchingResponsible()).toBeTrue();
+    store.searchResponsibleCandidates('carla');
+    slow.next(pageOf([candidate]));
+
+    expect(store.responsibleCandidates()).toEqual([other]);
+    expect(store.responsibleSearchTerm()).toBe('carla');
+    expect(store.searchingResponsible()).toBeFalse();
+  });
+
+  it('guarda o termo da última busca respondida, e o limpa quando a busca fica vazia', () => {
+    userDataService.getAll.and.returnValue(of(pageOf([])));
+
+    store.searchResponsibleCandidates(' carlos ');
+    expect(store.responsibleSearchTerm()).toBe('carlos');
+
+    store.searchResponsibleCandidates('');
+    expect(store.responsibleSearchTerm()).toBeNull();
+  });
+
+  it('falha ao salvar fica no mutationError (do diálogo), não no erro de carga da listagem', async () => {
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+    departmentDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.create({ name: 'Operações', description: 'Logística' });
+
+    expect(store.mutationError()).toBe('Erro ao criar departamento');
+    expect(store.listState().error).toBeNull();
+    expect(store.departments()).toEqual(departments);
+  });
+
   it('limpa o erro de mutação', () => {
-    sectorDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Conflito' } })));
-    store.deleteSector('sec-1');
+    sectorDataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Conflito' } })));
+    store.updateSector('sec-1', { name: 'Suporte' });
+    expect(store.mutationError()).toBe('Conflito');
 
     store.clearMutationError();
 
     expect(store.mutationError()).toBeNull();
+  });
+
+  it('não quebra a tela quando a listagem falha: departamentos vazio e erro exposto, em vez de lançar', async () => {
+    departmentDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(() => store.departments()).not.toThrow();
+    expect(store.departments()).toEqual([]);
+    expect(store.listState().loading).toBeFalse();
+    expect(store.listState().error).toBeTruthy();
   });
 });

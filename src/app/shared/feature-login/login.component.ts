@@ -1,12 +1,11 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
 import { LoginStore } from '../application/login.store';
 
 /** UI de autenticação. */
 @Component({
     selector: 'app-login',
-    imports: [ReactiveFormsModule, RouterModule],
+    imports: [ReactiveFormsModule],
     templateUrl: './login.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     // Visual compartilhado com a tela de primeiro acesso (ver shared/ui/auth-form.css).

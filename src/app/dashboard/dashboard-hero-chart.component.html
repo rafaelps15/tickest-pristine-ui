@@ -1,0 +1,179 @@
+<section class="card hero-card" aria-labelledby="heroTitle">
+  <div class="card-body hero-body">
+    <!-- Toolbar única: a frase de destaque à esquerda e os controles à direita (o título fica pro leitor de tela). -->
+    <h2 id="heroTitle" class="visually-hidden">{{ scope() === 'filtered' ? 'Operação com os filtros' : 'Operação da empresa' }}</h2>
+    <div class="hero-toolbar">
+      <div class="hero-insight-slot">
+        @if (insight(); as text) {
+          <p class="hero-insight">{{ text }}</p>
+        } @else if (flowState() === 'loading') {
+          <span class="tk-skeleton skeleton-block insight-skeleton" aria-hidden="true"></span>
+        }
+      </div>
+
+      <!-- O escopo (Empresa / Com filtros) não mora aqui: fica numa linha acima dos números, porque vale pra tela toda. -->
+      <div class="hero-controls">
+        <!-- Agrupamento e tabela andam juntos: no celular, quebram de linha juntos (o botão da tabela não fica sozinho). -->
+        <div class="d-flex align-items-center gap-2">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
+          @for (option of groupByOptions; track option) {
+            <!-- Fora do limite de pontos: continua na ordem do Tab (aria-disabled), com o motivo à vista no foco. -->
+            <button type="button" class="btn" [class.btn-primary]="groupBy() === option" [class.btn-outline-secondary]="groupBy() !== option"
+                    [attr.aria-pressed]="groupBy() === option" [attr.aria-disabled]="unavailableGroupings().includes(option) || null"
+                    [attr.data-tip]="unavailableGroupings().includes(option) ? 'Período longo demais' : null"
+                    (click)="chooseGroupBy(option)">{{ groupByLabels[option] }}@if (unavailableGroupings().includes(option)) {<span class="visually-hidden"> (período longo demais)</span>}</button>
+          }
+        </div>
+        <!-- Só o rótulo muda (sem aria-pressed junto): os dois juntos anunciavam um estado contraditório. -->
+        <!-- Só o ícone (a toolbar divide a linha com a frase); o nome acessível e o title dizem a ação. -->
+        <button type="button" class="btn btn-sm btn-outline-secondary btn-table-toggle" (click)="toggleTable()"
+                [attr.aria-label]="showTable() ? 'Ver gráfico' : 'Ver como tabela'" [title]="showTable() ? 'Ver gráfico' : 'Ver como tabela'">
+          <i class="bx {{ showTable() ? 'bx-bar-chart-alt-2' : 'bx-table' }}" aria-hidden="true"></i>
+        </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agora: quantos estão abertos, em andamento, resolvidos e fechados. -->
+    <div class="hero-composition">
+      @switch (compositionState()) {
+        @case ('unavailable') {
+          <app-dashboard-notice text="Situação atual dos chamados: disponível em breve." />
+        }
+        @case ('error') {
+          <!-- O aviso com "Tentar novamente" já está nos indicadores acima (a mesma fonte): aqui, só o estado, sem um segundo alerta. -->
+          <p class="composition-unavailable mb-0">Situação atual indisponível. Use “Tentar novamente” nos indicadores acima.</p>
+        }
+        @case ('loading') {
+          <div class="composition-skeleton" role="status">
+            <span class="visually-hidden">Carregando a situação atual dos chamados…</span>
+            <span class="tk-skeleton skeleton-block skeleton-bar" aria-hidden="true"></span>
+            <span class="tk-skeleton skeleton-block skeleton-legend" aria-hidden="true"></span>
+          </div>
+        }
+        @default {
+          @if (composition(); as data) {
+            <app-dashboard-status-composition [composition]="data" [links]="statusLinks()" />
+          }
+        }
+      }
+    </div>
+
+    <!-- Ao longo do tempo: criados (e resolvidos) por período. -->
+    <div class="flow-area" [class.d-none]="showTable()">
+      @switch (flowState()) {
+        @case ('unavailable') {
+          <app-dashboard-notice text="Chamados por período: disponível em breve." />
+        }
+        @case ('error') {
+          <!-- Erro de verdade, não o vazio "nenhum chamado" — que diria que a empresa não abriu chamados. -->
+          <app-dashboard-notice kind="error" text="Não foi possível carregar os chamados por período." (retry)="retryFlow.emit()" />
+        }
+        @case ('loading') {
+          <div class="flow-chart" role="status">
+            <span class="visually-hidden">Carregando os chamados por período…</span>
+            <span class="tk-skeleton skeleton-block h-100 d-block" aria-hidden="true"></span>
+          </div>
+        }
+        @default {
+          @if (firstUse()) {
+            <!-- Empresa sem nenhum chamado ainda: em vez de um gráfico vazio, a próxima ação de quem chegou. -->
+            <div class="flow-chart d-flex flex-column align-items-center justify-content-center text-center px-3">
+              <p class="fw-semibold mb-1">A empresa ainda não tem nenhum chamado.</p>
+              @if (canSetUpStructure()) {
+                <p class="text-muted small mb-3">Os chamados são abertos para um setor. Comece cadastrando os departamentos e setores que atendem chamados.</p>
+                <a class="btn btn-primary" routerLink="/departamentos">Cadastrar departamentos e setores</a>
+              } @else {
+                <p class="text-muted small mb-3">Quando alguém abrir o primeiro chamado, o volume aparece aqui.</p>
+                <a class="btn btn-primary" routerLink="/tickets/novo">Abrir o primeiro chamado</a>
+              }
+            </div>
+          } @else if (flowState() === 'empty') {
+            <app-empty-state class="flow-chart d-flex flex-column justify-content-center" icon="bx-bar-chart-alt-2"
+                             [title]="scope() === 'filtered' ? 'Nenhum chamado no período com estes filtros.' : 'Nenhum chamado no período.'"
+                             hint="Troque o agrupamento em Dia, Semana ou Mês pra ver um intervalo maior." />
+          } @else {
+            @if (drawFailed()) {
+              <app-dashboard-notice class="flow-chart d-flex align-items-center" kind="error" text="Não foi possível desenhar o gráfico. Os mesmos números estão em “Ver como tabela”." (retry)="retryDraw()" />
+            } @else {
+              <!-- Área focável: setas percorrem os períodos (barra destacada + tooltip), Enter abre a lista. -->
+              <div class="flow-chart chart-focus" tabindex="0" role="group" [attr.aria-label]="chartAriaLabel()"
+                   (keydown)="onChartKeydown($event)" (blur)="clearActive()">
+                @defer (on idle) {
+                  <canvas #flowChart aria-hidden="true"></canvas>
+                } @placeholder {
+                  <span class="tk-skeleton skeleton-block h-100 d-block" aria-hidden="true"></span>
+                }
+              </div>
+            }
+            <p class="visually-hidden">{{ flowSummary() }}</p>
+            <p class="visually-hidden" aria-live="polite">{{ keyboardAnnouncement() }}</p>
+          }
+        }
+      }
+    </div>
+
+    @if (showTable()) {
+      <div class="table-responsive flow-table-wrap">
+        <table #flowTable tabindex="-1" class="table table-sm align-middle mb-0">
+          <caption class="visually-hidden">Chamados criados{{ hasResolved() ? ' e resolvidos' : '' }} por período</caption>
+          <thead>
+            <tr>
+              <th scope="col">Período</th>
+              <th scope="col" class="text-end">Criados</th>
+              @if (hasResolved()) {
+                <th scope="col" class="text-end">Resolvidos</th>
+              }
+              @if (bucketLink()) {
+                <th scope="col"><span class="visually-hidden">Lista</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @switch (flowState()) {
+              @case ('unavailable') {
+                <tr><td [attr.colspan]="tableColumns()" class="text-center py-4 text-muted">Chamados por período: disponível em breve.</td></tr>
+              }
+              @case ('error') {
+                <tr><td [attr.colspan]="tableColumns()" class="text-center py-4">Não foi possível carregar os chamados por período.</td></tr>
+              }
+              @case ('loading') {
+                <tr><td [attr.colspan]="tableColumns()" class="text-center py-4"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando os chamados por período…</span></td></tr>
+              }
+              @case ('empty') {
+                <tr><td [attr.colspan]="tableColumns()" class="text-center py-4 text-muted">Nenhum chamado no período.</td></tr>
+              }
+              @default {
+                @for (point of points(); track point.periodStart; let i = $index) {
+                  <tr>
+                    <th scope="row">{{ longLabel(point.periodStart) }}</th>
+                    <td class="text-end">{{ full(point.count) }}</td>
+                    @if (hasResolved()) {
+                      <td class="text-end">{{ full(point.resolvedCount) }}</td>
+                    }
+                    @if (bucketLinks()[i]; as link) {
+                      <td class="text-end"><a [routerLink]="link.route" [queryParams]="link.queryParams" [attr.aria-label]="'Ver os chamados criados em ' + longLabel(point.periodStart)" class="tap-target">Ver chamados</a></td>
+                    }
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- O que o gráfico cobre e o que ainda não mostra, numa linha só, sem série fantasma. -->
+    <p class="hero-footnote">
+      <span aria-live="polite">{{ scope() !== 'filtered' ? 'Todos os chamados da empresa' : flowFiltered() ? 'Chamados com os filtros' : 'Números com os filtros; o fluxo ainda é o da empresa toda' }} · {{ rangeLabel() }}</span>
+      @if (average() !== null && flowState() === 'ready') {
+        <!-- A legenda do que o gráfico desenha além das barras (a cor nunca é o único sinal). -->
+        <span> · Tracejado: média dos períodos completos@if (hasWeekends()) {; faixas claras: sábados e domingos}</span>
+      }
+      <!-- A nota provisória só com a série liberada (flag volumeResolved) e o back-end ainda sem os resolvidos; desligada, nada promete. -->
+      @if (resolvedEnabled() && !hasResolved() && flowState() !== 'unavailable') {
+        <span> · Resolvidos por período e fila ao longo do tempo: disponível em breve.</span>
+      }
+    </p>
+  </div>
+</section>

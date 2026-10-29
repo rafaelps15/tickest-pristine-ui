@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-03T00:00:00Z",
+  "generatedAt": "2026-10-27T20:40:00Z",
   "title": "Design System: Tickest",
   "extensions": {
     "colorMeta": {
@@ -8,7 +8,16 @@
         "role": "primary",
         "displayName": "Índigo Confiança",
         "canonical": "#696cff",
-        "tonalRamp": ["#1a1b66", "#2b2d8a", "#3d3fab", "#4f51c7", "#696cff", "#8a8cff", "#b3b5ff", "#e7e7ff"]
+        "tonalRamp": [
+          "#1a1b66",
+          "#2b2d8a",
+          "#3d3fab",
+          "#4f51c7",
+          "#696cff",
+          "#8a8cff",
+          "#b3b5ff",
+          "#e7e7ff"
+        ]
       },
       "primary-dark": {
         "role": "primary",
@@ -44,40 +53,146 @@
         "role": "neutral",
         "displayName": "Grafite Texto",
         "canonical": "#2b2c40",
-        "tonalRamp": ["#15151f", "#2b2c40", "#44455c", "#697a8d", "#a1acb8", "#c8ced5", "#e9ecef", "#f5f5f9"]
+        "tonalRamp": [
+          "#15151f",
+          "#2b2c40",
+          "#44455c",
+          "#697a8d",
+          "#a1acb8",
+          "#c8ced5",
+          "#e9ecef",
+          "#f5f5f9"
+        ]
       },
-      "text-secondary": { "role": "neutral", "displayName": "Ardósia Secundária", "canonical": "#697a8d" },
-      "text-muted": { "role": "neutral", "displayName": "Névoa Terciária", "canonical": "#a1acb8" },
-      "surface": { "role": "neutral", "displayName": "Branco Superfície", "canonical": "#ffffff" },
-      "page-bg": { "role": "neutral", "displayName": "Lavanda Nebulosa", "canonical": "#f5f5f9" },
-      "border": { "role": "neutral", "displayName": "Contorno Lavanda", "canonical": "#e7e7ff" },
-      "text-primary-dark": { "role": "neutral", "displayName": "Gelo Escuro", "canonical": "#e9ecef" },
-      "text-secondary-dark": { "role": "neutral", "displayName": "Cinza Médio", "canonical": "#adb5bd" },
-      "text-muted-dark": { "role": "neutral", "displayName": "Grafite Esmaecido", "canonical": "#868e96" },
-      "surface-dark": { "role": "neutral", "displayName": "Carvão Superfície", "canonical": "#212529" },
-      "page-bg-dark": { "role": "neutral", "displayName": "Breu de Página", "canonical": "#1a1d20" },
-      "border-dark": { "role": "neutral", "displayName": "Contorno Carvão", "canonical": "#3a3f44" }
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Ardósia Secundária",
+        "canonical": "#5f6f82"
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Névoa Terciária",
+        "canonical": "#a1acb8"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Branco Superfície",
+        "canonical": "#ffffff"
+      },
+      "page-bg": {
+        "role": "neutral",
+        "displayName": "Lavanda Nebulosa",
+        "canonical": "#f5f5f9"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Contorno Lavanda",
+        "canonical": "#e7e7ff"
+      },
+      "text-primary-dark": {
+        "role": "neutral",
+        "displayName": "Gelo Escuro",
+        "canonical": "#e9ecef"
+      },
+      "text-secondary-dark": {
+        "role": "neutral",
+        "displayName": "Cinza Médio",
+        "canonical": "#adb5bd"
+      },
+      "text-muted-dark": {
+        "role": "neutral",
+        "displayName": "Grafite Esmaecido",
+        "canonical": "#868e96"
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Carvão Superfície",
+        "canonical": "#212529"
+      },
+      "page-bg-dark": {
+        "role": "neutral",
+        "displayName": "Breu de Página",
+        "canonical": "#1a1d20"
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Contorno Carvão",
+        "canonical": "#3a3f44"
+      },
+      "input-border": {
+        "role": "neutral",
+        "displayName": "Contorno de Campo",
+        "canonical": "#d9dee3"
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display (Sora)", "purpose": "Wordmark 'tickest' em login/registro — único uso da fonte de marca." },
-      "body": { "displayName": "Corpo (Public Sans)", "purpose": "Todo o resto da interface: títulos de tela, tabelas, formulários, texto corrido." },
-      "label": { "displayName": "Rótulo (Public Sans, tracked)", "purpose": "Rótulos de formulário, cabeçalho de tabela, cabeçalho de seção do menu." }
+      "display": {
+        "displayName": "Display (Sora)",
+        "purpose": "Wordmark 'tickest' em login/registro — único uso da fonte de marca."
+      },
+      "body": {
+        "displayName": "Corpo (Public Sans)",
+        "purpose": "Todo o resto da interface: títulos de tela, tabelas, formulários, texto corrido."
+      },
+      "label": {
+        "displayName": "Rótulo (Public Sans, tracked)",
+        "purpose": "Rótulos de formulário, cabeçalho de tabela, cabeçalho de seção do menu."
+      }
     },
     "shadows": [
-      { "name": "shadow-sm", "value": "0 0.125rem 0.375rem rgba(105, 108, 255, 0.08)", "purpose": "Cards e inputs em repouso (claro)." },
-      { "name": "shadow-sm-dark", "value": "0 0.125rem 0.375rem rgba(0, 0, 0, 0.3)", "purpose": "Cards e inputs em repouso (escuro)." },
-      { "name": "shadow-md", "value": "0 0.375rem 1.25rem rgba(105, 108, 255, 0.12)", "purpose": "Navbar flutuante, destaque médio (claro)." },
-      { "name": "shadow-md-dark", "value": "0 0.375rem 1.25rem rgba(0, 0, 0, 0.4)", "purpose": "Navbar flutuante, destaque médio (escuro)." },
-      { "name": "shadow-lg", "value": "0 1rem 3rem rgba(105, 108, 255, 0.18)", "purpose": "Modais — camada mais alta da interface (claro)." },
-      { "name": "shadow-lg-dark", "value": "0 1rem 3rem rgba(0, 0, 0, 0.55)", "purpose": "Modais (escuro)." },
-      { "name": "shadow-auth-card", "value": "0 20px 60px rgba(0, 0, 0, 0.2)", "purpose": "Card de login/registro — elevação dramática exclusiva da entrada, não dark-aware." }
+      {
+        "name": "shadow-sm",
+        "value": "0 0.125rem 0.375rem rgba(105, 108, 255, 0.08)",
+        "purpose": "Cards e inputs em repouso (claro)."
+      },
+      {
+        "name": "shadow-sm-dark",
+        "value": "0 0.125rem 0.375rem rgba(0, 0, 0, 0.3)",
+        "purpose": "Cards e inputs em repouso (escuro)."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 0.375rem 1.25rem rgba(105, 108, 255, 0.12)",
+        "purpose": "Navbar flutuante, destaque médio (claro)."
+      },
+      {
+        "name": "shadow-md-dark",
+        "value": "0 0.375rem 1.25rem rgba(0, 0, 0, 0.4)",
+        "purpose": "Navbar flutuante, destaque médio (escuro)."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0 1rem 3rem rgba(105, 108, 255, 0.18)",
+        "purpose": "Modais — camada mais alta da interface (claro)."
+      },
+      {
+        "name": "shadow-lg-dark",
+        "value": "0 1rem 3rem rgba(0, 0, 0, 0.55)",
+        "purpose": "Modais (escuro)."
+      },
+      {
+        "name": "shadow-auth-card",
+        "value": "0 20px 60px rgba(0, 0, 0, 0.2)",
+        "purpose": "Card de login/registro — elevação dramática exclusiva da entrada, não dark-aware."
+      }
     ],
     "motion": [
-      { "name": "ease-standard", "value": "200ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Transição padrão do sistema (cor, sombra, transform)." },
-      { "name": "fade-in-route", "value": "tk-fade-in 250ms ease-out", "purpose": "Entrada suave de cada rota: opacidade 0→1 + translateY 4px→0." }
+      {
+        "name": "ease-standard",
+        "value": "200ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Transição padrão do sistema (cor, sombra, transform)."
+      },
+      {
+        "name": "fade-in-route",
+        "value": "tk-fade-in 250ms ease-out",
+        "purpose": "Entrada suave de cada rota: opacidade 0→1 + translateY 4px→0."
+      }
     ],
     "breakpoints": [
-      { "name": "sidebar-collapse", "value": "1199px" }
+      {
+        "name": "sidebar-collapse",
+        "value": "1199px"
+      }
     ]
   },
   "components": [
@@ -101,9 +216,9 @@
       "name": "Stat Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Card de estatística do dashboard — sem borda, sombra suave, eleva no hover.",
-      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-label\">Total de Tickets</span><div class=\"ds-stat-value\">128</div></div>",
-      "css": ".ds-stat-card { background: #ffffff; border: none; border-radius: 0.75rem; box-shadow: 0 0.125rem 0.25rem rgba(161,172,184,0.4); padding: 1.25rem; transition: transform 200ms ease-in-out, box-shadow 200ms ease-in-out; font-family: 'Public Sans', system-ui, sans-serif; } .ds-stat-card:hover { transform: translateY(-5px); box-shadow: 0 0.75rem 1.5rem rgba(105,108,255,0.15); } .ds-stat-label { color: #697a8d; font-weight: 500; font-size: 0.875rem; } .ds-stat-value { font-weight: 600; font-size: 1.75rem; color: #2b2c40; margin-top: 0.25rem; }"
+      "description": "Card de estatística (<app-stat-card>) do Dashboard e do Monitorar: rótulo, número num div (nunca heading), legenda e ícone no tom semântico. Só o card que filtra ou navega sobe no hover; o filtrado fica com tingimento índigo.",
+      "html": "<div class=\"ds-stat-card ds-stat-pressed\"><div><span class=\"ds-stat-label\">Em Risco</span><div class=\"ds-stat-value\">4</div><small class=\"ds-stat-hint\">Perto de vencer</small></div><span class=\"ds-stat-icon\" aria-hidden=\"true\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v6M12 16.5v.5\"/></svg></span></div>",
+      "css": ".ds-stat-card { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; background: #ffffff; border-radius: 0.75rem; box-shadow: 0 0.125rem 0.25rem rgba(161,172,184,0.4); padding: 1.25rem; cursor: pointer; transition: transform 200ms ease-in-out, box-shadow 200ms ease-in-out, background-color 200ms ease-in-out; font-family: 'Public Sans', system-ui, sans-serif; } .ds-stat-card:hover { transform: translateY(-5px); box-shadow: 0 0.75rem 1.5rem rgba(105,108,255,0.15); } .ds-stat-card:focus-visible { outline: 2px solid #696cff; outline-offset: 2px; } .ds-stat-pressed { background-color: rgba(105,108,255,0.1); } .ds-stat-label { color: #697a8d; } .ds-stat-value { font-weight: 600; font-size: 1.5rem; line-height: 1.2; color: #c78a00; margin-top: 0.5rem; } .ds-stat-hint { color: #697a8d; font-size: 0.875rem; } .ds-stat-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 0.75rem; background: #fff2d6; color: #b37400; }"
     },
     {
       "name": "Text Input",
@@ -111,7 +226,7 @@
       "refersTo": "input",
       "description": "Campo de texto padrão — borda neutra, anel de foco índigo.",
       "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-demo-input\">E-mail</label><input id=\"ds-demo-input\" class=\"ds-input\" type=\"email\" placeholder=\"seu@email.com\" /></div>",
-      "css": ".ds-field { display: flex; flex-direction: column; gap: 0.4rem; font-family: 'Public Sans', system-ui, sans-serif; } .ds-label { font-weight: 600; color: #697a8d; font-size: 0.85rem; } .ds-input { border-radius: 0.5rem; border: 1.5px solid #d9dee3; padding: 0.5rem 0.875rem; font-size: 1rem; transition: border-color 200ms cubic-bezier(0.4,0,0.2,1), box-shadow 200ms cubic-bezier(0.4,0,0.2,1); } .ds-input:focus-visible { border-color: #696cff; box-shadow: 0 0 0 0.2rem rgba(105,108,255,0.15); outline: none; }"
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 0.5rem; font-family: 'Public Sans', system-ui, sans-serif; } .ds-label { font-weight: 600; color: #697a8d; font-size: 0.85rem; } .ds-input { border-radius: 0.5rem; border: 1.5px solid var(--tk-input-border, #d9dee3); padding: 0.5rem 0.875rem; font-size: 1rem; transition: border-color 200ms cubic-bezier(0.4,0,0.2,1), box-shadow 200ms cubic-bezier(0.4,0,0.2,1); } .ds-input:focus-visible { border-color: #696cff; box-shadow: 0 0 0 0.2rem rgba(105,108,255,0.15); outline: none; }"
     },
     {
       "name": "Sidebar Nav Item",
@@ -124,9 +239,74 @@
     {
       "name": "Row Actions Menu",
       "kind": "custom",
-      "description": "Menu de ações por linha de tabela (ícone de três pontos) — substitui fileiras de botões.",
-      "html": "<div class=\"ds-row-actions\"><button class=\"ds-row-actions-toggle\" aria-label=\"Ações\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"currentColor\"><circle cx=\"12\" cy=\"5\" r=\"1.6\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\"/><circle cx=\"12\" cy=\"19\" r=\"1.6\"/></svg></button></div>",
-      "css": ".ds-row-actions-toggle { width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #697a8d; cursor: pointer; transition: border-color 200ms, color 200ms; } .ds-row-actions-toggle:hover, .ds-row-actions-toggle:focus-visible { border-color: #e7e7ff; color: #2b2c40; outline: none; }"
+      "refersTo": "btn-row-actions",
+      "description": "Um único botão ⋮ por linha (.btn-row-actions): sem borda até hover/foco/aberto, só realce índigo leve; o título da linha é o link pro detalhe.",
+      "html": "<button class=\"ds-row-actions\" aria-label=\"Ações para o ticket Impressora parada\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/><circle cx=\"12\" cy=\"19\" r=\"2\"/></svg></button>",
+      "css": ".ds-row-actions { display: inline-flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--tk-text-secondary, #5f6f82); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; } .ds-row-actions:hover, .ds-row-actions:focus-visible { border-color: var(--tk-border, #e7e7ff); background: rgba(105, 108, 255, 0.08); color: var(--tk-text-primary, #2b2c40); } .ds-row-actions:focus-visible { outline: 2px solid #696cff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Icon Tile",
+      "kind": "custom",
+      "refersTo": "icon-tile",
+      "description": "Ícone centralizado num quadrado/círculo de fundo suave (badge bg-label-*), decorativo ao lado de um rótulo. Tamanhos -sm/-lg/-xl.",
+      "html": "<span class=\"ds-icon-tile\" aria-hidden=\"true\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 6 9 17l-5-5\"/></svg></span>",
+      "css": ".ds-icon-tile { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: #e8fadf; color: #2e7d14; flex-shrink: 0; }"
+    },
+    {
+      "name": "SLA Alert Item",
+      "kind": "custom",
+      "refersTo": "critical-ticket-link",
+      "description": "Item dos Alertas de SLA: linha inteira clicável (44px), etiqueta Vencido/Em risco em texto e cor, prazo relativo vivo ancorado na hora do servidor.",
+      "html": "<a class=\"ds-sla-item\" href=\"#\"><span class=\"ds-sla-row\"><span class=\"ds-sla-title\">Servidor de arquivos fora do ar</span><span class=\"ds-sla-badge\">Vencido</span></span><span class=\"ds-sla-meta\">Helpdesk · <time>venceu há 3h 1min</time></span></a>",
+      "css": ".ds-sla-item { display: block; min-height: 2.75rem; padding: 0.5rem; border-radius: 0.5rem; color: #2b2c40; text-decoration: none; transition: background-color 150ms ease; } .ds-sla-item:hover, .ds-sla-item:focus-visible { background: rgba(105, 108, 255, 0.06); } .ds-sla-item:hover .ds-sla-title { color: #696cff; text-decoration: underline; } .ds-sla-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; } .ds-sla-title { font-weight: 500; } .ds-sla-badge { background: #ffe5e5; color: #991b1b; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 600; } .ds-sla-meta { display: block; font-size: 0.875rem; color: #991b1b; }"
+    },
+    {
+      "name": "Side Panel",
+      "kind": "custom",
+      "refersTo": "info-panel",
+      "description": "Painel lateral \"Informações do X\" (appSidePanel): coluna sticky ao lado da tabela no desktop, diálogo modal de tela cheia abaixo de lg. Título focável, badges de estado, lista rótulo/valor (rótulo no passo Label, valor no corpo) e os atalhos que a linha já oferece.",
+      "html": "<section class=\"ds-side-panel\" role=\"region\" aria-labelledby=\"dsPanelTitle\"><div class=\"ds-side-panel-head\"><h5 id=\"dsPanelTitle\" tabindex=\"-1\">Maria Silva</h5><button class=\"ds-side-panel-close\" aria-label=\"Fechar painel de informações do usuário\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg></button></div><span class=\"ds-side-panel-badge\">Ativo</span><dl class=\"ds-info-list\"><dt>E-mail</dt><dd>maria@empresa.com</dd><dt>Funções</dt><dd>Agent</dd><dt>Cadastrado em</dt><dd>01/01/2026 09:00</dd></dl><button class=\"ds-side-panel-action\">Editar cadastro</button></section>",
+      "css": ".ds-side-panel { max-width: 22rem; padding: 1.5rem; border-radius: 0.75rem; background: var(--tk-surface, #ffffff); box-shadow: 0 0.125rem 0.375rem rgba(105, 108, 255, 0.08); font-family: 'Public Sans', system-ui, sans-serif; color: var(--tk-text-primary, #2b2c40); } .ds-side-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem; } .ds-side-panel-head h5 { margin: 0; font-size: 1.25rem; font-weight: 700; } .ds-side-panel-head h5:focus { outline: none; } .ds-side-panel-close { width: 2.75rem; height: 2.75rem; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid #c9ced6; background: transparent; color: #5f6f82; cursor: pointer; } .ds-side-panel-badge { display: inline-block; margin-bottom: 1rem; padding: 0.35em 0.65em; border-radius: 999px; background: #e8fadf; color: #2e7d14; font-size: 0.75rem; font-weight: 600; } .ds-info-list { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0.5rem 0.75rem; margin: 0 0 1rem; } .ds-info-list dt { color: #6b7684; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; } .ds-info-list dd { margin: 0; } .ds-side-panel-action { width: 100%; min-height: 2.75rem; border-radius: 0.5rem; border: 1px solid #696cff; background: transparent; color: #696cff; font-weight: 500; cursor: pointer; }"
+    },
+    {
+      "name": "Empty State",
+      "kind": "custom",
+      "refersTo": "empty-state",
+      "description": "Estado vazio de tabela/card: ícone neutro (nunca opacity), frase em negrito dizendo o que está vazio, uma linha de orientação e a próxima ação — \"Limpar filtros\" pra filtro sem resultado, criar o primeiro item pra lista vazia.",
+      "html": "<div class=\"ds-empty-state\"><svg width=\"40\" height=\"40\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\" class=\"ds-empty-state-icon\"><circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5\"/><circle cx=\"17\" cy=\"9\" r=\"2.5\"/><path d=\"M16 13.6c3 .3 5.5 2.8 5.5 6.4\"/></svg><p class=\"ds-empty-state-title\">Nenhum usuário encontrado com esses filtros.</p><p class=\"ds-empty-state-hint\">Tente outro termo de busca, outro status ou um período maior.</p><button class=\"ds-empty-state-action\">Limpar filtros</button></div>",
+      "css": ".ds-empty-state { padding: 3rem 1rem; text-align: center; font-family: 'Public Sans', system-ui, sans-serif; color: var(--tk-text-primary, #2b2c40); } .ds-empty-state-icon { color: var(--tk-text-muted, #6b7684); margin-bottom: 0.5rem; } .ds-empty-state p { max-width: 28rem; margin-inline: auto; } .ds-empty-state-title { margin: 0 0 0.25rem; font-weight: 600; } .ds-empty-state-hint { margin: 0 0 1rem; font-size: 0.875rem; color: var(--tk-text-muted, #6b7684); } .ds-empty-state-action { min-height: 2.75rem; padding: 0.25rem 0.75rem; border-radius: 0.5rem; border: 1px solid #c9ced6; background: transparent; color: #5f6f82; font-weight: 500; cursor: pointer; }"
+    },
+    {
+      "name": "Page Header",
+      "kind": "custom",
+      "refersTo": "page-header",
+      "description": "Cabeçalho único de toda tela (<app-page-header>): trilha pequena fora do título, o único h1 da tela (visual de h4), subtítulo de uma linha e as ações à direita.",
+      "html": "<header class=\"ds-page-header\"><div><nav aria-label=\"Trilha\"><ol class=\"ds-crumbs\"><li>Administração</li></ol></nav><h1 class=\"ds-page-title\">Funções</h1><p class=\"ds-page-subtitle\">Cada função reúne permissões e define o que quem a recebe pode ver e fazer.</p></div><button class=\"ds-page-action\" type=\"button\">+ Nova Função</button></header>",
+      "css": ".ds-page-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; font-family: 'Public Sans', system-ui, sans-serif; } .ds-crumbs { display: flex; list-style: none; padding: 0; margin: 0 0 0.25rem; font-size: 0.8125rem; color: #5f6f82; } .ds-page-title { font-size: 1.5rem; font-weight: 700; color: #2b2c40; margin: 0 0 0.25rem; } .ds-page-subtitle { font-size: 0.875rem; color: #5f6f82; margin: 0; max-width: 48rem; } .ds-page-action { background: #696cff; color: #fff; border: none; border-radius: 0.5rem; padding: 0.5rem 1.25rem; font-weight: 500; cursor: pointer; } .ds-page-action:hover { background: #5f61e6; } .ds-page-action:focus-visible { outline: 2px solid #696cff; outline-offset: 2px; }"
+    },
+    {
+      "name": "Screen Guide",
+      "kind": "custom",
+      "refersTo": "screen-guide",
+      "description": "Guia da Tela (<app-screen-guide>): card recolhível logo abaixo do cabeçalho, aberto por padrão, borda fina e sem sombra — apoio, mais discreto que o conteúdo. Seções com título em versalete separadas por um fio.",
+      "html": "<div class=\"ds-guide\"><button class=\"ds-guide-toggle\" type=\"button\" aria-expanded=\"true\"><span>Guia da Tela</span><span aria-hidden=\"true\">⌃</span></button><div class=\"ds-guide-body\"><div class=\"ds-guide-section\"><h2 class=\"ds-guide-title\">Status</h2><p class=\"ds-guide-text\">Ativo: pode entrar no sistema normalmente.</p></div><div class=\"ds-guide-section\"><h2 class=\"ds-guide-title\">Busca</h2><p class=\"ds-guide-text\">O termo de busca não fica salvo no link.</p></div></div></div>",
+      "css": ".ds-guide { border: 1px solid #e7e7ff; border-radius: 0.75rem; background: #fff; font-family: 'Public Sans', system-ui, sans-serif; } .ds-guide-toggle { display: flex; justify-content: space-between; width: 100%; padding: 1rem; border: none; background: transparent; font-weight: 700; color: #2b2c40; cursor: pointer; } .ds-guide-toggle:focus-visible { outline: 2px solid #696cff; outline-offset: -2px; } .ds-guide-body { padding: 0 1rem 1rem; } .ds-guide-section + .ds-guide-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e7e7ff; } .ds-guide-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #5f6f82; margin: 0 0 0.75rem; } .ds-guide-text { font-size: 0.875rem; color: #6b7684; margin: 0; }"
+    },
+    {
+      "name": "Dialog",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "Diálogo único (<app-dialog>), mostrado com @if: título + contexto, corpo rolável, rodapé com Cancelar à esquerda do primário. Foco inicial, Tab preso, Esc e clique fora travados enquanto salva.",
+      "html": "<div class=\"ds-dialog\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-dialog-title\"><div class=\"ds-dialog-header\"><div><h2 id=\"ds-dialog-title\" class=\"ds-dialog-title\">Atribuir responsável</h2><p class=\"ds-dialog-subtitle\">Impressora parada no 3º andar</p></div><button class=\"ds-dialog-close\" type=\"button\" aria-label=\"Fechar\">×</button></div><div class=\"ds-dialog-body\">Isso substitui <strong>Maria Souza</strong> por <strong>João Pedro</strong> como responsável.</div><div class=\"ds-dialog-footer\"><button class=\"ds-btn-secondary\" type=\"button\">Cancelar</button><button class=\"ds-btn-primary\" type=\"button\">Reatribuir</button></div></div>",
+      "css": ".ds-dialog { max-width: 30rem; background: #fff; border-radius: 0.75rem; box-shadow: 0 0.5rem 2rem rgba(105,108,255,0.18); font-family: 'Public Sans', system-ui, sans-serif; } .ds-dialog-header { display: flex; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(105,108,255,0.08); } .ds-dialog-title { font-size: 1.125rem; font-weight: 700; color: #2b2c40; margin: 0; } .ds-dialog-subtitle { font-size: 0.875rem; color: #6b7684; margin: 0; } .ds-dialog-close { border: none; background: transparent; font-size: 1.25rem; cursor: pointer; color: #6b7684; } .ds-dialog-close:focus-visible { outline: 2px solid #696cff; } .ds-dialog-body { padding: 1.5rem; color: #2b2c40; } .ds-dialog-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.5rem; border-top: 1px solid rgba(105,108,255,0.08); } .ds-btn-secondary { border: 1px solid #8592a3; color: #8592a3; background: transparent; border-radius: 0.5rem; padding: 0.5rem 1.25rem; cursor: pointer; } .ds-btn-primary { border: none; background: #696cff; color: #fff; border-radius: 0.5rem; padding: 0.5rem 1.25rem; cursor: pointer; } .ds-btn-primary:hover { background: #5f61e6; }"
+    },
+    {
+      "name": "Toast with Action",
+      "kind": "custom",
+      "refersTo": "toast-action",
+      "description": "Toast de confirmação com uma ação na hora (\"Desfazer\", \"Reenviar convite\"): fica 8s em vez de 4s, pra dar tempo de alcançar o botão. Preferido a uma confirmação quando a ação é reversível.",
+      "html": "<div class=\"ds-toast\" role=\"status\" aria-live=\"polite\"><span class=\"ds-toast-body\">Acesso de \"Maria Silva\" desativado.</span><button class=\"ds-toast-action\">Desfazer</button><button class=\"ds-toast-close\" aria-label=\"Fechar\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg></button></div>",
+      "css": ".ds-toast { display: inline-flex; align-items: center; gap: 0.5rem; max-width: 26rem; padding: 0.5rem 0.5rem 0.5rem 1rem; border-radius: 0.5rem; background: #2e7d14; color: #ffffff; font-family: 'Public Sans', system-ui, sans-serif; font-size: 0.875rem; box-shadow: 0 0.375rem 1.25rem rgba(105, 108, 255, 0.12); } .ds-toast-body { flex: 1; } .ds-toast-action { min-height: 2.25rem; padding: 0.25rem 0.75rem; border: 0; border-radius: 0.5rem; background: #f8f9fa; color: #2b2c40; font-weight: 600; cursor: pointer; } .ds-toast-close { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #ffffff; cursor: pointer; }"
     }
   ],
   "narrative": {
@@ -141,25 +321,60 @@
       "Português (pt-BR) em toda a interface, incluindo mensagens de erro e rótulos de formulário"
     ],
     "rules": [
-      { "name": "The One Accent Rule", "body": "O Índigo Confiança é a única cor não-semântica do sistema. Se um elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor nova inventada para aquela tela.", "section": "colors" },
-      { "name": "The Badge Pair Rule", "body": "Toda cor semântica existe em dois pares: um 'soft' para o modo claro, um 'soft dark' para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro.", "section": "colors" },
-      { "name": "The Brand-Only Display Rule", "body": "Sora nunca aparece fora da wordmark de login/registro — títulos de tela usam Public Sans em peso 700.", "section": "typography" },
-      { "name": "The Tinted-Light, Neutral-Dark Rule", "body": "Sombra no modo claro é tintada da marca; no modo escuro é preto neutro. Nunca o inverso.", "section": "elevation" },
-      { "name": "The Transform-Not-Padding Rule", "body": "Microinterações de deslocamento animam transform, nunca padding/margin.", "section": "components" }
+      {
+        "name": "The One Accent Rule",
+        "body": "O Índigo Confiança é a única cor não-semântica do sistema. Se um elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor nova inventada para aquela tela.",
+        "section": "colors"
+      },
+      {
+        "name": "The RGB Token Rule",
+        "body": "Fundo ou realce translúcido de marca/alerta usa os tokens em RGB — `rgba(var(--tk-primary-rgb), α)` e `rgba(var(--tk-danger-rgb), α)` — nunca o valor literal (`rgba(105, 108, 255, …)`). Consolidado em 2026-10-27.",
+        "section": "colors"
+      },
+      {
+        "name": "The Badge Pair Rule",
+        "body": "Toda cor semântica (success/warning/info/danger) existe em dois pares: um \"soft\" (fundo pastel claro + texto na variante escurecida do matiz, ver **Semantic Text** acima — não a cor semântica pura, que falha contraste sobre o próprio fundo pastel) para o modo claro, e um \"soft dark\" (fundo do mesmo matiz em baixa opacidade sobre fundo escuro + texto mais claro) para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro — fica estourado.",
+        "section": "colors"
+      },
+      {
+        "name": "The Brand-Only Display Rule",
+        "body": "Sora nunca aparece fora da wordmark de login/registro — títulos de tela, mesmo os mais importantes, usam Public Sans em peso 700. A fonte de marca é reservada para o momento de marca, não para hierarquia geral.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tinted-Light, Neutral-Dark Rule",
+        "body": "Sombra no modo claro é tintada da marca; no modo escuro é preto neutro. Nunca o inverso — preto no claro lê como sujeira, índigo no escuro sobre fundo já escuro não aparece.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Transform-Not-Padding Rule",
+        "body": "Microinterações de deslocamento (hover de item de menu, por exemplo) animam `transform`, nunca `padding`/`margin` — a primeira é compositada pelo navegador, a segunda força recálculo de layout a cada quadro.",
+        "section": "components"
+      }
     ],
     "dos": [
-      "Do reservar o Índigo Confiança para ação primária e estado ativo",
-      "Do usar o par claro/escuro de cada badge semântico conforme o tema ativo",
-      "Do declarar a camada de grid base (col-12/col-6) antes de col-md-*/col-lg-* em qualquer linha de formulário ou card",
-      "Do agrupar mais de duas ações de linha de tabela num menu \"⋮\" em vez de botões lado a lado",
-      "Do usar transform para microinterações de deslocamento, nunca padding/margin",
-      "Do manter login/registro sempre no tema claro, independente da preferência do sistema operacional"
+      "Do reservar o Índigo Confiança para ação primária e estado ativo — ver The One Accent Rule.",
+      "Do usar o par claro/escuro de cada badge semântico conforme o tema ativo — ver The Badge Pair Rule.",
+      "Do declarar a camada de grid base (`col-12`/`col-6`) antes de `col-md-*`/`col-lg-*` em qualquer linha de formulário ou card.",
+      "Do agrupar mais de duas ações de linha de tabela num menu \"⋮\" em vez de botões lado a lado.",
+      "Do usar `transform` para microinterações de deslocamento, nunca `padding`/`margin`.",
+      "Do manter login/registro sempre no tema claro, independente da preferência do sistema operacional do usuário.",
+      "Do mostrar \"—\" e uma mensagem de erro quando um dado não carregou — ver Estados de dado.",
+      "Do usar movimento só pra explicar uma mudança de estado, sempre com um caminho `prefers-reduced-motion` (o realce do alerta de SLA que vence é o modelo).",
+      "Do dar a todo controle só de ícone um `<button>` com `aria-label` e 44px (`.btn-icon`) — nada de `<a href=\"javascript:void(0)\">`.",
+      "Do usar o painel lateral com a diretiva `appSidePanel` e os estilos globais `.info-panel*` em qualquer nova tela de lista com consulta rápida — ver Painel lateral.",
+      "Do dar 44×44px de alvo a todo controle tocável, inclusive checkbox de tabela (`.select-hit`) e o botão de mostrar senha."
     ],
     "donts": [
-      "Don't usar gradiente em texto — use peso ou tamanho para ênfase",
-      "Don't usar o confirm()/alert() nativo do navegador para qualquer confirmação — sempre o modal de confirmação do sistema",
-      "Don't aplicar sombra tintada de índigo no modo escuro, nem sombra preta pura no modo claro",
-      "Don't inventar uma nova cor de acento para uma tela específica"
+      "Don't usar gradiente em texto — é decoração sem função; use peso ou tamanho para ênfase.",
+      "Don't usar o `confirm()`/`alert()` nativo do navegador para qualquer confirmação — sempre o modal de confirmação do sistema.",
+      "Don't aplicar sombra tintada de índigo no modo escuro, nem sombra preta pura no modo claro — ver The Tinted-Light, Neutral-Dark Rule.",
+      "Don't inventar uma nova cor de acento para uma tela específica — toda necessidade de cor não resolvida por índigo ou pelas quatro cores semânticas é um sinal pra reusar um token existente, não criar um novo.",
+      "Don't prometer \"ao vivo\"/tempo real numa tela que não se atualiza sozinha.",
+      "Don't forçar `text-transform: uppercase` em badges — o rótulo já vem escrito como deve ser lido.",
+      "Don't usar `opacity` pra dizer \"inativo\" ou \"decorativo\" em linha, ícone ou texto que precisa ser lido — derruba o contraste abaixo de AA; use cor de token (`text-secondary`, `text-muted`).",
+      "Don't publicar trilha/painel \"Em breve\" sem dado real numa tela nova — só onde já foi decidido manter como prévia (Monitorar Chamados).",
+      "Don't fazer coreografia de carregamento (números contando, entradas em sequência) em tela de operação — quem abre o Dashboard quer o número, não a animação."
     ]
   }
 }

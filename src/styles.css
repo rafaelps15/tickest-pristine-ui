@@ -10,15 +10,32 @@
   --tk-primary-dark: #5f61e6;
   --tk-primary-darker: #3a3ca3;
   --tk-primary-rgb: 105, 108, 255;
+  /* O vermelho de alerta em canais, pros fundos translúcidos (badge "Atrasado", realce de um alerta que acabou de vencer). */
+  --tk-danger-rgb: 255, 62, 29;
+  --tk-warning-rgb: 255, 171, 0;
+  /* O verde de Resolvido/Ativo em canais, pros realces translúcidos (hover do "Reativar" no menu ⋮, badge escuro). */
+  --tk-success-rgb: 113, 221, 55;
+  /* Fundo âmbar "soft" (badge .bg-label-warning, chip de aviso pressionado); no escuro, o âmbar em baixa opacidade. */
+  --tk-warning-soft-bg: #fff2e2;
+  /* Links de texto no índigo do produto, nunca no azul de fábrica do Bootstrap. */
+  --bs-link-color: var(--tk-primary-text);
+  --bs-link-color-rgb: 58, 60, 163;
+  --bs-link-hover-color: var(--tk-primary-darker);
+  --bs-link-hover-color-rgb: 58, 60, 163;
+  /* Índigo como texto (link ativo, menu): o --tk-primary puro dá só ~4:1 sobre fundo claro. */
+  --tk-primary-text: var(--tk-primary-darker);
 
   --tk-page-bg: #f5f5f9;
   --tk-surface: #ffffff;
   --tk-border: #e7e7ff;
+  --tk-input-border: #d9dee3;
 
   --tk-text-primary: #2b2c40;
-  --tk-text-secondary: #697a8d;
+  /* Escurecido em 2026-10-27 (era #697a8d, ~4,05:1 sobre --tk-page-bg) — subtítulo de Meus Tickets reprovava AA. */
+  --tk-text-secondary: #5f6f82;
   /* Escurecido em 2026-10-08 (era #a1acb8, ~2,31:1) pra passar 4,5:1 WCAG AA sobre --tk-surface — auditado no Dashboard. */
-  --tk-text-muted: #6b7684;
+  /* Escurecido em 2026-10-28 (era #6b7684, 4,24:1 sobre --tk-page-bg): agora 4,63:1 na página e 5,03:1 no card. */
+  --tk-text-muted: #65707e;
 
   /*
    * Variantes escurecidas das cores semânticas "puras" — mesmos hex já usados como texto dos
@@ -31,9 +48,31 @@
   --tk-info-text: #0c6478;
   --tk-danger-text: #991b1b;
 
-  --tk-shadow-sm: 0 0.125rem 0.375rem rgba(105, 108, 255, 0.08);
-  --tk-shadow-md: 0 0.375rem 1.25rem rgba(105, 108, 255, 0.12);
-  --tk-shadow-lg: 0 1rem 3rem rgba(105, 108, 255, 0.18);
+  /*
+   * Cor de cada status do chamado em área (barra de composição, gráfico, marcador de legenda) — as
+   * cores semânticas do DESIGN.md, nunca como texto pequeno. Uma cor por status na tela inteira:
+   * Aberto âmbar, Em andamento ciano, Resolvido verde, Fechado no cinza neutro do sistema.
+   */
+  --tk-status-open: #ffab00;
+  --tk-status-in-progress: #03c3ec;
+  --tk-status-resolved: #71dd37;
+  --tk-status-closed: var(--tk-text-muted);
+
+  /*
+   * Contorno de cada área de status: o mesmo matiz escurecido (55% da cor + preto), pra a borda da
+   * fatia/barra ter ≥3:1 contra o fundo claro (WCAG 1.4.11) — o âmbar e o ciano puros ficam ~2:1.
+   */
+  --tk-status-open-edge: color-mix(in srgb, var(--tk-status-open) 55%, #000);
+  --tk-status-in-progress-edge: color-mix(in srgb, var(--tk-status-in-progress) 55%, #000);
+  --tk-status-resolved-edge: color-mix(in srgb, var(--tk-status-resolved) 55%, #000);
+  --tk-status-closed-edge: color-mix(in srgb, var(--tk-status-closed) 55%, #000);
+  /* Texto dentro das fatias: escuro sobre âmbar, ciano e verde (≥6:1); claro sobre o cinza de Fechado. */
+  --tk-status-label: #2b2c40;
+  --tk-status-closed-label: #fff;
+
+  --tk-shadow-sm: 0 0.125rem 0.375rem rgba(var(--tk-primary-rgb), 0.08);
+  --tk-shadow-md: 0 0.375rem 1.25rem rgba(var(--tk-primary-rgb), 0.12);
+  --tk-shadow-lg: 0 1rem 3rem rgba(var(--tk-primary-rgb), 0.18);
 
   --tk-radius-sm: 0.5rem;
   --tk-radius-md: 0.75rem;
@@ -51,9 +90,11 @@
  * visível entre os tokens --tk-* e os componentes nativos (card, modal, dropdown, table).
  */
 [data-bs-theme="dark"] {
+  --tk-warning-soft-bg: rgba(var(--tk-warning-rgb), 0.16);
   --tk-page-bg: #1a1d20;
   --tk-surface: #212529;
   --tk-border: #3a3f44;
+  --tk-input-border: #3a3f44;
 
   --tk-text-primary: #e9ecef;
   --tk-text-secondary: #adb5bd;
@@ -64,6 +105,13 @@
   --tk-warning-text: #ffc670;
   --tk-info-text: #5fd9f2;
   --tk-danger-text: #ff8669;
+  --tk-primary-text: #b3b5ff;
+  --bs-link-color: #b3b5ff;
+  --bs-link-color-rgb: 179, 181, 255;
+  --bs-link-hover-color: #d1d2ff;
+  --bs-link-hover-color-rgb: 209, 210, 255;
+  /* No escuro, o cinza de Fechado clareia: o texto da fatia passa a ser o fundo escuro do sistema (~5:1). */
+  --tk-status-closed-label: var(--tk-page-bg);
 
   --tk-shadow-sm: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.3);
   --tk-shadow-md: 0 0.375rem 1.25rem rgba(0, 0, 0, 0.4);
@@ -115,6 +163,168 @@ body {
   max-width: 48rem;
 }
 
+/*
+ * Cabeçalho de tela (`<app-page-header>`, shared/ui/page-header): título e subtítulo à esquerda,
+ * ações à direita, quebrando pra baixo no celular. A trilha fica acima do título, pequena e fora
+ * do `h1`; os níveis com tela própria são links.
+ */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.page-actions:empty {
+  display: none;
+}
+
+.page-title:focus {
+  outline: none;
+}
+
+.page-title:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+  border-radius: var(--tk-radius-sm);
+}
+
+.page-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--tk-text-secondary);
+}
+
+.page-crumbs li + li::before {
+  content: "/";
+  padding: 0 0.5rem;
+  color: var(--tk-text-muted);
+}
+
+.page-crumbs a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.page-crumbs a:hover {
+  color: var(--tk-primary);
+}
+
+/*
+ * Diálogo (`<app-dialog>`, shared/ui/dialog): o conteúdo projetado (um `<form>` ou `.dialog-content`
+ * envolvendo corpo + rodapé) continua sendo um flex em coluna, pra `.modal-dialog-scrollable`
+ * rolar só o `.modal-body` e manter o rodapé com os botões sempre visível.
+ */
+.modal-content > form,
+.modal-content > .dialog-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/*
+ * Card de estatística (`<app-stat-card>`, shared/ui/stat-card), do Dashboard e do Monitorar. Só o
+ * card que responde a clique (filtro ou link pra fila) sobe e ganha realce — o "Total" nunca é
+ * clicável, e elevar card sem ação é afordância falsa. A área de clique é o `::after` do
+ * `.stretched-link` (idiom do Bootstrap) cobrindo o card inteiro; o card filtrado agora fica com
+ * tingimento índigo (não uma borda colorida — banida pelo craft-floor).
+ */
+.card-stats {
+  background-color: var(--tk-surface);
+  position: relative;
+}
+
+.card-stats-clickable:hover {
+  box-shadow: var(--tk-shadow-md);
+  transform: translateY(-5px);
+}
+
+.card-stats-pressed {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+}
+
+.stat-press {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.card-stats-clickable .stretched-link::after {
+  border-radius: inherit;
+  transition: background-color var(--tk-transition);
+}
+
+.card-stats-clickable .stretched-link:hover::after {
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.card-stats-clickable .stretched-link:focus-visible {
+  outline: none;
+}
+
+.card-stats-clickable .stretched-link:focus-visible::after {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+/* Número do card: não é um heading (não é título de seção) — só peso e altura de linha. */
+.stat-value {
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-icon {
+  border-radius: var(--tk-radius-md);
+}
+
+/*
+ * Chamada de um card clicável ("Ver na fila", "Ver em Meus Chamados"), no slot [statHint] do
+ * stat-card: o índigo de texto do sistema (7,5:1 no claro, 6,9:1 no escuro — o token se ajusta sozinho).
+ */
+.kpi-cta {
+  color: var(--tk-primary-text);
+  font-weight: 500;
+}
+
+/* Link de texto pequeno com alvo de toque de 44px no celular (o texto não cresce). */
+@media (pointer: coarse) {
+  .tap-target {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
+/* Celular: KPIs em grade 2x2 (`col-6`) — o ícone sai pra não espremer o número, que é o que importa. */
+@media (max-width: 575.98px) {
+  .card-stats .kpi-icon {
+    display: none;
+  }
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
 /* Cards: elevação suave e consistente em todas as telas */
 .card {
   border: none;
@@ -136,8 +346,12 @@ body {
   transition: transform var(--tk-transition), box-shadow var(--tk-transition), background-color var(--tk-transition);
 }
 
+/*
+ * Gradiente a partir do índigo escuro: branco sobre o --tk-primary puro dava 4,0:1 (abaixo do AA);
+ * sobre a ponta mais clara agora dá 4,8:1. A outra ponta é o escuro misturado ao "darker".
+ */
 .btn-primary {
-  background: linear-gradient(to right, var(--tk-primary), var(--tk-primary-dark));
+  background: linear-gradient(to right, var(--tk-primary-dark), color-mix(in srgb, var(--tk-primary-dark) 75%, var(--tk-primary-darker)));
   border: none;
   box-shadow: 0 0.25rem 0.75rem rgba(var(--tk-primary-rgb), 0.3);
 }
@@ -145,7 +359,13 @@ body {
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 0.5rem 1.1rem rgba(var(--tk-primary-rgb), 0.4);
-  background: linear-gradient(to right, var(--tk-primary-dark), var(--tk-primary));
+  background: linear-gradient(to right, color-mix(in srgb, var(--tk-primary-dark) 75%, var(--tk-primary-darker)), var(--tk-primary-dark));
+}
+
+/* No escuro, a sombra índigo virava brilho em volta do botão: sombra neutra do tema. */
+[data-bs-theme="dark"] .btn-primary,
+[data-bs-theme="dark"] .btn-primary:hover:not(:disabled) {
+  box-shadow: var(--tk-shadow-sm);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -156,8 +376,75 @@ body {
   transition: transform var(--tk-transition), box-shadow var(--tk-transition);
 }
 
+/*
+ * Contornado secundário no cinza secundário do tema, nunca no #6c757d de fábrica: o de fábrica dava
+ * 4,31:1 sobre o fundo da página no claro ("Guia da tela", Empresa/Com filtros, fora de card) e 3,3:1
+ * no escuro. O secundário dá 4,73:1 (página) e 5,14:1 (card) no claro, e 7,4–8,2:1 no escuro; o hover
+ * preenche com ele e o texto vira a superfície (5,1:1 e 7,4:1).
+ */
+.btn-outline-secondary {
+  --bs-btn-color: var(--tk-text-secondary);
+  --bs-btn-border-color: var(--tk-text-secondary);
+  --bs-btn-hover-color: var(--tk-surface);
+  --bs-btn-hover-bg: var(--tk-text-secondary);
+  --bs-btn-hover-border-color: var(--tk-text-secondary);
+  --bs-btn-active-color: var(--tk-surface);
+  --bs-btn-active-bg: var(--tk-text-secondary);
+  --bs-btn-active-border-color: var(--tk-text-secondary);
+  --bs-btn-disabled-color: var(--tk-text-secondary);
+  --bs-btn-disabled-border-color: var(--tk-text-secondary);
+}
+
+/*
+ * O contornado primário vinha com o azul padrão do Bootstrap (#0d6efd), fora da marca. Texto em
+ * Índigo Profundo (AA sobre branco); no hover, preenchido com `--tk-primary-dark` (branco a 4,8:1 —
+ * o `--tk-primary` daria 4,05:1, abaixo do AA). No escuro, o índigo claro dos badges escuros.
+ */
+.btn-outline-primary {
+  --bs-btn-color: var(--tk-primary-darker);
+  --bs-btn-border-color: var(--tk-primary);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--tk-primary-dark);
+  --bs-btn-hover-border-color: var(--tk-primary-dark);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--tk-primary-darker);
+  --bs-btn-active-border-color: var(--tk-primary-darker);
+  --bs-btn-disabled-color: var(--tk-primary);
+  --bs-btn-disabled-border-color: var(--tk-primary);
+  --bs-btn-focus-shadow-rgb: var(--tk-primary-rgb);
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+  --bs-btn-color: #b3b5ff;
+  --bs-btn-disabled-color: #b3b5ff;
+}
+
+/* O botão-link também vinha no azul de fábrica: mesmo Índigo Profundo do contornado, e o claro no escuro. */
+.btn-link {
+  --bs-btn-color: var(--tk-primary-darker);
+  --bs-btn-hover-color: var(--tk-primary-dark);
+  --bs-btn-active-color: var(--tk-primary-darker);
+  --bs-btn-focus-shadow-rgb: var(--tk-primary-rgb);
+}
+
+[data-bs-theme="dark"] .btn-link {
+  --bs-btn-color: #b3b5ff;
+  --bs-btn-hover-color: #b3b5ff;
+  --bs-btn-active-color: #b3b5ff;
+}
+
 .btn-outline-secondary:hover, .btn-outline-primary:hover {
   transform: translateY(-1px);
+}
+
+/*
+ * No escuro, o cinza de fábrica do contornado secundário (#6c757d) dava 3,3:1 sobre a superfície —
+ * a paginação inteira reprovava AA (medido no audit de Usuários, 2026-10-28). Texto no secundário
+ * do tema (~9:1); o hover continua o preenchido do Bootstrap.
+ */
+[data-bs-theme="dark"] .btn-outline-secondary {
+  --bs-btn-color: var(--tk-text-secondary);
+  --bs-btn-border-color: var(--tk-border);
 }
 
 /* Tabelas: cabeçalho discreto, linhas com resposta ao hover */
@@ -188,7 +475,7 @@ body {
 
 .form-control, .form-select {
   border-radius: var(--tk-radius-sm);
-  border: 1.5px solid #d9dee3;
+  border: 1.5px solid var(--tk-input-border);
   transition: border-color var(--tk-transition), box-shadow var(--tk-transition), transform var(--tk-transition);
 }
 
@@ -252,12 +539,42 @@ body {
 
 .dropdown-item.text-danger:hover,
 .dropdown-item.text-danger:focus {
-  background-color: rgba(255, 62, 29, 0.08);
+  background-color: rgba(var(--tk-danger-rgb), 0.08);
 }
 
 .dropdown-item.text-success:hover,
 .dropdown-item.text-success:focus {
-  background-color: rgba(113, 221, 55, 0.1);
+  background-color: rgba(var(--tk-success-rgb), 0.1);
+}
+
+/*
+ * Ícone centralizado num quadrado/círculo de fundo suave (junto com `.badge.bg-label-*` e
+ * `.rounded`/`.rounded-circle`): ícone dos KPIs, das Ações Rápidas, do primeiro uso e do "Fila em
+ * dia" do Dashboard. Antes eram 4 blocos de CSS iguais, só com o tamanho diferente (extract,
+ * 2026-10-27). Tamanho padrão 2,5rem; modificadores -sm/-lg/-xl.
+ */
+.icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.icon-tile-sm {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.icon-tile-lg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.icon-tile-xl {
+  width: 4rem;
+  height: 4rem;
 }
 
 /*
@@ -272,10 +589,36 @@ body {
 }
 
 /*
+ * Abaixo de "md", a fileira de números (até 5 botões de 44px + reticências + Anterior/Próxima,
+ * ~500px) estourava a largura do celular. Ali a paginação vira "Anterior · Página X de Y ·
+ * Próxima"; os números voltam a partir de "md". Achado do audit de Meus Tickets (2026-10-27).
+ */
+.page-indicator {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .pagination-group {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-group .btn-page-number,
+  .pagination-group .page-ellipsis {
+    display: none;
+  }
+
+  .page-indicator {
+    display: inline;
+  }
+}
+
+/*
  * Tabela que vira lista de cards abaixo de "md": cada linha é um bloco, cada célula com
  * `data-label` vira um par rótulo/valor, a célula `.table-stack-actions` (menu "⋮") vai pro canto
- * superior direito do card. Evita rolar a tabela pro lado no celular. Usado em Meus Tickets e
- * Monitorar Tickets.
+ * superior direito do card. Evita rolar a tabela pro lado no celular. Usado em Meus Chamados,
+ * Monitorar Chamados e Usuários. A célula `.table-stack-title` (o nome/título) recua do "⋮" mesmo
+ * quando não é a primeira — em Usuários, a primeira é o checkbox, vazio nas linhas fora do lote.
  */
 @media (max-width: 767.98px) {
   .table-stack thead {
@@ -297,7 +640,7 @@ body {
 
   .table-stack tr {
     position: relative;
-    padding: 0.875rem 1rem;
+    padding: 1rem;
     border-bottom: 1px solid var(--bs-border-color);
   }
 
@@ -306,12 +649,13 @@ body {
   }
 
   .table-stack td {
-    padding: 0.2rem 0;
+    padding: 0.25rem 0;
     border: 0;
     text-align: start !important;
   }
 
-  .table-stack td:first-child {
+  .table-stack td:first-child,
+  .table-stack td.table-stack-title {
     padding-right: 3.25rem;
   }
 
@@ -382,7 +726,7 @@ body {
 }
 
 .bg-label-warning {
-  background-color: #fff2e2 !important;
+  background-color: var(--tk-warning-soft-bg) !important;
   color: var(--tk-warning-text) !important;
 }
 
@@ -403,17 +747,17 @@ body {
 
 /* Variantes escuras dos badges "soft" — fundo pastel claro ficaria estourado sobre página escura. */
 [data-bs-theme="dark"] .bg-label-primary {
-  background-color: rgba(105, 108, 255, 0.18) !important;
+  background-color: rgba(var(--tk-primary-rgb), 0.18) !important;
   color: #b3b5ff !important;
 }
 
 [data-bs-theme="dark"] .bg-label-success {
-  background-color: rgba(113, 221, 55, 0.14) !important;
+  background-color: rgba(var(--tk-success-rgb), 0.14) !important;
   color: var(--tk-success-text) !important;
 }
 
 [data-bs-theme="dark"] .bg-label-warning {
-  background-color: rgba(255, 171, 0, 0.16) !important;
+  background-color: var(--tk-warning-soft-bg) !important;
   color: var(--tk-warning-text) !important;
 }
 
@@ -423,7 +767,7 @@ body {
 }
 
 [data-bs-theme="dark"] .bg-label-danger {
-  background-color: rgba(255, 62, 29, 0.16) !important;
+  background-color: rgba(var(--tk-danger-rgb), 0.16) !important;
   color: var(--tk-danger-text) !important;
 }
 
@@ -442,22 +786,17 @@ body {
 }
 
 /*
- * Prévia de cor por função (pedido explícito do usuário em 2026-10-25, "pra ver como fica"): o
- * back-end não tem campo de cor na função hoje, então a escolha fica só neste navegador
- * (localStorage, ver `shared/utils/role-colors.util.ts`) — não é dado real ainda. A cor escolhida
- * entra via a variável `--role-color` no próprio elemento; aqui só a mistura que gera o par
- * claro/escuro "soft" (mesmo princípio do Badge Pair Rule do DESIGN.md, com a cor vindo de uma
- * variável em vez de um dos 4 tons semânticos fixos). Usada em mais de uma tela (Gestão de
- * Usuários, atribuição de responsável no chamado), por isso global.
+ * Ponto colorido antes do texto do badge de status do usuário (Ativo/Inativo/Convite) — reforça a
+ * leitura rápida por cor, não só por texto. Nome próprio (era `.status-dot`, que o marcador de
+ * status de chamado do Início também usa e sobrescrevia em silêncio — achado do audit de Usuários).
  */
-.badge-role-custom {
-  background-color: color-mix(in srgb, var(--role-color) 15%, white) !important;
-  color: color-mix(in srgb, var(--role-color) 65%, black) !important;
-}
-
-[data-bs-theme="dark"] .badge-role-custom {
-  background-color: color-mix(in srgb, var(--role-color) 25%, #212529) !important;
-  color: color-mix(in srgb, var(--role-color) 70%, white) !important;
+.badge-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  margin-right: 0.25rem;
+  background-color: currentColor;
 }
 
 /* Alertas */
@@ -525,4 +864,277 @@ body {
 router-outlet + * {
   display: block;
   animation: tk-fade-in 250ms ease-out;
+}
+
+/*
+ * Movimento reduzido (preferência do sistema): os deslocamentos somem, mas o feedback de estado
+ * fica — a rota ainda entra com fade (só opacidade), e hover/foco continuam mudando cor, fundo e
+ * sombra. Não é um "desliga tudo" (0.01ms): só tira o que move a tela. O `!important` vence os
+ * hovers com `transform` do CSS isolado dos componentes (menu lateral, cards do Dashboard, botões
+ * do login). A gaveta do menu no celular continua deslizando: é a origem do painel, não decoração.
+ * Achado do audit de Meus Tickets (2026-10-27) — o projeto não tinha nenhum.
+ */
+@keyframes tk-fade-in-static {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  router-outlet + * {
+    animation-name: tk-fade-in-static;
+  }
+
+  .btn:hover,
+  .btn:active,
+  .card:hover,
+  .menu-link:hover,
+  .form-control:focus {
+    transform: none !important;
+  }
+}
+
+
+/*
+ * ============================================================================================
+ * Padrões de tela extraídos (extract, 2026-10-27) — antes copiados em cada componente.
+ * ============================================================================================
+ */
+
+/*
+ * Guia da Tela: card recolhível no topo de cada tela administrativa (Dashboard, Departamentos,
+ * Funções, Monitorar Tickets, Usuários). O botão de alternar usa só o visual do .card por baixo —
+ * reset do <button> nativo.
+ */
+/*
+ * Card de filtros (`<app-filter-bar>`, shared/ui/filter-bar): mais discreto que o card da tabela,
+ * que é o conteúdo principal da tela. "Limpar filtros" é ação secundária de baixa frequência e não
+ * compete com o botão primário do cabeçalho.
+ */
+.filters-card {
+  box-shadow: none;
+  border: 1px solid var(--tk-border);
+}
+
+.filters-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.filters-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.filters-footer:empty {
+  display: none;
+}
+
+.btn-clear-filters,
+.btn-more-filters {
+  color: var(--tk-text-secondary);
+  font-weight: 500;
+}
+
+.btn-clear-filters:hover,
+.btn-more-filters:hover {
+  color: var(--tk-text-primary);
+}
+
+/*
+ * Card "Resumo" (`<app-summary-card>`, shared/ui/summary-card): mesma linguagem do Guia — seções
+ * separadas por um fio. O número usa o passo Title da escala (1.5rem), não um tamanho próprio.
+ */
+.insights-section + .insights-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tk-border);
+}
+
+.insights-stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--tk-text-primary);
+  line-height: 1.2;
+}
+
+/* Rótulo de um grupo de cards na tela (ex.: "Seus chamados", "Toda a empresa"): versalete discreto, passo Label. */
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tk-text-secondary);
+}
+
+/* Card do Guia: borda fina e sem sombra — apoio da tela, mais discreto que a tabela/conteúdo. */
+.guide-card {
+  box-shadow: none;
+  border: 1px solid var(--tk-border);
+}
+
+.guide-section {
+  display: block;
+}
+
+.guide-toggle {
+  border: none;
+  background: transparent;
+  color: var(--tk-text-primary);
+}
+
+.guide-toggle:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: -2px;
+}
+
+.guide-section + .guide-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tk-border);
+}
+
+.guide-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tk-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+/*
+ * Guia da Tela e Resumo ficam sempre no fluxo da tela, no topo, com a largura do conteúdo. Até
+ * 2026-10-27 havia um modo "trilha lateral" (≥1900px) que os tirava do fluxo com `position: fixed`
+ * numa faixa de ~130–170px ao lado do `container-xxl`: o limiar e a largura dependiam do viewport
+ * real (zoom do navegador, escala do Windows, barra lateral do Edge, largura da barra de rolagem
+ * dentro de `100vw`), então o mesmo monitor caía num modo no Chrome e no outro no Edge — e na
+ * trilha estreita o texto era cortado. Não reintroduzir.
+ */
+
+/*
+ * Painel lateral "Informações do X" (Usuários, Monitorar Tickets) — o comportamento de
+ * acessibilidade (região/diálogo, foco, Tab preso) vem da diretiva `appSidePanel`
+ * (shared/ui/directives/side-panel.directive.ts). De "lg" pra cima é só uma coluna ao lado da
+ * tabela e acompanha a rolagem; abaixo disso a tabela não tem espaço pra encolher, então o painel
+ * vira overlay de tela cheia — acima do cabeçalho/sidebar do layout (z-index até 1045) e abaixo da
+ * pilha de toasts global (1080). O fundo escurecido é o mesmo preto a 50% do `.modal-backdrop` do
+ * Bootstrap, pra parecer a mesma camada que os modais.
+ */
+.info-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 991.98px) {
+  .info-panel-col {
+    position: fixed;
+    inset: 0;
+    z-index: 1055;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+}
+
+.info-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Título recebe foco programático ao abrir o painel (tabindex="-1"): sem anel, mas ainda visível se alguém navegar por ele com teclado. */
+.info-panel-title:focus {
+  outline: none;
+}
+
+.info-panel-title:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+  border-radius: var(--tk-radius-sm);
+}
+
+/*
+ * Lista de campos rótulo/valor do painel (E-mail, Funções, Solicitante, Prazo...). Rótulo no passo
+ * Label do DESIGN.md (0.72rem, versalete rastreado — o mesmo do título "Descrição" e do Guia) e
+ * valor no corpo (1rem); antes eram 0.8rem/0.85rem, dois tamanhos fora da escala que deixavam
+ * rótulo e valor quase do mesmo tamanho. `baseline` alinha o rótulo menor à linha do valor.
+ */
+.info-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+}
+
+.info-list dt {
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.info-list dd {
+  margin: 0;
+}
+
+/*
+ * Estado vazio (tabela ou card sem itens): ícone em cinza neutro — nunca `opacity`, que derruba o
+ * contraste junto com o que estiver dentro — e texto num bloco de largura confortável. Todo estado
+ * vazio oferece uma ação (limpar filtros, criar o primeiro item) quando existir uma.
+ */
+.empty-state-icon {
+  color: var(--tk-text-muted);
+}
+
+.empty-state p {
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+/*
+ * Preenchimento por status do chamado (barra de composição, marcadores de KPI e de legenda do
+ * Início): a cor de área do status e o contorno escuro do mesmo matiz (`--edge`, WCAG 1.4.11). As
+ * classes seguem a chave do grupo no código (`open`, `inProgress`, `resolved`, `closed`).
+ */
+.status-fill-open { background-color: var(--tk-status-open); --edge: var(--tk-status-open-edge); }
+.status-fill-inProgress { background-color: var(--tk-status-in-progress); --edge: var(--tk-status-in-progress-edge); }
+.status-fill-resolved { background-color: var(--tk-status-resolved); --edge: var(--tk-status-resolved-edge); }
+.status-fill-closed { background-color: var(--tk-status-closed); --edge: var(--tk-status-closed-edge); color: var(--tk-status-closed-label); }
+
+/* Marcador redondo da cor do status, ao lado de um rótulo (a cor nunca é o único sinal). */
+.status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+/* Esqueleto de carregamento com brilho correndo (parado com movimento reduzido); o tamanho é de quem usa. */
+.tk-skeleton {
+  border-radius: var(--tk-radius-sm);
+  background: linear-gradient(90deg, var(--tk-border) 25%, var(--tk-page-bg) 50%, var(--tk-border) 75%);
+  background-size: 200% 100%;
+  animation: tk-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes tk-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-skeleton { animation: none; }
 }

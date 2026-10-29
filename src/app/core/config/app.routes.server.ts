@@ -11,7 +11,8 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  */
 export const serverRoutes: ServerRoute[] = [
   { path: 'login', renderMode: RenderMode.Prerender },
-  { path: 'register', renderMode: RenderMode.Prerender },
+  // O token do convite vem no fragmento (#token=), que nunca chega ao servidor: só o navegador sabe qual estado mostrar.
+  { path: 'ativar-conta', renderMode: RenderMode.Client },
   { path: 'primeiro-acesso', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },
   { path: 'tickets', renderMode: RenderMode.Client },

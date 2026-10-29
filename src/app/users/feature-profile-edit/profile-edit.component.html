@@ -1,51 +1,33 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Conta /</span> Meu Perfil</h4>
-      <button type="button" class="btn btn-outline-secondary btn-sm" routerLink="/dashboard">
-        <i class="bx bx-arrow-back me-1"></i> Voltar ao Painel
-      </button>
-    </div>
-  </div>
-</div>
+<app-page-header title="Meu Perfil" subtitle="Seu nome no sistema e a senha de acesso." [crumbs]="[{ label: 'Conta' }]">
+  <a pageActions routerLink="/dashboard" class="btn btn-outline-secondary btn-sm">
+    <i class="bx bx-arrow-back me-1" aria-hidden="true"></i> Voltar ao início
+  </a>
+</app-page-header>
 
 <div class="card shadow-sm border-0 overflow-hidden">
   <div class="card-header py-4">
-    <h5 class="mb-0 fw-bold">Dados pessoais</h5>
+    <h2 class="h5 mb-0 fw-bold">Dados pessoais</h2>
     <p class="text-muted small mb-0 mt-1">Atualize o nome exibido no sistema.</p>
   </div>
 
   <div class="card-body p-4 p-lg-5">
     @if (store.loading() && !store.profile()) {
-      <div class="text-center py-5">
-        <span class="spinner-border text-primary" role="status"></span>
-      </div>
+      <app-loading-state label="Carregando seu perfil…" />
     } @else if (store.loadError()) {
-      <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert">
-        <i class="bx bx-error-circle fs-4 me-3"></i>
-        <div class="fw-medium">{{ store.loadError() }}</div>
+      <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2" role="alert">
+        <span class="d-flex align-items-center fw-medium">
+          <i class="bx bx-error-circle fs-4 me-3" aria-hidden="true"></i>{{ store.loadError() }}
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadCurrentUser()">Tentar novamente</button>
       </div>
     } @else if (store.profile(); as profile) {
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-
-        @if (store.mutationError()) {
-          <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-            <i class="bx bx-error-circle fs-4 me-3"></i>
-            <div class="fw-medium">{{ store.mutationError() }}</div>
-          </div>
-        }
-        @if (store.saved()) {
-          <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-            <i class="bx bx-check-circle fs-4 me-3"></i>
-            <div class="fw-medium">Perfil atualizado com sucesso.</div>
-          </div>
-        }
 
         <div class="row g-4">
           <div class="col-12 col-md-6">
             <label class="form-label" for="firstName">Nome</label>
             <input id="firstName" type="text" class="form-control" formControlName="firstName"
-                   autocomplete="given-name" maxlength="50"
+                   autocomplete="given-name" [maxlength]="nameMaxLength"
                    [class.is-invalid]="isFieldInvalid('firstName')"
                    [attr.aria-describedby]="isFieldInvalid('firstName') ? 'firstName-error' : null" />
             @if (isFieldInvalid('firstName')) {
@@ -55,7 +37,7 @@
                 } @else if (form.controls.firstName.errors?.['minlength']) {
                   O nome deve ter no mínimo 2 caracteres.
                 } @else if (form.controls.firstName.errors?.['maxlength']) {
-                  O nome deve ter no máximo 50 caracteres.
+                  O nome deve ter no máximo {{ nameMaxLength }} caracteres.
                 }
               </div>
             }
@@ -64,7 +46,7 @@
           <div class="col-12 col-md-6">
             <label class="form-label" for="lastName">Sobrenome</label>
             <input id="lastName" type="text" class="form-control" formControlName="lastName"
-                   autocomplete="family-name" maxlength="50"
+                   autocomplete="family-name" [maxlength]="nameMaxLength"
                    [class.is-invalid]="isFieldInvalid('lastName')"
                    [attr.aria-describedby]="isFieldInvalid('lastName') ? 'lastName-error' : null" />
             @if (isFieldInvalid('lastName')) {
@@ -74,7 +56,7 @@
                 } @else if (form.controls.lastName.errors?.['minlength']) {
                   O sobrenome deve ter no mínimo 2 caracteres.
                 } @else if (form.controls.lastName.errors?.['maxlength']) {
-                  O sobrenome deve ter no máximo 50 caracteres.
+                  O sobrenome deve ter no máximo {{ nameMaxLength }} caracteres.
                 }
               </div>
             }
@@ -86,6 +68,13 @@
             <div class="form-text">O e-mail é usado no login e não pode ser alterado aqui.</div>
           </div>
         </div>
+
+        @if (store.mutationError()) {
+          <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mt-4 mb-0" role="alert">
+            <i class="bx bx-error-circle fs-4 me-3" aria-hidden="true"></i>
+            <div class="fw-medium">{{ store.mutationError() }}</div>
+          </div>
+        }
 
         <div class="mt-5 d-flex justify-content-end">
           <button type="submit" class="btn btn-primary" [disabled]="store.saving() || form.pristine">
@@ -104,25 +93,12 @@
 
 <div class="card shadow-sm border-0 overflow-hidden mt-4">
   <div class="card-header py-4">
-    <h5 class="mb-0 fw-bold">Alterar senha</h5>
+    <h2 class="h5 mb-0 fw-bold">Alterar senha</h2>
     <p class="text-muted small mb-0 mt-1">Ao trocar a senha, suas demais sessões são desconectadas.</p>
   </div>
 
   <div class="card-body p-4 p-lg-5">
     <form [formGroup]="passwordForm" (ngSubmit)="onChangePassword()" novalidate>
-
-      @if (store.passwordError()) {
-        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-          <i class="bx bx-error-circle fs-4 me-3"></i>
-          <div class="fw-medium">{{ store.passwordError() }}</div>
-        </div>
-      }
-      @if (store.passwordChanged()) {
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-          <i class="bx bx-check-circle fs-4 me-3"></i>
-          <div class="fw-medium">Senha alterada com sucesso.</div>
-        </div>
-      }
 
       <div class="row g-4">
         <div class="col-12 col-md-4">
@@ -198,6 +174,13 @@
           }
         </div>
       </div>
+
+      @if (store.passwordError()) {
+        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mt-4 mb-0" role="alert">
+          <i class="bx bx-error-circle fs-4 me-3" aria-hidden="true"></i>
+          <div class="fw-medium">{{ store.passwordError() }}</div>
+        </div>
+      }
 
       <div class="mt-5 d-flex justify-content-end">
         <button type="submit" class="btn btn-primary" [disabled]="store.changingPassword() || passwordForm.pristine">

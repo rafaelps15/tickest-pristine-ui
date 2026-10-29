@@ -1,114 +1,119 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
-import { ConfirmDialogService, getRoleColor, setRoleColor, clearRoleColor, hasAccessibleRoleColorContrast } from '../../shared';
+import { Permission } from '../entities/permission';
+import { ConfirmDialogService, ToastService } from '../../shared';
 import { RoleGuideComponent } from './role-guide.component';
 import { RoleInsightsComponent } from './role-insights.component';
-
-/** Cor padrão pré-marcada no seletor de cor ao criar uma função — o próprio índigo do sistema. */
-const DEFAULT_ROLE_COLOR = '#696cff';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
+import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 
 /** Quantidade de badges de permissão exibidos antes de agrupar o restante em "+N". */
 const MAX_VISIBLE_PERMISSION_BADGES = 2;
 
-/** Tela administrativa de gestão de roles e atribuição de permissões (RBAC). */
+/** Situação das caixas de um grupo de permissões no diálogo: todas, algumas ou nenhuma marcada. */
+export type PermissionGroupSelection = 'all' | 'some' | 'none';
+
+/**
+ * Tela administrativa das funções (RBAC): consulta e ajuste das permissões de cada uma. As funções
+ * vêm do catálogo fixo do back-end — não há criar, renomear nem excluir por aqui.
+ */
 @Component({
     selector: 'app-role-list',
-    imports: [ReactiveFormsModule, RoleGuideComponent, RoleInsightsComponent],
+    imports: [PageHeaderComponent, RoleGuideComponent, RoleInsightsComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, RowActionsComponent],
     templateUrl: './role-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './role-list.component.css'
 })
 export class RoleListComponent implements OnInit {
-    private readonly fb = inject(FormBuilder);
     protected readonly store = inject(RolesStore);
     private readonly confirmDialogService = inject(ConfirmDialogService);
+    private readonly toastService = inject(ToastService);
 
-    createForm = this.fb.group({
-        name: ['', [Validators.required, Validators.maxLength(100)]]
+    /** Diálogo aberto agora (renderizado com `@if`, via `<app-dialog>`), ou `null`. */
+    protected readonly openDialog = signal<'permissions' | null>(null);
+
+    /** Função cujas permissões estão abertas no diálogo. */
+    readonly selectedRole = signal<Role | null>(null);
+
+    /** Conjunto de códigos de permissão marcados no diálogo de permissões. */
+    readonly selectedPermissionCodes = signal<Set<string>>(new Set());
+
+    /** A função aberta é a de Administrador: as permissões dela são do sistema e o diálogo só mostra. */
+    readonly permissionsReadOnly = computed(() => !!this.selectedRole()?.isAdministrator);
+
+    /** Códigos marcados no diálogo que a função ainda não tem. */
+    readonly addedPermissionCodes = computed(() => {
+        const current = new Set(this.selectedRole()?.permissionCodes ?? []);
+        return Array.from(this.selectedPermissionCodes()).filter(code => !current.has(code));
     });
 
-    /** Role cujas permissões estão sendo editadas no modal. */
-    selectedRole = signal<Role | null>(null);
+    /** Códigos que a função tem e foram desmarcados no diálogo. */
+    readonly removedPermissionCodes = computed(() =>
+        (this.selectedRole()?.permissionCodes ?? []).filter(code => !this.selectedPermissionCodes().has(code)));
 
-    /** Conjunto (mutável) de códigos de permissão marcados no modal de atribuição. */
-    selectedPermissionCodes = signal<Set<string>>(new Set());
+    /** Há alguma marcação diferente do que está salvo — habilita o "Salvar" e pede confirmação ao descartar. */
+    readonly hasPermissionChanges = computed(() =>
+        this.addedPermissionCodes().length + this.removedPermissionCodes().length > 0);
 
-    /** Cor marcada no seletor do modal de criação. */
-    createColor = signal(DEFAULT_ROLE_COLOR);
+    /** Resumo do que mudou no diálogo, pro rodapé ("2 adicionadas e 1 removida"). */
+    readonly permissionChangeSummary = computed(() => {
+        const added = this.addedPermissionCodes().length;
+        const removed = this.removedPermissionCodes().length;
+        const parts = [
+            added > 0 ? `${added} ${added === 1 ? 'adicionada' : 'adicionadas'}` : null,
+            removed > 0 ? `${removed} ${removed === 1 ? 'removida' : 'removidas'}` : null
+        ].filter(part => part !== null);
+        return parts.length > 0 ? parts.join(' e ') : 'Nenhuma alteração';
+    });
 
-    /**
-     * Incrementado a cada escolha/remoção de cor, só pra forçar `roleColor()` a reavaliar —
-     * a cor em si fica no localStorage (prévia local, sem persistência no back-end ainda, ver
-     * `shared/utils/role-colors.util.ts`), que não é reativo sozinho.
-     */
-    private readonly roleColorVersion = signal(0);
+    /** "Salvar" do diálogo de permissões indisponível: catálogo sem carregar, envio em voo ou nada mudou. */
+    readonly permissionsSaveBlocked = computed(() =>
+        this.store.assigningPermissions()
+        || this.store.permissions().length === 0
+        || !this.hasPermissionChanges());
 
-    /** Aviso exibido quando a cor escolhida não teria contraste suficiente para o badge; `null` quando não há aviso. */
-    colorContrastWarning = signal<string | null>(null);
-
-    /** Carrega as roles e os códigos de permissão disponíveis ao abrir a tela. */
+    /** Carrega as funções e o catálogo de permissões ao abrir a tela. */
     ngOnInit(): void {
         this.store.load();
         this.store.loadPermissions();
     }
 
-    /** Prepara o modal de criação, limpando o erro de uma tentativa anterior. */
-    openCreateModal(): void {
-        this.store.clearCreateError();
-        this.createForm.reset({ name: '' });
-        this.createColor.set(DEFAULT_ROLE_COLOR);
-    }
-
-    /** Valida e envia o formulário de criação de uma nova role; salva a cor escolhida em caso de sucesso. */
-    onCreateSubmit(): void {
-        if (this.createForm.invalid) {
-            this.createForm.markAllAsTouched();
-            return;
-        }
-
-        const name = this.createForm.getRawValue().name!;
-        this.store.create(name, () => {
-            setRoleColor(name, this.createColor());
-            this.roleColorVersion.update(v => v + 1);
-            this.createForm.reset({ name: '' });
-            document.getElementById('roleCreateModalCloseButton')?.click();
-        });
+    /** Fecha o diálogo aberto (X, Esc, clique fora, "Cancelar"/"Fechar" ou depois de salvar). */
+    closeDialog(): void {
+        this.openDialog.set(null);
     }
 
     /**
-     * Cor escolhida pra uma função — prévia só neste navegador (localStorage), o back-end não tem
-     * campo de cor ainda. `null` cai no acento padrão do sistema (índigo), sem badge customizada.
+     * Pedido de fechar o diálogo de permissões: com marcações não salvas, confirma antes de
+     * descartá-las; sem mudanças (ou só consultando), fecha direto.
      */
-    roleColor(roleName: string): string | null {
-        this.roleColorVersion();
-        return getRoleColor(roleName);
-    }
-
-    /** Escolhe (ou troca) a cor de uma função já existente — rejeita cores sem contraste suficiente pro badge. */
-    onPickColor(roleName: string, hex: string): void {
-        if (!hasAccessibleRoleColorContrast(hex)) {
-            this.colorContrastWarning.set('Essa cor não tem contraste suficiente para o badge ficar legível. Escolha uma cor mais escura/saturada.');
+    requestClosePermissions(): void {
+        const role = this.selectedRole();
+        if (!role || this.permissionsReadOnly() || !this.hasPermissionChanges()) {
+            this.closeDialog();
             return;
         }
 
-        this.colorContrastWarning.set(null);
-        setRoleColor(roleName, hex);
-        this.roleColorVersion.update(v => v + 1);
+        this.confirmDialogService.confirm({
+            title: 'Descartar as alterações?',
+            message: `As permissões marcadas em "${role.name}" não foram salvas.`,
+            confirmLabel: 'Descartar',
+            cancelLabel: 'Continuar editando',
+            variant: 'danger'
+        }).subscribe(confirmed => {
+            if (confirmed) this.closeDialog();
+        });
     }
 
-    /** Remove a cor customizada de uma função, voltando ao acento padrão. */
-    onClearColor(roleName: string): void {
-        clearRoleColor(roleName);
-        this.roleColorVersion.update(v => v + 1);
-    }
-
-    /** Abre o modal de atribuição de permissões pré-marcando as permissões já atribuídas à role. */
+    /** Abre o diálogo de permissões pré-marcando as que a função já tem (só leitura para o Administrador). */
     openPermissionsModal(role: Role): void {
         this.store.clearAssignPermissionsError();
         this.selectedRole.set(role);
         this.selectedPermissionCodes.set(new Set(role.permissionCodes));
+        this.openDialog.set('permissions');
     }
 
     /** Até {@link MAX_VISIBLE_PERMISSION_BADGES} permissões exibidas como badge; o restante vira um badge "+N". */
@@ -121,7 +126,7 @@ export class RoleListComponent implements OnInit {
         return Math.max(0, role.permissionCodes.length - MAX_VISIBLE_PERMISSION_BADGES);
     }
 
-    /** Nomes amigáveis das permissões ocultas no badge "+N", para exibir no `title` (tooltip nativo). */
+    /** Nomes amigáveis das permissões ocultas no badge "+N" (texto pro leitor de tela e tooltip do mouse). */
     hiddenPermissionNames(role: Role): string {
         return role.permissionCodes
             .slice(MAX_VISIBLE_PERMISSION_BADGES)
@@ -129,16 +134,44 @@ export class RoleListComponent implements OnInit {
             .join(', ');
     }
 
-    /** Indica se o código de permissão está marcado no modal de atribuição. */
+    /** Indica se o código de permissão está marcado no diálogo de permissões. */
     isChecked(code: string): boolean {
         return this.selectedPermissionCodes().has(code);
     }
 
-    /** Marca ou desmarca um código de permissão no modal de atribuição. */
+    /** A marcação dessa permissão difere do que está salvo na função (realçada no diálogo). */
+    isPermissionChanged(code: string): boolean {
+        return this.isChecked(code) !== (this.selectedRole()?.permissionCodes.includes(code) ?? false);
+    }
+
+    /** Marca ou desmarca um código de permissão no diálogo de permissões. */
     togglePermission(code: string, checked: boolean): void {
         this.selectedPermissionCodes.update(current => {
             const next = new Set(current);
             if (checked) next.add(code); else next.delete(code);
+            return next;
+        });
+    }
+
+    /** Quantas permissões de um grupo estão marcadas no diálogo. */
+    groupCheckedCount(permissions: Permission[]): number {
+        return permissions.filter(permission => this.isChecked(permission.code)).length;
+    }
+
+    /** Situação da caixa "Todas" de um grupo: todas, algumas (indeterminada) ou nenhuma marcada. */
+    groupSelection(permissions: Permission[]): PermissionGroupSelection {
+        const checked = this.groupCheckedCount(permissions);
+        if (checked === 0) return 'none';
+        return checked === permissions.length ? 'all' : 'some';
+    }
+
+    /** Marca ou desmarca de uma vez todas as permissões de um grupo. */
+    toggleGroup(permissions: Permission[], checked: boolean): void {
+        this.selectedPermissionCodes.update(current => {
+            const next = new Set(current);
+            for (const permission of permissions) {
+                if (checked) next.add(permission.code); else next.delete(permission.code);
+            }
             return next;
         });
     }
@@ -150,10 +183,10 @@ export class RoleListComponent implements OnInit {
      */
     onAssignPermissionsSubmit(): void {
         const role = this.selectedRole();
-        if (!role) return;
+        if (!role || this.permissionsReadOnly()) return;
 
-        const removedAdministrativeCodes = role.permissionCodes.filter(code =>
-            !this.isChecked(code) && this.store.permissions().find(permission => permission.code === code)?.isAdministrative
+        const removedAdministrativeCodes = this.removedPermissionCodes().filter(code =>
+            this.store.permissions().find(permission => permission.code === code)?.isAdministrative
         );
 
         if (removedAdministrativeCodes.length > 0) {
@@ -161,7 +194,7 @@ export class RoleListComponent implements OnInit {
             const plural = removedAdministrativeCodes.length > 1;
             this.confirmDialogService.confirm({
                 title: `Remover permissão administrativa de "${role.name}"?`,
-                message: `${names} ${plural ? 'são permissões administrativas' : 'é uma permissão administrativa'}. Isso afeta todos os usuários que têm essa função, não só você.`,
+                message: `${names} ${plural ? 'são permissões administrativas' : 'é uma permissão administrativa'}. A mudança vale na hora para todos os usuários com essa função.`,
                 confirmLabel: 'Remover',
                 variant: 'danger'
             }).subscribe(confirmed => {
@@ -173,7 +206,7 @@ export class RoleListComponent implements OnInit {
         if (this.selectedPermissionCodes().size === 0) {
             this.confirmDialogService.confirm({
                 title: `Salvar "${role.name}" sem nenhuma permissão?`,
-                message: 'Quem tem essa função vai ficar sem nenhum acesso liberado por ela. Isso afeta todos os usuários que têm essa função, não só você.',
+                message: 'Quem tem essa função fica sem nenhum acesso liberado por ela. A mudança vale na hora para todos os usuários com essa função.',
                 confirmLabel: 'Salvar sem permissões',
                 variant: 'danger'
             }).subscribe(confirmed => {
@@ -185,10 +218,11 @@ export class RoleListComponent implements OnInit {
         this.submitAssignPermissions(role);
     }
 
-    /** Envia a atribuição de permissões marcadas para a role selecionada. */
+    /** Envia a atribuição de permissões marcadas para a função selecionada. */
     private submitAssignPermissions(role: Role): void {
         this.store.assignPermissions(role.name, Array.from(this.selectedPermissionCodes()), () => {
-            document.getElementById('rolePermissionsModalCloseButton')?.click();
+            this.closeDialog();
+            this.toastService.show(`Permissões da função "${role.name}" salvas.`);
         });
     }
 }

@@ -1,281 +1,373 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <h4 class="fw-bold pt-3 mb-1"><span class="text-muted fw-light">Administração /</span> Departamentos e setores</h4>
-        <p class="text-muted small mb-0">Os chamados são abertos para um setor dentro de um departamento. Cadastre cada setor no departamento a que ele pertence.</p>
-      </div>
-      @if (canManageDepartments()) {
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#departmentModal" (click)="openCreateModal()">
-          <i class="bx bx-plus me-1"></i> Novo departamento
-        </button>
-      }
-    </div>
+<app-page-header title="Departamentos e setores"
+                 subtitle="Todo chamado vai para um setor. Organize os setores por departamento — sem setor, o departamento não aparece na abertura de chamados."
+                 [crumbs]="[{ label: 'Administração' }]">
+  @if (canManageDepartments()) {
+    <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
+      <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Departamento
+    </button>
+  }
+</app-page-header>
+
+<app-department-guide />
+<app-department-insights [departments]="store.departments()" [activeIssue]="issueFilter()" (issueChange)="issueFilter.set($event)"
+                         [loading]="store.listState().loading && store.departments().length === 0"
+                         [failed]="!!store.listState().error && store.departments().length === 0" />
+
+<!--
+  Só a falha de leitura aparece aqui, em tom neutro (vermelho é risco operacional, não falha do sistema).
+  Erro de salvar fica no diálogo; de excluir, no card.
+-->
+@if (store.listState().error; as error) {
+  <div class="department-load-error" role="alert">
+    <i class="bx bx-error-circle" aria-hidden="true"></i>
+    <span>{{ error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" (click)="store.load()">Tentar novamente</button>
   </div>
-</div>
-
-<app-department-guide class="guide-rail" />
-<app-department-insights class="insights-rail" [departments]="store.departments()" />
-
-@if (store.listState().error) {
-  <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.listState().error }}</div>
 }
 
 @if (store.departments().length > 0) {
-  <div class="row mb-3">
-    <div class="col-12 col-md-4">
-      <label class="form-label small" for="departmentSearch">Buscar</label>
-      <div class="input-group">
-        <span class="input-group-text"><i class="bx bx-search"></i></span>
-        <input id="departmentSearch" type="text" class="form-control" placeholder="Departamento ou setor"
-               [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
-      </div>
+  <!--
+    Busca, contagem e "Limpar filtros" numa linha só, colada na lista que eles afetam — antes a busca
+    ocupava um card inteiro pra um campo de um terço da largura (critique 2 de 2026-10-28).
+  -->
+  <div class="department-toolbar">
+    <div class="input-group department-search">
+      <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+      <label class="visually-hidden" for="departmentSearch">Buscar departamento ou setor</label>
+      <input id="departmentSearch" type="search" class="form-control" placeholder="Buscar departamento ou setor"
+             [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
     </div>
-  </div>
-}
-
-@if (store.listState().loading && store.departments().length === 0) {
-  <div class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando…</span></span></div>
-} @else if (store.departments().length === 0) {
-  <div class="card shadow-sm border-0">
-    <div class="card-body text-center py-5 text-muted">
-      <i class="bx bx-sitemap display-6 d-block mb-2 opacity-50"></i>
-      Nenhum departamento cadastrado ainda.
-    </div>
-  </div>
-} @else if (filteredDepartments().length === 0) {
-  <div class="card shadow-sm border-0">
-    <div class="card-body text-center py-5 text-muted">
-      <i class="bx bx-search-alt display-6 d-block mb-2 opacity-50"></i>
-      Nenhum departamento ou setor encontrado para "{{ searchInput() }}".
-    </div>
-  </div>
-} @else {
-  <div class="row g-4">
-    @for (department of filteredDepartments(); track department.id) {
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0">
-          <div class="card-header d-flex align-items-start justify-content-between gap-3">
-            <div>
-              <h5 class="mb-1 fw-bold">
-                {{ department.name }}
-                <span class="badge bg-label-secondary ms-1 align-middle">
-                  {{ department.sectors.length }} {{ department.sectors.length === 1 ? 'setor' : 'setores' }}
-                </span>
-              </h5>
-              <div class="text-muted small">{{ department.description }}</div>
-              @if (department.responsibleUserName) {
-                <div class="text-muted small mt-1"><i class="bx bx-user me-1"></i>Responsável: {{ department.responsibleUserName }}</div>
-              }
-            </div>
-            @if (canManageDepartments()) {
-              <div class="d-flex flex-shrink-0">
-                <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" data-bs-toggle="modal" data-bs-target="#departmentModal" (click)="openEditModal(department)" [attr.aria-label]="'Editar o departamento ' + department.name">
-                  <i class="bx bx-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" (click)="onDelete(department)" [attr.aria-label]="'Excluir o departamento ' + department.name">
-                  <i class="bx bx-trash"></i>
-                </button>
-              </div>
-            }
-          </div>
-
-          <ul class="list-group list-group-flush">
-            @for (sector of department.sectors; track sector.id) {
-              <li class="list-group-item d-flex align-items-center justify-content-between gap-3">
-                <div>
-                  <div class="fw-semibold"><i class="bx bx-git-branch text-muted me-1"></i>{{ sector.name }}</div>
-                  @if (sector.description) {
-                    <div class="text-muted small">{{ sector.description }}</div>
-                  }
-                </div>
-                @if (canManageSectors()) {
-                  <div class="d-flex flex-shrink-0">
-                    <button type="button" class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2" data-bs-toggle="modal" data-bs-target="#sectorModal" (click)="openEditSectorModal(department, sector)" [attr.aria-label]="'Editar o setor ' + sector.name">
-                      <i class="bx bx-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-icon btn-outline-danger rounded-circle" (click)="onDeleteSector(department, sector)" [attr.aria-label]="'Excluir o setor ' + sector.name">
-                      <i class="bx bx-trash"></i>
-                    </button>
-                  </div>
-                }
-              </li>
-            } @empty {
-              <li class="list-group-item text-muted small py-3">
-                Nenhum setor ainda. Sem setores, este departamento não aparece na abertura de chamados.
-              </li>
-            }
-          </ul>
-
-          @if (canManageSectors()) {
-            <div class="card-footer bg-transparent">
-              <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#sectorModal" (click)="openCreateSectorModal(department)">
-                <i class="bx bx-plus me-1"></i> Adicionar setor
-              </button>
-            </div>
-          }
-        </div>
-      </div>
+    <!-- A região viva existe sempre (só o texto muda): criada junto com o texto, o leitor de tela não anuncia. -->
+    <p class="small text-muted mb-0" aria-live="polite">
+      @if (hasFilters()) {
+        Mostrando {{ filteredDepartments().length }} de {{ store.departments().length }} departamentos.
+      }
+    </p>
+    @if (hasFilters()) {
+      <button type="button" class="btn btn-sm btn-outline-secondary department-clear" (click)="clearFilters()">
+        <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+      </button>
     }
   </div>
 }
 
-<!-- Modal de criação/edição de departamento -->
-<div class="modal fade" id="departmentModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="departmentModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="departmentModalTitle">{{ editingDepartment() ? 'Editar departamento' : 'Novo departamento' }}</h5>
-          <button id="departmentModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.mutationError()) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
+@if (store.listState().loading && store.departments().length === 0) {
+  <app-loading-state label="Carregando departamentos…" />
+} @else if (store.listState().error && store.departments().length === 0) {
+  <!--
+    Falha de carga: o alerta com "Tentar novamente" acima já diz tudo. Não cai no estado vazio —
+    "Nenhum departamento cadastrado" com "Novo Departamento" faria o erro parecer dado (DESIGN.md).
+  -->
+} @else if (store.departments().length === 0) {
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <app-empty-state icon="bx-sitemap" title="Nenhum departamento cadastrado ainda."
+                       hint="Crie o primeiro departamento e cadastre nele os setores que atendem chamados.">
+        @if (canManageDepartments()) {
+          <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
+            <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Departamento
+          </button>
+        }
+      </app-empty-state>
+    </div>
+  </div>
+} @else if (filteredDepartments().length === 0) {
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <app-empty-state icon="bx-search-alt"
+                       [title]="searchInput().trim() ? 'Nenhum departamento ou setor encontrado para &quot;' + searchInput() + '&quot;.' : 'Nenhum departamento com esse problema.'"
+                       [hint]="searchInput().trim() ? 'Confira a grafia ou busque pelo nome do departamento ou de um setor.' : 'Limpe o filtro pra voltar a ver todos.'">
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+          <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+        </button>
+      </app-empty-state>
+    </div>
+  </div>
+} @else {
+  <!--
+    Uma coluna: cada departamento ocupa a largura toda e os setores dele se distribuem numa grade
+    interna. A grade de dois cards por linha deixava buracos sob os cards curtos.
+  -->
+  <div class="d-flex flex-column gap-3">
+    @for (department of filteredDepartments(); track department.id) {
+      <section class="card shadow-sm border-0" [attr.aria-labelledby]="'department-' + department.id"
+               [attr.data-item-id]="department.id" [class.item-new]="highlightedId() === department.id"
+               [attr.aria-busy]="deletingDepartmentId() === department.id ? 'true' : null">
+        <div class="card-header d-flex align-items-start justify-content-between gap-3">
+          <div class="min-w-0">
+            <h2 class="h5 mb-1 fw-bold text-wrap-anywhere" [id]="'department-' + department.id">{{ department.name }}</h2>
+            <p class="department-meta small mb-1 d-flex flex-wrap align-items-center column-gap-3 row-gap-1">
+              <!-- Sem setor, o departamento some da abertura de chamados: o único estado que pede ação fica em âmbar. -->
+              <span class="badge" [class.bg-label-warning]="department.sectors.length === 0" [class.bg-label-secondary]="department.sectors.length > 0">
+                {{ department.sectors.length }} {{ department.sectors.length === 1 ? 'setor' : 'setores' }}
+              </span>
+              @if (department.responsibleUserName) {
+                <span class="text-muted fw-normal"><i class="bx bx-user me-1" aria-hidden="true"></i>Responsável: {{ department.responsibleUserName }}</span>
+              } @else {
+                @if (canManageDepartments()) {
+                  <!-- O problema "sem responsável" do Resumo com a correção no próprio card, como o "Adicionar o primeiro setor". -->
+                  <button type="button" class="btn btn-link btn-sm p-0 fw-normal align-baseline tap-target" (click)="openEditModal(department, true)"
+                          [attr.aria-label]="'Definir responsável de ' + department.name">
+                    <i class="bx bx-user-plus me-1" aria-hidden="true"></i>Definir responsável
+                  </button>
+                } @else {
+                  <span class="text-muted fw-normal"><i class="bx bx-user-x me-1" aria-hidden="true"></i>Sem responsável</span>
+                }
+              }
+            </p>
+            <p class="text-muted small fw-normal mb-0 text-wrap-anywhere">{{ department.description }}</p>
+          </div>
+          @if (canManageDepartments()) {
+            <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name"
+                             [busy]="store.deletingId() === department.id" [rowKey]="department.id">
+              <li>
+                <button type="button" class="dropdown-item" (click)="openEditModal(department)">
+                  <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar departamento
+                </button>
+              </li>
+              <li>
+                <button type="button" class="dropdown-item text-danger" (click)="onDelete(department)">
+                  <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir departamento
+                </button>
+              </li>
+            </app-row-actions>
           }
-          <div class="mb-3">
-            <label class="form-label" for="departmentName">Nome</label>
-            <input id="departmentName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Tecnologia da Informação"
-                   [class.is-invalid]="isFieldInvalid('name')"
-                   [attr.aria-describedby]="isFieldInvalid('name') ? 'departmentName-error' : null" />
-            @if (isFieldInvalid('name')) {
-              <div class="invalid-feedback" id="departmentName-error">
-                @if (form.controls.name.errors?.['required']) {
-                  O nome é obrigatório.
-                } @else if (form.controls.name.errors?.['maxlength']) {
-                  O nome deve ter no máximo 100 caracteres.
-                }
-              </div>
+        </div>
+
+        <!-- A falha de excluir este departamento ou um setor dele aparece aqui, perto de onde a ação partiu. -->
+        @if (deleteErrorPlacement(); as deleteError) {
+          @if (deleteError.departmentId === department.id) {
+          <div class="alert alert-danger border-0 rounded-0 mb-0 py-2 small d-flex align-items-start justify-content-between gap-2" role="alert">
+            <span>{{ deleteError.message }}</span>
+            <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearDeleteError()"></button>
+          </div>
+          }
+        }
+
+        <div class="card-body py-2">
+          @if (department.sectors.length === 0) {
+            <p class="small mb-2 pt-2 sector-empty">
+              <i class="bx bx-error-circle me-1" aria-hidden="true"></i>Nenhum setor ainda. Sem setores, este departamento não aparece na abertura de chamados.
+            </p>
+          }
+          @if (department.sectors.length > 0 || canManageSectors()) {
+            <ul class="sector-grid list-unstyled mb-0" [attr.aria-label]="'Setores de ' + department.name">
+              @for (sector of department.sectors; track sector.id) {
+                <li class="sector-item" [attr.data-item-id]="sector.id" [class.item-new]="highlightedId() === sector.id"
+                    [class.sector-match]="matchedSectorIds().has(sector.id)">
+                  <div class="min-w-0">
+                    <div class="fw-semibold text-wrap-anywhere">
+                      <i class="bx bx-git-branch text-muted me-1" aria-hidden="true"></i><span class="sector-name">{{ sector.name }}</span>
+                      @if (matchedSectorIds().has(sector.id)) {
+                        <span class="visually-hidden"> (encontrado pela busca)</span>
+                      }
+                    </div>
+                    @if (sector.description) {
+                      <div class="text-muted small text-wrap-anywhere">{{ sector.description }}</div>
+                    }
+                  </div>
+                  @if (canManageSectors()) {
+                    <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name"
+                                     [busy]="store.deletingId() === sector.id" [rowKey]="sector.id">
+                      <li>
+                        <button type="button" class="dropdown-item" (click)="openEditSectorModal(department, sector)">
+                          <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar setor
+                        </button>
+                      </li>
+                      <li>
+                        <button type="button" class="dropdown-item text-danger" (click)="onDeleteSector(department, sector)">
+                          <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir setor
+                        </button>
+                      </li>
+                    </app-row-actions>
+                  }
+                </li>
+              }
+              <!-- Adicionar fica na própria grade, como a próxima célula: a ação mais repetida da tela sem um botão por card competindo com os setores. -->
+              @if (canManageSectors()) {
+                <li class="sector-add-cell">
+                  <button type="button" class="sector-add" (click)="openCreateSectorModal(department)"
+                          [attr.aria-label]="(department.sectors.length === 0 ? 'Adicionar o primeiro setor' : 'Adicionar setor') + ' em ' + department.name">
+                    <i class="bx bx-plus" aria-hidden="true"></i>{{ department.sectors.length === 0 ? 'Adicionar o primeiro setor' : 'Adicionar setor' }}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </section>
+    }
+  </div>
+}
+
+@if (openDialog() === 'department') {
+<app-dialog id="departmentModal" [busy]="store.mutating()" [title]="editingDepartment() ? 'Editar departamento' : 'Novo departamento'" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="modal-body">
+      @if (store.mutationError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
+      }
+      <div class="mb-3">
+        <label class="form-label" for="departmentName">Nome</label>
+        <input id="departmentName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Tecnologia da Informação"
+               aria-required="true"
+               [class.is-invalid]="isFieldInvalid('name')" [attr.aria-invalid]="isFieldInvalid('name') || null"
+               [attr.aria-describedby]="isFieldInvalid('name') ? 'departmentName-error' : null" />
+        @if (isFieldInvalid('name')) {
+          <div class="invalid-feedback" id="departmentName-error">
+            @if (form.controls.name.errors?.['required']) {
+              O nome é obrigatório.
+            } @else if (form.controls.name.errors?.['maxlength']) {
+              O nome deve ter no máximo 100 caracteres.
             }
           </div>
-          <div class="mb-3">
-            <label class="form-label" for="departmentDescription">Descrição</label>
-            <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"
-                      [class.is-invalid]="isFieldInvalid('description')"
-                      [attr.aria-describedby]="isFieldInvalid('description') ? 'departmentDescription-error' : null"></textarea>
-            @if (isFieldInvalid('description')) {
-              <div class="invalid-feedback" id="departmentDescription-error">
-                @if (form.controls.description.errors?.['required']) {
-                  A descrição é obrigatória.
-                } @else if (form.controls.description.errors?.['maxlength']) {
-                  A descrição deve ter no máximo 500 caracteres.
-                }
-              </div>
+        }
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="departmentDescription">Descrição</label>
+        <textarea id="departmentDescription" class="form-control" rows="3" formControlName="description" placeholder="Do que este departamento cuida"
+                  aria-required="true"
+                  [class.is-invalid]="isFieldInvalid('description')" [attr.aria-invalid]="isFieldInvalid('description') || null"
+                  [attr.aria-describedby]="isFieldInvalid('description') ? 'departmentDescription-error' : null"></textarea>
+        @if (isFieldInvalid('description')) {
+          <div class="invalid-feedback" id="departmentDescription-error">
+            @if (form.controls.description.errors?.['required']) {
+              A descrição é obrigatória.
+            } @else if (form.controls.description.errors?.['maxlength']) {
+              A descrição deve ter no máximo 500 caracteres.
             }
           </div>
+        }
+      </div>
 
-          <div class="mb-3">
-            <label class="form-label" for="departmentResponsibleSearch">Responsável <span class="text-muted fw-normal">(opcional)</span></label>
+      <div class="mb-3">
+        <label class="form-label" for="departmentResponsibleSearch">Responsável <span class="text-muted fw-normal">(opcional)</span></label>
+        <!-- A região viva existe sempre e só o texto muda: criada junto com o texto, o leitor de tela não anuncia. -->
+        <p class="visually-hidden" role="status">{{ responsibleStatusMessage() }}</p>
 
-            @if (loadingCurrentResponsible()) {
-              <div class="small text-muted mb-2">
-                <span class="spinner-border spinner-border-sm me-1" role="status"><span class="visually-hidden">Carregando responsável atual…</span></span>
-                Carregando responsável atual…
-              </div>
-            } @else if (selectedResponsibleName(); as currentName) {
-              <p class="small mb-2">
-                Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
-                <button type="button" class="btn btn-link btn-sm p-0 ms-2 align-baseline" (click)="onClearResponsible()">Remover</button>
-              </p>
-            } @else {
-              <p class="text-muted small mb-2">Nenhum responsável selecionado.</p>
-            }
-
-            <div class="input-group mb-2">
-              <span class="input-group-text"><i class="bx bx-search"></i></span>
-              <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
-                     [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
+        @if (loadingCurrentResponsible()) {
+          <div class="small text-muted mb-2" id="departmentResponsibleStatus">
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Carregando responsável atual…
+          </div>
+        } @else if (currentResponsibleError(); as responsibleError) {
+          <!--
+            Sem saber o responsável atual, salvar o apagaria: o erro fica aqui, com as duas saídas — tentar
+            de novo ou tirar o responsável — além de escolher outro na busca abaixo.
+          -->
+          <div class="alert alert-warning border-0 py-2 small" role="alert" id="departmentResponsibleStatus">
+            <p class="mb-2">{{ responsibleError }} Para salvar, tente de novo, remova o responsável ou escolha outro abaixo.</p>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="retryCurrentResponsible()">Tentar de novo</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearResponsible()">Remover responsável</button>
             </div>
-
-            @if (store.responsibleSearchError()) {
-              <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.responsibleSearchError() }}</div>
-            } @else if (store.searchingResponsible()) {
-              <div class="text-center py-2"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
-            } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
-              <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
-            } @else if (store.responsibleCandidates().length > 0) {
-              <ul class="list-group">
-                @for (candidate of store.responsibleCandidates(); track candidate.id) {
-                  <li class="list-group-item p-0">
-                    <button type="button" class="btn w-100 text-start p-2 rounded-0" (click)="onSelectResponsible(candidate)">
-                      <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
-                      <div class="small text-muted">{{ candidate.email }}</div>
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
           </div>
+        } @else if (selectedResponsibleName(); as currentName) {
+          <p class="small mb-2">
+            Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
+            <button type="button" class="btn btn-link btn-sm p-0 ms-2 align-baseline tap-target" (click)="onClearResponsible()">Remover</button>
+          </p>
+        } @else {
+          <p class="text-muted small mb-2">Nenhum responsável selecionado.</p>
+        }
 
-          @if (!editingDepartment()) {
-            <p class="text-muted small mb-0">Depois de salvar, adicione os setores do departamento no próprio card dele.</p>
-          }
+        <div class="input-group mb-2 responsible-search">
+          <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+          <input id="departmentResponsibleSearch" type="text" class="form-control" placeholder="Buscar por nome ou e-mail"
+                 [attr.data-dialog-focus]="focusResponsible() ? '' : null"
+                 [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || loadingCurrentResponsible()">
-            @if (store.mutating()) {
-              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+
+        @if (store.responsibleSearchError()) {
+          <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.responsibleSearchError() }}</div>
+        } @else if (responsibleSearchPending()) {
+          <div class="text-center py-2"><span class="d-inline-flex align-items-center gap-2 text-muted small"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Buscando usuários…</span></div>
+        } @else if (responsibleSearchInput().trim().length > 0 && store.responsibleCandidates().length === 0) {
+          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+        } @else if (responsibleSearchInput().trim().length > 0) {
+          <ul class="list-group" aria-label="Usuários encontrados">
+            @for (candidate of store.responsibleCandidates(); track candidate.id) {
+              <li class="list-group-item p-0">
+                <button type="button" class="btn w-100 text-start p-2 rounded-0" (click)="onSelectResponsible(candidate)">
+                  <span class="d-block fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</span>
+                  <span class="d-block small text-muted">{{ candidate.email }}</span>
+                </button>
+              </li>
             }
-            Salvar
-          </button>
-        </div>
-      </form>
+          </ul>
+        }
+      </div>
+
+      @if (!editingDepartment()) {
+        <p class="text-muted small mb-0">Depois de criar, você já pode cadastrar o primeiro setor — sem ele, o departamento não aparece na abertura de chamados.</p>
+      }
     </div>
-  </div>
-</div>
-
-<!-- Modal de criação/edição de setor (sempre dentro de um departamento) -->
-<div class="modal fade" id="sectorModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="sectorModalTitle">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form [formGroup]="sectorForm" (ngSubmit)="onSubmitSector()">
-        <div class="modal-header">
-          <h5 class="modal-title" id="sectorModalTitle">
-            {{ editingSector() ? 'Editar setor' : 'Novo setor' }}
-            <span class="d-block text-muted small fw-normal mt-1">em {{ sectorDepartment()?.name }}</span>
-          </h5>
-          <button id="sectorModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-        </div>
-        <div class="modal-body">
-          @if (store.mutationError()) {
-            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
-          }
-          <div class="mb-3">
-            <label class="form-label" for="sectorName">Nome</label>
-            <input id="sectorName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Suporte técnico"
-                   [class.is-invalid]="isSectorFieldInvalid('name')"
-                   [attr.aria-describedby]="isSectorFieldInvalid('name') ? 'sectorName-error' : null" />
-            @if (isSectorFieldInvalid('name')) {
-              <div class="invalid-feedback" id="sectorName-error">
-                @if (sectorForm.controls.name.errors?.['required']) {
-                  O nome é obrigatório.
-                } @else if (sectorForm.controls.name.errors?.['maxlength']) {
-                  O nome deve ter no máximo 100 caracteres.
-                }
-              </div>
-            }
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="sectorDescription">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
-            <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description" placeholder="Que tipo de chamado este setor atende"
-                      [class.is-invalid]="isSectorFieldInvalid('description')"
-                      [attr.aria-describedby]="isSectorFieldInvalid('description') ? 'sectorDescription-error' : null"></textarea>
-            @if (isSectorFieldInvalid('description')) {
-              <div class="invalid-feedback" id="sectorDescription-error">A descrição deve ter no máximo 500 caracteres.</div>
-            }
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
-            @if (store.mutating()) {
-              <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-            }
-            Salvar
-          </button>
-        </div>
-      </form>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
+      <!-- Desabilitado sem saber o responsável atual: o aviso acima diz o porquê (aria-describedby). -->
+      <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || !responsibleKnown()"
+              [attr.aria-describedby]="!responsibleKnown() ? 'departmentResponsibleStatus' : null">
+        @if (store.mutating()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        {{ store.mutating() ? 'Salvando…' : (editingDepartment() ? 'Salvar alterações' : 'Criar departamento') }}
+      </button>
     </div>
-  </div>
-</div>
+  </form>
+</app-dialog>
+}
+
+@if (openDialog() === 'sector') {
+<app-dialog id="sectorModal" [busy]="store.mutating()" [title]="editingSector() ? 'Editar setor' : 'Novo setor'" [subtitle]="sectorDepartment() ? 'em ' + sectorDepartment()!.name : null" (closed)="closeDialog()">
+  <form dialogContent [formGroup]="sectorForm" (ngSubmit)="onSubmitSector()">
+    <div class="modal-body">
+      <!-- Confirmação do "Criar e adicionar outro": região viva sempre presente, só o texto muda. -->
+      <p class="small mb-0 sector-added" [class.mb-3]="sectorAddedMessage()" role="status">
+        @if (sectorAddedMessage()) {
+          <i class="bx bx-check-circle me-1" aria-hidden="true"></i>{{ sectorAddedMessage() }}
+        }
+      </p>
+      @if (store.mutationError()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.mutationError() }}</div>
+      }
+      <div class="mb-3">
+        <label class="form-label" for="sectorName">Nome</label>
+        <input id="sectorName" type="text" class="form-control" formControlName="name" placeholder="Ex.: Suporte técnico"
+               aria-required="true"
+               [class.is-invalid]="isSectorFieldInvalid('name')" [attr.aria-invalid]="isSectorFieldInvalid('name') || null"
+               [attr.aria-describedby]="isSectorFieldInvalid('name') ? 'sectorName-error' : null" />
+        @if (isSectorFieldInvalid('name')) {
+          <div class="invalid-feedback" id="sectorName-error">
+            @if (sectorForm.controls.name.errors?.['required']) {
+              O nome é obrigatório.
+            } @else if (sectorForm.controls.name.errors?.['maxlength']) {
+              O nome deve ter no máximo 100 caracteres.
+            }
+          </div>
+        }
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="sectorDescription">Descrição <span class="text-muted fw-normal">(opcional)</span></label>
+        <textarea id="sectorDescription" class="form-control" rows="3" formControlName="description" placeholder="Que tipo de chamado este setor atende"
+                  [class.is-invalid]="isSectorFieldInvalid('description')" [attr.aria-invalid]="isSectorFieldInvalid('description') || null"
+                  [attr.aria-describedby]="isSectorFieldInvalid('description') ? 'sectorDescription-error' : null"></textarea>
+        @if (isSectorFieldInvalid('description')) {
+          <div class="invalid-feedback" id="sectorDescription-error">A descrição deve ter no máximo 500 caracteres.</div>
+        }
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">{{ sectorAddedMessage() ? 'Concluir' : 'Cancelar' }}</button>
+      <!-- Montar a estrutura é cadastrar vários setores seguidos: o diálogo fica aberto pro próximo. -->
+      @if (!editingSector()) {
+        <button type="button" class="btn btn-outline-primary" [disabled]="store.mutating()" (click)="onSubmitSector(true)">Criar e adicionar outro</button>
+      }
+      <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
+        @if (store.mutating()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        {{ store.mutating() ? 'Salvando…' : (editingSector() ? 'Salvar alterações' : 'Criar setor') }}
+      </button>
+    </div>
+  </form>
+</app-dialog>
+}

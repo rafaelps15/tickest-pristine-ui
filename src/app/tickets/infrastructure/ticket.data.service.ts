@@ -2,11 +2,18 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CreateTicketData, Ticket, TicketDetail, UpdateTicketData } from '../entities/ticket';
+import { TicketStatusGroup } from '../entities/ticket-status-group';
+import { TicketStatus } from '../entities/ticket-status';
+import { TicketStatsQuery } from '../entities/ticket-stats-query';
+import { TicketDashboardOverview } from '../entities/ticket-dashboard';
+import { TicketAverageTimes } from '../entities/ticket-average-times';
+import { TicketAssignee } from '../entities/ticket-assignee';
 import { TicketSla } from '../entities/ticket-sla';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketStatusCounts } from '../entities/ticket-status-counts';
+import { OwnTicketCount } from '../entities/own-ticket-count';
 import { TicketVolumeGrouping, TicketVolumePoint } from '../entities/ticket-volume';
 import { TicketHistoryEntry } from '../entities/ticket-history';
 import { CursorPage, PageCursor, PagedResponse } from '../../shared';
@@ -32,9 +39,12 @@ export class TicketDataService {
     return this.http.put<void>(`${this.apiUrl}/${ticketId}`, data);
   }
 
-  /** Reabre um ticket inativo (POST /tickets/{id}/reopen). */
-  reopen(ticketId: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${ticketId}/reopen`, null);
+  /**
+   * Reabre um ticket inativo (POST /tickets/{id}/reopen). Com motivo, o back-end grava também a
+   * mensagem de quem reabriu, na mesma transação; sem motivo, vai sem corpo.
+   */
+  reopen(ticketId: string, reason: string | null = null): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${ticketId}/reopen`, reason ? { reason } : null);
   }
 
   /** Exclui (soft-delete) um ticket (DELETE /tickets/{id}). */
@@ -43,13 +53,18 @@ export class TicketDataService {
   }
 
   /**
-   * Busca uma página dos tickets abertos pelo usuário logado, do mais novo para o mais antigo (GET /tickets/mine).
-   * O back-end identifica o usuário pelo token, por isso nenhum id vai na URL.
+   * Busca uma página dos tickets do usuário logado (GET /tickets/mine), opcionalmente só de um
+   * grupo de status e/ou com um trecho do título. O back-end identifica o usuário pelo token, por
+   * isso nenhum id vai na URL.
    */
-  getMine(page: number, pageSize: number): Observable<PagedResponse<Ticket>> {
-    const params = new HttpParams()
+  getMine(page: number, pageSize: number, statusGroup: TicketStatusGroup | null = null, search = ''): Observable<PagedResponse<Ticket>> {
+    let params = new HttpParams()
       .set('page', page)
       .set('pageSize', pageSize);
+
+    if (statusGroup !== null) params = params.set('status', statusGroup);
+    const term = search.trim();
+    if (term) params = params.set('search', term);
 
     return this.http.get<PagedResponse<Ticket>>(`${this.apiUrl}/mine`, { params });
   }
@@ -117,12 +132,17 @@ export class TicketDataService {
 
     if (filters.status !== undefined) {
       params = params.set('status', filters.status);
+    } else if (filters.activeOnly) {
+      // O back-end aceita `status` repetido: Aberto e Em Andamento juntos.
+      params = params.append('status', TicketStatus.Open).append('status', TicketStatus.InProgress);
     }
     if (filters.priority !== undefined) {
       params = params.set('priority', filters.priority);
     }
-    if (filters.sectorId) {
-      params = params.set('sectorId', filters.sectorId);
+    params = appendStatsQuery(params, { sectorIds: filters.sectorIds, createdFrom: filters.createdFrom, createdTo: filters.createdTo });
+    if (filters.awaiting !== undefined) {
+      // O parâmetro da API se chama `waitingOn` (spec 029); `awaiting` é só o nome do filtro na tela.
+      params = params.set('waitingOn', filters.awaiting);
     }
     if (filters.slaStatus !== undefined) {
       params = params.set('slaStatus', filters.slaStatus);
@@ -132,9 +152,39 @@ export class TicketDataService {
     }
     if (filters.unassignedOnly) {
       params = params.set('unassignedOnly', filters.unassignedOnly);
+    } else if (filters.assignedToUserId) {
+      params = params.set('assignedToUserId', filters.assignedToUserId);
     }
 
     return this.http.get<PagedResponse<TicketMonitorItem>>(this.apiUrl, { params });
+  }
+
+  /**
+   * Busca o agregado do recorte numa resposta só — volume, SLA e central de atenção
+   * (GET /tickets/stats/overview) — exige `tickets:manage`.
+   */
+  getOverview(query: TicketStatsQuery): Observable<TicketDashboardOverview> {
+    return this.http.get<TicketDashboardOverview>(`${this.apiUrl}/stats/overview`, { params: appendStatsQuery(new HttpParams(), query) });
+  }
+
+  /**
+   * Busca média e mediana da primeira resposta e da resolução do recorte, em minutos úteis
+   * (GET /tickets/stats/times) — exige `tickets:manage`. O período é o da conclusão (`resolvedFrom`/`resolvedTo`).
+   */
+  getTimes(query: TicketStatsQuery): Observable<TicketAverageTimes> {
+    return this.http.get<TicketAverageTimes>(`${this.apiUrl}/stats/times`, { params: appendStatsQuery(new HttpParams(), query) });
+  }
+
+  /**
+   * Busca uma página dos responsáveis elegíveis (GET /tickets/assignees): ativos com
+   * `tickets:manage`, em ordem de nome — exige `tickets:manage`, não `users:read`.
+   */
+  getAssignees(search = '', sectorId?: string, page = 1, pageSize = 100): Observable<PagedResponse<TicketAssignee>> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    const term = search.trim();
+    if (term) params = params.set('search', term);
+    if (sectorId) params = params.set('sectorId', sectorId);
+    return this.http.get<PagedResponse<TicketAssignee>>(`${this.apiUrl}/assignees`, { params });
   }
 
   /** Busca as contagens de SLA dos chamados ativos, opcionalmente de um só setor (GET /tickets/sla-summary). */
@@ -143,14 +193,40 @@ export class TicketDataService {
     return this.http.get<TicketSlaSummary>(`${this.apiUrl}/sla-summary`, { params });
   }
 
+  /** Busca quantos chamados do usuário logado há em cada status e prioridade (GET /tickets/mine/summary). */
+  getMineSummary(): Observable<OwnTicketCount[]> {
+    return this.http.get<OwnTicketCount[]>(`${this.apiUrl}/mine/summary`);
+  }
+
   /** Busca os totais de tickets por status de toda a empresa, para qualquer usuário logado (GET /tickets/stats/status). */
   getStatusCounts(): Observable<TicketStatusCounts> {
     return this.http.get<TicketStatusCounts>(`${this.apiUrl}/stats/status`);
   }
 
-  /** Busca o volume de tickets abertos por período, de toda a empresa (GET /tickets/stats/volume). */
-  getVolume(groupBy: TicketVolumeGrouping): Observable<TicketVolumePoint[]> {
-    const params = new HttpParams().set('groupBy', groupBy);
+  /**
+   * Busca o volume de chamados criados (e resolvidos) por período (GET /tickets/stats/volume): da
+   * empresa toda sem recorte, ou só do recorte; com `createdFrom`/`createdTo`, o período define o intervalo do gráfico.
+   */
+  getVolume(groupBy: TicketVolumeGrouping, query: TicketStatsQuery = {}): Observable<TicketVolumePoint[]> {
+    const params = appendStatsQuery(new HttpParams().set('groupBy', groupBy), query);
     return this.http.get<TicketVolumePoint[]>(`${this.apiUrl}/stats/volume`, { params });
   }
+}
+
+/** Acrescenta o recorte das estatísticas aos parâmetros: setores repetidos, prioridade, responsável e períodos. */
+function appendStatsQuery(params: HttpParams, query: TicketStatsQuery): HttpParams {
+  for (const sectorId of query.sectorIds ?? []) {
+    params = params.append('sectorId', sectorId);
+  }
+  if (query.priority !== undefined) params = params.set('priority', query.priority);
+  if (query.unassignedOnly) {
+    params = params.set('unassignedOnly', true);
+  } else if (query.assignedToUserId) {
+    params = params.set('assignedToUserId', query.assignedToUserId);
+  }
+  if (query.createdFrom) params = params.set('createdFrom', query.createdFrom);
+  if (query.createdTo) params = params.set('createdTo', query.createdTo);
+  if (query.resolvedFrom) params = params.set('resolvedFrom', query.resolvedFrom);
+  if (query.resolvedTo) params = params.set('resolvedTo', query.resolvedTo);
+  return params;
 }

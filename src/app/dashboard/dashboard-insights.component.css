@@ -1,17 +1,153 @@
+/*
+ * Host em bloco: elemento customizado é `inline` por padrão, e aí uma altura percentual dentro
+ * dele (o antigo `h-100` do card) era resolvida contra a coluna inteira do Dashboard — esticava o
+ * card até o fim da página (achado no audit de 2026-10-27).
+ */
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+/*
+ * Card de SLA (ao lado da Central de atenção, abaixo do gráfico): estreito, tudo empilha; com
+ * espaço (o card, não a tela, passa de 40rem), resumo (cabeçalho + totais) à esquerda e lista à
+ * direita. Com a fila em dia, cabeçalho e "Fila em dia" numa linha só — o card encolhe, e o tamanho
+ * dele vira a mensagem. Container query (o host é o contêiner): a largura que importa é a da
+ * coluna, não a da janela.
+ */
+.sla-band-header {
+  margin-bottom: 1rem;
+}
+
+@container (width >= 40rem) {
+  .sla-band:not(.sla-band-quiet) {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) 2fr;
+    gap: 2rem;
+  }
+
+  .sla-band-quiet .sla-band-summary {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+  }
+
+  .sla-band-quiet .sla-band-header {
+    margin-bottom: 0;
+  }
+}
+
+/* Links do card (totais e chamados): sem sublinhado e com o realce de fundo animado. */
+.sla-total,
+.critical-ticket-link {
+  text-decoration: none;
+  transition: background-color var(--tk-transition);
+}
+
+/*
+ * Totais de vencidos / em risco no topo do card — o número grande é o mesmo `.stat-value` dos KPIs
+ * do Dashboard (vocabulário que a tela já tem, só aplicado ao SLA, o diferencial do produto). Cada
+ * total é um link pra fila filtrada; o fundo tinge no hover/foco como os cards de status.
+ */
+.sla-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.sla-total {
+  display: flex;
+  flex-direction: column;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--tk-radius-sm);
+  background-color: rgba(var(--tk-primary-rgb), 0.04);
+  color: var(--tk-text-secondary);
+}
+
+.sla-total:hover,
+.sla-total:focus-visible {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+}
+
+.sla-total:focus-visible,
+.critical-ticket-link:focus-visible {
+  outline: 2px solid var(--tk-primary);
+}
+
+.sla-total:focus-visible {
+  outline-offset: 2px;
+}
+
+
+.critical-ticket-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .critical-ticket-item + .critical-ticket-item {
-  margin-top: 0.65rem;
-  padding-top: 0.65rem;
   border-top: 1px solid var(--tk-border);
 }
 
+/* "Atribuir" ao lado da linha (fora do link): alvo de 44px, não encolhe quando o título é longo. */
+.critical-ticket-assign {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+}
+
+/*
+ * A linha inteira (título + setor/prazo) é o link: bloco com no mínimo 44px de altura, sangrando
+ * um pouco pras laterais pra o realce de hover não encostar no texto.
+ */
 .critical-ticket-link {
+  min-height: 2.75rem;
+  margin: 0 -0.5rem;
+  padding: 0.5rem;
+  border-radius: var(--tk-radius-sm);
   color: var(--tk-text-primary);
+}
+
+/* "Sem responsável" num alerta: o texto âmbar AA do sistema — pede alguém pra assumir. */
+.critical-ticket-unassigned {
+  color: var(--tk-warning-text);
+}
+
+.critical-ticket-title {
   font-weight: 500;
-  text-decoration: none;
+  text-underline-offset: 0.2em;
 }
 
 .critical-ticket-link:hover,
 .critical-ticket-link:focus-visible {
-  color: var(--tk-primary);
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.critical-ticket-link:hover .critical-ticket-title,
+.critical-ticket-link:focus-visible .critical-ticket-title {
+  color: var(--tk-primary-text);
   text-decoration: underline;
+}
+
+
+
+/*
+ * Momento focal do card (animate, 2026-10-27): quando um alerta vence com a tela aberta, a linha
+ * acende num vermelho suave e apaga em 1,6s (mesmo tempo de HIGHLIGHT_MS no .ts) — explica por que a
+ * etiqueta virou "Vencido". Só cor de fundo, sem deslocamento; com movimento reduzido não anima (a
+ * etiqueta e a cor do prazo já mudam sozinhas).
+ */
+@keyframes sla-just-crossed {
+  from { background-color: rgba(var(--tk-danger-rgb), 0.16); }
+  to { background-color: transparent; }
+}
+
+.critical-ticket-link.just-crossed {
+  animation: sla-just-crossed 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .critical-ticket-link.just-crossed {
+    animation: none;
+  }
 }

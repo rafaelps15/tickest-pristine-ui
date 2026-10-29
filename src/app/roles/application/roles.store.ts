@@ -7,14 +7,15 @@ import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
 import { RoleDataService } from '../infrastructure/role.data.service';
 import { PermissionDataService } from '../infrastructure/permission.data.service';
-import { extractErrorMessage } from '../../shared';
+import { extractErrorMessage, valueOf } from '../../shared';
 
-/** Store de roles: listagem, criação e atribuição de permissões (RBAC: Users -> Roles -> Permissions). */
+/**
+ * Store de roles: listagem e atribuição de permissões (RBAC: Users -> Roles -> Permissions). As
+ * funções são um catálogo fixo do back-end (identificadas pelo nome) — não há criar nem excluir.
+ */
 export const RolesStore = signalStore(
   { providedIn: 'root' },
   withState({
-    /** Erro de criação de role — exibido dentro do modal "Nova Função", não na página. */
-    createError: null as string | null,
     /** Erro de atribuição de permissões — exibido dentro do modal "Permissões", não na página. */
     assignPermissionsError: null as string | null,
     /** Erro ao carregar o catálogo de permissões (GET /permissions). */
@@ -32,23 +33,23 @@ export const RolesStore = signalStore(
   })),
   withComputed((store) => ({
     /** Roles carregadas (GET /roles), usadas tanto na tela de roles quanto no checklist de atribuição de usuários. */
-    roles: computed(() => store._listResource.value() ?? []),
+    roles: computed(() => valueOf(store._listResource) ?? []),
     /** Estado agregado da listagem de roles (dados, carregamento e erro de carregamento — não de mutação). */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._listResource.value() ?? ([] as Role[]),
+        data: valueOf(store._listResource) ?? ([] as Role[]),
         loading: store._listResource.isLoading(),
         error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar funções') : null
       };
     }),
     /** Catálogo de permissões disponíveis no sistema, com nome/descrição/grupo (GET /permissions). */
-    permissions: computed(() => store._permissionsResource.value() ?? []),
+    permissions: computed(() => valueOf(store._permissionsResource) ?? []),
     /** Estado agregado do catálogo de permissões (dados, carregamento e erro). */
     permissionsState: computed(() => {
       const resourceError = store._permissionsResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._permissionsResource.value() ?? ([] as Permission[]),
+        data: valueOf(store._permissionsResource) ?? ([] as Permission[]),
         loading: store._permissionsResource.isLoading(),
         error: store.permissionsLoadError() ?? (resourceError
           ? extractErrorMessage(resourceError, {}, 'Erro ao carregar permissões')
@@ -92,28 +93,9 @@ export const RolesStore = signalStore(
       store._permissionsResource.reload();
     },
 
-    /** Limpa o erro de criação — chamado ao abrir o modal "Nova Função", pra não mostrar o erro de uma tentativa anterior. */
-    clearCreateError(): void {
-      patchState(store, { createError: null });
-    },
-
     /** Limpa o erro de atribuição de permissões — chamado ao abrir o modal "Permissões" de outra role. */
     clearAssignPermissionsError(): void {
       patchState(store, { assignPermissionsError: null });
-    },
-
-    /** Cria uma nova role (POST /roles) e recarrega a listagem em caso de sucesso. */
-    create(name: string, onSuccess?: () => void): void {
-      store._roleDataService.create(name).subscribe({
-        next: () => {
-          patchState(store, { createError: null });
-          store._listResource.reload();
-          onSuccess?.();
-        },
-        error: (err: HttpErrorResponse) => {
-          patchState(store, { createError: extractErrorMessage(err, {}, 'Erro ao criar função') });
-        }
-      });
     },
 
     /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions) e recarrega a listagem em caso de sucesso. */

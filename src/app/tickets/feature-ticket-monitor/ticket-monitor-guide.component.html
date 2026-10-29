@@ -1,47 +1,19 @@
-<div class="card filters-card mb-3">
-  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
-          [attr.aria-expanded]="open()" aria-controls="ticketMonitorGuideBody" (click)="toggle()">
-    <span class="fw-bold">
-      <i class="bx bx-info-circle me-2"></i>Guia da Tela
-    </span>
-    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
-  </button>
+<app-screen-guide storageKey="tickest.ticketMonitorGuide.open">
+  <app-guide-section title="Como ler a fila">
+    <p class="small text-muted mb-2"><strong>Padrão:</strong> a tela abre nos chamados ativos (aberto ou em andamento), com o prazo que vence primeiro no topo. "Todos os status" fica no filtro de Status.</p>
+    <p class="small text-muted mb-2"><strong>SLA e prazo:</strong> a etiqueta diz a situação e, pros ativos, quanto falta ("vence em 2h") ou há quanto passou ("venceu há 35 min"), pela hora do servidor. A data exata aparece ao parar o mouse em cima.</p>
+    <p class="small text-muted mb-2"><strong>Números do topo:</strong> seguem setor, prioridade, responsável e período de abertura; a busca, o Status, o SLA e o Aguardando valem só pra tabela. Clicar num deles mostra os ativos daquela situação.</p>
+    <p class="small text-muted mb-0"><strong>Aguardando:</strong> embaixo do status, de quem é a vez — do solicitante ou da equipe —, pela última mensagem.</p>
+  </app-guide-section>
 
-  @if (open()) {
-    <div id="ticketMonitorGuideBody" class="card-body pt-0">
-      <div class="guide-section">
-        <h6 class="guide-section-title">Prioridade</h6>
-        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0">
-          @for (priority of priorityOptions; track priority) {
-            <li>
-              <span class="badge" [ngClass]="priorityBadgeClass[priority]">{{ priorityLabels[priority] }}</span>
-            </li>
-          }
-        </ul>
-      </div>
-
-      <div class="guide-section">
-        <h6 class="guide-section-title">Status</h6>
-        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0">
-          @for (status of statusOptions; track status) {
-            <li>
-              <span class="badge" [ngClass]="statusBadgeClass[status]">{{ statusLabels[status] }}</span>
-            </li>
-          }
-        </ul>
-      </div>
-
-      <div class="guide-section mb-0">
-        <h6 class="guide-section-title">SLA</h6>
-        <ul class="list-unstyled mb-0">
-          @for (slaStatus of slaStatusOptions; track slaStatus) {
-            <li class="d-flex align-items-start gap-2 mb-2">
-              <span class="badge flex-shrink-0" [ngClass]="slaStatusBadgeClass[slaStatus]">{{ slaStatusLabels[slaStatus] }}</span>
-              <span class="small text-muted">{{ slaExplanations[slaStatus] }}</span>
-            </li>
-          }
-        </ul>
-      </div>
-    </div>
-  }
-</div>
+  <app-guide-section title="SLA">
+    <ul class="list-unstyled mb-0">
+      @for (slaStatus of slaStatusOptions; track slaStatus; let last = $last) {
+        <li class="d-flex align-items-start gap-2" [class.mb-2]="!last">
+          <span class="badge flex-shrink-0" [ngClass]="slaStatusBadgeClass[slaStatus]">{{ slaStatusLabels[slaStatus] }}</span>
+          <span class="small text-muted">{{ slaExplanations[slaStatus] }}</span>
+        </li>
+      }
+    </ul>
+  </app-guide-section>
+</app-screen-guide>

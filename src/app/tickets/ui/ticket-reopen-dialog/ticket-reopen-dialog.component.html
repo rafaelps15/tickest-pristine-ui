@@ -1,0 +1,34 @@
+<app-dialog title="Reabrir o chamado?" [subtitle]="ticketTitle()" closeLabel="Fechar sem reabrir" [busy]="saving()"
+            (closed)="closed.emit()">
+  <form dialogContent [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="modal-body">
+      @if (error()) {
+        <div class="alert alert-danger border-0 py-2 small" role="alert">{{ error() }}</div>
+      }
+
+      <p class="mb-3">O chamado volta para <strong>Aberto</strong> e um novo prazo de atendimento começa a contar — acompanhe na seção <strong>SLA</strong> do chamado.</p>
+
+      <label class="form-label" for="ticketReopenReason">Por que está reabrindo? <span class="text-muted fw-normal">(opcional)</span></label>
+      <textarea id="ticketReopenReason" data-dialog-focus class="form-control" rows="3" formControlName="reason"
+                [class.is-invalid]="form.controls.reason.invalid"
+                aria-describedby="ticketReopenReasonHint"></textarea>
+      @if (form.controls.reason.invalid) {
+        <div class="invalid-feedback">O motivo deve ter no máximo {{ maxLength }} caracteres.</div>
+      }
+      <div id="ticketReopenReasonHint" class="form-text d-flex justify-content-between gap-3">
+        <span>Vira uma mensagem no chamado, para quem atende entender o que faltou.</span>
+        <span class="text-nowrap">{{ form.controls.reason.value?.length ?? 0 }}/{{ maxLength }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" [disabled]="saving()" (click)="closed.emit()">Voltar</button>
+      <button type="submit" class="btn btn-primary" [disabled]="form.invalid || saving()">
+        @if (saving()) {
+          <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+        }
+        Reabrir chamado
+      </button>
+    </div>
+  </form>
+</app-dialog>

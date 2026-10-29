@@ -1,39 +1,40 @@
-<div class="card filters-card mb-3">
-  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
-          [attr.aria-expanded]="open()" aria-controls="userListGuideBody" (click)="toggle()">
-    <span class="fw-bold">
-      <i class="bx bx-info-circle me-2"></i>Guia da Tela
-    </span>
-    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
-  </button>
+<!--
+  Fechado até na 1ª visita (como Departamentos): aberto, empurrava a primeira linha da tabela pra
+  1086px num desktop 1366×768 (critique de 2026-10-28). Só o que a tela não diz sozinha.
+-->
+<app-screen-guide storageKey="tickest.userListGuide.open" [defaultOpen]="false">
+  <app-guide-section title="Status">
+    <ul class="list-unstyled mb-0">
+      <li class="d-flex align-items-start gap-2 mb-2">
+        <app-user-status-badge status="active" class="flex-shrink-0" />
+        <span class="small text-muted">Já criou a senha e entra no sistema normalmente.</span>
+      </li>
+      <li class="d-flex align-items-start gap-2 mb-2">
+        <app-user-status-badge status="pending" class="flex-shrink-0" />
+        <span class="small text-muted">Ainda não abriu o link do e-mail. O convite vale 72 horas; vencido, use "Reenviar convite" no ⋮ ou no painel.</span>
+      </li>
+      <li class="d-flex align-items-start gap-2 mb-0">
+        <app-user-status-badge status="inactive" class="flex-shrink-0" />
+        <span class="small text-muted">Login bloqueado. Pode ser reativado a qualquer momento.</span>
+      </li>
+    </ul>
+  </app-guide-section>
 
-  @if (open()) {
-    <div id="userListGuideBody" class="card-body pt-0">
-      <div class="guide-section mb-0">
-        <h6 class="guide-section-title">Status</h6>
-        <ul class="list-unstyled mb-0">
-          <li class="d-flex align-items-start gap-2 mb-2">
-            <span class="badge bg-label-success flex-shrink-0"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
-            <span class="small text-muted">Pode entrar no sistema normalmente.</span>
-          </li>
-          <li class="d-flex align-items-start gap-2 mb-0">
-            <span class="badge bg-label-secondary flex-shrink-0"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
-            <span class="small text-muted">Login bloqueado — pode ser reativado a qualquer momento.</span>
-          </li>
-        </ul>
-      </div>
+  <app-guide-section title="Funções">
+    <p class="small text-muted mb-0">
+      Badges em índigo; as funções são cadastradas na tela <strong>Funções</strong>.
+    </p>
+  </app-guide-section>
 
-      <p class="text-muted small mb-0 mt-3">
-        As funções (badges azuis) são cadastradas e geridas na tela <strong>Funções</strong> — não têm um conjunto fixo pra legendar aqui.
-      </p>
+  <app-guide-section title="Linha e seleção">
+    <p class="small text-muted mb-0">
+      O nome abre o painel com as informações e os atalhos daquela pessoa. O checkbox é só pra desativar várias de uma vez; a sua conta e quem já está inativo ficam de fora do lote.
+    </p>
+  </app-guide-section>
 
-      <p class="text-muted small mb-0 mt-3">
-        <strong>Clicar numa linha</strong> abre o painel de informações daquele usuário (só consulta). <strong>Marcar o checkbox</strong> é pra ação em lote (ex.: desativar vários de uma vez) — são seleções independentes, uma não afeta a outra.
-      </p>
-
-      <p class="text-muted small mb-0 mt-3">
-        O termo de busca não fica salvo no link (por privacidade) — recarregar a página limpa a busca, mas mantém os outros filtros.
-      </p>
-    </div>
-  }
-</div>
+  <app-guide-section title="Busca">
+    <p class="small text-muted mb-0">
+      O termo buscado não vai pro link (por privacidade): recarregar a página limpa a busca e mantém os outros filtros.
+    </p>
+  </app-guide-section>
+</app-screen-guide>

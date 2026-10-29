@@ -1,24 +1,12 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-      <div>
-        <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Início / Meus Tickets /</span> Novo Ticket</h4>
-        <p class="page-subtitle small mb-0">Descreva o problema e escolha o departamento e o setor responsável.</p>
-      </div>
-      <a routerLink="/tickets" class="btn btn-outline-secondary btn-sm">
-        <i class="bx bx-arrow-back me-1"></i> Voltar
-      </a>
-    </div>
-  </div>
-</div>
+<app-page-header title="Novo Chamado" subtitle="Descreva o problema e escolha o departamento e o setor responsável."
+                 [crumbs]="[{ label: 'Início', link: '/dashboard' }, { label: 'Meus Chamados', link: '/tickets' }]" />
+
+<app-ticket-create-guide />
 
 <div class="card shadow-sm border-0">
   <div class="card-body p-4 p-lg-5">
     <div class="max-w-700 mx-auto">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        @if (store.state().error) {
-          <div class="alert alert-danger border-0 shadow-sm mb-4">{{ store.state().error }}</div>
-        }
 
         <div class="row g-4">
           <div class="col-12">
@@ -52,15 +40,6 @@
               </div>
             }
             <div id="ticketDescriptionHint" class="form-text text-end">{{ form.controls.description.value?.length ?? 0 }}/500</div>
-          </div>
-
-          <div class="col-12 col-md-4">
-            <label class="form-label" for="ticketPriority">Prioridade</label>
-            <select id="ticketPriority" class="form-select" formControlName="priority">
-              @for (priority of priorities; track priority.value) {
-                <option [ngValue]="priority.value">{{ priority.label }}</option>
-              }
-            </select>
           </div>
 
           <div class="col-12 col-md-4">
@@ -100,16 +79,31 @@
               <div id="ticketSectorIdError" class="invalid-feedback">Selecione o setor.</div>
             }
           </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label" for="ticketPriority">Prioridade</label>
+            <select id="ticketPriority" class="form-select" formControlName="priority">
+              @for (priority of priorities; track priority.value) {
+                <option [ngValue]="priority.value">{{ priority.label }}</option>
+              }
+            </select>
+          </div>
         </div>
 
-        <div class="mt-5">
-          <button type="submit" class="btn btn-primary w-100" [disabled]="store.creating()">
+        <!-- Erro de envio logo acima do botão, onde o olho está ao clicar (DESIGN.md, Linguagem da interface). -->
+        @if (store.state().error) {
+          <div class="alert alert-danger border-0 shadow-sm mt-4 mb-0" role="alert">{{ store.state().error }}</div>
+        }
+
+        <div class="mt-5 d-flex justify-content-end flex-wrap gap-2">
+          <a routerLink="/tickets" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-primary" [disabled]="store.creating()">
             @if (store.creating()) {
               <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             } @else {
               <i class="bx bx-send me-1"></i>
             }
-            Abrir Ticket
+            Abrir Chamado
           </button>
         </div>
       </form>

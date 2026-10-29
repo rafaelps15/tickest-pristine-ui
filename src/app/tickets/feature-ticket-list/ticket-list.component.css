@@ -1,10 +1,3 @@
-.table th {
-  font-size: 0.8125rem;
-  text-transform: uppercase;
-  color: var(--tk-text-muted);
-  font-weight: 600;
-}
-
 /* Título do ticket é o link pro detalhe — cor de texto, sublinhado só no hover/foco. */
 .ticket-title {
   color: var(--tk-text-primary);
@@ -13,7 +6,7 @@
 
 .ticket-title:hover,
 .ticket-title:focus-visible {
-  color: var(--tk-primary);
+  color: var(--tk-primary-text);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -33,5 +26,273 @@
     width: 0;
     min-width: 100%;
     max-width: none;
+    /* No toque não existe o tooltip do `title`: mostra até 2 linhas da descrição em vez de 1 cortada. */
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
+
+  /*
+   * Card inteiro tocável: o link do título se estica sobre o card (o `tr` já é `position: relative`
+   * no `.table-stack`), e o "⋮" fica por cima dele. Só no celular — no desktop a linha continua com
+   * o título como único alvo, sem roubar o clique de seleção de texto.
+   */
+  .ticket-title::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  /*
+   * As ações deixam o canto superior (onde ficava o "⋮") e vão pro rodapé do card, à esquerda, acima
+   * do link esticado do título. Sem o "⋮" no canto, o título não precisa mais reservar espaço à direita.
+   */
+  .table-stack td.table-stack-actions {
+    position: relative;
+    z-index: 2;
+    top: auto;
+    right: auto;
+    order: 5;
+    width: 100%;
+    padding-top: 0.5rem;
+  }
+
+  .table-stack td:first-child {
+    padding-right: 0;
+  }
+
+  .table-stack .row-actions-inline {
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Alvo de toque de 44px: o título esticado cobre o resto do card, e um toque que erra o botão abria o detalhe. */
+  .table-stack .row-actions-inline .btn {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+  }
+
+  /*
+   * Ordem do card: título → status → quem atende → prazo → atualizado. O status vem logo abaixo do
+   * título porque é a primeira coisa que quem abriu o chamado procura; no desktop a coluna segue a
+   * ordem do cabeçalho, com o atendimento antes (lido da esquerda pra direita junto do título).
+   */
+  .table-stack tr {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .table-stack td[data-label="Status"] {
+    order: 1;
+  }
+
+  .table-stack td[data-label="Atendimento"] {
+    order: 2;
+  }
+
+  .table-stack td[data-label="Prazo"] {
+    order: 3;
+  }
+
+  .table-stack td[data-label="Atualizado"] {
+    order: 4;
+  }
+
+  /*
+   * No card, responsável/setor e SLA/data ficam empilhados à direita do rótulo, como os outros
+   * valores. `.table-stack` na frente pra vencer as regras base de `.assignment`/`.due` abaixo.
+   */
+  .table-stack .assignment,
+  .table-stack .due {
+    align-items: flex-end;
+    text-align: end;
+  }
+
+  /*
+   * Seletor de grupo ocupa a largura toda, com alvo de toque de 44px. Cada botão cresce a partir do
+   * próprio texto (não em terços iguais), pra "Em aberto 9" não quebrar em duas linhas ao lado de "Encerrados".
+   */
+  .status-group {
+    display: flex;
+    width: 100%;
+  }
+
+  .status-group .btn {
+    flex: 1 1 auto;
+    min-height: 2.75rem;
+    padding-inline: 0.5rem;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Atendimento: quem atende em destaque (é o que o solicitante procura), o setor logo abaixo, mais discreto. */
+.assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.assignment-person {
+  color: var(--tk-text-primary);
+}
+
+/* Sem responsável é um estado, não um alerta: neutro e em itálico, nunca na cor de erro. */
+.assignment-waiting {
+  color: var(--tk-text-secondary);
+  font-style: italic;
+}
+
+.assignment-sector {
+  color: var(--tk-text-muted);
+}
+
+/* Prazo: a situação do SLA lidera (dá pra ler sem decifrar a data); a data vem abaixo. */
+.due {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.due-date {
+  color: var(--tk-text-secondary);
+  white-space: nowrap;
+}
+
+/* Datas e horas em algarismos de largura fixa, pra colunas de tempo alinharem de linha em linha. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Estados vazios dentro da tabela: sem o recuo à direita que o `.table-stack` dá à 1ª célula no celular. */
+@media (max-width: 767.98px) {
+  .table-stack td.filtered-empty {
+    padding-right: 0;
+  }
+}
+
+/*
+ * Ao trocar de página ou recarregar depois de uma ação, mantém as linhas atuais e só esmaece — sem
+ * trocar a tabela por um spinner, o que destruía o "⋮" com o foco. Mesmo padrão do Monitor.
+ */
+.table {
+  transition: opacity 150ms ease;
+}
+
+.table.is-refreshing {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/*
+ * Estado vazio de primeiro uso: bloco centralizado na tabela, com a lista de passos alinhada à
+ * esquerda (centralizar texto de várias linhas atrapalha a leitura).
+ */
+.first-use-body {
+  max-width: 34rem;
+  margin: 0 auto;
+  text-align: center;
+  white-space: normal;
+}
+
+.first-use-icon {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--tk-primary);
+}
+
+.first-use-lead {
+  color: var(--tk-text-secondary);
+}
+
+.first-use-steps {
+  display: inline-block;
+  margin: 0;
+  padding-left: 1.25rem;
+  text-align: left;
+  color: var(--tk-text-primary);
+}
+
+.first-use-steps li + li {
+  margin-top: 0.25rem;
+}
+
+.first-use-departments {
+  color: var(--tk-text-muted);
+}
+
+/* No celular o primeiro uso ganha respiro próprio, sem o recuo à direita da 1ª célula do `.table-stack`. */
+@media (max-width: 767.98px) {
+  .table-stack td.first-use {
+    padding: 2rem 1rem;
+  }
+}
+
+/* Tempo restante pro dono cancelar, dentro do botão: menor e mais leve que o rótulo, na mesma cor (sem opacidade). */
+.cancel-hint {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Contagem do grupo no seletor ("Em aberto 3"): número menor, na cor do rótulo — opacidade derrubava o contraste. */
+.status-group-count {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Situação do prazo como texto com ícone: o tom muda só quando pede atenção, e o texto sempre diz. */
+.due-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--tk-text-primary);
+}
+
+.due-warning .due-label {
+  color: var(--tk-warning-text);
+  font-weight: 600;
+}
+
+.due-danger .due-label {
+  color: var(--tk-danger-text);
+  font-weight: 600;
+}
+
+/* "Cobrar no chamado" no atrasado: link secundário em índigo de texto, abaixo da data, sem competir com o "Atrasado". */
+.due-nudge {
+  color: var(--tk-primary-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* No celular fica acima do título esticado sobre o card (z-index 1) e ganha alvo de toque de 44px. */
+@media (max-width: 767.98px) {
+  .due-nudge {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
+/* Ações da linha à vista: botões pequenos lado a lado, à direita no desktop. */
+.row-actions-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.row-actions-inline .btn {
+  white-space: nowrap;
 }

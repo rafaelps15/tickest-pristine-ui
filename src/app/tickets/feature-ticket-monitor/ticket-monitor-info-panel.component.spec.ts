@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketDetail } from '../entities/ticket';
@@ -9,6 +10,9 @@ import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla } from '../entities/ticket-sla';
+
+/** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
+const FAR_FUTURE = '2999-01-01T00:00:00Z';
 
 describe('TicketMonitorInfoPanelComponent', () => {
   const sla: TicketSla = { serverNowUtc: '2026-01-01T12:00:00Z', plan: { policyId: null, policyName: '', policyVersion: 1, calendarId: '', calendarName: '', isLegacy: false }, objectives: [] };
@@ -20,12 +24,13 @@ describe('TicketMonitorInfoPanelComponent', () => {
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
 
-  let quickInfoStoreFake: { ticket: ReturnType<typeof signal<TicketDetail | undefined>>; state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>> };
+  let quickInfoStoreFake: { ticket: ReturnType<typeof signal<TicketDetail | undefined>>; state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>; reload: jasmine.Spy };
 
   beforeEach(async () => {
     quickInfoStoreFake = {
       ticket: signal<TicketDetail | undefined>(undefined),
-      state: signal({ loading: false, error: null as string | null })
+      state: signal({ loading: false, error: null as string | null }),
+      reload: jasmine.createSpy('reload')
     };
 
     await TestBed.configureTestingModule({
@@ -44,6 +49,59 @@ describe('TicketMonitorInfoPanelComponent', () => {
     return fixture;
   }
 
+  it('é uma região rotulada pelo título do chamado fora do modo modal, e vira diálogo modal no overlay', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const panel = fixture.nativeElement.querySelector('.info-panel') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('region');
+    expect(panel.hasAttribute('aria-modal')).toBeFalse();
+
+    fixture.componentRef.setInput('modal', true);
+    await fixture.whenStable();
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('no modo overlay, move o foco pro título ao abrir, mas não o rouba quando a lista recarrega o mesmo chamado', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const title = fixture.nativeElement.querySelector('#ticketInfoPanelTitle') as HTMLElement;
+    expect(document.activeElement).toBe(title);
+
+    const searchInput = document.createElement('input');
+    document.body.appendChild(searchInput);
+    searchInput.focus();
+    fixture.componentRef.setInput('ticket', { ...ticket });
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(searchInput);
+
+    searchInput.remove();
+    fixture.nativeElement.remove();
+  });
+
+  it('no modo modal, Tab no último controle volta pro primeiro e Shift+Tab no primeiro vai pro último', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const first = fixture.nativeElement.querySelector('button') as HTMLElement;
+    const last = fixture.nativeElement.querySelector('a[href]') as HTMLElement;
+
+    last.focus();
+    last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(last);
+
+    fixture.nativeElement.remove();
+  });
+
   it('renderiza os campos instantâneos recebidos por @Input, sem esperar nenhuma busca', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
@@ -59,7 +117,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(text).toContain('No prazo');
   });
 
-  it('mostra o nome do atendente quando o ticket já tem um responsável', async () => {
+  it('mostra o nome do atendente quando o chamado já tem um responsável', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('ticket', { ...ticket, assignedToUserId: 'u2', assignedToName: 'Carlos Souza' });
     await fixture.whenStable();
@@ -67,7 +125,22 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Carlos Souza');
   });
 
-  it('mostra a data de resolução só quando o ticket já foi resolvido', async () => {
+  it('mostra o prazo relativo recebido da tela, em vermelho e negrito quando atrasado, e de quem é a vez', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('ticket', { ...ticket, waitingOn: TicketAwaiting.Agent });
+    fixture.componentRef.setInput('dueRelative', 'venceu há 35 min');
+    fixture.componentRef.setInput('overdue', true);
+    await fixture.whenStable();
+
+    const relative = Array.from(fixture.nativeElement.querySelectorAll('dd span') as NodeListOf<HTMLElement>)
+      .find(span => span.textContent?.includes('venceu há 35 min'))!;
+    expect(relative.classList).toContain('text-danger');
+    expect(relative.classList).toContain('fw-semibold');
+    expect(fixture.nativeElement.textContent).toContain('Aguardando');
+    expect(fixture.nativeElement.textContent).toContain('Aguardando a equipe');
+  });
+
+  it('mostra a data de resolução só quando o chamado já foi resolvido', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Resolvido em');
@@ -89,7 +162,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     quickInfoStoreFake.ticket.set({
       id: 't1', title: ticket.title, description: 'Fumaça saindo da impressora.',
       priority: ticket.priority, status: ticket.status,
-      openedByUserId: 'u1', openedByName: 'Maria Silva', assignedToUserId: null, assignedToName: null,
+      openedByUserId: 'u1', openedByName: 'Maria Silva', canCancel: true, ownerCancelDeadlineUtc: FAR_FUTURE, assignedToUserId: null, assignedToName: null,
       sectorId: 's1', sectorName: 'Suporte',
       createdAtUtc: ticket.createdAtUtc, dueAtUtc: ticket.dueAtUtc, slaWarningAtUtc: ticket.slaWarningAtUtc,
       resolvedAtUtc: null, slaStatus: ticket.slaStatus, sla
@@ -101,11 +174,11 @@ describe('TicketMonitorInfoPanelComponent', () => {
   });
 
   it('mostra a mensagem de erro quando a busca da descrição falha', async () => {
-    quickInfoStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este ticket.' });
+    quickInfoStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este chamado.' });
     const fixture = createFixture();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este ticket.');
+    expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este chamado.');
   });
 
   it('emite "close" ao clicar no botão de fechar', async () => {
@@ -115,17 +188,70 @@ describe('TicketMonitorInfoPanelComponent', () => {
     const closeSpy = jasmine.createSpy('close');
     fixture.componentInstance.close.subscribe(closeSpy);
 
-    const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar painel de informações do ticket"]') as HTMLButtonElement;
+    const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar painel de informações do chamado"]') as HTMLButtonElement;
     closeButton.click();
 
     expect(closeSpy).toHaveBeenCalled();
   });
 
-  it('o link "Ver detalhes completos" leva pro ticket com ?from=monitor', async () => {
+  it('o link "Ver detalhes" leva pro chamado com ?from=monitor', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/tickets/t1?from=monitor');
+  });
+
+  it('mostra os atalhos de atribuição só quando a tela permite, e avisa a tela ao clicar', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).not.toContain('Atribuir a mim');
+
+    fixture.componentRef.setInput('canAssignToMe', true);
+    fixture.componentRef.setInput('canAssignResponsible', true);
+    await fixture.whenStable();
+
+    const assignToMe = jasmine.createSpy('assignToMe');
+    const assignResponsible = jasmine.createSpy('assignResponsible');
+    fixture.componentInstance.assignToMeClick.subscribe(assignToMe);
+    fixture.componentInstance.assignResponsibleClick.subscribe(assignResponsible);
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>);
+    buttons.find(button => button.textContent?.includes('Atribuir a mim'))!.click();
+    buttons.find(button => button.textContent?.includes('responsável'))!.click();
+
+    expect(assignToMe).toHaveBeenCalled();
+    expect(assignResponsible).toHaveBeenCalled();
+  });
+
+  it('mostra a situação de SLA que a linha mostra, quando a tela passa uma (o selo acompanha o relógio)', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('slaStatus', TicketSlaStatus.Breached);
+    await fixture.whenStable();
+
+    const badges = [...fixture.nativeElement.querySelectorAll('.badge')].map(b => (b as HTMLElement).textContent?.trim());
+    expect(badges).toContain('Atrasado');
+    expect(badges).not.toContain('No prazo');
+  });
+
+  it('não mostra data de prazo pra chamado sem SLA, como a tabela', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorInfoPanelComponent);
+    fixture.componentRef.setInput('ticket', { ...ticket, slaStatus: TicketSlaStatus.NotApplicable });
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.querySelector('.info-list').textContent as string;
+    expect(text).toContain('Sem prazo de SLA');
+    expect(text).not.toContain('02/01/2026');
+  });
+
+  it('com a descrição que falhou, mostra o erro em tom neutro e tenta de novo pelo store', async () => {
+    quickInfoStoreFake.state.set({ loading: false, error: 'Erro ao carregar os detalhes do chamado' });
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const error = [...fixture.nativeElement.querySelectorAll('p')].find(p => (p as HTMLElement).textContent?.includes('Erro ao carregar os detalhes')) as HTMLElement;
+    expect(error.classList).not.toContain('text-danger');
+    (error.querySelector('button') as HTMLButtonElement).click();
+
+    expect(quickInfoStoreFake.reload).toHaveBeenCalled();
   });
 });

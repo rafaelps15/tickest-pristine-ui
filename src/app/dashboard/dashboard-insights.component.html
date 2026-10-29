@@ -1,39 +1,113 @@
-<div class="card insights-card mb-3">
-  <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <i class="bx bx-error fs-5 text-warning" aria-hidden="true"></i>
-      <h6 class="fw-bold mb-0">Alertas de SLA</h6>
-    </div>
-    <p class="text-muted small mb-3">Chamados em risco mais próximos de vencer o prazo.</p>
-
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-2">
-        <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando alertas de SLA…</span></span>
+<!--
+  Card ao lado da Central de atenção, abaixo do gráfico (redesenho de 2026-10-28): resumo e lista
+  empilhados, ou lado a lado quando o card é largo; com a fila em dia, vira uma linha compacta.
+-->
+<section class="card insights-card" aria-labelledby="slaAlertsTitle">
+  <div class="card-body sla-band" [class.sla-band-quiet]="isQuiet()">
+    <div class="sla-band-summary">
+      <div class="d-flex align-items-start gap-2 sla-band-header">
+        <!-- Âmbar de alerta só quando há alerta; com a fila em dia (ou sem dados), um ícone neutro. -->
+        <i class="bx fs-5 mt-1" aria-hidden="true"
+           [class.bx-error]="criticalTickets().length > 0" [class.text-warning]="criticalTickets().length > 0"
+           [class.bx-time-five]="criticalTickets().length === 0" [class.text-muted]="criticalTickets().length === 0"></i>
+        <div>
+          <!-- tabindex="-1": recebe o foco quando a nova tentativa dá certo e o botão dela sai da tela. -->
+          <h2 #alertsTitle id="slaAlertsTitle" class="h5 card-title fw-bold mb-0" tabindex="-1">Alertas de SLA</h2>
+          <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
+          <!-- No escopo "Com filtros", os Alertas seguem os filtros (o mesmo recorte do topo); no da empresa, a empresa toda. -->
+          <p class="text-muted small mb-0">{{ filtered() ? 'Com os filtros' : 'Toda a empresa' }}@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
+        </div>
+        <!-- aria-disabled, não disabled: o foco não sai do botão enquanto recarrega. -->
+        <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
+                [attr.aria-disabled]="loading() || refreshing() || null" aria-label="Atualizar alertas de SLA"
+                (click)="loading() || refreshing() || refresh.emit()">
+          @if (refreshing()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          } @else {
+            <i class="bx bx-refresh fs-5" aria-hidden="true"></i>
+          }
+        </button>
       </div>
-    } @else if (error(); as errorMessage) {
-      <p class="text-danger small mb-0">{{ errorMessage }}</p>
-    } @else if (criticalTickets().length === 0) {
-      <p class="text-muted small mb-0">Nenhum chamado em risco de SLA agora.</p>
-    } @else {
-      <ul class="list-unstyled mb-0 critical-ticket-list">
-        @for (ticket of criticalTickets(); track ticket.id) {
-          <li class="critical-ticket-item">
-            <a [routerLink]="['/tickets', ticket.id]" class="critical-ticket-link">{{ ticket.title }}</a>
-            <div class="text-muted small">{{ ticket.sectorName }} — vence {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</div>
-          </li>
-        }
-      </ul>
+
+      <!-- O erro vem antes do carregamento: numa nova tentativa, o aviso fica (não pisca pro spinner nem é lido de novo) e o botão dele gira. -->
+      @if (error(); as errorMessage) {
+        <app-dashboard-notice kind="error" [text]="errorMessage" [busy]="loading()" (retry)="retryFromNotice()" />
+      } @else if (loading()) {
+        <div class="d-flex justify-content-center py-2">
+          <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando alertas de SLA…</span>
+        </div>
+      } @else if (criticalTickets().length === 0) {
+        <!-- Fila sob controle de verdade merece ser dita com clareza, não só "nada aqui". -->
+        <div class="d-flex align-items-center gap-3 sla-all-clear">
+          <span class="badge bg-label-success rounded-circle icon-tile" aria-hidden="true"><i class="bx bx-check fs-4"></i></span>
+          <div>
+            <p class="fw-semibold mb-0">Fila em dia</p>
+            <p class="text-muted small mb-0">Nenhum chamado atrasado ou em risco{{ filtered() ? ' com estes filtros' : '' }} agora.</p>
+          </div>
+        </div>
+      } @else if (!showTotals()) {
+        <!-- Só a lista: os totais estão no topo da tela e no grupo de SLA. A fila inteira, pelo prazo, fica a um clique. -->
+        <p class="small text-muted mb-1">Os mais perto do prazo primeiro.</p>
+        <a class="small fw-semibold tap-target" routerLink="/tickets/monitorar" [queryParams]="queueParams()">Ver a fila pelo prazo <i class="bx bx-chevron-right" aria-hidden="true"></i></a>
+      } @else {
+        <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
+        <div class="sla-totals">
+          <a class="sla-total sla-total-breached" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.Breached }"
+             [attr.aria-label]="shownBreachedCount() + ' chamados atrasados — ver na fila'">
+            <!-- Cor de alerta só quando há o que alertar: zero fica neutro. -->
+            <span class="stat-value fs-4" [class.text-danger]="shownBreachedCount() > 0">{{ shownBreachedCount() }}</span>
+            <span class="small">{{ shownBreachedCount() === 1 ? 'atrasado' : 'atrasados' }} <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
+          </a>
+          <a class="sla-total sla-total-at-risk" routerLink="/tickets/monitorar" [queryParams]="{ slaStatus: TicketSlaStatus.AtRisk }"
+             [attr.aria-label]="shownAtRiskCount() + ' chamados em risco — ver na fila'">
+            <span class="stat-value fs-4" [class.text-warning]="shownAtRiskCount() > 0">{{ shownAtRiskCount() }}</span>
+            <span class="small">em risco <i class="bx bx-chevron-right" aria-hidden="true"></i></span>
+          </a>
+        </div>
+        <!-- A definição no ponto de uso, não só no Guia (que no Dashboard começa fechado). -->
+        <p class="small text-muted mb-0 mt-2">Em risco: a partir de 75% do prazo, ainda dentro dele.</p>
+      }
+    </div>
+
+    @if (hasAlerts()) {
+      <div class="sla-band-list mt-3 mt-lg-0">
+        <ul class="list-unstyled mb-0 critical-ticket-list">
+          @for (item of items(); track item.ticket.id) {
+            <li class="critical-ticket-item">
+              <!-- A linha inteira é o link (alvo de toque ≥ 44px), não só o título de uma linha. -->
+              <a [routerLink]="['/tickets', item.ticket.id]" class="critical-ticket-link flex-grow-1" [class.just-crossed]="justCrossedIds().has(item.ticket.id)">
+                <span class="d-flex align-items-start justify-content-between gap-2">
+                  <span class="critical-ticket-title text-break">{{ item.ticket.title }}</span>
+                  @if (item.overdue) {
+                    <span class="badge bg-label-danger flex-shrink-0">Atrasado</span>
+                  } @else {
+                    <span class="badge bg-label-warning flex-shrink-0">Em risco</span>
+                  }
+                </span>
+                <!-- Prazo relativo vivo (anda a cada 30s); a data absoluta fica no `datetime`/title pra quem precisar. -->
+                <span class="d-block small" [class.text-danger]="item.overdue" [class.text-muted]="!item.overdue">
+                  {{ item.ticket.sectorName }} ·
+                  <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">{{ item.relative }}</time>
+                </span>
+                <!-- Quem atende: atrasado sem dono e atrasado em atendimento pedem ações opostas. -->
+                @if (item.ticket.assignedToName; as assignee) {
+                  <span class="d-block small text-muted">Com {{ assignee }}</span>
+                } @else {
+                  <span class="d-block small fw-semibold critical-ticket-unassigned">Sem responsável</span>
+                }
+              </a>
+              <!-- Dar um dono ali mesmo, sem abrir o chamado — fora do link (interativo dentro de link é inválido). -->
+              @if (!item.ticket.assignedToName && canAssign()) {
+                <button type="button" class="btn btn-sm btn-outline-primary critical-ticket-assign"
+                        [attr.aria-label]="'Atribuir responsável ao chamado ' + item.ticket.title" (click)="assign.emit(item.ticket)">
+                  Atribuir
+                </button>
+              }
+            </li>
+          }
+        </ul>
+        <div class="visually-hidden" aria-live="polite">{{ announcement() }}</div>
+      </div>
     }
   </div>
-</div>
-
-<div class="card insights-card h-100">
-  <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <i class="bx bx-pulse fs-5 text-muted" aria-hidden="true"></i>
-      <h6 class="fw-bold mb-0">Atividade Recente</h6>
-      <span class="badge bg-label-secondary ms-auto">Em breve</span>
-    </div>
-    <p class="text-muted small mb-0">Espaço reservado pra atividade da fila — ainda não conectado a dados reais: últimas atribuições e mudanças de status em toda a fila, de toda a empresa.</p>
-  </div>
-</div>
+</section>

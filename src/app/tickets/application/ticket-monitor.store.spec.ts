@@ -4,6 +4,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { TicketMonitorStore } from './ticket-monitor.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
+import { TicketAwaiting } from '../entities/ticket-awaiting';
+import { TicketDashboardOverview } from '../entities/ticket-dashboard';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -22,6 +24,13 @@ describe('TicketMonitorStore', () => {
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
   const slaSummary: TicketSlaSummary = { activeCount: 10, onTimeCount: 6, atRiskCount: 3, breachedCount: 1, serverNowUtc: '2026-01-01T12:00:00Z' };
+  /** O agregado da operação que gera o resumo acima (ativos = backlog; no prazo, em risco e atrasados do SLA). */
+  const overview: TicketDashboardOverview = {
+    serverNowUtc: '2026-01-01T12:00:00Z',
+    volume: { totalCount: 30, openCount: 4, inProgressCount: 6, resolvedCount: 15, closedCount: 5, canceledCount: 0, backlogCount: 10 },
+    sla: { onTimeCount: 6, atRiskCount: 3, breachedCount: 1, metCount: 12, missedCount: 3, notApplicableCount: 0 },
+    attention: { breachedCount: 1, criticalCount: 0, unassignedCount: 2 }
+  };
 
   function pageOf(items: TicketMonitorItem[], page = 1, totalCount = items.length, pageSize = 20): PagedResponse<TicketMonitorItem> {
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -30,7 +39,7 @@ describe('TicketMonitorStore', () => {
 
   const candidate: UserSummary = {
     id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null
+    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   let store: InstanceType<typeof TicketMonitorStore>;
@@ -38,9 +47,9 @@ describe('TicketMonitorStore', () => {
   let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getSlaSummary', 'assignTicket']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getOverview', 'assignTicket']);
     dataService.getAll.and.returnValue(of(pageOf([ticket])));
-    dataService.getSlaSummary.and.returnValue(of(slaSummary));
+    dataService.getOverview.and.returnValue(of(overview));
     userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
     userDataService.getAll.and.returnValue(of({
       items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
@@ -57,14 +66,16 @@ describe('TicketMonitorStore', () => {
     store = TestBed.inject(TicketMonitorStore);
   });
 
-  it('carrega a primeira página de tickets e o resumo de SLA com os filtros padrão', async () => {
+  it('carrega a primeira página de chamados e o resumo de SLA com os filtros padrão', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledWith({ sort: TicketSortOrder.Newest, page: 1, pageSize: 20 });
-    expect(dataService.getSlaSummary).toHaveBeenCalledWith(undefined);
+    expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
+    expect(dataService.getOverview).toHaveBeenCalledWith({
+      sectorIds: undefined, priority: undefined, unassignedOnly: undefined, assignedToUserId: undefined, createdFrom: undefined, createdTo: undefined
+    });
     expect(store.tickets()).toEqual([ticket]);
     expect(store.total()).toBe(1);
-    expect(store.slaSummary()).toEqual(slaSummary);
+    expect(store.slaSummary()).toEqual(jasmine.objectContaining(slaSummary));
   });
 
   it('expõe a mensagem de erro quando a listagem falhar', async () => {
@@ -73,23 +84,23 @@ describe('TicketMonitorStore', () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Você não tem permissão para monitorar os tickets do sistema.');
+    expect(store.listState().error).toBe('Você não tem permissão para monitorar os chamados do sistema.');
   });
 
   it('expõe a mensagem de erro quando o resumo de SLA falhar, e recarrega ao chamar reloadSlaSummary', async () => {
-    dataService.getSlaSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.slaSummaryState().error).toBe('Erro ao carregar o resumo de SLA');
 
-    dataService.getSlaSummary.calls.reset();
-    dataService.getSlaSummary.and.returnValue(of(slaSummary));
+    dataService.getOverview.calls.reset();
+    dataService.getOverview.and.returnValue(of(overview));
     store.reloadSlaSummary();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getSlaSummary).toHaveBeenCalled();
+    expect(dataService.getOverview).toHaveBeenCalled();
     expect(store.slaSummaryState().error).toBeNull();
   });
 
@@ -123,14 +134,43 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ priority: TicketPriority.Urgent }));
   });
 
-  it('filtra por setor e refaz o resumo de SLA só para esse setor', async () => {
+  it('os números do topo seguem setores (vários), prioridade, responsável e período, como a tabela', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.setSectorId('s1');
+    store.setSectorIds(['s1', 's2']);
+    store.setPriority(TicketPriority.Urgent);
+    store.setAssignedToUserId('u2');
+    store.setCreatedRange('2026-10-01', '2026-10-28');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorId: 's1' }));
-    expect(dataService.getSlaSummary).toHaveBeenCalledWith('s1');
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
+    expect(dataService.getOverview).toHaveBeenCalledWith({
+      sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, unassignedOnly: undefined, assignedToUserId: 'u2',
+      createdFrom: '2026-10-01', createdTo: '2026-10-28'
+    });
+  });
+
+  it('a busca, o SLA e o Aguardando valem só pra tabela: não refazem os números do topo', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+    const calls = dataService.getOverview.calls.count();
+
+    store.setSearch('impressora');
+    store.setSlaStatus(TicketSlaStatus.Breached);
+    store.setAwaiting(TicketAwaiting.Agent);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getOverview.calls.count()).toBe(calls);
+  });
+
+  it('filtra pelo período de abertura e por "aguardando", voltando pra página 1', async () => {
+    store.goToPage(3);
+    store.setCreatedRange('2026-10-01', '2026-10-28');
+    store.setAwaiting(TicketAwaiting.Agent);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({
+      createdFrom: '2026-10-01', createdTo: '2026-10-28', awaiting: TicketAwaiting.Agent, page: 1
+    }));
   });
 
   it('filtra por situação de SLA', async () => {
@@ -158,6 +198,15 @@ describe('TicketMonitorStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ unassignedOnly: true, page: 1 }));
+  });
+
+  it('filtra pelos chamados de um responsável, desligando "só sem responsável" (e vice-versa)', () => {
+    store.setUnassignedOnly(true);
+    store.setAssignedToUserId('u1');
+    expect(store.filters()).toEqual(jasmine.objectContaining({ assignedToUserId: 'u1', unassignedOnly: undefined, page: 1 }));
+
+    store.setUnassignedOnly(true);
+    expect(store.filters()).toEqual(jasmine.objectContaining({ assignedToUserId: undefined, unassignedOnly: true }));
   });
 
   it('muda a ordenação', async () => {
@@ -203,7 +252,7 @@ describe('TicketMonitorStore', () => {
     expect(store.assigningToMeIds()).toEqual([]);
   });
 
-  it('marca só o ticket em questão como "atribuindo", sem afetar outros, enquanto a atribuição está em voo', async () => {
+  it('marca só o chamado em questão como "atribuindo", sem afetar outros, enquanto a atribuição está em voo', async () => {
     let resolveAssign!: () => void;
     dataService.assignTicket.and.returnValue(new Observable<void>(subscriber => {
       resolveAssign = () => { subscriber.next(); subscriber.complete(); };
@@ -301,7 +350,7 @@ describe('TicketMonitorStore', () => {
     store.assignResponsible('t1', 'u2');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.mutationError()).toBe('Ticket ou usuário não encontrado.');
+    expect(store.mutationError()).toBe('Chamado ou usuário não encontrado.');
     expect(store.assigningResponsible()).toBeFalse();
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
@@ -314,6 +363,27 @@ describe('TicketMonitorStore', () => {
     store.clearFilters();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.getAll).toHaveBeenCalledWith({ sort: TicketSortOrder.Newest, page: 1, pageSize: 20 });
+    expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
+  });
+
+  it('marca a hora em que a lista chegou ("Atualizado às"), e nenhuma antes da primeira carga', async () => {
+    expect(store.listLoadedAtMs()).toBeNull();
+    const before = Date.now();
+
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.listLoadedAtMs()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('ao limpar os filtros, mantém o setor (escopo da tela) e o "Por página"', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+    store.setSectorIds(['s1']);
+    store.setPageSize(50);
+    store.setStatus(TicketStatus.Open);
+
+    store.clearFilters();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 50, sectorIds: ['s1'] });
   });
 });

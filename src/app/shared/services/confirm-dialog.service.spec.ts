@@ -35,6 +35,24 @@ describe('ConfirmDialogService', () => {
     expect(result).toBeFalse();
   });
 
+  it('deve responder false ao pedido anterior quando outro é aberto antes dele ser resolvido', () => {
+    let first: boolean | undefined;
+    let firstCompleted = false;
+    service.confirm({ title: 'Primeiro', message: '...' }).subscribe({
+      next: value => first = value,
+      complete: () => firstCompleted = true
+    });
+
+    let second: boolean | undefined;
+    service.confirm({ title: 'Segundo', message: '...' }).subscribe(value => second = value);
+    service.resolve(true);
+
+    expect(first).toBeFalse();
+    expect(firstCompleted).toBeTrue();
+    expect(second).toBeTrue();
+    expect(service.options()).toBeNull();
+  });
+
   it('deve suportar um novo pedido de confirmação depois do anterior ser resolvido', () => {
     service.confirm({ title: 'Primeiro', message: '...' }).subscribe();
     service.resolve(true);

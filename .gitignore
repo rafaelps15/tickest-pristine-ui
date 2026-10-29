@@ -40,3 +40,6 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Estado de execução do servidor do /impeccable live (porta/pid), não é artefato do projeto
+.impeccable/live/

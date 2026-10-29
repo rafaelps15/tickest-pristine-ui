@@ -1,13 +1,58 @@
-/* Mesma linguagem visual do Guia da Tela: seções separadas por um fio, título em versalete discreto. */
-.insights-section + .insights-section {
-  margin-top: 0.85rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--tk-border);
+/*
+ * Avisos do Resumo como chips de filtro: pílula com ícone, contagem e o problema, alvo de 44px.
+ * "Sem setor" em âmbar (o único estado que tira o departamento da abertura de chamados); "sem
+ * responsável" neutro. Pressionado = tingido e com borda da cor do estado, o mesmo vocabulário dos
+ * cards de status do Monitorar.
+ */
+.insights-filters-label {
+  color: var(--tk-text-secondary);
 }
 
-.insights-stat {
-  font-size: 1.75rem;
-  font-weight: 600;
+.insights-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--tk-border);
+  border-radius: 999px;
+  background: var(--tk-surface);
   color: var(--tk-text-primary);
-  line-height: 1.2;
+  font-size: 0.875rem;
+  transition: background-color var(--tk-transition), border-color var(--tk-transition);
+}
+
+.insights-chip-count {
+  font-weight: 700;
+}
+
+.insights-chip:hover,
+.insights-chip:focus-visible {
+  background-color: rgba(var(--tk-primary-rgb), 0.06);
+}
+
+.insights-chip:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+.insights-chip.active {
+  background-color: rgba(var(--tk-primary-rgb), 0.1);
+  border-color: var(--tk-primary);
+}
+
+.insights-chip-warning .bx {
+  color: var(--tk-warning-text);
+}
+
+/* O mesmo fundo âmbar do .bg-label-warning; o token já muda no tema escuro. */
+.insights-chip-warning.active {
+  background-color: var(--tk-warning-soft-bg);
+  border-color: var(--tk-warning-text);
+}
+
+/* Totais na linha de apoio do Resumo: o número em peso forte, o resto discreto. */
+.insights-total {
+  color: var(--tk-text-primary);
+  font-weight: 600;
 }

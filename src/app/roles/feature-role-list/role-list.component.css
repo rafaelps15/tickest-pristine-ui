@@ -1,60 +1,99 @@
-.table th {
-  font-size: 0.8125rem;
-  text-transform: uppercase;
-  color: var(--tk-text-muted);
-  font-weight: 600;
+/*
+ * Recarga com a lista já na tela (depois de salvar permissões, "Tentar novamente"): mantém as
+ * linhas e só esmaece, em vez de trocar a tabela por um spinner — mesmo padrão de Usuários.
+ */
+.table {
+  transition: opacity 150ms ease;
 }
 
-/* Seletor de cor por função (prévia local, ver shared/utils/role-colors.util.ts): círculo pequeno, sem a borda quadrada padrão do <input type="color">. */
-.role-color-input {
-  width: 1.5rem;
-  height: 1.5rem;
-  padding: 0;
-  border: 1px solid var(--tk-border);
-  border-radius: 50%;
-  cursor: pointer;
-  flex-shrink: 0;
+.table.is-refreshing {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
-.role-color-input::-webkit-color-swatch-wrapper {
-  padding: 0;
-  border-radius: 50%;
-}
-
-.role-color-input::-webkit-color-swatch {
-  border: none;
-  border-radius: 50%;
-}
-
-.role-color-input::-moz-color-swatch {
-  border: none;
-  border-radius: 50%;
+/* Nome, amostra de cor e badges de estado numa linha só, quebrando juntos no celular. */
+.role-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  min-width: 0;
 }
 
 /*
- * Trilhas laterais, mesma mecânica do Monitorar Tickets (ver ticket-monitor.component.css) — só
- * escapam do fluxo normal numa janela realmente larga (≥1900px). O Resumo tem dado real (não é
- * "Em breve"), então fica sempre visível no fluxo normal por padrão, igual o Guia — nunca some
- * abaixo de 1900px.
+ * Falha de leitura: neutra (texto secundário + "Tentar novamente" contornado), nunca o vermelho,
+ * que fica pro risco operacional (DESIGN.md, "Falha técnica é neutra").
  */
-@media (min-width: 1900px) {
-  .guide-rail {
-    position: fixed;
-    top: 100px;
-    left: 268px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
+.role-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--tk-radius-md);
+  background-color: var(--tk-surface);
+  box-shadow: var(--tk-shadow-sm);
+  color: var(--tk-text-secondary);
+}
 
-  .insights-rail {
-    position: fixed;
-    top: 100px;
-    right: 8px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
+.role-notice > span {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.role-notice > .bx {
+  font-size: 1.25rem;
+}
+
+.role-notice-inline {
+  margin-bottom: 0;
+  box-shadow: none;
+  padding-inline: 0;
+}
+
+/* Grupo de permissões do diálogo: título do grupo e "Todas" na mesma linha. */
+.permission-group {
+  margin-top: 1.25rem;
+}
+
+.permission-group > legend {
+  float: left;
+  width: auto;
+  margin: 0 1rem 0.5rem 0;
+  padding: 0;
+  line-height: 1.75rem;
+}
+
+.permission-group-all {
+  float: right;
+  margin-bottom: 0.5rem;
+  min-height: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.permission-group-items {
+  clear: both;
+}
+
+/* Cada opção com alvo de toque confortável e um realce índigo leve quando difere do que está salvo. */
+.permission-option {
+  margin: 0;
+  padding: 0.5rem 0.5rem 0.5rem 2rem;
+  border-radius: var(--tk-radius-sm);
+  min-height: 2.75rem;
+  transition: background-color 150ms ease;
+}
+
+.permission-option.is-changed {
+  background-color: rgba(var(--tk-primary-rgb), 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table,
+  .permission-option {
+    transition: none;
   }
 }

@@ -6,6 +6,7 @@ import { CreateUserData } from '../entities/create-user-data';
 import { AccessTokens } from '../entities/access-tokens';
 import { CurrentUser } from '../entities/current-user';
 import { ChangeRequiredPasswordData } from '../entities/change-required-password-data';
+import { ActivateAccountData } from '../entities/activate-account-data';
 import { environment } from '../../../environments/environment';
 
 /** Acesso HTTP aos endpoints de autenticação/identidade (login, registro, renovação de token). */
@@ -24,7 +25,12 @@ export class AuthDataService {
     return this.http.post<AccessTokens>(`${this.apiUrl}/login/new-password`, data);
   }
 
-  /** Registra um novo usuário — único caminho de criação exposto pelo back-end (POST /users/register). */
+  /** Ativa a conta de quem foi convidado, definindo a própria senha; não abre sessão (POST /users/activation, anônima). */
+  activateAccount(data: ActivateAccountData): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/activation`, data);
+  }
+
+  /** Registra um novo usuário sem senha: o back-end envia o convite por e-mail pra pessoa definir a dela (POST /users/register). */
   register(data: CreateUserData): Observable<string> {
     return this.http.post<string>(`${this.apiUrl}/register`, data);
   }

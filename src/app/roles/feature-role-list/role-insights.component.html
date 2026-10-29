@@ -1,22 +1,14 @@
-<div class="card insights-card h-100">
-  <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
-      <i class="bx bx-bar-chart-alt-2 fs-5 text-muted" aria-hidden="true"></i>
-      <h6 class="fw-bold mb-0">Resumo</h6>
-    </div>
-
+<app-summary-card [loading]="loading()" [failed]="failed()">
+  @if (rolesWithoutPermissions() > 0) {
+    <!-- O número grande fica pro que pede ação: função que não libera nada pra quem a tem. -->
     <div class="insights-section">
-      <div class="insights-stat">{{ roles().length }}</div>
-      <p class="text-muted small mb-0">{{ roles().length === 1 ? 'função cadastrada' : 'funções cadastradas' }}</p>
+      <div class="insights-stat">{{ rolesWithoutPermissions() }}</div>
+      <p class="text-muted small mb-0">{{ rolesWithoutPermissions() === 1 ? 'função sem nenhuma permissão — não libera nada pra quem a tem' : 'funções sem nenhuma permissão — não liberam nada pra quem as tem' }}</p>
     </div>
-
-    <div class="insights-section mb-0">
-      @if (rolesWithoutPermissions() === 0) {
-        <p class="text-muted small mb-0"><i class="bx bx-check text-success me-1"></i>Todas as funções têm pelo menos uma permissão atribuída.</p>
-      } @else {
-        <div class="insights-stat">{{ rolesWithoutPermissions() }}</div>
-        <p class="text-muted small mb-0">{{ rolesWithoutPermissions() === 1 ? 'função sem nenhuma permissão atribuída' : 'funções sem nenhuma permissão atribuída' }}</p>
-      }
-    </div>
+  }
+  <div class="insights-section mb-0">
+    <p class="text-muted small mb-0">
+      {{ roles().length }} {{ roles().length === 1 ? 'função no sistema' : 'funções no sistema' }}@if (roles().length > 0 && rolesWithoutPermissions() === 0) {<span> · <i class="bx bx-check text-success" aria-hidden="true"></i> todas com pelo menos uma permissão</span>}.
+    </p>
   </div>
-</div>
+</app-summary-card>

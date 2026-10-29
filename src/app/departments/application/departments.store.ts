@@ -1,13 +1,13 @@
-import { signalStore, withState, withProps, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { signalStore, withState, withProps, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 import { Department, DepartmentData, DepartmentDetail } from '../entities/department';
 import { CreateSectorData, UpdateSectorData } from '../entities/sector';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
-import { extractErrorMessage } from '../../shared';
+import { extractErrorMessage, valueOf } from '../../shared';
 import { UserDataService, UserSummary } from '../../users';
 
 /**
@@ -18,32 +18,52 @@ import { UserDataService, UserSummary } from '../../users';
 export const DepartmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Falha da última criação/atualização de departamento ou setor — mostrada só dentro do diálogo. */
     mutationError: null as string | null,
     /** Em voo uma criação/atualização/exclusão de departamento ou setor — evita duplo submit. */
     mutating: false,
+    /** Id do departamento ou setor sendo excluído agora (um por vez — evita o clique duplo), ou `null`. */
+    deletingId: null as string | null,
+    /**
+     * Falha da última exclusão, com o id do departamento ou setor: a tela mostra no card dele, perto de
+     * onde a ação partiu, em vez do alerta da página.
+     */
+    deleteError: null as { targetId: string; message: string } | null,
     /** Candidatos a responsável encontrados na busca do formulário de departamento. */
     responsibleCandidates: [] as UserSummary[],
+    /** Em voo uma busca de candidatos a responsável. */
     searchingResponsible: false,
-    responsibleSearchError: null as string | null
+    /** Falha da última busca de candidatos a responsável, ou `null`. */
+    responsibleSearchError: null as string | null,
+    /**
+     * Termo da última busca de responsável já respondida: enquanto ele difere do que está digitado, a
+     * tela trata como "buscando" — senão o "Nenhum usuário encontrado" piscava durante o debounce.
+     */
+    responsibleSearchTerm: null as string | null
   }),
   withProps(() => ({
     _departmentDataService: inject(DepartmentDataService),
     _sectorDataService: inject(SectorDataService),
-    _userDataService: inject(UserDataService)
+    _userDataService: inject(UserDataService),
+    /** Termos da busca de responsável; cada termo novo cancela a requisição anterior (`switchMap`). */
+    _responsibleSearch: new Subject<string>()
   })),
   withProps((store) => ({
     _listResource: rxResource({ stream: () => store._departmentDataService.getAll() })
   })),
   withComputed((store) => ({
-    departments: computed(() => store._listResource.value() ?? []),
+    /** Departamentos carregados, já com os setores (vazio enquanto carrega ou se a carga falhou). */
+    departments: computed(() => valueOf(store._listResource) ?? ([] as Department[])),
+    /**
+     * Estado da carga da listagem. O erro é só o da leitura: falha de salvar fica no diálogo
+     * ({@link mutationError}) e de excluir no card ({@link deleteError}) — antes o erro de salvar
+     * entrava aqui e a tela dizia que a lista não tinha carregado.
+     */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._listResource.value() ?? ([] as Department[]),
         loading: store._listResource.isLoading(),
-        error: store.mutationError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar departamentos')
-          : null)
+        error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar departamentos') : null
       };
     })
   })),
@@ -54,16 +74,19 @@ export const DepartmentsStore = signalStore(
       store._listResource.reload();
     },
 
-    /** Cria um novo departamento e recarrega a listagem em caso de sucesso (POST /departments). */
-    create(data: DepartmentData, onSuccess?: () => void): void {
+    /**
+     * Cria um novo departamento e recarrega a listagem em caso de sucesso (POST /departments). O
+     * `onSuccess` recebe o id criado — a tela oferece cadastrar o primeiro setor nele.
+     */
+    create(data: DepartmentData, onSuccess?: (departmentId: string) => void): void {
       patchState(store, { mutating: true });
       store._departmentDataService.create(data).pipe(
         finalize(() => patchState(store, { mutating: false }))
       ).subscribe({
-        next: () => {
+        next: (departmentId) => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
-          onSuccess?.();
+          onSuccess?.(departmentId);
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar departamento') });
@@ -91,66 +114,78 @@ export const DepartmentsStore = signalStore(
     /**
      * Busca o detalhe de um departamento, incluindo o id do responsável (GET /departments/{id}) —
      * a listagem só traz o nome dele. Usado ao abrir o modal de edição, pra saber quem já está
-     * selecionado antes do admin trocar.
+     * selecionado antes do admin trocar. A falha vai pro `onError` (o modal mostra ali mesmo), não pro
+     * erro de mutação — senão apareceria também no alerta da página, atrás do modal. A mensagem é
+     * sempre a do modal (a da API, tipo "Falha no servidor", não diz o que ficou faltando), exceto sem
+     * conexão.
      */
-    getDepartmentDetail(departmentId: string, onLoaded: (detail: DepartmentDetail) => void): void {
+    getDepartmentDetail(departmentId: string, onLoaded: (detail: DepartmentDetail) => void, onError?: (message: string) => void): void {
       store._departmentDataService.getById(departmentId).subscribe({
         next: onLoaded,
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao carregar o departamento') });
+          onError?.(err.status === 0
+            ? extractErrorMessage(err)
+            : 'Não foi possível carregar o responsável atual.');
         }
       });
     },
 
-    /** Busca usuários ativos candidatos a responsável do departamento, pelo nome/sobrenome/e-mail (GET /users). */
+    /**
+     * Busca usuários ativos candidatos a responsável do departamento, pelo nome/sobrenome/e-mail (GET
+     * /users). Um termo novo cancela a busca anterior em voo — uma resposta antiga e lenta não
+     * sobrescreve mais a da busca atual.
+     */
     searchResponsibleCandidates(search: string): void {
       const trimmed = search.trim();
       if (!trimmed) {
-        patchState(store, { responsibleCandidates: [], searchingResponsible: false, responsibleSearchError: null });
-        return;
+        patchState(store, { responsibleCandidates: [], searchingResponsible: false, responsibleSearchError: null, responsibleSearchTerm: null });
+      } else {
+        patchState(store, { searchingResponsible: true, responsibleSearchError: null });
       }
-
-      patchState(store, { searchingResponsible: true, responsibleSearchError: null });
-
-      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
-        finalize(() => patchState(store, { searchingResponsible: false }))
-      ).subscribe({
-        next: (page) => patchState(store, { responsibleCandidates: page.items }),
-        error: (err: HttpErrorResponse) => patchState(store, {
-          responsibleCandidates: [],
-          responsibleSearchError: extractErrorMessage(err, {}, 'Erro ao buscar usuários')
-        })
-      });
+      store._responsibleSearch.next(trimmed);
     },
 
     /** Limpa a busca e os candidatos a responsável (ex.: ao fechar/reabrir o modal de departamento). */
     clearResponsibleSearch(): void {
-      patchState(store, { responsibleCandidates: [], responsibleSearchError: null });
+      store._responsibleSearch.next('');
+      patchState(store, { responsibleCandidates: [], searchingResponsible: false, responsibleSearchError: null, responsibleSearchTerm: null });
     },
 
-    /** Exclui um departamento e recarrega a listagem em caso de sucesso (DELETE /departments/{id}). */
-    delete(departmentId: string): void {
-      store._departmentDataService.delete(departmentId).subscribe({
+    /**
+     * Exclui um departamento e recarrega a listagem em caso de sucesso (DELETE /departments/{id}). Ignora
+     * o pedido se já há uma exclusão em voo; a falha vai pra {@link deleteError}, com o id do departamento,
+     * e avisa o `onError` (a tela devolve o foco pro card).
+     */
+    delete(departmentId: string, onSuccess?: () => void, onError?: () => void): void {
+      if (store.deletingId()) return;
+      patchState(store, { deletingId: departmentId, deleteError: null });
+
+      store._departmentDataService.delete(departmentId).pipe(
+        finalize(() => patchState(store, { deletingId: null }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
           store._listResource.reload();
+          onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir departamento') });
+          patchState(store, {
+            deleteError: { targetId: departmentId, message: extractErrorMessage(err, {}, 'Não foi possível excluir o departamento.') }
+          });
+          onError?.();
         }
       });
     },
 
     /** Cria um setor dentro de um departamento e recarrega a listagem em caso de sucesso (POST /sectors). */
-    createSector(data: CreateSectorData, onSuccess?: () => void): void {
+    createSector(data: CreateSectorData, onSuccess?: (sectorId: string) => void): void {
       patchState(store, { mutating: true });
       store._sectorDataService.create(data).pipe(
         finalize(() => patchState(store, { mutating: false }))
       ).subscribe({
-        next: () => {
+        next: (sectorId) => {
           patchState(store, { mutationError: null });
           store._listResource.reload();
-          onSuccess?.();
+          onSuccess?.(sectorId);
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar setor') });
@@ -175,15 +210,26 @@ export const DepartmentsStore = signalStore(
       });
     },
 
-    /** Exclui um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}). */
-    deleteSector(sectorId: string): void {
-      store._sectorDataService.delete(sectorId).subscribe({
+    /**
+     * Exclui um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}). Mesma
+     * guarda e mesmo destino de erro de {@link delete}, com o id do setor.
+     */
+    deleteSector(sectorId: string, onSuccess?: () => void, onError?: () => void): void {
+      if (store.deletingId()) return;
+      patchState(store, { deletingId: sectorId, deleteError: null });
+
+      store._sectorDataService.delete(sectorId).pipe(
+        finalize(() => patchState(store, { deletingId: null }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
           store._listResource.reload();
+          onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao excluir setor') });
+          patchState(store, {
+            deleteError: { targetId: sectorId, message: extractErrorMessage(err, {}, 'Não foi possível excluir o setor.') }
+          });
+          onError?.();
         }
       });
     },
@@ -191,6 +237,31 @@ export const DepartmentsStore = signalStore(
     /** Limpa o erro da última mutação (ex.: ao abrir um formulário novo). */
     clearMutationError(): void {
       patchState(store, { mutationError: null });
+    },
+
+    /** Fecha o aviso de falha da última exclusão. */
+    clearDeleteError(): void {
+      patchState(store, { deleteError: null });
     }
-  }))
+  })),
+  withHooks({
+    /** Liga a busca de responsável: um termo por vez, o vazio só cancela a anterior. */
+    onInit(store) {
+      store._responsibleSearch.pipe(
+        switchMap(term => !term ? EMPTY : store._userDataService.getAll({ status: 'Active', search: term, page: 1, pageSize: 8 }).pipe(
+          tap(page => patchState(store, { responsibleCandidates: page.items, searchingResponsible: false, responsibleSearchTerm: term })),
+          catchError((err: HttpErrorResponse) => {
+            patchState(store, {
+              responsibleCandidates: [],
+              searchingResponsible: false,
+              responsibleSearchTerm: term,
+              responsibleSearchError: extractErrorMessage(err, {}, 'Erro ao buscar usuários')
+            });
+            return EMPTY;
+          })
+        )),
+        takeUntilDestroyed()
+      ).subscribe();
+    }
+  })
 );

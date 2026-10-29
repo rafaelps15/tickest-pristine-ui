@@ -1,132 +1,137 @@
-.card-stats {
-    background-color: var(--tk-surface);
-    position: relative;
+/*
+ * Cabeçalho do Início mais justo que o das outras telas (1rem em vez de 1.5rem abaixo): a primeira
+ * dobra a 1366×650 precisa caber cabeçalho, indicadores e o gráfico inteiro.
+ */
+.dashboard-header.page-header {
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+/* KPIs -> gráfico com o mesmo espaço que separa os KPIs entre si (0.75rem): o grupo não se parte. */
+.kpi-row {
+    margin-bottom: 0.75rem;
+}
+
+/* Idade dos números + atualizar, alinhados às outras ações do cabeçalho. */
+.freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.freshness-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    /* Secundário, não "muted": o cabeçalho fica sobre o fundo da página, onde o muted não chega a 4,5:1. */
+    color: var(--tk-text-secondary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+/* No celular, a frase de falha ("… números de uma visita anterior") quebra linha em vez de passar da tela. */
+@media (max-width: 575.98px) {
+    .freshness {
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+
+    .freshness-label {
+        white-space: normal;
+    }
+}
+
+/* Falha ao atualizar: texto secundário (não é risco operacional, então nada de vermelho). */
+/* A falha se distingue pelo ícone e pelo peso, não por um cinza mais claro. */
+.freshness-failed {
+    font-weight: 600;
+}
+
+/* Nome na saudação: o índigo de texto (o --tk-primary puro não chega a 4,5:1). */
+.greeting-name {
+    color: var(--tk-primary-text);
+}
+
+.freshness-spinner {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-width: 0.15em;
+    color: var(--tk-text-muted);
+}
+
+/* Filtros da URL valendo pras listas: discretos, mas à vista, com "Limpar" ao lado. */
+.applied-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+    color: var(--tk-text-secondary);
+    font-size: 0.875rem;
+}
+
+.applied-filters .bx {
+    color: var(--tk-text-muted);
 }
 
 /*
- * Documentado em DESIGN.md (Cards/Containers): cards de estatística do dashboard sobem para uma
- * sombra maior e elevam 5px no hover — `.card` já tem a transition pronta em styles.css. Restrito
- * a `.card-stats-clickable` (não a `.card-stats` em geral): o card "Total de Tickets" nunca é
- * clicável, e os 3 cards de status só são pra quem tem o papel administrativo — elevar os outros
- * do mesmo jeito é afordância falsa (convida ao clique, não faz nada). Achado no critique de
- * 2026-10-24.
+ * Atalhos de Ações Rápidas como linhas discretas (quieter, 2026-10-27): sem caixa com borda, alvo
+ * de 44px, realce leve no hover — o botão "Novo Chamado" acima fica sendo a única ação primária.
  */
-.card-stats-clickable:hover {
-    box-shadow: var(--tk-shadow-md);
-    transform: translateY(-5px);
+.quick-links li + li {
+    border-top: 1px solid var(--tk-border);
 }
 
-/*
- * Cards de status com permissão tickets:manage: card inteiro clicável via .stretched-link (link
- * invisível cobrindo o card, idiom do Bootstrap) pra "Monitorar Tickets" já filtrado pelo mesmo
- * status — mesmo tingimento de fundo índigo do .card-stats-btn do Monitorar Tickets (que filtra
- * dentro da própria tela); aqui é navegação entre telas, por isso <a>, não <button>.
- */
-.card-stats-clickable .stretched-link {
+.quick-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    margin: 0 -0.5rem;
+    padding: 0.5rem;
+    border-radius: var(--tk-radius-sm);
+    color: var(--tk-text-primary);
+    text-decoration: none;
     transition: background-color var(--tk-transition);
 }
 
-.card-stats-clickable .stretched-link:hover,
-.card-stats-clickable .stretched-link:focus-visible {
+.quick-link:hover,
+.quick-link:focus-visible {
     background-color: rgba(var(--tk-primary-rgb), 0.06);
-    border-radius: inherit;
+    color: var(--tk-text-primary);
 }
 
-.card-stats-clickable .stretched-link:focus-visible {
+.quick-link:focus-visible {
     outline: 2px solid var(--tk-primary);
-    outline-offset: 2px;
+    outline-offset: 0;
 }
 
-.card-stats .badge.rounded {
-    width: 3rem;
-    height: 3rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--tk-radius-md) !important;
-}
 
-/*
- * Ícone colorido de cada item de Ações Rápidas — mesma linguagem visual do badge-ícone dos cards
- * de estatística (bg-label-*), só circular e menor, pra caber numa linha de lista em vez de um
- * card grande. Pedido do usuário em 2026-10-24 pra deixar a tela mais colorida além do gráfico;
- * reaproveita cores semânticas já existentes no design system (nunca inventa uma cor nova).
- */
-.quick-action-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.card-title {
-    color: var(--tk-text-secondary);
-    font-weight: 500;
-}
-
-/*
- * Alvo de toque mínimo (44x44px) pros controles compactos do cabeçalho do gráfico (agrupar por
- * dia/semana/mês, "Ver como tabela") — `.btn-group-sm`/`.btn-sm` do Bootstrap rendem ~30px de
- * altura, abaixo do recomendado pra dedo. Só aumenta em `pointer: coarse` (toque): no mouse/
- * trackpad o tamanho compacto original continua correto. Achado no audit de 2026-10-26.
- */
+/* Toque: os links e botões pequenos da tela ganham o alvo mínimo de 44px (WCAG 2.5.5). */
 @media (pointer: coarse) {
-  .card-header .btn-group-sm > .btn,
-  .card-header .btn-sm {
-    min-height: 44px;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-  }
+    .applied-filters .btn-link,
+    .see-all {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+    }
 }
 
-.chart-container {
-    width: 100%;
-    margin-top: 1rem;
+/* Escopo dos números, acima de tudo que ele muda (indicadores, gráfico, Central e SLA). */
+.scope-row {
+    display: flex;
+    margin-bottom: 0.75rem;
 }
 
-/*
- * Número do card de estatística — não é um h3 (não é título de seção; os títulos reais da tela
- * são h5, ex. "Tickets Abertos por Período"). Achado no audit de 2026-10-26: usar h3 aqui invertia
- * a hierarquia de heading (nível maior num dado, antes de títulos de seção com nível menor).
- */
-.stat-value {
-    font-weight: 600;
-    line-height: 1.2;
-}
+@media (pointer: coarse) {
+    .scope-row .btn {
+        min-height: 44px;
+    }
 
-.badge {
-    text-transform: uppercase;
-    font-weight: 500;
-}
-
-/*
- * Trilhas laterais, mesma mecânica e mesmas contas do Monitorar Tickets (ver
- * ticket-monitor.component.css) — só escapam do fluxo normal (pra fora do limite de 1320px do
- * `container-xxl`) numa janela realmente larga (≥1900px). Diferente do Monitor/Usuários, o
- * conteúdo da direita aqui tem dado real (Alertas de SLA) — não é só uma prévia "Em breve" — então
- * não pode ficar escondido abaixo de 1900px como lá; por isso fica no fluxo normal por padrão
- * (dentro da coluna de Ações Rápidas), igual o Guia já fica, em vez de some/aparece.
- */
-@media (min-width: 1900px) {
-  .guide-rail {
-    position: fixed;
-    top: 100px;
-    left: 268px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
-
-  .insights-rail {
-    position: fixed;
-    top: 100px;
-    right: 8px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
-  }
+    /* "Novo Chamado" (no cabeçalho compartilhado, mas declarado aqui) e o convite do primeiro chamado. */
+    .touch-cta {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
 }

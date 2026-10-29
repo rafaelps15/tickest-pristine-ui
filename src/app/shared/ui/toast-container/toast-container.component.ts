@@ -15,6 +15,9 @@ import { ToastService } from '../../services/toast.service';
         <div class="toast show align-items-center border-0 mb-2" [class]="'text-bg-' + toast.variant" role="status" aria-live="polite">
           <div class="d-flex">
             <div class="toast-body">{{ toast.message }}</div>
+            @if (toast.action; as action) {
+              <button type="button" class="btn btn-sm btn-light toast-action my-auto me-1 flex-shrink-0" (click)="toastService.runAction(toast.id)">{{ action.label }}</button>
+            }
             <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Fechar" (click)="toastService.dismiss(toast.id)"></button>
           </div>
         </div>

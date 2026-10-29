@@ -17,11 +17,21 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
     const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => req.url.includes(endpoint));
 
-    return next(withToken(req, session.token())).pipe(
+    const sentToken = session.token();
+
+    return next(withToken(req, sentToken)).pipe(
         catchError((error: HttpErrorResponse) => {
             if (error.status === 401 && !isAuthEndpoint) {
+                const currentToken = session.token();
+                if (currentToken && currentToken !== sentToken) {
+                    // A sessão já foi renovada enquanto esta requisição estava em voo: repete com o token novo,
+                    // sem uma segunda troca de refresh token.
+                    return next(withToken(req, currentToken));
+                }
                 // Access token expirado: tenta renovar via refresh token e repetir a requisição original.
                 return tokenRefresh.refresh().pipe(
+                    // Falha de rede ou do servidor na renovação não invalida a sessão: devolve o 401 original.
+                    catchError(() => throwError(() => error)),
                     switchMap(newToken => {
                         if (!newToken) {
                             session.clearSession();

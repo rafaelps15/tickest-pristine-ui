@@ -1,39 +1,180 @@
-/*
- * Lista de setores dentro do card do departamento: sem borda entre os itens — a sombra do card já
- * separa o departamento do resto da tela, e uma borda extra aqui deixava o aninhamento pesado,
- * contrariando a regra do DESIGN.md (sem borda, só sombra). Mais respiro vertical no lugar da
- * borda pra manter os setores distinguíveis.
- */
-.list-group-item {
-  border: none;
-  padding-top: 0.85rem;
-  padding-bottom: 0.85rem;
+/* Nome ou descrição sem espaço (URL, sigla longa) quebra dentro do card em vez de alargar a página. */
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
 }
 
 /*
- * Trilhas laterais, mesma mecânica do Monitorar Tickets (ver ticket-monitor.component.css) — só
- * escapam do fluxo normal numa janela realmente larga (≥1900px). O Resumo tem dado real (não é
- * "Em breve"), então fica sempre visível no fluxo normal por padrão, igual o Guia — nunca some
- * abaixo de 1900px.
+ * Setores numa grade interna do card do departamento: uma coluna no celular, duas ou três quando há
+ * largura. Sem borda entre os itens (a sombra do card já separa — regra do DESIGN.md); o respiro
+ * vertical e o alvo de 44px do "⋮" mantêm cada setor distinguível.
  */
-@media (min-width: 1900px) {
-  .guide-rail {
-    position: fixed;
-    top: 100px;
-    left: 268px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
+.sector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  column-gap: 2rem;
+}
+
+/*
+ * Títulos pelo topo (com descrições de tamanhos diferentes, `center` desalinhava os nomes da mesma
+ * linha) e o "⋮" colado no nome: no fim da coluna ele ficava a ~200px do setor que controla.
+ */
+.sector-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-height: 3.25rem;
+  padding: 0.375rem 0;
+}
+
+/* Setor que bateu com a busca: o mesmo tingido índigo de seleção, pra achar o que a busca encontrou. */
+.sector-match .sector-name {
+  margin-inline: -0.125rem;
+  padding-inline: 0.125rem;
+  border-radius: 0.25rem;
+  background-color: rgba(var(--tk-primary-rgb), 0.12);
+}
+
+/* Departamento sem setor: o aviso usa o âmbar AA do sistema — é o estado que pede ação. */
+.sector-empty {
+  color: var(--tk-warning-text);
+}
+
+/* O badge dentro da linha `.small` encolheria duas vezes (0,75em de 0,875rem): tamanho do badge padrão. */
+.department-meta .badge {
+  font-size: 0.75rem;
+}
+
+/*
+ * "Adicionar setor" como a próxima célula da grade: contorno tracejado discreto (é um lugar a
+ * preencher, não um card), alvo de 44px, e ganha o índigo só no hover/foco — antes era um botão
+ * contornado em cada card, a coisa mais pesada da tela, competindo com os próprios setores.
+ */
+.sector-add-cell {
+  display: flex;
+  align-items: center;
+  padding: 0.375rem 0;
+}
+
+.sector-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  /* O --tk-border some no branco: o tracejado precisa se ver como "lugar a preencher". */
+  border: 1px dashed rgba(var(--tk-primary-rgb), 0.35);
+  border-radius: var(--tk-radius-sm);
+  background: transparent;
+  color: var(--tk-text-secondary);
+  font-weight: 500;
+  text-align: start;
+  transition: color var(--tk-transition), border-color var(--tk-transition), background-color var(--tk-transition);
+}
+
+/* O índigo de texto do sistema: o token já clareia no tema escuro. */
+.sector-add:hover,
+.sector-add:focus-visible {
+  color: var(--tk-primary-text);
+  border-color: var(--tk-primary);
+  background-color: rgba(var(--tk-primary-rgb), 0.04);
+}
+
+.sector-add:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 2px;
+}
+
+/*
+ * Departamento/setor recém-criado: um realce índigo que se desfaz em 4s (o mesmo da linha nova de
+ * Usuários) — quem salvou acha o que criou depois que a lista reordena. Vai do tingido à superfície
+ * do card (não a `transparent`): no card, `transparent` mostrava o fundo da página por 4s e depois
+ * voltava de uma vez.
+ */
+.item-new {
+  animation: tk-new-item 4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* No setor, o tingido passa um pouco das bordas do texto, sem mexer no layout. */
+.sector-item.item-new {
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--tk-radius-sm);
+}
+
+@keyframes tk-new-item {
+  from { background-color: color-mix(in srgb, var(--tk-primary) 14%, var(--bs-card-bg)); }
+  to { background-color: var(--bs-card-bg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item-new {
+    animation: none;
+    background-color: color-mix(in srgb, var(--tk-primary) 8%, var(--bs-card-bg));
+  }
+}
+
+/*
+ * Barra da busca acima da lista (sem card): campo à esquerda, contagem do filtro e "Limpar filtros"
+ * à direita. No celular, o campo ocupa a linha toda e o resto quebra abaixo.
+ */
+.department-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.department-search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+.department-clear {
+  min-height: 2.75rem;
+  margin-inline-start: auto;
+}
+
+/* Confirmação do "Criar e adicionar outro" dentro do diálogo de setor: o verde AA de texto do sistema. */
+.sector-added {
+  color: var(--tk-success-text);
+}
+
+/* Falha de leitura em tom neutro (DESIGN.md: vermelho é risco operacional, não falha do sistema). */
+.department-load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--tk-radius-md);
+  background-color: var(--tk-surface);
+  box-shadow: var(--tk-shadow-sm);
+  color: var(--tk-text-secondary);
+}
+
+.department-load-error .bx {
+  font-size: 1.25rem;
+  color: var(--tk-text-muted);
+}
+
+.department-load-error > span {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+/* Toque: os botões pequenos, o X do aviso e os campos de busca com o alvo mínimo de 44px. */
+@media (pointer: coarse) {
+  .btn-sm,
+  .department-search .form-control,
+  .responsible-search .form-control {
+    min-height: 2.75rem;
   }
 
-  .insights-rail {
-    position: fixed;
-    top: 100px;
-    right: 8px;
-    width: clamp(130px, calc((100vw - 1580px) / 2 - 16px), 320px);
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    z-index: 5;
+  .btn-close {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
   }
 }

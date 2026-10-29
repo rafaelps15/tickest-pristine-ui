@@ -1,27 +1,73 @@
-<div class="card filters-card mb-3">
-  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
-          [attr.aria-expanded]="open()" aria-controls="dashboardGuideBody" (click)="toggle()">
-    <span class="fw-bold">
-      <i class="bx bx-info-circle me-2"></i>Guia da Tela
-    </span>
-    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
-  </button>
+<button type="button" class="btn btn-outline-secondary guide-trigger" aria-haspopup="dialog" (click)="open.set(true)">
+  <i class="bx bx-help-circle me-1" aria-hidden="true"></i>Guia da tela
+</button>
 
-  @if (open()) {
-    <div id="dashboardGuideBody" class="card-body pt-0">
-      <div class="guide-section">
-        <h6 class="guide-section-title">Cards de estatística</h6>
-        <p class="small text-muted mb-2"><strong>Total de Tickets:</strong> todos os chamados da empresa, incluindo fechados e cancelados.</p>
-        <p class="small text-muted mb-2"><strong>Em Aberto:</strong> aguardando atendimento.</p>
-        <p class="small text-muted mb-2"><strong>Em Andamento:</strong> já em atendimento por alguém.</p>
-        <p class="small text-muted mb-0"><strong>Resolvidos:</strong> finalizados com solução.</p>
-      </div>
+@if (open()) {
+  <app-dialog title="Guia da tela" subtitle="Como ler cada bloco do Início" size="lg" (closed)="open.set(false)">
+    <div class="guide-dialog">
+      @if (showCompany()) {
+      <section>
+        <h3 class="section-label mb-1">Indicadores</h3>
+        @if (showOperation()) {
+          <p class="small text-muted mb-0">O risco vem primeiro: <strong>atrasados</strong> (passaram do prazo) e <strong>sem responsável</strong> (ativos que ninguém assumiu), com fundo de alerta quando há algum; depois a <strong>fila</strong> (abertos e em andamento) e o <strong>total</strong>. A divisão por status fica na barra colorida do gráfico. Os botões <strong>Empresa</strong> e <strong>Com filtros</strong>, acima, escolhem de quais chamados são os números. Cada card abre a lista.</p>
+        } @else {
+          <p class="small text-muted mb-0">Os números do topo são de <strong>toda a empresa, agora</strong>: total, na fila (abertos e em andamento), em andamento, resolvidos e fechados. Cada card abre a lista com esse status. O último card vai mostrar quantos chamados resolvidos cumpriram o prazo.</p>
+        }
+      </section>
 
-      <div class="guide-section mb-0">
-        <h6 class="guide-section-title">Gráfico de volume</h6>
-        <p class="small text-muted mb-2">Quantidade de tickets abertos por período — agrupe por dia, semana ou mês com os botões acima do gráfico.</p>
-        <p class="small text-muted mb-0">Os números são de toda a empresa, iguais para qualquer papel logado — não é uma visão pessoal.</p>
-      </div>
+      <section>
+        <h3 class="section-label mb-1">Gráfico da operação</h3>
+        <p class="small text-muted mb-2"><strong>A frase de cima</strong> resume a semana em linguagem simples (ex.: "12 chamados a mais (+18%) nos 7 dias até ontem que nos 7 anteriores"). Com poucos chamados, ela não aparece.</p>
+        <p class="small text-muted mb-2"><strong>A barra colorida</strong> mostra como os chamados estão divididos agora@if (filteredAvailable()) { (no escopo "Com filtros" com período, os abertos nesse período)}: abertos, em andamento, resolvidos e fechados, com número e percentual. Cancelados ficam fora da barra, à direita na mesma linha, pra a soma bater com o total.</p>
+        <p class="small text-muted mb-0"><strong>As barras por período</strong> contam os chamados criados em cada dia, semana ou mês (botões Dia, Semana e Mês)@if (flowFilteredAvailable()) { e, ao lado, as resoluções do período — um chamado reaberto e resolvido de novo conta outra vez}. Num período de mais de um ano, "Dia" fica indisponível. Passe o mouse pra ver os números; clique num período ou num status pra abrir a lista. O botão de tabela, ao lado de Mês, mostra os mesmos números em texto.</p>
+      </section>
+
+      }
+
+      @if (showOperation()) {
+        <section>
+          <h3 class="section-label mb-1">Filtros</h3>
+          <p class="small text-muted mb-0">Período, departamento, setor, prioridade e responsável ficam no endereço da página (dá pra compartilhar o link) e valem pras listas que os cards abrem. @if (filteredAvailable()) {No escopo "Com filtros", valem também pros números (topo, Central de atenção e SLA)@if (flowFilteredAvailable()) { e pro gráfico por período}@else {; o gráfico por período continua o da empresa toda e passa a seguir os filtros em breve}.} @else {Quando há filtros, uma linha acima dos números diz quais são, com "Limpar"; o gráfico "Com filtros" chega em breve.}</p>
+        </section>
+
+        <section>
+          <h3 class="section-label mb-1">Central de atenção</h3>
+          <p class="small text-muted mb-0">O que pede ação agora, do mais grave ao menos grave: críticos (urgentes ainda ativos) e, quando disponível, os que esperam a equipe ou o solicitante. Os atrasados e os sem responsável ficam no topo da tela.</p>
+        </section>
+
+        @if (filteredAvailable()) {
+          <section>
+            <h3 class="section-label mb-1">SLA</h3>
+            <p class="small text-muted mb-0">O número grande diz quantos dos chamados resolvidos cumpriram o prazo. Os cards mostram os ativos <strong>em risco</strong> (já usaram 75% do prazo, ainda dentro dele) e <strong>no prazo</strong> (com folga), e os resolvidos <strong>cumpridos</strong> e <strong>com atraso</strong>.</p>
+          </section>
+        }
+
+        @if (timesAvailable()) {
+          <section>
+            <h3 class="section-label mb-1">Tempos de atendimento</h3>
+            <p class="small text-muted mb-0">Quanto demora a <strong>primeira resposta</strong> (da abertura até a primeira mensagem de quem atende) e a <strong>resolução</strong> (da abertura até a primeira vez que o chamado foi resolvido), contados em horário útil do plano de SLA. O número grande é a mediana — metade dos chamados levou menos que isso —, que não se deixa puxar por um caso extremo; a média fica ao lado. Com poucos chamados na conta, aparece "Dados insuficientes" em vez de um número enganoso.@if (filteredAvailable()) { Com período no escopo "Com filtros", entram os respondidos ou resolvidos nesse período.}</p>
+          </section>
+        }
+
+        <section>
+          <h3 class="section-label mb-1">Alertas de SLA</h3>
+          <p class="small text-muted mb-0">@if (!filteredAvailable()) {<strong>Em risco</strong> já usou 75% do prazo, mas ainda está dentro dele; <strong>atrasado</strong> passou do prazo. }A lista mostra os chamados mais perto do prazo (até 3 atrasados e 2 em risco; se um grupo tem menos, o outro ocupa as vagas), e o prazo de cada um anda sozinho. No escopo "Com filtros", os alertas seguem os filtros, como os números do topo; no da empresa, mostram a empresa toda.</p>
+        </section>
+      }
+
+      @if (showMine()) {
+        <section>
+          <h3 class="section-label mb-1">Seus chamados</h3>
+          <p class="small text-muted mb-0">Os chamados que você abriu, nos mesmos grupos de Meus Chamados: <strong>em aberto</strong> (abertos e em andamento), <strong>encerrados</strong> (resolvidos, fechados e cancelados) e <strong>todos</strong>. Cada card abre a lista com o mesmo número.@if (showCompany()) { Os números da empresa contam todos os chamados; na lista, você vê só os seus.}</p>
+        </section>
+      }
+
+      @if (showRefresh()) {
+      <section>
+        <h3 class="section-label mb-1">Atualização</h3>
+        <p class="small text-muted mb-0">Os números se atualizam sozinhos a cada 2 minutos enquanto a aba está aberta; "Atualizado há…" no topo diz a idade deles, e o botão ao lado atualiza na hora.</p>
+      </section>
+      }
     </div>
-  }
-</div>
+  </app-dialog>
+}

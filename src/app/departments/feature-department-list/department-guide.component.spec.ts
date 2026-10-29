@@ -16,50 +16,32 @@ describe('DepartmentGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explica a relação entre departamento e setor, e como a busca funciona', async () => {
+  it('explica o que a tela não diz sozinha: filtros do Resumo, busca, regra de exclusão e responsável', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Departamento e setor');
-    expect(text).toContain('Busca');
+    expect(text).toContain('Como os avisos filtram');
+    expect(text).toContain('o filtro sai sozinho');
+    expect(text).toContain('O que a busca encontra');
+    // Os títulos do Guia não repetem os títulos dos cards da tela (DESIGN.md).
+    expect(text).not.toMatch(/\bResumo\b/);
+    expect(text).toContain('com chamados em andamento não pode ser excluído');
     expect(text).toContain('Responsável');
+    // A relação departamento × setor já está no subtítulo e no card: o Guia não repete.
+    expect(text).not.toContain('Departamento e setor');
   });
 
-  it('começa aberto quando não há preferência salva', async () => {
+  it('começa fechado até na primeira visita (exceção do DESIGN.md) e lembra quando o usuário abre', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('#departmentGuideBody')).toBeTruthy();
-  });
+    const toggle = fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
-  it('fecha e abre ao clicar no cabeçalho, e persiste a preferência', async () => {
-    const fixture = TestBed.createComponent(DepartmentGuideComponent);
+    toggle.click();
     await fixture.whenStable();
 
-    const toggleButton = fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement;
-    toggleButton.click();
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('#departmentGuideBody')).toBeNull();
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
-  });
-
-  it('restaura o painel fechado quando a preferência salva é "false"', async () => {
-    localStorage.setItem(STORAGE_KEY, 'false');
-
-    const fixture = TestBed.createComponent(DepartmentGuideComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('#departmentGuideBody')).toBeNull();
-  });
-
-  it('não quebra ao alternar quando a escrita no localStorage falha', async () => {
-    spyOn(Storage.prototype, 'setItem').and.throwError('bloqueado (ex.: modo privado)');
-    const fixture = TestBed.createComponent(DepartmentGuideComponent);
-    await fixture.whenStable();
-
-    const toggleButton = fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement;
-    expect(() => toggleButton.click()).not.toThrow();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
   });
 });

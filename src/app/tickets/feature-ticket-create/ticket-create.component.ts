@@ -6,11 +6,13 @@ import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
 import { ToastService } from '../../shared';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { TicketCreateGuideComponent } from './ticket-create-guide.component';
 
 /** Tela de abertura de um novo ticket. */
 @Component({
     selector: 'app-ticket-create',
-    imports: [ReactiveFormsModule, RouterLink],
+    imports: [ReactiveFormsModule, RouterLink, PageHeaderComponent, TicketCreateGuideComponent],
     templateUrl: './ticket-create.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-create.component.css'
@@ -82,7 +84,7 @@ export class TicketCreateComponent implements OnInit {
             priority: raw.priority!,
             sectorId: raw.sectorId!
         }, () => {
-            this.toastService.show('Ticket aberto com sucesso.');
+            this.toastService.show('Chamado aberto com sucesso.');
             this.router.navigate(['/tickets']);
         });
     }

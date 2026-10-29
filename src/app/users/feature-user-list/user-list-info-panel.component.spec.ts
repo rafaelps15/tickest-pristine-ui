@@ -2,19 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
 import { UserSummary } from '../entities/user-summary';
-import { setRoleColor } from '../../shared';
-
-const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('UserListInfoPanelComponent', () => {
   const activeUser: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva',
     roles: [{ name: 'Agent' }],
-    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
 
   beforeEach(async () => {
-    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     await TestBed.configureTestingModule({
       imports: [UserListInfoPanelComponent],
       providers: [provideZonelessChangeDetection()]
@@ -26,6 +22,99 @@ describe('UserListInfoPanelComponent', () => {
     fixture.componentRef.setInput('user', activeUser);
     return fixture;
   }
+
+  it('é uma região rotulada pelo nome do usuário fora do modo modal', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const panel = fixture.nativeElement.querySelector('.info-panel') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('region');
+    expect(panel.hasAttribute('aria-modal')).toBeFalse();
+    expect(document.getElementById(panel.getAttribute('aria-labelledby')!)?.textContent).toContain('Maria Silva');
+  });
+
+  it('vira diálogo modal no modo overlay', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    await fixture.whenStable();
+
+    const panel = fixture.nativeElement.querySelector('.info-panel') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('dialog');
+    expect(panel.getAttribute('aria-modal')).toBe('true');
+  });
+
+  it('no modo overlay, move o foco pro título ao abrir e de novo ao trocar de usuário', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const title = fixture.nativeElement.querySelector('#userInfoPanelTitle') as HTMLElement;
+    expect(document.activeElement).toBe(title);
+
+    (document.activeElement as HTMLElement).blur();
+    fixture.componentRef.setInput('user', { ...activeUser, id: 'u9', firstName: 'Ana' });
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(title);
+
+    fixture.nativeElement.remove();
+  });
+
+  it('não rouba o foco quando a lista recarrega e entrega um objeto novo pro mesmo usuário', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const searchInput = document.createElement('input');
+    document.body.appendChild(searchInput);
+    searchInput.focus();
+
+    fixture.componentRef.setInput('user', { ...activeUser, roles: [...activeUser.roles] });
+    await fixture.whenStable();
+
+    expect(document.activeElement).toBe(searchInput);
+
+    searchInput.remove();
+    fixture.nativeElement.remove();
+  });
+
+  it('no modo modal, Tab no último controle volta pro primeiro e Shift+Tab no primeiro vai pro último', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('modal', true);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+
+    last.focus();
+    last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(last);
+
+    fixture.nativeElement.remove();
+  });
+
+  it('fora do modo modal, não prende o Tab dentro do painel', async () => {
+    const fixture = createFixture();
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const last = buttons[buttons.length - 1];
+    last.focus();
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    last.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBeFalse();
+    expect(document.activeElement).toBe(last);
+
+    fixture.nativeElement.remove();
+  });
 
   it('renderiza os campos instantâneos recebidos por @Input', async () => {
     const fixture = createFixture();
@@ -39,7 +128,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(text).toContain('01/01/2026');
   });
 
-  it('mostra no máximo 2 badges de função e agrupa o restante em "+N"', async () => {
+  it('mostra todas as funções do usuário, sem agrupar em "+N" (o painel é o detalhe)', async () => {
     const userWithManyRoles: UserSummary = {
       ...activeUser,
       roles: [{ name: 'Agent' }, { name: 'Supervisor' }, { name: 'Financeiro' }]
@@ -48,17 +137,60 @@ describe('UserListInfoPanelComponent', () => {
     fixture.componentRef.setInput('user', userWithManyRoles);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('+1');
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Financeiro');
+    expect(text).not.toContain('+1');
   });
 
-  it('usa a cor customizada da função quando escolhida (prévia local)', async () => {
-    setRoleColor('Agent', '#ff3e1d');
+  it('mostra "Convite pendente", a validade do convite e o botão "Reenviar convite" pra quem não ativou a conta', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: '2026-11-01T15:00:00Z' });
+    await fixture.whenStable();
+    const emitted = jasmine.createSpy('resend');
+    fixture.componentInstance.resendInvitationClick.subscribe(emitted);
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Convite pendente');
+    expect(text).toContain('Vale até 01/11/2026');
+    const resend = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Reenviar convite'))!;
+    resend.click();
+
+    expect(emitted).toHaveBeenCalled();
+  });
+
+  it('não oferece reenviar convite pra quem já ativou a conta', async () => {
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Reenviar convite');
+    expect(fixture.nativeElement.textContent).not.toContain('Convite pendente');
+  });
+
+  it('diz "Nenhuma função" quando o usuário não tem função', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('user', { ...activeUser, roles: [] });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nenhuma função');
+  });
+
+  it('diz "Convite expirado" em destaque quando o convite venceu', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null });
+    await fixture.whenStable();
+
+    const expired = fixture.nativeElement.querySelector('.invitation-expired') as HTMLElement;
+    expect(expired.textContent).toContain('Convite expirado');
+  });
+
+  it('mostra cada função no badge índigo do sistema', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
     const badge = fixture.nativeElement.querySelector('.info-list .badge') as HTMLElement;
-    expect(badge.classList).toContain('badge-role-custom');
-    expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
+    expect(badge.classList).toContain('bg-label-primary');
+    expect(badge.textContent?.trim()).toBe('Agent');
   });
 
   it('mostra a data de desativação só quando o usuário está desativado', async () => {
@@ -66,18 +198,20 @@ describe('UserListInfoPanelComponent', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Desativado em');
 
-    fixture.componentRef.setInput('user', { ...activeUser, isActive: false, deactivatedAtUtc: '2026-02-01T12:00:00Z' });
+    fixture.componentRef.setInput('user', { ...activeUser, isActive: false, deactivatedAtUtc: '2026-02-01T12:00:00Z', pendingActivation: false, invitationExpiresAtUtc: null });
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Desativado em');
   });
 
-  it('esconde o botão Ativar/Desativar quando canToggleActive é false (própria conta logada)', async () => {
+  it('na própria conta logada, marca "Você" e troca o Ativar/Desativar por uma explicação', async () => {
     const fixture = createFixture();
-    fixture.componentRef.setInput('canToggleActive', false);
+    fixture.componentRef.setInput('isCurrentUser', true);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Desativar');
-    expect(fixture.nativeElement.textContent).not.toContain('Reativar');
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).map(button => button.textContent ?? '');
+    expect(buttons.some(text => text.includes('Desativar') || text.includes('Reativar'))).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('Você');
+    expect(fixture.nativeElement.textContent).toContain('Sua própria conta não pode ser desativada');
   });
 
   it('mostra "Desativar" para um usuário ativo e "Reativar" para um inativo', async () => {
@@ -123,8 +257,9 @@ describe('UserListInfoPanelComponent', () => {
     fixture.componentInstance.assignRolesClick.subscribe(rolesSpy);
     fixture.componentInstance.toggleActiveClick.subscribe(toggleSpy);
 
-    (fixture.nativeElement.querySelector('[data-bs-target="#userEditModal"]') as HTMLButtonElement).click();
-    (fixture.nativeElement.querySelector('[data-bs-target="#userRolesModal"]') as HTMLButtonElement).click();
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>);
+    buttons.find(button => button.textContent?.includes('Editar cadastro'))!.click();
+    buttons.find(button => button.textContent?.includes('Atribuir funções'))!.click();
     (fixture.nativeElement.querySelector('.btn-outline-danger') as HTMLButtonElement).click();
 
     expect(editSpy).toHaveBeenCalled();

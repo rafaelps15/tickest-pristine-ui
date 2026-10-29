@@ -13,4 +13,8 @@ export interface UserSummary {
   isActive: boolean;
   createdAtUtc: string;
   deactivatedAtUtc: string | null;
+  /** Cadastrado e ativo, mas ainda sem senha: não ativou a conta pelo convite por e-mail (spec 008 do back-end). */
+  pendingActivation: boolean;
+  /** Validade do último convite utilizável; `null` se não houver (expirado, revogado ou conta já ativada). */
+  invitationExpiresAtUtc: string | null;
 }

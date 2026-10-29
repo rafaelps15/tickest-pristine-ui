@@ -8,20 +8,18 @@ import { RolesStore } from '../../roles';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { Role } from '../../roles';
-import { SessionService, ConfirmDialogService, ToastService, setRoleColor } from '../../shared';
-
-const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
+import { SessionService, ConfirmDialogService, ToastService } from '../../shared';
 
 describe('UserListComponent', () => {
   const activeUser: UserSummary = {
     id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva',
     roles: [{ name: 'Agent' }],
-    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null
+    isActive: true, createdAtUtc: '2026-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
   };
   const inactiveUser: UserSummary = {
     id: 'u2', email: 'joao@empresa.com', firstName: 'João', lastName: 'Santos',
     roles: [],
-    isActive: false, createdAtUtc: '2026-01-02T12:00:00Z', deactivatedAtUtc: '2026-02-01T12:00:00Z'
+    isActive: false, createdAtUtc: '2026-01-02T12:00:00Z', deactivatedAtUtc: '2026-02-01T12:00:00Z', pendingActivation: false, invitationExpiresAtUtc: null
   };
   const role: Role = { name: 'Agent', permissionCodes: [], isDefault: false, isAdministrator: false };
   const defaultFilters: UserFilters = { status: 'All', page: 1, pageSize: 20 };
@@ -32,13 +30,33 @@ describe('UserListComponent', () => {
       users: signal<UserSummary[]>([activeUser]),
       filters: signal<UserFilters>(defaultFilters),
       listState: signal({ loading: false, error: null as string | null }),
+      listLoadFailed: signal(false),
+      listMutationError: signal<string | null>(null),
+      clearListMutationError: jasmine.createSpy('clearListMutationError'),
+      usersPage: signal<object | undefined>({}),
+      statusCounts: signal<{ totalCount: number; activeCount: number; pendingActivationCount: number; inactiveCount: number } | null>(
+        { totalCount: 12, activeCount: 10, pendingActivationCount: 0, inactiveCount: 2 }),
+      summaryLoading: signal(false),
+      summaryFailed: signal(false),
+      profileError: signal<string | null>(null),
+      rolesError: signal<string | null>(null),
       loading: signal(false),
       updatingProfile: signal(false),
       assigningRoles: signal(false),
       deactivatingIds: signal<string[]>([]),
       activatingIds: signal<string[]>([]),
+      resendingInvitationIds: signal<string[]>([]),
+      countingTicketsIds: signal<string[]>([]),
+      resendInvitation: jasmine.createSpy('resendInvitation'),
+      countOpenAssignedTickets: jasmine.createSpy('countOpenAssignedTickets')
+        .and.callFake((_userId: string, onDone: (count: number | null) => void) => onDone(0)),
+      countOpenAssignedTicketsMany: jasmine.createSpy('countOpenAssignedTicketsMany')
+        .and.callFake((_userIds: string[], onDone: (result: { tickets: number; people: number } | null) => void) => onDone({ tickets: 0, people: 0 })),
+      activateMany: jasmine.createSpy('activateMany'),
       success: signal(false),
       error: signal<string | null>(null),
+      createdUserId: signal<string | null>(null),
+      createRolesFailed: signal(false),
       currentPage: signal(1),
       pageSize: signal(20),
       total: signal(1),
@@ -47,7 +65,7 @@ describe('UserListComponent', () => {
       hasNextPage: signal(false),
       resetState: jasmine.createSpy('resetState'),
       loadAll: jasmine.createSpy('loadAll'),
-      clearListMutationError: jasmine.createSpy('clearListMutationError'),
+      clearDialogErrors: jasmine.createSpy('clearDialogErrors'),
       createUser: jasmine.createSpy('createUser'),
       updateProfile: jasmine.createSpy('updateProfile'),
       assignRoles: jasmine.createSpy('assignRoles'),
@@ -71,7 +89,6 @@ describe('UserListComponent', () => {
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
-    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     usersStoreFake = createUsersStoreFake();
     rolesStoreFake = { roles: signal<Role[]>([role]), load: jasmine.createSpy('load') };
     sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id') };
@@ -191,33 +208,66 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    const nameButton = row.querySelector('.btn-row-name') as HTMLButtonElement;
+    expect(nameButton.getAttribute('aria-expanded')).toBe('false');
     expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
 
     row.click();
     await fixture.whenStable();
-    expect(row.getAttribute('aria-pressed')).toBe('true');
+    expect(nameButton.getAttribute('aria-expanded')).toBe('true');
     expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeTruthy();
 
     row.click();
     await fixture.whenStable();
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(nameButton.getAttribute('aria-expanded')).toBe('false');
     expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
   });
 
-  it('marca a linha com o painel aberto com uma classe distinta da seleção em lote, e reflete o estado no aria-label', async () => {
+  it('abre e fecha o painel pelo botão do nome, uma vez por clique (sem disparar de novo pelo clique da linha)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const nameButton = fixture.nativeElement.querySelector('tbody tr.user-row .btn-row-name') as HTMLButtonElement;
+    nameButton.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.infoPanelUserId()).toBe('u1');
+
+    nameButton.click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.infoPanelUserId()).toBeUndefined();
+  });
+
+  it('mantém o <tr> como linha de tabela, sem papel de botão nem foco próprio', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+    expect(row.getAttribute('role')).toBeNull();
+    expect(row.hasAttribute('tabindex')).toBeFalse();
+    expect(row.querySelector('button.btn-row-name')).toBeTruthy();
+  });
+
+  it('marca a linha com o painel aberto com uma classe distinta da seleção em lote', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
     expect(row.classList).not.toContain('user-row-info-open');
-    expect(row.getAttribute('aria-label')).toBe('Ver informações de Maria Silva');
 
     row.click();
     await fixture.whenStable();
 
     expect(row.classList).toContain('user-row-info-open');
-    expect(row.getAttribute('aria-label')).toBe('Fechar informações de Maria Silva');
+  });
+
+  it('dá ao botão do nome o texto visível como nome acessível, sem rótulo que repita o estado (WCAG 2.5.3)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const nameButton = fixture.nativeElement.querySelector('tbody tr.user-row .btn-row-name') as HTMLButtonElement;
+    expect(nameButton.hasAttribute('aria-label')).toBeFalse();
+    expect(nameButton.hasAttribute('aria-pressed')).toBeFalse();
+    expect(nameButton.textContent?.trim()).toBe('Maria Silva');
   });
 
   it('mostra uma nota de que a seleção em lote vale só pra página atual, quando há mais de uma página', async () => {
@@ -243,16 +293,28 @@ describe('UserListComponent', () => {
     checkbox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await fixture.whenStable();
 
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(fixture.componentInstance.infoPanelUserId()).toBeUndefined();
+  });
+
+  it('marca o usuário pra ação em lote ao tocar em qualquer ponto da área de 44px da célula, sem abrir o painel', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const hitArea = fixture.nativeElement.querySelector('tbody tr.user-row .select-hit') as HTMLLabelElement;
+    hitArea.click();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeTrue();
+    expect(fixture.componentInstance.infoPanelUserId()).toBeUndefined();
   });
 
   it('fecha o painel com a tecla Esc, de qualquer lugar da tela, e devolve o foco a quem o abriu', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
-    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
-    row.focus();
-    row.click();
+    const nameButton = fixture.nativeElement.querySelector('tbody tr.user-row .btn-row-name') as HTMLButtonElement;
+    nameButton.focus();
+    nameButton.click();
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeTruthy();
 
@@ -260,7 +322,50 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
-    expect(document.activeElement).toBe(row);
+    expect(document.activeElement).toBe(nameButton);
+  });
+
+  it('não fecha o painel quando o Esc nasce dentro de um modal (só fecha o modal)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectRow('u1');
+    fixture.componentInstance.onPanelEdit();
+    await fixture.whenStable();
+
+    const modalInput = fixture.nativeElement.querySelector('#userEditFirstName') as HTMLInputElement;
+    modalInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.infoPanelUserId()).toBe('u1');
+  });
+
+  it('não fecha o painel quando o Esc nasce dentro do menu de ações "⋮" (só fecha o menu)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.selectRow('u1');
+    await fixture.whenStable();
+
+    const menuButton = fixture.nativeElement.querySelector('.btn-row-actions') as HTMLButtonElement;
+    menuButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.infoPanelUserId()).toBe('u1');
+  });
+
+  it('passa o painel pro modo modal (overlay) só abaixo de "lg"', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.selectRow('u1');
+
+    fixture.componentInstance.isOverlayViewport.set(true);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.info-panel').getAttribute('aria-modal')).toBe('true');
+
+    fixture.componentInstance.isOverlayViewport.set(false);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.info-panel').hasAttribute('aria-modal')).toBeFalse();
   });
 
   it('não faz nada ao apertar Esc sem nenhum painel aberto', async () => {
@@ -275,9 +380,9 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
 
-    const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
-    row.focus();
-    row.click();
+    const nameButton = fixture.nativeElement.querySelector('tbody tr.user-row .btn-row-name') as HTMLButtonElement;
+    nameButton.focus();
+    nameButton.click();
     await fixture.whenStable();
 
     const backdrop = fixture.nativeElement.querySelector('.info-panel-backdrop') as HTMLElement;
@@ -287,7 +392,7 @@ describe('UserListComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-user-list-info-panel')).toBeNull();
     expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
-    expect(document.activeElement).toBe(row);
+    expect(document.activeElement).toBe(nameButton);
   });
 
   it('não alterna a seleção da linha ao clicar no botão de menu de ações', async () => {
@@ -299,7 +404,7 @@ describe('UserListComponent', () => {
     menuButton.click();
     await fixture.whenStable();
 
-    expect(row.getAttribute('aria-pressed')).toBe('false');
+    expect(fixture.componentInstance.infoPanelUserId()).toBeUndefined();
   });
 
   it('reflete o usuário selecionado na URL, sem navegar pra outra rota', async () => {
@@ -340,7 +445,7 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.onPanelAssignRoles();
 
-    expect(fixture.componentInstance.isChecked('Agent')).toBeTrue();
+    expect(fixture.componentInstance.selectedRoleNames().has('Agent')).toBeTrue();
   });
 
   it('o atalho de ativar/desativar do painel chama desativar pra um usuário ativo, e ativar pra um inativo', async () => {
@@ -372,7 +477,7 @@ describe('UserListComponent', () => {
     expect(text).toContain('01/01/2026');
   });
 
-  it('mantém a lista atual visível (só esmaecida) ao recarregar com filtro/página, em vez de sumir com tudo', async () => {
+  it('mantém a lista legível ao recarregar com filtro/página (sem esmaecer) e diz "Atualizando…" na barra', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
@@ -380,7 +485,50 @@ describe('UserListComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Maria Silva');
-    expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
+    expect(fixture.nativeElement.querySelector('table').classList).not.toContain('is-refreshing');
+    expect(fixture.nativeElement.querySelector('.user-toolbar-status').textContent).toContain('Atualizando…');
+  });
+
+  it('não dispara a busca sozinha ao abrir a tela (a página vinda do link não volta pra 1)', async () => {
+    jasmine.clock().install();
+    try {
+      const fixture = TestBed.createComponent(UserListComponent);
+      fixture.detectChanges();
+      jasmine.clock().tick(400);
+      fixture.detectChanges();
+
+      expect(usersStoreFake.setSearch).not.toHaveBeenCalled();
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('mostra "Limpar filtros" na barra só quando há filtro aplicado, com a contagem do resultado', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.user-clear')).toBeNull();
+
+    usersStoreFake.filters.set({ status: 'Inactive', page: 1, pageSize: 20 });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.user-clear')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.user-toolbar-status').textContent).toContain('1 usuário encontrado.');
+  });
+
+  it('mantém o período recolhido até ser pedido, e à vista quando já há um aplicado', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#userPeriod')).toBeNull();
+
+    (fixture.nativeElement.querySelector('.user-period-toggle') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#userPeriod legend').textContent).toContain('Período de cadastro');
+    expect(fixture.nativeElement.querySelector('label[for="userCreatedFrom"]').textContent).toContain('De');
+
+    usersStoreFake.filters.set({ status: 'All', createdFrom: '2026-01-01', page: 1, pageSize: 20 });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.user-period-toggle')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#userPeriod')).not.toBeNull();
   });
 
   it('mostra o spinner no lugar da tabela só quando ainda não há nenhum usuário carregado', async () => {
@@ -389,7 +537,10 @@ describe('UserListComponent', () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
+    const status = fixture.nativeElement.querySelector('app-loading-state') as HTMLElement;
+    expect(status.querySelector('.spinner-border')).not.toBeNull();
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.textContent).toContain('Carregando usuários');
     expect(fixture.nativeElement.textContent).not.toContain('Nenhum usuário');
   });
 
@@ -412,15 +563,104 @@ describe('UserListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('+1');
   });
 
-  it('usa a cor customizada da função quando escolhida (prévia local), e o acento padrão quando não há', async () => {
-    setRoleColor('Agent', '#ff3e1d');
+  it('deixa o "+N" fora da ordem de Tab e lê os nomes ocultos pro leitor de tela', async () => {
+    usersStoreFake.users.set([{ ...activeUser, roles: [{ name: 'Agent' }, { name: 'Supervisor' }, { name: 'Financeiro' }] }]);
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
+    const overflow = fixture.nativeElement.querySelector('.badge-roles-overflow') as HTMLElement;
+    expect(overflow.hasAttribute('tabindex')).toBeFalse();
+    expect(overflow.hasAttribute('aria-label')).toBeFalse();
+    expect(overflow.querySelector('.visually-hidden')?.textContent).toContain('Financeiro');
+  });
+
+  it('anuncia a seleção em lote numa região aria-live que já existe antes da primeira marcação', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const live = fixture.nativeElement.querySelector('.visually-hidden[aria-live="polite"]') as HTMLElement;
+    expect(live).toBeTruthy();
+    expect(live.textContent?.trim()).toBe('');
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    await fixture.whenStable();
+    expect(live.textContent?.trim()).toBe('1 usuário selecionado');
+  });
+
+  it('mostra ao vivo o que o "Salvar" do modal de funções vai adicionar e remover', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openAssignRolesModal(activeUser);
+    await fixture.whenStable();
+    const diff = fixture.nativeElement.querySelector('#userRolesModal .roles-diff') as HTMLElement;
+    expect(diff.textContent).toContain('Nenhuma alteração ainda.');
+
+    fixture.componentInstance.toggleRole('Agent', false);
+    fixture.componentInstance.toggleRole('Supervisor', true);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.rolesDiff()).toEqual({ added: ['Supervisor'], removed: ['Agent'] });
+    expect(diff.textContent).toContain('Vai adicionar: Supervisor');
+    expect(diff.textContent).toContain('Vai remover: Agent');
+  });
+
+  it('avisa (sem bloquear) quando a seleção deixaria o usuário sem nenhuma função', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openAssignRolesModal(activeUser);
+    fixture.componentInstance.toggleRole('Agent', false);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('#userRolesModal').textContent).toContain('não consegue fazer nada');
+    fixture.componentInstance.onAssignRolesSubmit();
+    expect(usersStoreFake.assignRoles).toHaveBeenCalledWith('u1', [], jasmine.any(Function));
+  });
+
+  it('impede o admin logado de tirar de si a última função de administrador', async () => {
+    rolesStoreFake.roles.set([role, { name: 'Admin', permissionCodes: ['users:manage'], isDefault: false, isAdministrator: true }]);
+    sessionServiceFake.userId.and.returnValue('u1');
+    const self: UserSummary = { ...activeUser, roles: [{ name: 'Admin' }, { name: 'Agent' }] };
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openAssignRolesModal(self);
+    fixture.componentInstance.toggleRole('Admin', false);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.removesOwnAdminAccess()).toBeTrue();
+    const saveButton = fixture.nativeElement.querySelector('#userRolesModal .modal-footer .btn-primary') as HTMLButtonElement;
+    expect(saveButton.disabled).toBeTrue();
+    expect(fixture.nativeElement.querySelector('#userRolesOwnAdmin')).toBeTruthy();
+
+    fixture.componentInstance.onAssignRolesSubmit();
+    expect(usersStoreFake.assignRoles).not.toHaveBeenCalled();
+  });
+
+  it('deixa outro administrador tirar a função de administrador de alguém', async () => {
+    rolesStoreFake.roles.set([role, { name: 'Admin', permissionCodes: ['users:manage'], isDefault: false, isAdministrator: true }]);
+    const otherAdmin: UserSummary = { ...activeUser, roles: [{ name: 'Admin' }] };
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openAssignRolesModal(otherAdmin);
+    fixture.componentInstance.toggleRole('Admin', false);
+
+    expect(fixture.componentInstance.removesOwnAdminAccess()).toBeFalse();
+    fixture.componentInstance.onAssignRolesSubmit();
+    expect(usersStoreFake.assignRoles).toHaveBeenCalled();
+  });
+
+  it('mostra as funções no badge índigo do sistema, sem cor guardada no navegador', async () => {
+    localStorage.setItem('tickest.roleColors', JSON.stringify({ Agent: '#ff3e1d' }));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    localStorage.removeItem('tickest.roleColors');
+
     const badge = fixture.nativeElement.querySelector('td .badge') as HTMLElement;
-    expect(badge.classList).toContain('badge-role-custom');
-    expect(badge.classList).not.toContain('bg-label-primary');
-    expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
+    expect(badge.classList).toContain('bg-label-primary');
+    expect(badge.style.getPropertyValue('--role-color')).toBe('');
   });
 
   it('busca com debounce de 300ms após parar de digitar', async () => {
@@ -519,7 +759,9 @@ describe('UserListComponent', () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.pageNumbers()).toEqual([1, '…', 24, 25, 26, '…', 50]);
+    const windowItems = Array.from(fixture.nativeElement.querySelectorAll('.btn-page-number, .page-ellipsis') as NodeListOf<HTMLElement>)
+      .map(item => item.textContent?.trim());
+    expect(windowItems).toEqual(['1', '…', '24', '25', '26', '…', '50']);
     expect(fixture.nativeElement.querySelectorAll('.card-footer button').length).toBeLessThan(10);
   });
 
@@ -539,8 +781,7 @@ describe('UserListComponent', () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.rangeStart()).toBe(21);
-    expect(fixture.componentInstance.rangeEnd()).toBe(40);
+    expect(fixture.nativeElement.querySelector('.card-footer').textContent).toContain('Exibindo 21–40 de');
   });
 
   it('pré-preenche o formulário de edição ao abrir o modal de cadastro', async () => {
@@ -574,48 +815,58 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.updateProfile).not.toHaveBeenCalled();
   });
 
-  it('limpa o erro de mutação ao abrir o modal de edição, pra não mostrar o erro de uma tentativa anterior', async () => {
+  it('limpa os erros dos modais ao abrir o modal de edição, pra não mostrar o erro de uma tentativa anterior', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.openEditModal(activeUser);
 
-    expect(usersStoreFake.clearListMutationError).toHaveBeenCalled();
+    expect(usersStoreFake.clearDialogErrors).toHaveBeenCalled();
   });
 
-  it('limpa o erro de mutação ao abrir o modal de atribuição de funções', async () => {
+  it('limpa os erros dos modais ao abrir o modal de atribuição de funções', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.openAssignRolesModal(activeUser);
 
-    expect(usersStoreFake.clearListMutationError).toHaveBeenCalled();
+    expect(usersStoreFake.clearDialogErrors).toHaveBeenCalled();
+  });
+
+  it('mostra no modal de edição só o erro da edição, não o erro de carregamento da lista', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    usersStoreFake.listState.set({ loading: false, error: 'Erro ao carregar usuários' });
+    fixture.componentInstance.openEditModal(activeUser);
+    await fixture.whenStable();
+
+    const editModal = fixture.nativeElement.querySelector('#userEditModal') as HTMLElement;
+    expect(editModal.textContent).not.toContain('Erro ao carregar usuários');
+
+    usersStoreFake.profileError.set('Erro ao atualizar cadastro');
+    await fixture.whenStable();
+    expect(editModal.querySelector('[role="alert"]')?.textContent).toContain('Erro ao atualizar cadastro');
+  });
+
+  it('mostra dentro do modal de funções o erro da atribuição, em vez de só no topo da página (coberto pelo modal)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.openAssignRolesModal(activeUser);
+
+    usersStoreFake.rolesError.set('Erro ao atribuir funções');
+    await fixture.whenStable();
+
+    const rolesModal = fixture.nativeElement.querySelector('#userRolesModal') as HTMLElement;
+    expect(rolesModal.querySelector('[role="alert"]')?.textContent).toContain('Erro ao atribuir funções');
   });
 
   it('reseta o estado de criação ao abrir o modal de novo usuário', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
-    const button = fixture.nativeElement.querySelector('[data-bs-target="#userCreateModal"]') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('.page-actions button') as HTMLButtonElement;
     button.click();
 
     expect(usersStoreFake.resetState).toHaveBeenCalled();
-  });
-
-  it('alterna os campos de senha do modal de criação entre oculto e texto claro juntos', async () => {
-    const fixture = TestBed.createComponent(UserListComponent);
-    await fixture.whenStable();
-
-    const password = fixture.nativeElement.querySelector('input[formcontrolname="password"]') as HTMLInputElement;
-    const confirmPassword = fixture.nativeElement.querySelector('input[formcontrolname="confirmPassword"]') as HTMLInputElement;
-    expect(password.type).toBe('password');
-    expect(confirmPassword.type).toBe('password');
-
-    fixture.componentInstance.togglePasswordsVisibility();
-    fixture.detectChanges();
-
-    expect(password.type).toBe('text');
-    expect(confirmPassword.type).toBe('text');
   });
 
   it('pré-marca as roles já atribuídas ao abrir o modal de atribuição', async () => {
@@ -624,7 +875,7 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.openAssignRolesModal(activeUser);
 
-    expect(fixture.componentInstance.isChecked('Agent')).toBeTrue();
+    expect(fixture.componentInstance.selectedRoleNames().has('Agent')).toBeTrue();
   });
 
   it('envia a atribuição de roles marcadas', async () => {
@@ -657,38 +908,106 @@ describe('UserListComponent', () => {
     fixture.componentInstance.createForm.setValue({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Password123!',
-      confirmPassword: 'Password123!'
+      email: 'ana@empresa.com'
     });
     fixture.componentInstance.onCreateSubmit();
 
     expect(usersStoreFake.createUser).toHaveBeenCalledWith({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Password123!'
-    });
+      email: 'ana@empresa.com'
+    }, []);
   });
 
-  it('não envia a criação quando a senha for fraca (sem maiúscula/caractere especial)', async () => {
+  it('pré-marca as funções padrão ao abrir o modal de criação, e envia as marcadas junto do cadastro', async () => {
+    rolesStoreFake.roles.set([role, { name: 'Requester', permissionCodes: ['tickets:create'], isDefault: true, isAdministrator: false }]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openCreateModal();
+    expect(fixture.componentInstance.createRoleNames().has('Requester')).toBeTrue();
+    expect(fixture.componentInstance.createRoleNames().has('Agent')).toBeFalse();
+
+    fixture.componentInstance.toggleCreateRole('Agent', true);
+    fixture.componentInstance.createForm.setValue({
+      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com'
+    });
+    fixture.componentInstance.onCreateSubmit();
+
+    expect(usersStoreFake.createUser).toHaveBeenCalledWith(jasmine.any(Object), ['Requester', 'Agent']);
+  });
+
+  it('"Criar e cadastrar outro" mantém o modal aberto, limpa o formulário, mantém as funções e devolve o foco ao Nome', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    document.body.appendChild(fixture.nativeElement);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+    fixture.componentInstance.toggleCreateRole('Agent', true);
+    fixture.componentInstance.createForm.setValue({
+      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com'
+    });
+    fixture.componentInstance.onCreateSubmit(true);
+    usersStoreFake.createdUserId.set('new-id');
+    usersStoreFake.success.set(true);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('#userCreateModal')).not.toBeNull();
+    expect(fixture.componentInstance.createForm.getRawValue().email).toBe('');
+    expect(fixture.componentInstance.createRoleNames().has('Agent')).toBeTrue();
+    expect(document.activeElement?.id).toBe('userCreateFirstName');
+    expect(fixture.componentInstance.createAnnouncement()).toContain('Convite enviado para Ana Costa');
+
+    fixture.nativeElement.remove();
+  });
+
+  it('"Criar" fecha o modal e destaca a linha de quem acabou de ser criado', async () => {
+    usersStoreFake.users.set([activeUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+
+    jasmine.clock().install();
+    try {
+      fixture.componentInstance.createForm.setValue({
+        firstName: 'Maria', lastName: 'Silva', email: 'maria@empresa.com'
+      });
+      fixture.componentInstance.onCreateSubmit();
+      usersStoreFake.createdUserId.set('u1');
+      usersStoreFake.success.set(true);
+      // Relógio falso instalado: render síncrono, sem esperar o agendador (que usa setTimeout).
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#userCreateModal')).toBeNull();
+      const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
+      expect(row.classList).toContain('user-row-new');
+
+      jasmine.clock().tick(4001);
+      fixture.detectChanges();
+      expect(row.classList).not.toContain('user-row-new');
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('avisa como concluir quando o usuário foi criado mas as funções não foram atribuídas', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.createForm.setValue({
-      firstName: 'Ana',
-      lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'semmaiuscula1',
-      confirmPassword: 'semmaiuscula1'
+      firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com'
     });
-    fixture.componentInstance.onCreateSubmit();
+    usersStoreFake.createRolesFailed.set(true);
+    usersStoreFake.success.set(true);
+    await fixture.whenStable();
 
-    expect(usersStoreFake.createUser).not.toHaveBeenCalled();
+    expect(toastServiceFake.show).toHaveBeenCalledWith(jasmine.stringContaining('sem as funções escolhidas'), 'info');
   });
 
   it('o botão "Criar" não fica desabilitado por formulário inválido, só durante o carregamento', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openCreateModal();
     await fixture.whenStable();
 
     const button = fixture.nativeElement.querySelector('#userCreateModal button[type="submit"]') as HTMLButtonElement;
@@ -697,6 +1016,7 @@ describe('UserListComponent', () => {
 
   it('mostra a mensagem de erro certa para o nome no modal de criação, por tipo de validação', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openCreateModal();
     await fixture.whenStable();
     const firstName = fixture.componentInstance.createForm.controls.firstName;
 
@@ -729,14 +1049,12 @@ describe('UserListComponent', () => {
     fixture.componentInstance.createForm.setValue({
       firstName: 'Ana',
       lastName: 'Costa',
-      email: 'ana@empresa.com',
-      password: 'Password123!',
-      confirmPassword: 'Password123!'
+      email: 'ana@empresa.com'
     });
     usersStoreFake.success.set(true);
     await fixture.whenStable();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('"Ana Costa" criado com sucesso.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Convite enviado para ana@empresa.com.');
   });
 
   it('mostra um toast de sucesso ao editar o cadastro de um usuário', async () => {
@@ -762,6 +1080,161 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.deactivate).toHaveBeenCalledWith('u1', jasmine.any(Function));
   });
 
+  it('mostra o erro de uma ação em vermelho, sem "Tentar novamente" (recarregar não resolve), e fecha no X', async () => {
+    usersStoreFake.listMutationError.set('Erro ao desativar usuário');
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const alert = fixture.nativeElement.querySelector('.alert-danger') as HTMLElement;
+    expect(alert.textContent).toContain('Erro ao desativar usuário');
+    expect(alert.textContent).not.toContain('Tentar novamente');
+    (alert.querySelector('.btn-close') as HTMLButtonElement).click();
+
+    expect(usersStoreFake.clearListMutationError).toHaveBeenCalled();
+  });
+
+  it('o "Desfazer" do toast de desativação reativa o usuário na hora', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    (usersStoreFake.deactivate.calls.mostRecent().args[1] as () => void)();
+    const action = toastServiceFake.show.calls.mostRecent().args[2] as { run: () => void };
+    action.run();
+
+    expect(usersStoreFake.activate).toHaveBeenCalledWith('u1', jasmine.any(Function));
+  });
+
+  it('avisa na confirmação quantos chamados em aberto a pessoa atende, e que continuam atribuídos', async () => {
+    usersStoreFake.countOpenAssignedTickets.and.callFake((_id: string, onDone: (count: number | null) => void) => onDone(3));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(usersStoreFake.countOpenAssignedTickets).toHaveBeenCalledWith('u1', jasmine.any(Function));
+    expect(options.message).toContain('Maria Silva atende 3 chamados em aberto, que continuam atribuídos a essa pessoa');
+    expect(options.message).toContain('reatribua em Monitorar Chamados');
+  });
+
+  it('usa o singular quando é 1 chamado em aberto', async () => {
+    usersStoreFake.countOpenAssignedTickets.and.callFake((_id: string, onDone: (count: number | null) => void) => onDone(1));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toContain('atende 1 chamado em aberto, que continua atribuído');
+  });
+
+  it('confirma sem o aviso de chamados quando a contagem falha, sem bloquear a desativação', async () => {
+    usersStoreFake.countOpenAssignedTickets.and.callFake((_id: string, onDone: (count: number | null) => void) => onDone(null));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toBe('O acesso de Maria Silva ao Tickest é bloqueado na hora. Dá pra reativar depois.');
+  });
+
+  it('não consulta chamados de quem ainda não ativou a conta', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate({ ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null });
+
+    expect(usersStoreFake.countOpenAssignedTickets).not.toHaveBeenCalled();
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+  });
+
+  it('usa texto sem gênero gramatical na confirmação de desativação', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(activeUser);
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toBe('O acesso de Maria Silva ao Tickest é bloqueado na hora. Dá pra reativar depois.');
+  });
+
+  it('avisa quando nenhuma desativação do lote deu certo', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    usersStoreFake.listMutationError.set('Não foi possível desativar: Maria Silva.');
+    (usersStoreFake.deactivateMany.calls.mostRecent().args[1] as (ok: string[], failed: number) => void)([], 1);
+
+    // O motivo vai no próprio toast — antes ele mandava "olhar acima da lista".
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Nenhum usuário foi desativado. Não foi possível desativar: Maria Silva.', 'danger');
+  });
+
+  it('mostra "Convite pendente" com a validade, e "Convite expirado" quando não há link válido', async () => {
+    usersStoreFake.users.set([
+      { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: '2026-11-01T15:00:00Z' },
+      { ...activeUser, id: 'u7', email: 'bia@empresa.com', firstName: 'Bia', pendingActivation: true, invitationExpiresAtUtc: null }
+    ]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr.user-row') as NodeListOf<HTMLTableRowElement>;
+    expect(rows[0].textContent).toContain('Convite pendente');
+    expect(rows[0].textContent).toContain('Vale até 01/11');
+    expect(rows[1].textContent).toContain('Convite expirado');
+  });
+
+  it('oferece "Reenviar convite" no ⋮ só pra quem ainda não ativou a conta, e chama o store', async () => {
+    const pending: UserSummary = { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null };
+    usersStoreFake.users.set([pending, inactiveUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr.user-row') as NodeListOf<HTMLTableRowElement>;
+    const resend = Array.from(rows[0].querySelectorAll('.dropdown-item') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Reenviar convite'));
+    expect(resend).toBeTruthy();
+    expect(rows[1].textContent).not.toContain('Reenviar convite');
+
+    resend!.click();
+    expect(usersStoreFake.resendInvitation).toHaveBeenCalledWith('u1', jasmine.any(Function));
+    (usersStoreFake.resendInvitation.calls.mostRecent().args[1] as () => void)();
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Novo convite enviado para maria@empresa.com. O anterior deixou de valer.');
+  });
+
+  it('ao reativar quem nunca ativou a conta, avisa que falta reenviar o convite e oferece o reenvio no toast', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const pendingInactive: UserSummary = { ...inactiveUser, pendingActivation: true, invitationExpiresAtUtc: null };
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onActivate(pendingInactive);
+    (usersStoreFake.activate.calls.mostRecent().args[1] as () => void)();
+    const [message, variant, action] = toastServiceFake.show.calls.mostRecent().args as [string, string, { label: string; run: () => void }];
+
+    expect(message).toContain('Falta reenviar o convite');
+    expect(variant).toBe('info');
+    expect(action.label).toBe('Reenviar convite');
+    action.run();
+    expect(usersStoreFake.resendInvitation).toHaveBeenCalledWith('u2', jasmine.any(Function));
+  });
+
+  it('o modal de criação não pede senha e explica o convite por e-mail', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#userCreateModal') as HTMLElement;
+    expect(modal.querySelector('input[type="password"]')).toBeNull();
+    expect(modal.querySelector('#userCreateInvitationHint')?.textContent).toContain('Um convite vai para esse e-mail');
+    expect(modal.querySelector('#userCreateEmail')?.getAttribute('aria-describedby')).toContain('userCreateInvitationHint');
+  });
+
   it('mostra um toast de sucesso ao desativar', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(UserListComponent);
@@ -771,7 +1244,7 @@ describe('UserListComponent', () => {
     const onSuccess = usersStoreFake.deactivate.calls.mostRecent().args[1];
     onSuccess();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('"Maria Silva" foi desativado.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Acesso de "Maria Silva" desativado.', 'success', jasmine.objectContaining({ label: 'Desfazer' }));
   });
 
   it('não desativa o usuário quando a confirmação for cancelada', async () => {
@@ -805,7 +1278,7 @@ describe('UserListComponent', () => {
     const onSuccess = usersStoreFake.activate.calls.mostRecent().args[1];
     onSuccess();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('"João Santos" foi reativado.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Acesso de "João Santos" reativado.');
   });
 
   it('não reativa o usuário quando a confirmação for cancelada', async () => {
@@ -877,11 +1350,11 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     fixture.componentInstance.toggleSelection('u1', true);
-    expect(fixture.componentInstance.isSelected('u1')).toBeTrue();
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeTrue();
     expect(fixture.componentInstance.selectedCount()).toBe(1);
 
     fixture.componentInstance.toggleSelection('u1', false);
-    expect(fixture.componentInstance.isSelected('u1')).toBeFalse();
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeFalse();
     expect(fixture.componentInstance.selectedCount()).toBe(0);
   });
 
@@ -964,13 +1437,26 @@ describe('UserListComponent', () => {
     fixture.componentInstance.toggleSelection('u1', true);
     fixture.componentInstance.onBulkDeactivate();
     const onDone = usersStoreFake.deactivateMany.calls.mostRecent().args[1];
-    onDone(1, 0);
+    onDone(['u1'], 0);
 
     expect(fixture.componentInstance.selectedCount()).toBe(0);
-    expect(toastServiceFake.show).toHaveBeenCalledWith('1 usuário desativado.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('1 usuário desativado.', 'success', { label: 'Desfazer', run: jasmine.any(Function) });
   });
 
-  it('mostra um toast informando falha parcial na desativação em lote', async () => {
+  it('o "Desfazer" do lote reativa só quem foi desativado agora', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    usersStoreFake.deactivateMany.calls.mostRecent().args[1](['u1'], 1);
+    (toastServiceFake.show.calls.mostRecent().args[2] as { run: () => void }).run();
+
+    expect(usersStoreFake.activateMany).toHaveBeenCalledWith(['u1'], jasmine.any(Function));
+  });
+
+  it('mostra um toast informando falha parcial na desativação em lote, ainda com "Desfazer"', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
@@ -978,9 +1464,37 @@ describe('UserListComponent', () => {
     fixture.componentInstance.toggleSelection('u1', true);
     fixture.componentInstance.onBulkDeactivate();
     const onDone = usersStoreFake.deactivateMany.calls.mostRecent().args[1];
-    onDone(1, 1);
+    onDone(['u1'], 1);
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('1 de 2 usuários desativados.', 'info');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('1 de 2 usuários desativados.', 'info', { label: 'Desfazer', run: jasmine.any(Function) });
+  });
+
+  it('avisa na confirmação do lote quantos chamados em aberto os selecionados atendem', async () => {
+    usersStoreFake.countOpenAssignedTicketsMany.and.callFake((_ids: string[], onDone: (r: { tickets: number; people: number }) => void) => onDone({ tickets: 5, people: 2 }));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(usersStoreFake.countOpenAssignedTicketsMany).toHaveBeenCalledWith(['u1'], jasmine.any(Function));
+    expect(options.message).toContain('2 dessas pessoas atendem 5 chamados em aberto, que continuam atribuídos');
+    expect(options.message).toContain('reatribua em Monitorar Chamados');
+  });
+
+  it('lista até 8 nomes na confirmação do lote e resume o resto em "e mais N"', async () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ ...activeUser, id: `m${i}`, firstName: `Pessoa${i}`, lastName: 'Teste' }));
+    usersStoreFake.users.set(many);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelectAll(true);
+    fixture.componentInstance.onBulkDeactivate();
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toContain('Pessoa7 Teste e mais 2');
+    expect(options.message).not.toContain('Pessoa9');
   });
 
   it('mostra a barra de ação em lote só quando há seleção ativa', async () => {
@@ -1006,21 +1520,22 @@ describe('UserListComponent', () => {
     expect((rows[1] as HTMLElement).textContent).toContain('01/02/2026');
   });
 
-  it('deixa a linha de um usuário inativo mais apagada', async () => {
+  it('marca a linha de um usuário inativo sem apagá-la com opacidade (que derrubaria o contraste)', async () => {
     usersStoreFake.users.set([inactiveUser]);
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr') as HTMLTableRowElement;
-    expect(row.classList).toContain('opacity-75');
+    expect(row.classList).toContain('user-row-inactive');
+    expect(row.classList).not.toContain('opacity-75');
   });
 
-  it('não deixa a linha de um usuário ativo apagada', async () => {
+  it('não marca como inativa a linha de um usuário ativo', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     const row = fixture.nativeElement.querySelector('tbody tr') as HTMLTableRowElement;
-    expect(row.classList).not.toContain('opacity-75');
+    expect(row.classList).not.toContain('user-row-inactive');
   });
 
   it('mostra mensagem distinta quando a lista estiver vazia por causa dos filtros', async () => {
@@ -1031,5 +1546,137 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Nenhum usuário encontrado com esses filtros.');
+  });
+
+  it('oferece "Limpar filtros" no estado vazio por filtro, e limpa ao clicar', async () => {
+    usersStoreFake.users.set([]);
+    usersStoreFake.total.set(0);
+    usersStoreFake.filters.set({ status: 'Inactive', page: 1, pageSize: 20 });
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('.empty-state button') as HTMLButtonElement;
+    expect(button.textContent).toContain('Limpar filtros');
+    button.click();
+
+    expect(usersStoreFake.clearFilters).toHaveBeenCalled();
+  });
+
+  it('oferece "Novo Usuário" no estado vazio de primeiro uso', async () => {
+    usersStoreFake.users.set([]);
+    usersStoreFake.total.set(0);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const button = fixture.nativeElement.querySelector('.empty-state button') as HTMLButtonElement;
+    expect(button.textContent).toContain('Novo Usuário');
+    button.click();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#userCreateModal')).not.toBeNull();
+  });
+
+  it('oferece recarregar a lista quando o carregamento falha, num aviso neutro (falha técnica não é risco)', async () => {
+    usersStoreFake.listState.set({ loading: false, error: 'Erro ao carregar usuários' });
+    usersStoreFake.listLoadFailed.set(true);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    usersStoreFake.loadAll.calls.reset();
+
+    expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+    const alert = fixture.nativeElement.querySelector('.alert-secondary') as HTMLElement;
+    expect(alert.textContent).toContain('Erro ao carregar usuários');
+    (alert.querySelector('button') as HTMLButtonElement).click();
+
+    expect(usersStoreFake.loadAll).toHaveBeenCalled();
+  });
+
+  it('não transforma a falha de carga em "Nenhum usuário cadastrado ainda"', async () => {
+    usersStoreFake.users.set([]);
+    usersStoreFake.total.set(0);
+    usersStoreFake.listState.set({ loading: false, error: 'Erro ao carregar usuários' });
+    usersStoreFake.listLoadFailed.set(true);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum usuário cadastrado ainda');
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeNull();
+    expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('A lista não carregou');
+  });
+
+  it('marca a própria conta com "Você", explica por que ela não tem checkbox e tira o Desativar do ⋮', async () => {
+    usersStoreFake.users.set([{ ...activeUser, id: 'admin-id' }]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr') as HTMLElement;
+    expect(row.querySelector('.badge.bg-label-primary')?.textContent).toContain('Você');
+    expect(row.querySelector('.col-select input')).toBeNull();
+    expect(row.querySelector('.col-select .visually-hidden')?.textContent).toContain('Sua conta não entra na desativação em lote');
+    expect(row.textContent).toContain('Sua própria conta não pode ser desativada.');
+    expect(row.querySelector('.dropdown-item.text-danger')).toBeNull();
+  });
+
+  it('dá ao celular um "selecionar todos" visível (o cabeçalho da tabela some lá)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const mobile = fixture.nativeElement.querySelector('.select-all-mobile') as HTMLElement;
+    expect(mobile.textContent).toContain('Selecionar todos desta página');
+    (mobile.querySelector('input') as HTMLInputElement).click();
+
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeTrue();
+  });
+
+  it('liga o ⋮ de cada linha ao id (pra devolver o foco) e mostra spinner enquanto conta os chamados', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    usersStoreFake.countingTicketsIds.set(['u1']);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[data-row-actions="u1"] .spinner-border')).not.toBeNull();
+  });
+
+  it('diz "Convite expirado" com o caminho do reenvio quando o convite venceu', async () => {
+    usersStoreFake.users.set([{ ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null }]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.invitation-expired').textContent).toContain('Convite expirado: reenvie pelo ⋮');
+  });
+
+  it('não aplica um período invertido e explica o problema abaixo dos campos', async () => {
+    usersStoreFake.filters.set({ status: 'All', createdTo: '2026-01-10', page: 1, pageSize: 20 });
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onCreatedFromChange('2026-02-01');
+    await fixture.whenStable();
+
+    expect(usersStoreFake.setPeriod).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#userPeriod-error')?.textContent).toContain('anterior à data final');
+    expect(fixture.nativeElement.querySelector('#userCreatedFrom').getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('aplica o período e some com o erro quando ele volta a ser coerente', async () => {
+    usersStoreFake.filters.set({ status: 'All', createdTo: '2026-01-10', page: 1, pageSize: 20 });
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.onCreatedFromChange('2026-02-01');
+
+    fixture.componentInstance.onCreatedFromChange('2026-01-05');
+    await fixture.whenStable();
+
+    expect(usersStoreFake.setPeriod).toHaveBeenCalledWith('2026-01-05', '2026-01-10');
+    expect(fixture.nativeElement.querySelector('#userPeriod-error')).toBeNull();
+  });
+
+  it('trava o fechamento do diálogo de edição enquanto salva (o X fica desabilitado)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    fixture.componentInstance.openEditModal(activeUser);
+    usersStoreFake.updatingProfile.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement.querySelector('#userEditModal .btn-close') as HTMLButtonElement).disabled).toBeTrue();
   });
 });

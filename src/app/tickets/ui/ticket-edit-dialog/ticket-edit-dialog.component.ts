@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy, inject, input, output, effect, viewChild, ElementRef, AfterViewInit, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, input, output, effect } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ConfirmDialogService } from '../../../shared';
+import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 
 /** Dados mínimos de um ticket para editar a descrição — o suficiente tanto em `Ticket` quanto em `TicketDetail`. */
 export interface TicketEditDialogTicket {
@@ -21,12 +22,11 @@ export interface TicketEditDialogTicket {
  */
 @Component({
     selector: 'app-ticket-edit-dialog',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, DialogComponent],
     templateUrl: './ticket-edit-dialog.component.html',
-    styleUrl: './ticket-edit-dialog.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TicketEditDialogComponent implements AfterViewInit {
+export class TicketEditDialogComponent {
     private readonly fb = inject(FormBuilder);
     private readonly confirmDialogService = inject(ConfirmDialogService);
 
@@ -42,9 +42,6 @@ export class TicketEditDialogComponent implements AfterViewInit {
     /** Disparado ao fechar o modal (sem alteração pendente, ou após confirmar descartá-la). */
     readonly closed = output<void>();
 
-    /** Campo de descrição, focado ao abrir o modal. */
-    private readonly descriptionField = viewChild<ElementRef<HTMLTextAreaElement>>('descriptionField');
-
     /** Formulário com a descrição editada — mesmas regras de tamanho do back-end (10 a 500 caracteres). */
     readonly form = this.fb.group({
         description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]]
@@ -58,26 +55,20 @@ export class TicketEditDialogComponent implements AfterViewInit {
         });
     }
 
-    /** Foca o campo de descrição ao abrir — o modal já nasce pronto pra digitar. */
-    ngAfterViewInit(): void {
-        this.descriptionField()?.nativeElement.focus();
-    }
-
     /** Verifica se o campo de descrição está inválido e já foi tocado, pra só mostrar o erro depois da primeira interação. */
     isDescriptionInvalid(): boolean {
         const control = this.form.controls.description;
         return control.invalid && (control.dirty || control.touched);
     }
 
-    /** Esc fecha o modal (com confirmação se houver alteração não salva), igual ao painel de informações do Monitor. */
-    @HostListener('document:keydown.escape')
-    onEscapeKey(): void {
+    /**
+     * Pedido de fechar vindo de `<app-dialog>` (X, Esc, clique fora) — passa pela mesma confirmação
+     * do "Cancelar". Ignorado enquanto a confirmação de descarte está aberta: ali o Esc só fecha a
+     * própria confirmação.
+     */
+    onDialogClose(): void {
+        if (this.confirmDialogService.options()) return;
         this.requestClose();
-    }
-
-    /** Fecha ao clicar na área escura fora do modal — ignora cliques que começam dentro da caixa do diálogo. */
-    onBackdropClick(event: MouseEvent): void {
-        if (event.target === event.currentTarget) this.requestClose();
     }
 
     /** Valida o formulário e emite a nova descrição sem espaços nas pontas. */

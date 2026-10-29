@@ -7,7 +7,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP aos setores (criação, atualização e exclusão); a leitura vem aninhada em GET /departments. */
 @Injectable({ providedIn: 'root' })
 export class SectorDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** URL base do recurso na API (/sectors). */
   private readonly apiUrl = `${environment.apiUrl}/sectors`;
 
   /** Cria um novo setor (POST /sectors). */

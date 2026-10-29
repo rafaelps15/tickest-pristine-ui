@@ -22,7 +22,7 @@ export const TICKET_STATUS_BADGE_CLASS: Record<TicketStatus, string> = {
   [TicketStatus.InProgress]: 'bg-label-info',
   [TicketStatus.Resolved]: 'bg-label-success',
   [TicketStatus.Closed]: 'bg-label-secondary',
-  [TicketStatus.Canceled]: 'bg-label-danger'
+  [TicketStatus.Canceled]: 'bg-label-secondary'
 };
 
 /** Status em que o ticket ainda está ativo (aceita atribuir/remover responsável). */

@@ -1,8 +1,6 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef, DestroyRef, afterNextRender } from '@angular/core';
 import { DatePipe, NgClass } from '@angular/common';
-import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
 import { TicketHistoryStore } from '../application/ticket-history.store';
@@ -20,15 +18,21 @@ import {
 } from '../entities/ticket-sla';
 import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
-import { ConfirmDialogService, SessionService, ToastService, visibleRoles, hiddenRolesCount, hiddenRolesNames, getRoleColor } from '../../shared';
-import { UserSummary } from '../../users';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
+import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
+import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAttachment } from '../entities/ticket-attachment';
+import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
+import { canAssignTicketToOthers, canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
 @Component({
     selector: 'app-ticket-detail',
-    imports: [DatePipe, NgClass, RouterLink, TicketEditDialogComponent],
+    imports: [DatePipe, NgClass, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, LoadingStateComponent, TicketAssignDialogComponent],
     templateUrl: './ticket-detail.component.html',
     styleUrl: './ticket-detail.component.css',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -40,6 +44,10 @@ export class TicketDetailComponent implements OnInit {
     protected readonly historyStore = inject(TicketHistoryStore);
     protected readonly messagesStore = inject(TicketMessagesStore);
     protected readonly sessionService = inject(SessionService);
+    private readonly destroyRef = inject(DestroyRef);
+
+    /** Hora atual do navegador, atualizada a cada 30 s, pra janela de cancelamento do dono vencer com a tela aberta. */
+    protected readonly now = signal(Date.now());
     private readonly confirmDialogService = inject(ConfirmDialogService);
     private readonly toastService = inject(ToastService);
 
@@ -127,7 +135,10 @@ export class TicketDetailComponent implements OnInit {
      * (achado do critique de 2026-10-25: aqui descartava esse nível, perdendo o pai que o usuário
      * acabou de ver um clique antes).
      */
-    protected readonly breadcrumbLabel = this.cameFromMonitor ? 'Administração / Monitorar Tickets /' : 'Meus Tickets /';
+    /** Trilha do cabeçalho — a tela de onde o usuário veio (Monitorar ou Meus Chamados). */
+    protected readonly crumbs: PageCrumb[] = this.cameFromMonitor
+        ? [{ label: 'Administração' }, { label: 'Monitorar Chamados', link: '/tickets/monitorar' }]
+        : [{ label: 'Início', link: '/dashboard' }, { label: 'Meus Chamados', link: '/tickets' }];
 
     /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
     protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';
@@ -148,31 +159,22 @@ export class TicketDetailComponent implements OnInit {
         this.fileInput().nativeElement.click();
     }
 
-    /** Texto digitado na busca de candidatos a responsável, antes do debounce. */
-    assigneeSearchInput = signal('');
+    /** Se o diálogo "Atribuir/Alterar responsável" está aberto. */
 
-    /** Id do candidato selecionado no modal de atribuição, antes de confirmar. */
-    selectedAssigneeId = signal<string | null>(null);
-
-    /** Índice do candidato com foco (tabindex circulante), pra navegação por seta no listbox de busca. */
-    focusedAssigneeIndex = signal(0);
+    readonly assignDialogOpen = signal(false);
 
     /** Detalhe do ticket carregado pelo id da rota. */
     protected readonly ticket = this.detailStore.ticket;
 
+    /** Carrega o detalhe do ticket, o histórico, os anexos e as mensagens ao inicializar a tela. */
     constructor() {
-        // Espera ~300ms após a última tecla antes de buscar, pra não buscar a cada letra digitada.
-        toObservable(this.assigneeSearchInput).pipe(
-            debounceTime(300),
-            distinctUntilChanged(),
-            takeUntilDestroyed()
-        ).subscribe(search => {
-            this.focusedAssigneeIndex.set(0);
-            this.detailStore.searchAssignees(search);
+        // O relógio da janela de cancelamento só roda no navegador (o prerender não pode ficar preso num intervalo).
+        afterNextRender(() => {
+            const timer = setInterval(() => this.now.set(Date.now()), 30_000);
+            this.destroyRef.onDestroy(() => clearInterval(timer));
         });
     }
 
-    /** Carrega o detalhe do ticket, o histórico, os anexos e as mensagens ao inicializar a tela. */
     ngOnInit(): void {
         this.detailStore.loadTicket(this.ticketId);
         this.historyStore.loadForTicket(this.ticketId);
@@ -206,6 +208,11 @@ export class TicketDetailComponent implements OnInit {
     /** Só quem escreveu a mensagem pode editá-la. */
     protected canEditMessage(message: TicketMessage): boolean {
         return message.authorUserId === this.sessionService.userId();
+    }
+
+    /** Quem enviou o anexo, ou quem administra chamados, pode excluí-lo (mesma regra do back-end). */
+    protected canDeleteAttachment(attachment: TicketAttachment): boolean {
+        return attachment.uploadedByUserId === this.sessionService.userId() || this.sessionService.hasPermission('tickets:manage');
     }
 
     /** Quem escreveu a mensagem, ou quem administra chamados, pode excluí-la. */
@@ -342,21 +349,38 @@ export class TicketDetailComponent implements OnInit {
     }
 
     /**
-     * Indica se o botão "Editar" (descrição) deve aparecer: quem abriu o chamado ou quem administra
-     * chamados, com o chamado ativo — mesma regra do back-end (`tickets:update-own` ou `tickets:manage`).
+     * Indica se o botão "Editar" (descrição) deve aparecer: dono com `tickets:update-own` ou quem
+     * administra chamados, com o chamado ativo — mesma regra do back-end.
      */
     protected canEditTicket(t: TicketDetail): boolean {
-        return (this.isOwner(t) || this.sessionService.hasPermission('tickets:manage')) && TICKET_ACTIVE_STATUSES.has(t.status);
+        return canEditTicketDescription(t.status, this.isOwner(t), code => this.sessionService.hasPermission(code));
+    }
+
+    /** Se quem está logado cancela qualquer chamado, sem prazo (`tickets:cancel`). */
+    private canCancelAny(): boolean {
+        return this.sessionService.hasPermission(TICKETS_CANCEL_PERMISSION);
     }
 
     /**
-     * Indica se o botão dedicado "Cancelar chamado" deve aparecer pra quem abriu o chamado — só
-     * quando a pessoa NÃO já vê essa opção pelo fluxo de transição de status de quem administra
-     * (`nextStatusOptions`, que já inclui Cancelar), pra não duplicar o botão quando as duas
-     * condições coincidirem.
+     * Se dá pra cancelar agora: o back-end permite (`canCancel` — dono nos 15 min após abrir, ou
+     * `tickets:cancel`) e, pro dono sem a permissão, a janela ainda não venceu no relógio do navegador.
      */
-    protected canCancelAsOwner(t: TicketDetail): boolean {
-        return !this.canChangeStatus() && this.isOwner(t) && TICKET_ACTIVE_STATUSES.has(t.status);
+    protected canCancelNow(t: TicketDetail): boolean {
+        return TICKET_ACTIVE_STATUSES.has(t.status) && isCancelAvailable(t, this.now(), this.canCancelAny());
+    }
+
+    /** Tempo restante pro dono cancelar ("por mais 8 min"), ou null pra quem cancela sem prazo. */
+    protected cancelHint(t: TicketDetail): string | null {
+        return ownerCancelHint(t, this.now(), this.canCancelAny());
+    }
+
+    /**
+     * Indica se o botão dedicado "Cancelar chamado" deve aparecer — quando dá pra cancelar e a pessoa
+     * NÃO já vê essa opção nas transições de status de quem atende (`nextStatusOptions`), pra não
+     * duplicar o botão.
+     */
+    protected canCancelSeparately(t: TicketDetail): boolean {
+        return this.canCancelNow(t) && !this.nextStatusOptions(t).includes(TicketStatus.Canceled);
     }
 
     /** Abre o modal de edição da descrição, limpando o erro de uma mutação anterior. */
@@ -382,9 +406,12 @@ export class TicketDetailComponent implements OnInit {
         });
     }
 
-    /** Indica se o botão "Atribuir/Alterar responsável" deve aparecer: só pra quem administra, com o chamado ativo. */
+    /**
+     * Indica se o botão "Atribuir/Alterar responsável" deve aparecer: o diálogo escolhe qualquer pessoa,
+     * então exige `tickets:manage` e `tickets:assign`, com o chamado ativo.
+     */
     canAssignTicket(status: TicketStatus): boolean {
-        return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(status);
+        return canAssignTicketToOthers(status, code => this.sessionService.hasPermission(code));
     }
 
     /** Indica se o botão "Remover responsável" deve aparecer: só pra quem administra, com o chamado ativo e com responsável atual. */
@@ -414,14 +441,18 @@ export class TicketDetailComponent implements OnInit {
         return this.sessionService.hasPermission('tickets:manage');
     }
 
-    /** Próximos status válidos a partir do status atual, pra quem administra chamados. */
-    protected nextStatusOptions(status: TicketStatus): TicketStatus[] {
-        return this.canChangeStatus() ? TICKET_STATUS_TRANSITIONS[status] : [];
+    /**
+     * Próximos status válidos a partir do status atual, pra quem administra chamados. Cancelar só
+     * entra se dá pra cancelar agora: com a spec 016 do back-end, `tickets:manage` sozinho não cancela.
+     */
+    protected nextStatusOptions(t: TicketDetail): TicketStatus[] {
+        if (!this.canChangeStatus()) return [];
+        return TICKET_STATUS_TRANSITIONS[t.status].filter(status => status !== TicketStatus.Canceled || this.canCancelNow(t));
     }
 
-    /** Indica se o botão "Reabrir chamado" deve aparecer: o chamado precisa estar inativo (Resolvido/Fechado/Cancelado). */
-    protected canReopenTicket(status: TicketStatus): boolean {
-        return !TICKET_ACTIVE_STATUSES.has(status);
+    /** Indica se o botão "Reabrir chamado" deve aparecer: chamado inativo e dono com `tickets:reopen-own` ou `tickets:manage`. */
+    protected canReopenTicket(t: TicketDetail): boolean {
+        return canReopenTicket(t.status, this.isOwner(t), code => this.sessionService.hasPermission(code));
     }
 
     /**
@@ -474,87 +505,50 @@ export class TicketDetailComponent implements OnInit {
         }
     }
 
-    /** Reabre o chamado inativo. */
+    /** Indica se o modal de reabertura (com motivo opcional) está aberto. */
+    protected readonly reopenDialogOpen = signal(false);
+
+    /** Botão "Reabrir chamado" — recebe o foco de volta quando o modal de reabertura fecha. */
+    private readonly reopenButton = viewChild<ElementRef<HTMLButtonElement>>('reopenButton');
+
+    /** Abre o modal de reabertura, sem herdar o erro de uma ação anterior. */
     protected onReopen(): void {
-        this.detailStore.reopen(this.ticketId, () => {
-            this.toastService.show('Chamado reaberto.');
-            this.historyStore.reload();
-        });
-    }
-
-    /** Reseta a busca e a seleção do modal de atribuição ao abri-lo. */
-    onOpenAssignModal(): void {
-        this.assigneeSearchInput.set('');
-        this.selectedAssigneeId.set(null);
-        this.focusedAssigneeIndex.set(0);
         this.detailStore.clearMutationError();
-        this.detailStore.clearAssigneeSearch();
-    }
-
-    /** Nome do candidato selecionado no modal de atribuição, pra mostrar no aviso de substituição do responsável atual. */
-    selectedAssigneeName(): string | null {
-        const candidate = this.detailStore.assigneeCandidates().find(c => c.id === this.selectedAssigneeId());
-        return candidate ? `${candidate.firstName} ${candidate.lastName}` : null;
-    }
-
-    /** Até 2 funções do candidato exibidas como badge; o restante vira um badge "+N" (mesma regra da Gestão de Usuários). */
-    visibleCandidateRoles(candidate: UserSummary) {
-        return visibleRoles(candidate.roles);
-    }
-
-    hiddenCandidateRolesCount(candidate: UserSummary): number {
-        return hiddenRolesCount(candidate.roles);
-    }
-
-    hiddenCandidateRolesNames(candidate: UserSummary): string {
-        return hiddenRolesNames(candidate.roles);
-    }
-
-    /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
-    roleColor(roleName: string): string | null {
-        return getRoleColor(roleName);
-    }
-
-    /** Marca (ou desmarca, ao clicar de novo) um candidato como o escolhido para responsável; limpa o erro de uma tentativa anterior. */
-    onSelectAssignee(userId: string, index: number): void {
-        this.selectedAssigneeId.update(current => current === userId ? null : userId);
-        this.focusedAssigneeIndex.set(index);
-        this.detailStore.clearMutationError();
+        this.reopenDialogOpen.set(true);
     }
 
     /**
-     * Navega entre os candidatos encontrados com as setas (padrão ARIA Listbox de tabindex
-     * circulante: só o item focado tem tabindex 0, os demais ficam fora do Tab).
+     * Reabre o chamado com o motivo opcional, numa chamada só: o back-end grava a reabertura e a
+     * mensagem juntas. Com motivo, a conversa é recarregada pra mensagem nova aparecer.
      */
-    onAssigneeListKeydown(event: KeyboardEvent, candidateCount: number): void {
-        if (candidateCount === 0) return;
-
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            this.focusedAssigneeIndex.update(i => (i + 1) % candidateCount);
-            this.focusAssigneeRow();
-        } else if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            this.focusedAssigneeIndex.update(i => (i - 1 + candidateCount) % candidateCount);
-            this.focusAssigneeRow();
-        }
-    }
-
-    /** Move o foco do navegador pro candidato atualmente marcado como circulante. */
-    private focusAssigneeRow(): void {
-        document.getElementById(`assignee-candidate-${this.focusedAssigneeIndex()}`)?.focus();
-    }
-
-    /** Atribui o candidato selecionado como responsável e fecha o modal em caso de sucesso. */
-    onConfirmAssign(): void {
-        const userId = this.selectedAssigneeId();
-        if (!userId) return;
-
-        const name = this.selectedAssigneeName();
-        this.detailStore.assignTicket(this.ticketId, userId, () => {
-            this.toastService.show(name ? `${name} agora é o responsável.` : 'Responsável atribuído.');
+    protected onReopenConfirm(reason: string | null): void {
+        this.detailStore.reopen(this.ticketId, reason, () => {
+            this.toastService.show('Chamado reaberto.');
             this.historyStore.reload();
-            document.getElementById('ticketAssignModalCloseButton')?.click();
+            this.reopenDialogOpen.set(false);
+            if (reason) this.messagesStore.loadForTicket(this.ticketId);
+        });
+    }
+
+    /** Fecha o modal de reabertura sem reabrir, devolvendo o foco ao botão que o abriu. */
+    protected onReopenClosed(): void {
+        this.reopenDialogOpen.set(false);
+        this.reopenButton()?.nativeElement.focus();
+    }
+
+    /** Abre o diálogo de atribuição, sem herdar a busca nem o erro de uma abertura anterior. */
+    onOpenAssignModal(): void {
+        this.detailStore.clearMutationError();
+        this.detailStore.clearAssigneeSearch();
+        this.assignDialogOpen.set(true);
+    }
+
+    /** Atribui o candidato confirmado no diálogo e fecha o diálogo em caso de sucesso. */
+    onConfirmAssign(choice: { userId: string; name: string }): void {
+        this.detailStore.assignTicket(this.ticketId, choice.userId, () => {
+            this.toastService.show(`${choice.name} agora é o responsável.`);
+            this.historyStore.reload();
+            this.assignDialogOpen.set(false);
         });
     }
 

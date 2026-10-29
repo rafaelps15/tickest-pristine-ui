@@ -1,125 +1,121 @@
-<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
-  <div>
-    <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Administração /</span> Monitorar Tickets</h4>
-    <p class="page-subtitle small mb-0">Todos os chamados do sistema, com prazos e situação de SLA.</p>
-  </div>
-</div>
-
-<!-- Resumo de SLA -->
-<p class="text-muted small mb-2">
-  Resumo do setor selecionado, com todos os status e prioridades — não muda com os outros filtros da tabela abaixo.
-</p>
-@if (store.slaSummaryState().error) {
-  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
-    <span>{{ store.slaSummaryState().error }}</span>
-    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.reloadSlaSummary()">Tentar novamente</button>
-  </div>
-}
-<div class="row">
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === undefined"
-            (click)="onSlaCardClick(undefined)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">Ativos</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2">{{ store.slaSummary()?.activeCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Com o relógio do SLA correndo — toque pra ver todos</small>
-          </div>
-          <span class="badge bg-label-primary rounded p-2"><i class="bx bx-receipt fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.OnTime"
-            (click)="onSlaCardClick(TicketSlaStatus.OnTime)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">No Prazo</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-success">{{ store.slaSummary()?.onTimeCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Dentro do SLA — toque pra filtrar</small>
-          </div>
-          <span class="badge bg-label-success rounded p-2"><i class="bx bx-check-circle fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.AtRisk"
-            (click)="onSlaCardClick(TicketSlaStatus.AtRisk)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">Em Risco</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-warning">{{ store.slaSummary()?.atRiskCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Perto de vencer — toque pra filtrar</small>
-          </div>
-          <span class="badge bg-label-warning rounded p-2"><i class="bx bx-error-circle fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 mb-4">
-    <button type="button" class="card card-stats card-stats-btn h-100"
-            [attr.aria-pressed]="store.filters().slaStatus === TicketSlaStatus.Breached"
-            (click)="onSlaCardClick(TicketSlaStatus.Breached)">
-      <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between">
-          <div>
-            <span class="text-muted">Atrasados</span>
-            <div class="d-flex align-items-end mt-2">
-              <h3 class="mb-0 me-2 text-danger">{{ store.slaSummary()?.breachedCount ?? '—' }}</h3>
-            </div>
-            <small class="text-muted">Já passaram do prazo — toque pra filtrar</small>
-          </div>
-          <span class="badge bg-label-danger rounded p-2"><i class="bx bx-error fs-3"></i></span>
-        </div>
-      </div>
-    </button>
-  </div>
-</div>
-
-<!-- Filtros -->
-<div class="card filters-card mb-3">
-  <div class="card-body p-3">
-    <div class="filters-label mb-3">
-      <i class="bx bx-filter-alt"></i>
-      Filtros
-    </div>
-    <div class="row g-3 align-items-end">
-      <div class="col-12 col-md-3">
-        <label class="form-label small" for="monitorSearch">Buscar</label>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="monitorSearch" type="text" class="form-control" placeholder="Título"
-                 [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
-        </div>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small" for="monitorStatus">Status</label>
-        <select id="monitorStatus" class="form-select" [value]="store.filters().status ?? ''"
-                (change)="store.setStatus($any($event.target).value ? +$any($event.target).value : undefined)">
-          <option value="">Todos</option>
-          @for (status of statusOptions; track status) {
-            <option [value]="status">{{ statusLabels[status] }}</option>
+<app-page-header title="Monitorar Chamados" subtitle="A fila de chamados, com o prazo de cada um e a situação de SLA."
+                 [crumbs]="[{ label: 'Administração' }]">
+  <!--
+    Escopo da tela: o Setor vale pros números do topo e pra tabela, por isso fica acima dos dois e
+    fora da barra de filtros — nas ações do cabeçalho, sem gastar uma linha inteira antes da fila.
+  -->
+  <div pageActions class="monitor-scope">
+    <label class="form-label small mb-1" for="monitorSector">Setor</label>
+    <!-- Cada opção marca a própria seleção ([selected]): as opções chegam depois do select (departamentos
+         carregando), e um [value] no select ficaria em "Todos os setores" com um setor aplicado. -->
+    <select #sectorSelect id="monitorSector" class="form-select"
+            aria-describedby="monitorScopeHint"
+            (change)="onSectorChange(sectorSelect.value)">
+      <option value="" [selected]="sectorValue() === ''">Todos os setores</option>
+      @if (drillSectorIds()) {
+        <!-- O conjunto que veio do Início continua escolhível depois de trocar de setor. -->
+        <option value="many" [selected]="sectorValue() === 'many'">{{ drillSectorLabel() }}</option>
+      }
+      @for (department of departmentsStore.departments(); track department.id) {
+        <optgroup [label]="department.name">
+          @for (sector of department.sectors; track sector.id) {
+            <option [value]="sector.id" [selected]="sectorValue() === sector.id">{{ sector.name }}</option>
           }
-        </select>
-      </div>
-      <div class="col-6 col-md-2">
+        </optgroup>
+      }
+    </select>
+  </div>
+</app-page-header>
+
+<app-ticket-monitor-guide />
+
+@if (store.slaSummaryState().error) {
+  <!-- Falha técnica é neutra (DESIGN.md): vermelho fica pro risco de SLA, não pra um erro de leitura. -->
+  <p class="small text-secondary d-flex flex-wrap align-items-center gap-2 mb-2" role="alert">
+    <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.slaSummaryState().error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.reloadSlaSummary()">Tentar novamente</button>
+  </p>
+}
+
+<!--
+  Resumo de SLA: cada card filtra a tabela pelos ativos com o mesmo SLA que mostra ("Ativos" tira o
+  filtro de SLA). Uma linha só diz o escopo do Setor e dos números (o recorte que o agregado aceita).
+-->
+<p id="monitorScopeHint" class="text-muted small mb-2">{{ slaScopeLabel() }}</p>
+<div class="row g-3 mb-3">
+  @for (card of slaCards; track card.label) {
+    <div class="col-6 col-lg-3">
+      <app-stat-card [label]="card.label" [value]="slaCount(card.count)" [hint]="card.hint" [icon]="card.icon" [tone]="card.tone"
+                     [loading]="store.slaSummaryState().loading && !store.slaSummary()" [failed]="!!store.slaSummaryState().error && !store.slaSummary()"
+                     [pressed]="isSlaCardPressed(card.slaStatus)"
+                     [pressLabel]="slaCardPressLabel(card)"
+                     (press)="onSlaCardClick(card.slaStatus)" />
+    </div>
+  }
+</div>
+
+<app-filter-bar (clear)="onClearFilters()">
+  <div class="col-12 col-md-6 col-xl-3">
+    <label class="form-label small" for="monitorSearch">Buscar</label>
+    <div class="input-group">
+      <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+      <input id="monitorSearch" type="search" class="form-control" placeholder="Título"
+             [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
+    </div>
+  </div>
+  <div class="col-6 col-md-6 col-xl-3">
+    <label class="form-label small" for="monitorStatus">Status</label>
+    <select #statusSelect id="monitorStatus" class="form-select" [value]="store.filters().activeOnly ? 'active' : store.filters().status ?? ''"
+            (change)="onStatusChange(statusSelect.value)">
+      <option value="">Todos os status</option>
+      <!-- "Ativos" como no card do topo, que diz "Aberto ou em andamento" — o rótulo longo era cortado no campo. -->
+      <option value="active">Ativos</option>
+      @for (status of statusOptions; track status) {
+        <option [value]="status">{{ statusLabels[status] }}</option>
+      }
+    </select>
+  </div>
+  <div class="col-6 col-md-6 col-xl-3">
+    <label class="form-label small" for="monitorSla">SLA</label>
+    <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
+            (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
+      <option value="">Todos</option>
+      <optgroup label="Em monitoramento">
+        @for (slaStatus of liveSlaStatusOptions; track slaStatus) {
+          <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
+        }
+      </optgroup>
+      <optgroup label="Já resolvidos">
+        @for (slaStatus of resolvedSlaStatusOptions; track slaStatus) {
+          <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
+        }
+      </optgroup>
+    </select>
+  </div>
+  <!-- A fila de quem atende: "Atribuídos a mim" e "Sem responsável" são as duas pontas da mesma pergunta. -->
+  <div class="col-12 col-md-6 col-xl-3">
+    <label class="form-label small" for="monitorResponsible">Responsável</label>
+    <select #responsibleSelect id="monitorResponsible" class="form-select"
+            (change)="onResponsibleFilterChange(responsibleSelect.value)">
+      <option value="any" [selected]="responsibleFilter() === 'any'">Qualquer um</option>
+      <option value="me" [selected]="responsibleFilter() === 'me'">Atribuídos a mim</option>
+      <option value="none" [selected]="responsibleFilter() === 'none'">Sem responsável</option>
+      @if (assigneesStore.assignees().length > 0) {
+        <optgroup [label]="assigneesStore.total() > assigneesStore.assignees().length
+                             ? 'Pessoas da equipe (' + assigneesStore.assignees().length + ' de ' + assigneesStore.total() + ', em ordem de nome)'
+                             : 'Pessoas da equipe'">
+          @for (assignee of assigneesStore.assignees(); track assignee.id) {
+            <option [value]="assignee.id" [selected]="responsibleFilter() === assignee.id">{{ assignee.fullName }}</option>
+          }
+        </optgroup>
+      }
+    </select>
+  </div>
+
+  <!-- Filtros de uso menos frequente: recolhidos por padrão; o botão mostra quantos estão aplicados. -->
+  <div id="monitorMoreFilters" class="col-12" [hidden]="!moreFiltersOpen()">
+    <div class="row g-3 align-items-end">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorPriority">Prioridade</label>
         <select id="monitorPriority" class="form-select" [value]="store.filters().priority ?? ''"
                 (change)="store.setPriority($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -129,103 +125,163 @@
           }
         </select>
       </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small" for="monitorSector">Setor</label>
-        <select id="monitorSector" class="form-select" [value]="store.filters().sectorId ?? ''"
-                (change)="store.setSectorId($any($event.target).value || undefined)">
-          <option value="">Todos</option>
-          @for (department of departmentsStore.departments(); track department.id) {
-            <optgroup [label]="department.name">
-              @for (sector of department.sectors; track sector.id) {
-                <option [value]="sector.id">{{ sector.name }}</option>
-              }
-            </optgroup>
+      <div class="col-6 col-md-3">
+        <label class="form-label small" for="monitorAwaiting">Aguardando</label>
+        <select #awaitingSelect id="monitorAwaiting" class="form-select" [value]="store.filters().awaiting ?? ''"
+                (change)="onAwaitingChange(awaitingSelect.value)">
+          <option value="">Qualquer situação</option>
+          @for (awaiting of awaitingOptions; track awaiting) {
+            <option [value]="awaiting">{{ awaitingLabels[awaiting] }}</option>
           }
         </select>
       </div>
-      <div class="col-6 col-md-1">
-        <label class="form-label small" for="monitorSla">SLA</label>
-        <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
-                (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
-          <option value="">Todos</option>
-          <optgroup label="Em monitoramento">
-            @for (slaStatus of liveSlaStatusOptions; track slaStatus) {
-              <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
-            }
-          </optgroup>
-          <optgroup label="Já resolvidos">
-            @for (slaStatus of resolvedSlaStatusOptions; track slaStatus) {
-              <option [value]="slaStatus">{{ slaStatusLabels[slaStatus] }}</option>
-            }
-          </optgroup>
-        </select>
+      <div class="col-6 col-md-3">
+        <label class="form-label small" for="monitorCreatedFrom">Aberto de</label>
+        <input #createdFromInput id="monitorCreatedFrom" type="date" class="form-control" [value]="store.filters().createdFrom ?? ''"
+               [class.is-invalid]="dateError() === 'from'" [attr.aria-invalid]="dateError() === 'from' || null"
+               [attr.aria-describedby]="dateError() === 'from' ? 'monitorDateError' : null"
+               [max]="store.filters().createdTo ?? ''" (change)="onCreatedDateChange('from', createdFromInput)" />
       </div>
-      <div class="col-12 col-md-2">
-        <label class="form-label small" for="monitorSort">Ordenar</label>
-        <select id="monitorSort" class="form-select" [value]="store.filters().sort"
-                (change)="store.setSort(+$any($event.target).value)">
-          @for (sort of sortOptions; track sort) {
-            <option [value]="sort">{{ sortOrderLabels[sort] }}</option>
-          }
-        </select>
+      <div class="col-6 col-md-3">
+        <label class="form-label small" for="monitorCreatedTo">Aberto até</label>
+        <input #createdToInput id="monitorCreatedTo" type="date" class="form-control" [value]="store.filters().createdTo ?? ''"
+               [class.is-invalid]="dateError() === 'to'" [attr.aria-invalid]="dateError() === 'to' || null"
+               [attr.aria-describedby]="dateError() === 'to' ? 'monitorDateError' : null"
+               [min]="store.filters().createdFrom ?? ''" (change)="onCreatedDateChange('to', createdToInput)" />
       </div>
-      <div class="col-12 d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="form-check form-switch mb-0">
-          <input class="form-check-input" type="checkbox" role="switch" id="monitorUnassignedOnly"
-                 [checked]="store.filters().unassignedOnly ?? false"
-                 (change)="store.setUnassignedOnly($any($event.target).checked)" />
-          <label class="form-check-label small" for="monitorUnassignedOnly">Só sem responsável</label>
-        </div>
-        <button type="button" class="btn btn-link btn-clear-filters text-decoration-none px-0" (click)="onClearFilters()">
-          <i class="bx bx-x me-1"></i>Limpar filtros
-        </button>
-      </div>
+      @if (dateError()) {
+        <!-- Data recusada: diz o motivo, em vez de só voltar o campo pro valor aplicado. -->
+        <p id="monitorDateError" class="col-12 small text-danger mb-0" role="alert">
+          {{ dateError() === 'from' ? 'O início precisa ser no máximo o fim do período.' : 'O fim precisa ser no mínimo o início do período.' }}
+          Mantivemos a data anterior.
+        </p>
+      }
     </div>
   </div>
-</div>
 
-@if (store.listState().error) {
-  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
-    <span>{{ store.listState().error }}</span>
-    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
-  </div>
+  <button filterExtras type="button" class="btn btn-link btn-more-filters text-decoration-none px-0"
+          aria-controls="monitorMoreFilters" [attr.aria-expanded]="moreFiltersOpen()" (click)="toggleMoreFilters()">
+    <i class="bx me-1" [class.bx-chevron-down]="!moreFiltersOpen()" [class.bx-chevron-up]="moreFiltersOpen()" aria-hidden="true"></i>
+    {{ moreFiltersOpen() ? 'Menos filtros' : 'Mais filtros' }}@if (secondaryFilterCount() > 0) { ({{ secondaryFilterCount() }}) }
+  </button>
+  @if (!moreFiltersOpen() && secondaryFilterSummary()) {
+    <span filterExtras class="small text-muted">{{ secondaryFilterSummary() }}</span>
+  }
+</app-filter-bar>
+
+@if (pendingPeriodLabel(); as period) {
+  <!-- O back-end ainda não filtra a lista por data (spec 025): dito em tom neutro, pra a lista não parecer errada. -->
+  <p class="small text-muted d-flex align-items-start gap-2 mb-3" role="status">
+    <i class="bx bx-info-circle mt-1" aria-hidden="true"></i>
+    <span>O período de abertura ({{ period }}) ainda não é aplicado nesta lista: ela mostra chamados de qualquer data. O filtro por data chega em breve.</span>
+  </p>
 }
 
-@if (store.mutationError()) {
-  <div class="alert alert-danger d-flex align-items-center justify-content-between gap-3" role="alert">
+@if (store.listState().error && store.tickets().length > 0) {
+  <!-- Recarga que falhou com a lista já na tela: a lista fica, e o aviso (neutro, é falha técnica) diz que ela pode estar velha. -->
+  <p class="small text-secondary d-flex flex-wrap align-items-center gap-2 mb-2" role="alert">
+    <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.listState().error }} A lista abaixo é a da última atualização.</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.load()">Tentar novamente</button>
+  </p>
+}
+
+<!-- Com o diálogo "Atribuir responsável" aberto, o erro aparece só dentro dele (aqui ficaria atrás do fundo escurecido). -->
+@if (store.mutationError() && !assigningResponsibleTicketId()) {
+  <div class="alert alert-secondary border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.mutationError() }}</span>
     <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar" (click)="store.clearMutationError()"></button>
   </div>
 }
 
 <div class="row g-3">
-  <div class="col-12" [class.col-lg-8]="selectedTicket()">
-  <app-ticket-monitor-guide class="guide-rail" />
+  <div class="col-12 monitor-table-col" [class.col-lg-8]="selectedTicket()">
   <div class="card">
+  <!--
+    Total (anunciado ao trocar filtro), a idade da lista com o botão de atualizar, e a ordenação, no
+    topo da tabela: ordenar não é filtrar. O prazo relativo anda sozinho; selo e números, só ao atualizar.
+  -->
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <span class="small text-muted" aria-live="polite">
+        @if (!store.listState().loading || store.tickets().length > 0) {
+          {{ store.total() === 1 ? '1 chamado' : store.total() + ' chamados' }}
+        }
+      </span>
+      @if (store.listLoadedAtMs(); as updatedAt) {
+        <span class="small text-muted" aria-hidden="true">·</span>
+        <span class="small text-muted">Atualizado às {{ updatedAt | date:'HH:mm' }}</span>
+      }
+      <button type="button" class="btn btn-sm btn-link monitor-refresh text-decoration-none px-1"
+              [disabled]="store.listState().loading" (click)="refresh()">
+        <i class="bx bx-refresh me-1" [class.bx-spin]="store.listState().loading" aria-hidden="true"></i>Atualizar
+      </button>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <label class="small text-muted mb-0" for="monitorSort">Ordenar por</label>
+      <select #sortSelect id="monitorSort" class="form-select form-select-sm w-auto monitor-sort"
+              (change)="store.setSort(+sortSelect.value)">
+        @for (sort of sortOptions; track sort) {
+          <option [value]="sort" [selected]="store.filters().sort === sort">{{ sortOrderLabels[sort] }}</option>
+        }
+      </select>
+    </div>
+  </div>
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0">
-      <caption class="visually-hidden">Tickets do sistema, filtrados conforme os filtros acima</caption>
+    <!-- Com o painel aberto, a tabela perde um terço da largura: Solicitante, Atendente e Setor (que o painel mostra) saem, e o título mantém a leitura. -->
+    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0"
+           [class.is-compact]="!!selectedTicket()" [attr.aria-busy]="store.listState().loading || null">
+      <caption class="visually-hidden">Chamados do sistema, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
-          <th scope="col">Título</th>
-          <th scope="col">Solicitante</th>
-          <th scope="col" class="d-none d-md-table-cell">Atendente</th>
-          <th scope="col">Setor</th>
+          <th scope="col" class="col-title">Título</th>
+          <th scope="col" class="col-requester">Solicitante</th>
+          <th scope="col" class="d-none d-md-table-cell col-assignee">Atendente</th>
+          <th scope="col" class="col-sector">Setor</th>
           <th scope="col">Prioridade</th>
           <th scope="col">Status</th>
-          <th scope="col">SLA</th>
-          <th scope="col">Prazo</th>
+          <th scope="col">SLA e prazo</th>
           <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
         @if (store.listState().loading && store.tickets().length === 0) {
-          <tr><td colspan="9" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
+          <tr><td colspan="8"><app-loading-state label="Carregando chamados…" /></td></tr>
+        } @else if (store.listState().error && store.tickets().length === 0) {
+          <!-- Erro nunca vira dado: sem lista, a falha ocupa o lugar dela (e não o vazio "Ainda não há chamados"). -->
+          <tr>
+            <td colspan="8">
+              <div class="d-flex flex-column align-items-center gap-2 py-4 text-center" role="alert">
+                <span class="text-secondary"><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.listState().error }}</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.load()">Tentar novamente</button>
+              </div>
+            </td>
+          </tr>
         } @else if (store.tickets().length === 0) {
           <tr>
-            <td colspan="9" class="text-center py-5 text-muted">
-              <i class="bx bx-receipt display-6 d-block mb-2 opacity-50"></i>
-              Nenhum ticket encontrado com esses filtros.
+            <td colspan="8">
+              @switch (emptyKind()) {
+                @case ('filtered') {
+                  <app-empty-state icon="bx-filter-alt" title="Nenhum chamado com esses filtros."
+                                   hint="Tente outro termo de busca, setor ou situação de SLA.">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">
+                      <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+                    </button>
+                  </app-empty-state>
+                }
+                @case ('queueClear') {
+                  <!-- A fila de trabalho vazia é uma boa notícia, não um "nada encontrado". -->
+                  <app-empty-state icon="bx-check-circle" title="Fila em dia."
+                                   hint="Nenhum chamado aberto ou em andamento agora.">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.setStatus(undefined)">
+                      Ver todos os status
+                    </button>
+                  </app-empty-state>
+                }
+                @default {
+                  <app-empty-state icon="bx-receipt" title="Ainda não há chamados."
+                                   hint="Quando alguém abrir o primeiro chamado, ele aparece aqui." />
+                }
+              }
             </td>
           </tr>
         } @else {
@@ -233,83 +289,87 @@
             <!-- A linha inteira é clicável com o mouse; pro teclado/leitor de tela, o botão de verdade é o título
                  (uma linha com role="button" escondia as colunas e o "⋮" de dentro dela). -->
             <tr class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id" (click)="selectTicket(ticket.id, selectButton)">
-              <td>
-                <button #selectButton type="button" class="ticket-select fw-semibold text-start text-break"
-                        [attr.aria-pressed]="selectedTicketId() === ticket.id"
-                        [attr.aria-label]="(selectedTicketId() === ticket.id ? 'Fechar informações do ticket ' : 'Ver informações do ticket ') + ticket.title"
+              <td class="col-title">
+                <!-- Nome acessível = título visível (WCAG 2.5.3); o painel aberto/fechado vem do aria-expanded — mesmo padrão de Usuários (DESIGN.md).
+                     Quebra só entre palavras: o .text-break deixava a coluna encolher até uma letra por linha com o painel aberto. -->
+                <button #selectButton type="button" class="ticket-select fw-semibold text-start"
+                        [attr.aria-expanded]="selectedTicketId() === ticket.id"
                         (click)="selectTicket(ticket.id, selectButton); $event.stopPropagation()">
                   {{ ticket.title }}
                 </button>
               </td>
-              <td>
+              <td class="col-requester">
                 <div>{{ ticket.requesterName }}</div>
-                <div class="text-muted small">{{ ticket.requesterEmail }}</div>
+                <div class="text-muted small requester-email">{{ ticket.requesterEmail }}</div>
                 <div class="text-muted small d-md-none">
                   Atendente:
                   @if (ticket.assignedToName) {
                     {{ ticket.assignedToName }}
                   } @else {
-                    <span class="fst-italic">não atribuído</span>
+                    <span class="fst-italic">Não atribuído</span>
                   }
                 </div>
               </td>
-              <td class="small d-none d-md-table-cell">
+              <td class="small d-none d-md-table-cell col-assignee">
                 @if (ticket.assignedToName) {
                   {{ ticket.assignedToName }}
                 } @else {
                   <span class="text-muted fst-italic">Não atribuído</span>
                 }
               </td>
-              <td class="small" data-label="Setor">{{ ticket.sectorName }}</td>
+              <td class="small col-sector" data-label="Setor">{{ ticket.sectorName }}</td>
               <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
-              <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
-              <td data-label="SLA"><span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span></td>
-              <td class="text-nowrap small" data-label="Prazo" [class.text-danger]="isOverdue(ticket)">
-                <!-- Ícone e data num item só: no card do celular a célula vira flex e os separaria. -->
-                <span>
-                  @if (isOverdue(ticket)) {
-                    <i class="bx bx-error-circle me-1" aria-hidden="true"></i>
+              <td data-label="Status">
+                <span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span>
+                @if (ticket.waitingOn) {
+                  <span class="d-block small text-muted mt-1">{{ awaitingLabels[ticket.waitingOn] }}</span>
+                }
+              </td>
+              <!--
+                SLA e prazo numa célula: a etiqueta e, pros ativos, o prazo relativo ("vence em 2h") pela
+                hora do servidor — a assinatura do produto, a mesma da faixa do Início. A data exata fica no title.
+              -->
+              <td data-label="SLA e prazo">
+                <span class="d-inline-flex flex-column align-items-start gap-1" [title]="'Prazo: ' + (ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">
+                  <!-- O selo acompanha o relógio: um "No prazo"/"Em risco" que venceu com a tela aberta vira "Atrasado" na hora. -->
+                  <span class="badge" [ngClass]="slaStatusBadgeClass[displaySlaStatus(ticket)]">{{ slaStatusLabels[displaySlaStatus(ticket)] }}</span>
+                  @if (dueRelative(ticket); as relative) {
+                    <span class="small text-nowrap" [class.text-danger]="isOverdue(ticket)" [class.fw-semibold]="isOverdue(ticket)">{{ relative }}</span>
+                  } @else if (ticket.slaStatus !== slaNotApplicable) {
+                    <span class="small text-muted text-nowrap">Prazo era {{ ticket.dueAtUtc | date:'dd/MM HH:mm' }}</span>
                   }
-                  {{ ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
                 </span>
               </td>
               <td class="text-end table-stack-actions" (click)="$event.stopPropagation()">
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
-                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
-                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
-                    <i class="bx bx-dots-vertical-rounded"></i>
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    @if (canAssignToMe(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
-                                [attr.aria-label]="'Atribuir o ticket ' + ticket.title + ' a mim'" (click)="onAssignToMe(ticket.id)">
-                          @if (store.assigningToMeIds().includes(ticket.id)) {
-                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                          } @else {
-                            <i class="bx bx-user-plus me-2"></i>
-                          }
-                          Atribuir a mim
-                        </button>
-                      </li>
-                    }
-                    @if (canAssignResponsible(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#monitorAssignResponsibleModal"
-                                [attr.aria-label]="(ticket.assignedToName ? 'Alterar o responsável pelo ticket ' : 'Atribuir responsável pelo ticket ') + ticket.title"
-                                (click)="onOpenAssignResponsibleModal(ticket.id)">
-                          <i class="bx bx-user-check me-2"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
-                        </button>
-                      </li>
-                    }
+                <app-row-actions [label]="'Ações para o chamado ' + ticket.title">
+                  @if (canAssignToMe(ticket)) {
                     <li>
-                      <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes do ticket ' + ticket.title">
-                        <i class="bx bx-show me-2"></i>Ver detalhes
-                      </a>
+                      <button type="button" class="dropdown-item" [disabled]="store.assigningToMeIds().includes(ticket.id)"
+                              [attr.aria-label]="'Atribuir a mim: ' + ticket.title" (click)="onAssignToMe(ticket.id)">
+                        @if (store.assigningToMeIds().includes(ticket.id)) {
+                          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        } @else {
+                          <i class="bx bx-user-plus me-2" aria-hidden="true"></i>
+                        }
+                        Atribuir a mim
+                      </button>
                     </li>
-                  </ul>
-                </div>
+                  }
+                  @if (canAssignResponsible(ticket)) {
+                    <li>
+                      <button type="button" class="dropdown-item"
+                              [attr.aria-label]="(ticket.assignedToName ? 'Alterar responsável: ' : 'Atribuir responsável: ') + ticket.title"
+                              (click)="onOpenAssignResponsibleModal(ticket.id)">
+                        <i class="bx bx-user-check me-2" aria-hidden="true"></i>{{ ticket.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
+                      </button>
+                    </li>
+                  }
+                  <li>
+                    <a [routerLink]="['/tickets', ticket.id]" [queryParams]="{ from: 'monitor' }" class="dropdown-item" [attr.aria-label]="'Ver detalhes: ' + ticket.title">
+                      <i class="bx bx-show me-2" aria-hidden="true"></i>Ver detalhes
+                    </a>
+                  </li>
+                </app-row-actions>
               </td>
             </tr>
           }
@@ -319,42 +379,9 @@
   </div>
 
   @if (store.total() > 0) {
-    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} tickets</span>
-
-      @if (store.totalPages() > 1) {
-        <div class="d-flex align-items-center gap-2">
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() - 1)">
-            Anterior
-          </button>
-
-          @for (pageNumber of pageNumbers(); track $index) {
-            @if (pageNumber === '…') {
-              <span class="px-1 text-muted">…</span>
-            } @else {
-              <button type="button" class="btn btn-sm btn-page" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
-                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
-                      (click)="store.goToPage(pageNumber)">
-                {{ pageNumber }}
-              </button>
-            }
-          }
-
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.listState().loading" (click)="store.goToPage(store.currentPage() + 1)">
-            Próxima
-          </button>
-        </div>
-      }
-
-      <div class="d-flex align-items-center gap-2">
-        <label class="form-label small mb-0" for="monitorPageSize">Por página</label>
-        <select id="monitorPageSize" class="form-select form-select-sm w-auto" [value]="store.currentPageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
-          @for (size of pageSizeOptions; track size) {
-            <option [value]="size">{{ size }}</option>
-          }
-        </select>
-      </div>
-    </div>
+    <app-pagination [page]="store.currentPage()" [totalPages]="store.totalPages()" [total]="store.total()"
+                    [pageSize]="store.currentPageSize()" [pageSizeOptions]="pageSizeOptions" noun="chamados" [disabled]="store.listState().loading"
+                    (pageChange)="store.goToPage($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
   </div>
   </div>
@@ -363,55 +390,23 @@
     <!-- Abaixo de "lg", o painel vira um overlay de tela cheia (RF-04): a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
-      <app-ticket-monitor-info-panel [ticket]="ticket" (close)="closeInfoPanel()" />
+      <app-ticket-monitor-info-panel [ticket]="ticket" [modal]="isOverlayViewport()" [slaStatus]="displaySlaStatus(ticket)"
+                                     [canAssignToMe]="canAssignToMe(ticket)" [canAssignResponsible]="canAssignResponsible(ticket)"
+                                     [dueRelative]="dueRelative(ticket)" [overdue]="isOverdue(ticket)"
+                                     [assigningToMe]="store.assigningToMeIds().includes(ticket.id)"
+                                     (close)="closeInfoPanel()" (assignToMeClick)="onAssignToMe(ticket.id)"
+                                     (assignResponsibleClick)="onOpenAssignResponsibleModal(ticket.id)" />
     </div>
   }
 </div>
 
-<!-- Só aparece em telas muito largas, no espaço livre à direita do container central (ver CSS). -->
-<app-ticket-monitor-insights class="insights-rail" />
 
-<!-- Modal de atribuição de responsável -->
-<div class="modal fade" id="monitorAssignResponsibleModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="monitorAssignResponsibleModalTitle">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="monitorAssignResponsibleModalTitle">Atribuir responsável</h5>
-        <button id="monitorAssignResponsibleModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <label class="form-label small" for="monitorResponsibleSearch">Buscar usuário</label>
-        <div class="input-group mb-3">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="monitorResponsibleSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
-                 [value]="responsibleSearchInput()" (input)="responsibleSearchInput.set($any($event.target).value)" />
-        </div>
-
-        @if (store.responsibleSearchError()) {
-          <div class="alert alert-danger py-2 small mb-0" role="alert">{{ store.responsibleSearchError() }}</div>
-        } @else if (store.searchingResponsibleCandidates()) {
-          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
-        } @else if (responsibleSearchInput().trim().length === 0) {
-          <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
-        } @else if (store.responsibleCandidates().length === 0) {
-          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
-        } @else {
-          <ul class="list-group">
-            @for (candidate of store.responsibleCandidates(); track candidate.id) {
-              <li class="list-group-item p-0">
-                <button type="button" class="btn w-100 text-start p-2 rounded-0" [disabled]="store.assigningResponsible()" (click)="onSelectResponsibleCandidate(candidate)">
-                  <div class="fw-semibold">{{ candidate.firstName }} {{ candidate.lastName }}</div>
-                  <div class="small text-muted">{{ candidate.email }}</div>
-                </button>
-              </li>
-            }
-          </ul>
-        }
-
-        @if (store.mutationError()) {
-          <div class="alert alert-danger py-2 small mt-3 mb-0" role="alert">{{ store.mutationError() }}</div>
-        }
-      </div>
-    </div>
-  </div>
-</div>
+@if (assigningResponsibleTicket(); as assigning) {
+  <app-ticket-assign-dialog [ticketTitle]="assigning.title" [currentName]="assigning.assignedToName ?? null"
+                            [currentUserId]="assigning.assignedToUserId ?? null"
+                            [candidates]="store.responsibleCandidates()" [searching]="store.searchingResponsibleCandidates()"
+                            [searchError]="store.responsibleSearchError()"
+                            [saving]="store.assigningResponsible()" [error]="store.mutationError()"
+                            (search)="store.searchResponsibleCandidates($event)" (selectionChange)="store.clearMutationError()"
+                            (confirm)="onConfirmResponsible($event)" (closed)="assigningResponsibleTicketId.set(undefined)" />
+}

@@ -1,0 +1,31 @@
+<app-screen-guide storageKey="tickest.ticketListGuide.open">
+  <app-guide-section title="Status">
+    <ul class="list-unstyled mb-0">
+      @for (status of statusOptions; track status; let last = $last) {
+        <li class="d-flex align-items-start gap-2" [class.mb-2]="!last">
+          <span class="badge flex-shrink-0" [ngClass]="statusBadgeClass[status]">{{ statusLabels[status] }}</span>
+          <span class="small text-muted">{{ statusExplanations[status] }}</span>
+        </li>
+      }
+    </ul>
+  </app-guide-section>
+
+  <app-guide-section title="O que dá pra fazer">
+    <p class="small text-muted mb-2">Na própria linha: <strong>editar</strong> a descrição enquanto o chamado está aberto ou em andamento, e <strong>cancelar</strong> nos 15 primeiros minutos depois de abrir. Para solicitar o cancelamento, entre em contato com quem administra os chamados.</p>
+    <p class="small text-muted mb-0">Depois de resolvido, fechado ou cancelado, dá pra <strong>reabrir</strong> e dizer o que faltou — um novo prazo de atendimento começa a contar, e a coluna Prazo passa a mostrar esse prazo novo.</p>
+  </app-guide-section>
+
+  <app-guide-section title="Prazo">
+    <p class="small text-muted mb-2">Cada chamado tem um prazo de atendimento, contado em horário útil. A coluna Prazo diz como ele está:</p>
+    <ul class="list-unstyled small mb-2">
+      @for (sla of dueLegend; track sla) {
+        <li class="d-flex align-items-center gap-2">
+          <i class="bx {{ dueDisplay[sla].icon }}" aria-hidden="true"
+             [class.text-warning]="dueDisplay[sla].tone === 'warning'" [class.text-danger]="dueDisplay[sla].tone === 'danger'"></i>
+          <span>{{ dueDisplay[sla].label }}</span>
+        </li>
+      }
+    </ul>
+    <p class="small text-muted mb-0"><strong>Atualizado</strong> mostra há quanto tempo foi a última movimentação: mensagem, troca de status, responsável ou anexo.</p>
+  </app-guide-section>
+</app-screen-guide>

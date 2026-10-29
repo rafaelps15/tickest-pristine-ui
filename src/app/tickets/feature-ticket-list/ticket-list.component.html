@@ -1,45 +1,138 @@
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-      <div>
-        <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Início /</span> Meus Tickets</h4>
-        <p class="page-subtitle small mb-0">Os chamados que você abriu, com prioridade e status atuais.</p>
-      </div>
-      <a routerLink="/tickets/novo" class="btn btn-primary">
-        <i class="bx bx-plus me-1"></i> Novo Ticket
-      </a>
+<app-page-header title="Meus Chamados" subtitle="Os chamados que você abriu: quem está atendendo, até quando e a última movimentação."
+                 [crumbs]="[{ label: 'Início', link: '/dashboard' }]">
+  <a pageActions routerLink="/tickets/novo" class="btn btn-primary">
+    <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
+  </a>
+</app-page-header>
+
+<app-ticket-list-guide />
+
+<!-- Recorte da lista: grupo de status (Em aberto é o padrão) e busca pelo título, os dois na URL. -->
+<app-filter-bar [clearable]="hasCustomFilters()" (clear)="onClearFilters()">
+  <div class="col-12 col-md-auto">
+    <span class="form-label small d-block" id="ticketStatusGroupLabel">Mostrar</span>
+    <div class="btn-group status-group" role="radiogroup" aria-labelledby="ticketStatusGroupLabel">
+      @for (option of statusGroupOptions; track option.key) {
+        <input type="radio" class="btn-check" name="ticketStatusGroup" [id]="'ticketStatusGroup-' + option.key"
+               [checked]="store.statusGroup() === option.value" (change)="onStatusGroupChange(option.value)" />
+        <label class="btn btn-outline-secondary" [for]="'ticketStatusGroup-' + option.key">
+          {{ option.label }}
+          @if (groupCount(option.key); as count) {
+            <span class="status-group-count num">{{ count }}<span class="visually-hidden">{{ count === 1 ? ' chamado' : ' chamados' }}</span></span>
+          }
+        </label>
+      }
     </div>
   </div>
-</div>
+  <div class="col-12 col-md">
+    <label class="form-label small" for="ticketSearch">Buscar</label>
+    <div class="input-group">
+      <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+      <input id="ticketSearch" type="search" class="form-control" placeholder="Título do chamado"
+             [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
+    </div>
+  </div>
+</app-filter-bar>
 
-@if (store.state().error) {
+<!-- Com a lista vazia, o erro mora só no estado vazio da tabela (um anúncio, uma saída); aqui, só sobre linhas antigas. -->
+@if (store.loadError() && store.tickets().length > 0) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
-    <span>{{ store.state().error }}</span>
+    <span>{{ store.loadError() }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForCurrentUser()">Tentar novamente</button>
+  </div>
+}
+
+<!-- Erro de editar/cancelar/reabrir: "Tentar novamente" não refaria a ação, então só dá pra dispensar.
+     Com um modal (edição/reabertura) aberto, o erro aparece só dentro dele. -->
+@if (store.mutationError() && !editingTicket() && !reopeningTicket()) {
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
+    <span>{{ store.mutationError() }}</span>
+    <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso de erro" (click)="store.clearMutationError()"></button>
   </div>
 }
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0 table-stack">
+    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="isRefreshing()" [attr.aria-busy]="isRefreshing() || null">
+      <caption class="visually-hidden">Chamados que você abriu, do que teve movimentação mais recente para o mais antigo</caption>
       <thead>
         <tr>
-          <th scope="col">Título</th>
-          <th scope="col">Abertura</th>
-          <th scope="col">Prioridade</th>
+          <th scope="col">Chamado</th>
+          <th scope="col">Atendimento</th>
+          <th scope="col">Prazo</th>
           <th scope="col">Status</th>
+          <th scope="col">Atualizado</th>
           <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
-        @if (store.state().loading) {
-          <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
+        @if (isLoadingList()) {
+          <tr><td colspan="6"><app-loading-state label="Carregando chamados…" /></td></tr>
+        } @else if (store.loadError() && store.tickets().length === 0) {
+          <!-- Erro de leitura nunca vira dado: sem isso, a lista vazia caía em "Nada pendente" logo abaixo do alerta. -->
+          <tr>
+            <td colspan="6" class="filtered-empty" role="alert">
+              <app-empty-state icon="bx-error-circle" title="Não deu pra carregar seus chamados agora"
+                               [hint]="store.loadError() + ' Eles continuam guardados.'">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.loadForCurrentUser()">Tentar novamente</button>
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else if (store.tickets().length === 0 && store.hasAnyTicket() === false) {
+          <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro chamado. -->
+          <tr>
+            <td colspan="6" class="first-use py-5">
+              <div class="first-use-body">
+                <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
+                <h2 class="h5 fw-bold mb-2">Nenhum chamado aberto ainda</h2>
+                <p class="first-use-lead mb-3">
+                  Precisa de algo de outro departamento? Abra um chamado em vez de mandar e-mail ou WhatsApp:
+                  o pedido chega ao setor certo e você acompanha tudo por aqui.
+                </p>
+                <ol class="first-use-steps small mb-3">
+                  <li>Descreva o que precisa e escolha o setor que vai atender.</li>
+                  <li>O setor assume o chamado e o status muda aqui, nesta lista.</li>
+                  <li>A conversa fica dentro do chamado, com prazo de atendimento.</li>
+                </ol>
+                @if (attendingDepartments()) {
+                  <p class="first-use-departments small mb-4">Atendem chamados: {{ attendingDepartments() }}.</p>
+                }
+                <a routerLink="/tickets/novo" class="btn btn-primary">
+                  <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro chamado
+                </a>
+              </div>
+            </td>
+          </tr>
+        } @else if (store.tickets().length === 0 && store.search()) {
+          <tr>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-search" [title]="'Nenhum chamado com “' + store.search() + '” no título'"
+                               [hint]="store.statusGroup() === null ? 'Confira o termo digitado.' : 'A busca vale só para ' + currentGroupLabel() + '. O chamado pode estar no outro grupo.'">
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                  @if (store.statusGroup() !== null) {
+                    <button type="button" class="btn btn-sm btn-primary" (click)="onStatusGroupChange(null)">Buscar em todos os chamados</button>
+                  }
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearSearch()">Limpar busca</button>
+                </div>
+              </app-empty-state>
+            </td>
+          </tr>
+        } @else if (store.tickets().length === 0 && store.statusGroup() === statusGroup.Active) {
+          <tr>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-check-circle" title="Nada pendente"
+                               hint="Nenhum chamado seu está aberto ou em andamento agora.">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onStatusGroupChange(statusGroup.Finished)">Ver encerrados</button>
+              </app-empty-state>
+            </td>
+          </tr>
         } @else if (store.tickets().length === 0) {
           <tr>
-            <td colspan="5" class="text-center py-5 text-muted">
-              <i class="bx bx-receipt display-6 d-block mb-2 opacity-50"></i>
-              Você ainda não abriu nenhum ticket.
-              <a routerLink="/tickets/novo" class="d-block small mt-2">Abrir o primeiro ticket</a>
+            <td colspan="6" class="filtered-empty">
+              <app-empty-state icon="bx-archive" title="Nenhum chamado encerrado ainda"
+                               hint="Os chamados resolvidos, fechados ou cancelados aparecem aqui.">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onStatusGroupChange(statusGroup.Active)">Ver em aberto</button>
+              </app-empty-state>
             </td>
           </tr>
         } @else {
@@ -49,46 +142,67 @@
                 <a [routerLink]="['/tickets', ticket.id]" class="ticket-title fw-semibold">{{ ticket.title }}</a>
                 <div class="ticket-summary text-muted small text-truncate" [title]="ticket.description">{{ ticket.description }}</div>
               </td>
-              <td class="text-nowrap small" data-label="Abertura">{{ ticket.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
+              <td data-label="Atendimento">
+                <div class="assignment">
+                  @if (ticket.assignedToName) {
+                    <span class="assignment-person">{{ ticket.assignedToName }}</span>
+                  } @else if (isActive(ticket)) {
+                    <span class="assignment-person assignment-waiting">Aguardando atendimento</span>
+                  } @else {
+                    <span class="assignment-person assignment-waiting">Sem responsável</span>
+                  }
+                  <span class="assignment-sector small">{{ ticket.sectorName }}</span>
+                </div>
+              </td>
+              <td data-label="Prazo">
+                <!-- O ciclo vigente: num chamado reaberto, o prazo novo (o mesmo da seção SLA do detalhe). -->
+                @let current = currentDue(ticket);
+                @let due = current.display;
+                <div class="due" [class.due-warning]="due.tone === 'warning'" [class.due-danger]="due.tone === 'danger'">
+                  <span class="due-label"><i class="bx {{ due.icon }}" aria-hidden="true"></i>{{ due.label }}</span>
+                  @if (due.showDate) {
+                    <span class="due-date small">{{ due.datePrefix }} <span class="num">{{ current.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span></span>
+                  }
+                  <!-- Atrasado não é beco sem saída: leva ao chamado, onde a conversa com o setor já existe (mesma rota do título). -->
+                  @if (due.tone === 'danger') {
+                    <a [routerLink]="['/tickets', ticket.id]" class="due-nudge small" [attr.aria-label]="'Cobrar no chamado ' + ticket.title">Cobrar no chamado</a>
+                  }
+                </div>
+              </td>
               <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
+              <td class="text-nowrap small" data-label="Atualizado">
+                <time class="num" [attr.datetime]="ticket.lastActivityAtUtc" [title]="lastActivityFull(ticket)">
+                  {{ lastActivityLabel(ticket) }}<span class="visually-hidden"> ({{ lastActivityFull(ticket) }})</span>
+                </time>
+              </td>
               <td class="text-end table-stack-actions">
-                <div class="dropdown">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
-                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
-                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
-                    @if (isPending(ticket)) {
-                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                    } @else {
-                      <i class="bx bx-dots-vertical-rounded"></i>
+                <!-- Uma ou duas ações por linha: botões à vista (o "⋮" é só pra mais de duas, pela regra do DESIGN.md). -->
+                <div class="row-actions-inline" [attr.data-row-actions]="ticket.id" [attr.aria-busy]="isPending(ticket) || null">
+                  @if (isPending(ticket)) {
+                    <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Salvando…</span></span>
+                  }
+                  @if (isActive(ticket)) {
+                    @if (canEdit(ticket)) {
+                      <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)"
+                              [attr.aria-label]="'Editar a descrição do chamado ' + ticket.title">
+                        <i class="bx bx-edit me-1" aria-hidden="true"></i>Editar
+                      </button>
                     }
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    @if (isActive(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)">
-                          <i class="bx bx-edit me-2"></i>Editar descrição
-                        </button>
-                      </li>
-                      <li>
-                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
-                          <i class="bx bx-x-circle me-2"></i>Cancelar ticket
-                        </button>
-                      </li>
-                      <li><hr class="dropdown-divider" /></li>
-                      <li>
-                        <button type="button" class="dropdown-item text-danger" [disabled]="isPending(ticket)" (click)="onDelete(ticket)">
-                          <i class="bx bx-trash me-2"></i>Excluir
-                        </button>
-                      </li>
-                    } @else if (canReopen(ticket)) {
-                      <li>
-                        <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onReopen(ticket)">
-                          <i class="bx bx-refresh me-2"></i>Reabrir ticket
-                        </button>
-                      </li>
+                    @if (canCancel(ticket)) {
+                      <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)"
+                              [attr.aria-label]="'Cancelar o chamado ' + ticket.title + (cancelHint(ticket) ? ', disponível ' + cancelHint(ticket) : '')">
+                        <i class="bx bx-x-circle me-1" aria-hidden="true"></i>Cancelar
+                        @if (cancelHint(ticket); as hint) {
+                          <span class="cancel-hint num">{{ hint }}</span>
+                        }
+                      </button>
                     }
-                  </ul>
+                  } @else if (canReopen(ticket)) {
+                    <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="isPending(ticket)" (click)="onStartReopen(ticket)"
+                            [attr.aria-label]="'Reabrir o chamado ' + ticket.title">
+                      <i class="bx bx-refresh me-1" aria-hidden="true"></i>Reabrir
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -99,46 +213,18 @@
   </div>
 
   @if (store.total() > 0) {
-    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
-      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} tickets</span>
-
-      @if (store.totalPages() > 1) {
-        <div class="d-flex align-items-center gap-2">
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.state().loading" (click)="store.goToPage(store.currentPage() - 1)">
-            Anterior
-          </button>
-
-          @for (pageNumber of pageNumbers(); track $index) {
-            @if (pageNumber === '…') {
-              <span class="px-1 text-muted">…</span>
-            } @else {
-              <button type="button" class="btn btn-sm btn-page" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
-                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
-                      (click)="store.goToPage(pageNumber)">
-                {{ pageNumber }}
-              </button>
-            }
-          }
-
-          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.state().loading" (click)="store.goToPage(store.currentPage() + 1)">
-            Próxima
-          </button>
-        </div>
-      }
-
-      <div class="d-flex align-items-center gap-2">
-        <label class="form-label small mb-0" for="ticketPageSize">Por página</label>
-        <select id="ticketPageSize" class="form-select form-select-sm w-auto" [value]="store.currentPageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
-          @for (size of pageSizeOptions; track size) {
-            <option [value]="size">{{ size }}</option>
-          }
-        </select>
-      </div>
-    </div>
+    <app-pagination [page]="store.currentPage()" [totalPages]="store.totalPages()" [total]="store.total()"
+                    [pageSize]="store.currentPageSize()" [pageSizeOptions]="pageSizeOptions" noun="chamados" [disabled]="store.state().loading"
+                    (pageChange)="store.goToPage($event)" (pageSizeChange)="onPageSizeChange($event)" />
   }
 </div>
 
 @if (editingTicket(); as editing) {
-  <app-ticket-edit-dialog [ticket]="editing" [saving]="isPending(editing)" [error]="store.state().error"
+  <app-ticket-edit-dialog [ticket]="editing" [saving]="isPending(editing)" [error]="store.mutationError()"
                            (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}
+
+@if (reopeningTicket(); as reopening) {
+  <app-ticket-reopen-dialog [ticketTitle]="reopening.title" [saving]="isPending(reopening)" [error]="store.mutationError()"
+                             (confirm)="onReopenConfirm($event)" (closed)="onReopenClosed()" />
 }

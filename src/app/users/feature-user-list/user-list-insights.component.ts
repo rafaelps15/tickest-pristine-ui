@@ -1,17 +1,24 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input } from '@angular/core';
+import { SummaryCardComponent } from '../../shared/ui/summary-card/summary-card.component';
+import { UserStatusCounts } from '../entities/user-status-counts';
 
 /**
- * Prévia de "Atividade da Equipe" de Usuários: só aparece em telas muito largas, no espaço que
- * sobra ao lado da tabela — mesmo padrão de insight que consoles de gestão de usuário de alto
- * nível (Okta, Azure AD/Entra, Auth0) mostram ao lado da listagem: atividade recente e
- * distribuição por papel. Conteúdo 100% estático e claramente marcado como "Em breve" — ainda não
- * existe nenhum endpoint de agregação (cadastros recentes, distribuição por função, atividade de
- * login) pra alimentar isso com dado real (R-03: nenhum número aqui é inventado).
+ * Card "Resumo" de Usuários: quantos ativos, com convite pendente e inativos a empresa tem — de
+ * toda a base, não da página atual. Componente de apresentação — recebe os totais via `input`, não
+ * injeta nenhum Store.
  */
 @Component({
   selector: 'app-user-list-insights',
+  imports: [SummaryCardComponent],
   templateUrl: './user-list-insights.component.html',
   styleUrl: './user-list-insights.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class UserListInsightsComponent {}
+export class UserListInsightsComponent {
+  /** Totais da empresa por situação (`null` enquanto não chegaram). */
+  readonly counts = input<UserStatusCounts | null>(null);
+  /** Os totais ainda estão carregando — o card mostra "—". */
+  readonly loading = input(false);
+  /** Os totais falharam — o card mostra "—" e o motivo. */
+  readonly failed = input(false);
+}

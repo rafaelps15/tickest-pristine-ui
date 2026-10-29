@@ -14,13 +14,16 @@ export const TICKET_SLA_STATUS_LABELS: Record<TicketSlaStatus, string> = {
   [TicketSlaStatus.AtRisk]: 'Em risco',
   [TicketSlaStatus.Breached]: 'Atrasado',
   [TicketSlaStatus.Met]: 'Cumprido',
-  [TicketSlaStatus.Missed]: 'Violado',
+  [TicketSlaStatus.Missed]: 'Resolvido com atraso',
   [TicketSlaStatus.NotApplicable]: 'Sem SLA'
 };
 
-/** Classe de badge Bootstrap por situação do SLA (as classes bg-label-* já têm variante para o dark mode). */
+/**
+ * Classe de badge Bootstrap por situação do SLA (as classes bg-label-* já têm variante para o dark mode).
+ * "No prazo" é neutro de propósito (DESIGN.md, risco de SLA): não pede ação e não compete com âmbar e vermelho.
+ */
 export const TICKET_SLA_STATUS_BADGE_CLASS: Record<TicketSlaStatus, string> = {
-  [TicketSlaStatus.OnTime]: 'bg-label-success',
+  [TicketSlaStatus.OnTime]: 'bg-label-secondary',
   [TicketSlaStatus.AtRisk]: 'bg-label-warning',
   [TicketSlaStatus.Breached]: 'bg-label-danger',
   [TicketSlaStatus.Met]: 'bg-label-success',

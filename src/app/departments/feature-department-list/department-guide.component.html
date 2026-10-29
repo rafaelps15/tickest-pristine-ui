@@ -1,28 +1,19 @@
-<div class="card filters-card mb-3">
-  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
-          [attr.aria-expanded]="open()" aria-controls="departmentGuideBody" (click)="toggle()">
-    <span class="fw-bold">
-      <i class="bx bx-info-circle me-2"></i>Guia da Tela
-    </span>
-    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
-  </button>
+<!-- Só o que a tela não diz sozinha: o subtítulo e o card já explicam departamento × setor. -->
+<!-- Fechado até na 1ª visita (exceção do DESIGN.md): o subtítulo já traz a regra principal. -->
+<app-screen-guide storageKey="tickest.departmentGuide.open" [defaultOpen]="false">
+  <app-guide-section title="Como os avisos filtram">
+    <p class="small text-muted mb-0">Cada aviso de "Pedem atenção" é um filtro: mostra só os departamentos com aquele problema. Corrigido o último, o filtro sai sozinho.</p>
+  </app-guide-section>
 
-  @if (open()) {
-    <div id="departmentGuideBody" class="card-body pt-0">
-      <div class="guide-section">
-        <h6 class="guide-section-title">Departamento e setor</h6>
-        <p class="small text-muted mb-0">Cada setor pertence a um departamento, e é cadastrado a partir do card dele. Um departamento sem nenhum setor não aparece na abertura de chamados.</p>
-      </div>
+  <app-guide-section title="O que a busca encontra">
+    <p class="small text-muted mb-0">Busca por nome do departamento ou de algum dos seus setores — não precisa saber em qual departamento um setor está.</p>
+  </app-guide-section>
 
-      <div class="guide-section">
-        <h6 class="guide-section-title">Busca</h6>
-        <p class="small text-muted mb-0">Busca por nome do departamento ou de algum dos seus setores — não precisa saber em qual departamento um setor está.</p>
-      </div>
+  <app-guide-section title="Excluir">
+    <p class="small text-muted mb-0">Excluir um departamento leva os setores dele junto. Departamento ou setor com chamados em andamento não pode ser excluído: conclua ou cancele esses chamados antes.</p>
+  </app-guide-section>
 
-      <div class="guide-section mb-0">
-        <h6 class="guide-section-title">Responsável</h6>
-        <p class="small text-muted mb-0">Opcional — um usuário indicado como ponto de contato do departamento.</p>
-      </div>
-    </div>
-  }
-</div>
+  <app-guide-section title="Responsável">
+    <p class="small text-muted mb-0">Opcional — um usuário indicado como ponto de contato do departamento.</p>
+  </app-guide-section>
+</app-screen-guide>
