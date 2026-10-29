@@ -82,6 +82,17 @@ describe('DashboardInsightsComponent', () => {
     expect(unassigned.querySelector('.critical-ticket-unassigned')?.textContent?.trim()).toBe('Sem responsável');
   });
 
+  it('não oferece "Atribuir" sem a permissão de atribuir a outra pessoa', async () => {
+    const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [orphan]);
+    fixture.componentRef.setInput('canAssign', false);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelectorAll('.critical-ticket-assign').length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('Sem responsável');
+  });
+
   it('oferece "Atribuir" só nos alertas sem responsável, fora do link, e emite o chamado', async () => {
     const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
     const fixture = TestBed.createComponent(DashboardInsightsComponent);

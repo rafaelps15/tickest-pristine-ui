@@ -80,7 +80,7 @@
   <app-dashboard-kpi-strip class="d-block kpi-row" [kpis]="kpis()" [state]="countsState()" [errorText]="countsErrorText()" (retry)="reloadCounts()" />
 
   <app-dashboard-hero-chart class="d-block mb-4"
-                            [scope]="chartScope()" [flowFiltered]="flowScope() === 'filtered'"
+                            [scope]="chartScope()" [flowFiltered]="flowScope() === 'filtered'" [resolvedEnabled]="features.volumeResolved"
                             [insight]="insight()" [composition]="composition()" [compositionState]="countsState()" [statusLinks]="statusLinks()"
                             [points]="flowPoints()" [groupBy]="flowGroupBy()" [unavailableGroupings]="unavailableGroupings()" [flowState]="flowState()" [bucketLink]="bucketLink()"
                             [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()" [range]="scope()"
@@ -100,6 +100,7 @@
                               [clockOffsetMs]="store.clockOffsetMs()"
                               [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
                               [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
+                              [canAssign]="sessionService.hasPermission('tickets:assign')"
                               (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
     </div>
     <div class="col-12 order-lg-1" [class.col-lg-5]="features.operationOverview" [class.col-lg-4]="!features.operationOverview">

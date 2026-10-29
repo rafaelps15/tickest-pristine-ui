@@ -1,6 +1,6 @@
 import { TicketStatus, TicketVolumePoint } from '../tickets';
 import { DASHBOARD_INSIGHT_RULES } from './dashboard-insight-rules';
-import { DASHBOARD_STATUS_GROUP_STATUS, accessNote, bucketLongLabel, bucketRange, bucketShortLabel, formatCompactCount, formatCount, freshnessLabel, statusComposition, volumeInsight, widgetState } from './dashboard-overview';
+import { DASHBOARD_STATUS_GROUP_STATUS, accessNote, bucketLongLabel, bucketRange, bucketShortLabel, formatAverage, formatCompactCount, formatCount, freshnessLabel, periodAverage, statusComposition, volumeInsight, weekendIndexes, widgetState } from './dashboard-overview';
 
 /** Pontos diários com as contagens dadas, do mais antigo pro mais novo. */
 function days(counts: number[], resolved?: number[]): TicketVolumePoint[] {
@@ -107,8 +107,36 @@ describe('dashboard-overview', () => {
     it('rótulos curto (eixo) e longo (tooltip e tabela)', () => {
       expect(bucketShortLabel('2026-10-26', 'Week')).toBe('26/10');
       expect(bucketShortLabel('2026-10-01', 'Month')).toBe('out/26');
+      expect(bucketLongLabel('2026-10-25', 'Day')).toBe('domingo, 25/10/2026');
+      expect(bucketLongLabel('2026-10-28', 'Day')).toBe('quarta, 28/10/2026');
       expect(bucketLongLabel('2026-10-26', 'Week')).toBe('Semana de 26/10/2026 a 01/11/2026');
       expect(bucketLongLabel('2026-10-01', 'Month')).toBe('out/2026');
+    });
+  });
+
+  describe('sombreado de fim de semana', () => {
+    it('marca sábados e domingos pela data local, só no agrupamento por dia', () => {
+      // 24/10/2026 é sábado e 25/10 domingo.
+      const points = ['2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26'].map(periodStart => ({ periodStart, count: 1 }));
+      expect(weekendIndexes(points, 'Day')).toEqual([1, 2]);
+      expect(weekendIndexes(points, 'Week')).toEqual([]);
+      expect(weekendIndexes(points, 'Month')).toEqual([]);
+    });
+  });
+
+  describe('média do período', () => {
+    it('usa só os períodos completos: o atual, pela metade, fica fora', () => {
+      expect(periodAverage(days([2, 4, 6, 100]))).toBe(4);
+    });
+
+    it('sem pelo menos dois períodos completos, não há média', () => {
+      expect(periodAverage(days([5, 9]))).toBeNull();
+      expect(periodAverage([])).toBeNull();
+    });
+
+    it('formata com uma casa em pt-BR, inteira quando não há fração', () => {
+      expect(formatAverage(4.333)).toBe('4,3');
+      expect(formatAverage(5)).toBe('5');
     });
   });
 

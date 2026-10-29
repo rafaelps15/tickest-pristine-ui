@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import { DashboardComponent, countTrend, greetingForHour, slaRate } from './dashboard.component';
+import { DASHBOARD_REFRESH_MS } from './dashboard-auto-refresh';
 import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardOverview, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem, TicketStatusCounts, TicketDashboardChartScope } from '../tickets';
 import { DepartmentsStore, Department } from '../departments';
 import { DASHBOARD_FEATURES, DashboardFeatures, SessionService, ToastService } from '../shared';
@@ -658,10 +659,19 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.hero-insight')).toBeNull();
     });
 
-    it('sem os resolvidos por período, diz uma vez que eles chegam em breve, sem série fantasma', async () => {
+    it('com volumeResolved desligado, o rodapé não promete os resolvidos, nem quando a resposta os traz', async () => {
+      features.volumeResolved = false;
+      ticketsStoreFake.volume.set(thirtyDays().map(point => ({ ...point, resolvedCount: 2 })));
       const fixture = await render();
       const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
       expect(footnote).toContain('Todos os chamados da empresa · Últimos 30 dias');
+      expect(footnote).not.toContain('Resolvidos por período');
+    });
+
+    it('com volumeResolved ligado e o back-end ainda sem os resolvidos, diz uma vez que eles chegam em breve, sem série fantasma', async () => {
+      features.volumeResolved = true;
+      const fixture = await render();
+      const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
       expect(footnote).toContain('Resolvidos por período e fila ao longo do tempo: disponível em breve.');
     });
 
@@ -728,6 +738,42 @@ describe('DashboardComponent', () => {
       expect(link.getAttribute('href')).toContain('createdFrom=2026-09-29');
       expect(link.getAttribute('href')).toContain('createdTo=2026-09-29');
       fixture.nativeElement.remove();
+    });
+
+    describe('série "Resolvidos" pela flag volumeResolved (spec 028)', () => {
+      /** Abre a tela como atendente, com a resposta da empresa trazendo resolvedCount, e mostra a tabela. */
+      async function tableHeaders(): Promise<(string | undefined)[]> {
+        asAgent();
+        ticketsStoreFake.volume.set(thirtyDays().map(point => ({ ...point, resolvedCount: 2 })));
+        const fixture = await render();
+        (fixture.nativeElement.querySelector('button[aria-label="Ver como tabela"]') as HTMLButtonElement).click();
+        await fixture.whenStable();
+        return Array.from(fixture.nativeElement.querySelectorAll('table th[scope="col"]') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
+      }
+
+      it('flag desligada: não mostra a série, mesmo com resolvedCount na resposta', async () => {
+        features.volumeResolved = false;
+        expect(await tableHeaders()).not.toContain('Resolvidos');
+      });
+
+      it('flag ligada: mostra a série, como antes', async () => {
+        features.volumeResolved = true;
+        expect(await tableHeaders()).toContain('Resolvidos');
+      });
+
+      it('flag desligada: períodos sem criados ficam "vazio", mesmo com resolvidos na resposta', async () => {
+        features.volumeResolved = false;
+        ticketsStoreFake.volume.set(thirtyDays(0).map(point => ({ ...point, resolvedCount: 3 })));
+        const fixture = await render();
+        expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Nenhum chamado no período.');
+      });
+
+      it('flag ligada: resolvidos no período não deixam o gráfico "vazio"', async () => {
+        features.volumeResolved = true;
+        ticketsStoreFake.volume.set(thirtyDays(0).map(point => ({ ...point, resolvedCount: 3 })));
+        const fixture = await render();
+        expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).not.toContain('Nenhum chamado no período.');
+      });
     });
 
     it('sem o agregado no back-end, não há escolha de escopo (nem no gráfico, nem acima dos números)', async () => {
@@ -816,6 +862,233 @@ describe('DashboardComponent', () => {
         await new Promise(resolve => setTimeout(resolve, 150));
         return (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
       }
+
+      describe('atualização automática x manual', () => {
+        type Fixture = Awaited<ReturnType<typeof render>>;
+
+        /** Cada frase escrita na região aria-live do cabeçalho, na ordem: o que o leitor de tela ouviria. */
+        const recordAnnouncements = (fixture: Fixture) => {
+          const said: string[] = [];
+          const region = fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement;
+          new MutationObserver(() => { const text = region.textContent?.trim(); if (text) said.push(text); })
+            .observe(region, { childList: true, characterData: true, subtree: true });
+          return said;
+        };
+
+        /** Uma atualização inteira: pede (pelo relógio ou pelo botão), carrega, aplica o resultado e espera o anúncio. */
+        const cycle = async (fixture: Fixture, origin: 'manual' | 'auto', apply: () => void = () => undefined) => {
+          fixture.componentInstance.refresh(origin);
+          ticketsStoreFake.statusCountsLoading.set(true);
+          await fixture.whenStable();
+          apply();
+          ticketsStoreFake.statusCountsLoading.set(false);
+          await fixture.whenStable();
+          await new Promise(resolve => setTimeout(resolve, 150));
+        };
+
+        /** Os Alertas falham (falha parcial: os outros blocos têm números). */
+        const alertsFail = () => ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+        /** Os Alertas voltam. */
+        const alertsBack = () => ticketsStoreFake.criticalTicketsError.set(null);
+        /** Todos os blocos sem números (falha total). */
+        const everythingFails = () => {
+          operationFake.volume.set(null);
+          ticketsStoreFake.statusCounts.set(null);
+          ticketsStoreFake.statusCountsFailed.set(true);
+          ticketsStoreFake.volumeHasValue.set(false);
+          ticketsStoreFake.volumeFailed.set(true);
+          ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+          operationFake.times.set(null);
+        };
+
+        it('com sucesso contínuo, o relógio não anuncia nada', async () => {
+          asAgent();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'auto');
+          await cycle(fixture, 'auto');
+
+          expect(said).toEqual([]);
+          expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Atualizado agora');
+        });
+
+        it('uma falha nova no relógio é anunciada uma vez; a mesma falha nos ciclos seguintes, não', async () => {
+          asAgent();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'auto', alertsFail);
+          await cycle(fixture, 'auto');
+          await cycle(fixture, 'auto');
+
+          expect(said).toEqual(['Não foi possível atualizar os números']);
+          expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
+        });
+
+        it('a volta pelo relógio é anunciada uma vez ("Números de volta"), e o ciclo seguinte sem mudança fica em silêncio', async () => {
+          asAgent();
+          alertsFail();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'auto', alertsBack);
+          await cycle(fixture, 'auto');
+
+          expect(said).toEqual(['Números de volta: atualizado agora']);
+          expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Atualizado agora');
+        });
+
+        // Parcial → total não acontece numa atualização: o fluxo guarda os últimos pontos bons do mesmo
+        // recorte, então há números (velhos) na tela e a falha continua parcial. A troca possível é total → parcial.
+        it('a troca de falha total pra parcial no relógio (um bloco volta, outro segue em erro) é anunciada uma vez', async () => {
+          asAgent();
+          everythingFails();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'auto', () => {
+            ticketsStoreFake.statusCounts.set({ totalCount: 12, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 2 });
+            ticketsStoreFake.statusCountsFailed.set(false);
+          });
+          await cycle(fixture, 'auto');
+
+          expect(said).toEqual(['Não foi possível atualizar os números']);
+          expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
+        });
+
+        it('com tudo fora desde a primeira carga, o relógio não repete a falha total; quando tudo volta, anuncia a volta uma vez', async () => {
+          asAgent();
+          everythingFails();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'auto');
+          await cycle(fixture, 'auto', () => {
+            operationFake.volume.set({ totalCount: 10, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 0, backlogCount: 5 });
+            ticketsStoreFake.statusCounts.set({ totalCount: 12, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 2 });
+            ticketsStoreFake.statusCountsFailed.set(false);
+            ticketsStoreFake.volumeHasValue.set(true);
+            ticketsStoreFake.volumeFailed.set(false);
+            ticketsStoreFake.criticalTicketsError.set(null);
+          });
+
+          expect(said).toEqual(['Números de volta: atualizado agora']);
+        });
+
+        it('o botão anuncia toda vez, inclusive o sucesso repetido e a falha que já estava valendo', async () => {
+          asAgent();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'manual');
+          await cycle(fixture, 'manual');
+          await cycle(fixture, 'manual', alertsFail);
+          await cycle(fixture, 'manual');
+
+          expect(said).toEqual(['Atualizado agora', 'Atualizado agora', 'Não foi possível atualizar os números', 'Não foi possível atualizar os números']);
+        });
+
+        it('o clique no botão "Atualizar" conta como pedido manual (anuncia mesmo sem mudança)', async () => {
+          asAgent();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+          ticketsStoreFake.statusCountsLoading.set(true);
+          await fixture.whenStable();
+          ticketsStoreFake.statusCountsLoading.set(false);
+          await fixture.whenStable();
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          expect(said).toEqual(['Atualizado agora']);
+        });
+
+        it('um pedido manual durante uma atualização automática em curso vale como manual: quem pediu ouve o resultado', async () => {
+          asAgent();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          fixture.componentInstance.refresh('auto');
+          ticketsStoreFake.statusCountsLoading.set(true);
+          await fixture.whenStable();
+          fixture.componentInstance.refresh('manual');
+          ticketsStoreFake.statusCountsLoading.set(false);
+          await fixture.whenStable();
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          expect(said).toEqual(['Atualizado agora']);
+        });
+
+        it('o relógio chegando durante um pedido manual em curso não tira o anúncio de quem pediu', async () => {
+          asAgent();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          fixture.componentInstance.refresh('manual');
+          ticketsStoreFake.statusCountsLoading.set(true);
+          await fixture.whenStable();
+          fixture.componentInstance.refresh('auto');
+          ticketsStoreFake.statusCountsLoading.set(false);
+          await fixture.whenStable();
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          expect(said).toEqual(['Atualizado agora']);
+        });
+
+        it('trocar o escopo durante uma atualização automática diz só o resumo do recorte', async () => {
+          asAgent();
+          features = { operationOverview: true, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          fixture.componentInstance.refresh('auto');
+          operationFake.overviewLoading.set(true);
+          await fixture.whenStable();
+          const filtered = Array.from(fixture.nativeElement.querySelectorAll('.scope-row button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.includes('Com filtros'))!;
+          filtered.click();
+          operationFake.chartScope.set('filtered');
+          operationFake.overviewLoading.set(false);
+          await fixture.whenStable();
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          expect(said).toEqual(['Números com os filtros: 2 atrasados, 5 na fila.']);
+        });
+
+        it('o relógio de 2 minutos pede a atualização como automática; o botão, como manual', () => {
+          asAgent();
+          // A aba do Karma pode estar em segundo plano: a visibilidade fica fixa, como no spec dos Alertas.
+          spyOnProperty(document, 'visibilityState', 'get').and.returnValue('visible');
+          jasmine.clock().install();
+          jasmine.clock().mockDate(new Date(2026, 9, 29, 15, 0));
+          try {
+            const fixture = TestBed.createComponent(DashboardComponent);
+            const refresh = spyOn(fixture.componentInstance, 'refresh').and.callThrough();
+            fixture.detectChanges();
+
+            jasmine.clock().tick(DASHBOARD_REFRESH_MS - 1);
+            expect(refresh).not.toHaveBeenCalled();
+            jasmine.clock().tick(1);
+            expect(refresh).toHaveBeenCalledOnceWith('auto');
+
+            (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+            expect(refresh).toHaveBeenCalledWith('manual');
+          } finally {
+            jasmine.clock().uninstall();
+          }
+        });
+
+        it('a primeira carga com falha, seguida do relógio com a mesma falha, não anuncia nada', async () => {
+          asAgent();
+          alertsFail();
+          const fixture = await render();
+          const said = recordAnnouncements(fixture);
+
+          await cycle(fixture, 'auto');
+
+          expect(said).toEqual([]);
+        });
+      });
 
       it('a primeira carga não anuncia nada', async () => {
         asAgent();
@@ -1226,15 +1499,23 @@ describe('DashboardComponent', () => {
       dueAtUtc: new Date(Date.now() + 3_600_000).toISOString(), slaStatus: 2
     } as unknown as TicketMonitorItem;
 
-    /** Abre o Início como quem atende a fila, com um alerta sem responsável, e clica em "Atribuir". */
+    /** Abre o Início como quem atende a fila e atribui a outras pessoas, com um alerta sem responsável, e clica em "Atribuir". */
     async function openAssignDialog() {
-      asAgent();
+      hasPermission.and.callFake((code: string) => code === 'tickets:manage' || code === 'tickets:assign');
       ticketsStoreFake.criticalTickets.set([unassigned]);
       const fixture = await render();
       (fixture.nativeElement.querySelector('button[aria-label="Atribuir responsável ao chamado VPN caindo"]') as HTMLButtonElement).click();
       await fixture.whenStable();
       return fixture;
     }
+
+    it('não mostra "Atribuir" pra quem atende a fila sem tickets:assign', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTickets.set([unassigned]);
+      const fixture = await render();
+
+      expect(fixture.nativeElement.querySelector('button[aria-label="Atribuir responsável ao chamado VPN caindo"]')).toBeNull();
+    });
 
     it('abre o diálogo de atribuição com a busca limpa', async () => {
       const fixture = await openAssignDialog();

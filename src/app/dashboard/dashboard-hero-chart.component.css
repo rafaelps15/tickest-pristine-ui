@@ -54,6 +54,13 @@
   height: 20.5rem;
 }
 
+/* Foco do teclado na área do gráfico: o anel do sistema, afastado das barras. */
+.chart-focus:focus-visible {
+  outline: 2px solid var(--tk-primary);
+  outline-offset: 4px;
+  border-radius: var(--tk-radius-sm);
+}
+
 .flow-table-wrap {
   max-height: 20.5rem;
   overflow-y: auto;

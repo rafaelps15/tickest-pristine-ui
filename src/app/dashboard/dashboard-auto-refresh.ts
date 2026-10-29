@@ -18,6 +18,25 @@ export function refreshDelay(updatedAtMs: number | null, nowMs: number, interval
   return Math.max(0, updatedAtMs + intervalMs - nowMs);
 }
 
+/** De onde veio uma atualização: o botão "Atualizar" (`manual`) ou o relógio de 2 min (`auto`). */
+export type DashboardRefreshOrigin = 'manual' | 'auto';
+
+/**
+ * Resultado de uma carga, pro anúncio ao leitor de tela: tudo carregou (`ok`), algum bloco falhou com
+ * outro com números na tela (`partial`), ou nenhum bloco tem números (`total`).
+ */
+export type DashboardRefreshOutcome = 'ok' | 'partial' | 'total';
+
+/**
+ * Frase dita ao leitor de tela no fim de uma atualização. A volta pelo relógio diz que os números voltaram
+ * (quem não pediu precisa saber que a falha anterior passou); pelo botão, só "Atualizado agora".
+ */
+export function refreshAnnouncement(outcome: DashboardRefreshOutcome, automatic: boolean): string {
+  if (outcome === 'total') return 'Não foi possível carregar os números';
+  if (outcome === 'partial') return 'Não foi possível atualizar os números';
+  return automatic ? 'Números de volta: atualizado agora' : 'Atualizado agora';
+}
+
 /** Controle da atualização automática ligada. */
 export interface DashboardAutoRefresh {
   /** Recomeça a contagem do intervalo (depois de uma atualização manual, pra não repetir logo em seguida). */

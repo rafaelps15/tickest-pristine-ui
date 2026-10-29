@@ -16,13 +16,13 @@ import { DashboardKpi, DashboardKpiStripComponent } from './dashboard-kpi-strip.
 import { DashboardNoticeComponent } from './dashboard-notice.component';
 import { DashboardLink } from './dashboard-status-composition.component';
 import { DashboardStatusGroup, DASHBOARD_STATUS_GROUP_STATUS, accessNote, bucketRange, freshnessLabel, statusComposition, volumeInsight, widgetState } from './dashboard-overview';
-import { DashboardAutoRefresh, startDashboardAutoRefresh } from './dashboard-auto-refresh';
+import { DashboardAutoRefresh, DashboardRefreshOrigin, DashboardRefreshOutcome, refreshAnnouncement, startDashboardAutoRefresh } from './dashboard-auto-refresh';
 import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
 import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
 // O shell pode ligar peças de um domínio direto (como faz com as telas feature-*): o diálogo depende de
 // UserSummary (domínio users), por isso mora em tickets/ui e não em shared/ui.
-import { TicketAssignDialogComponent } from '../tickets/ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAssignDialogComponent } from '../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 /** De quanto em quanto tempo o "Atualizado há N min" do cabeçalho anda. */
 const FRESHNESS_TICK_MS = 30_000;
@@ -120,8 +120,13 @@ export class DashboardComponent implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   /** Atualização automática ligada (null no SSR). */
   private autoRefresh: DashboardAutoRefresh | null = null;
-  /** A recarga em curso veio de uma atualização (automática ou do botão): ao terminar, avisa o leitor de tela. */
-  private announceNext = false;
+  /**
+   * A recarga em curso veio de uma atualização, e de onde: o botão (quem pediu sempre ouve o resultado)
+   * ou o relógio de 2 min (só fala se o resultado mudou). Null fora de uma atualização.
+   */
+  private pendingRefresh: DashboardRefreshOrigin | null = null;
+  /** Resultado da última carga concluída (null antes da primeira): o relógio compara com ele pra saber se algo mudou. */
+  private lastOutcome: DashboardRefreshOutcome | null = null;
   /**
    * O recorte mudou (filtro ou escopo) e o resumo ainda não foi dito ao leitor de tela. Signal, e não
    * campo: quando a troca não dispara nenhuma busca (ex.: "Com filtros" sem filtro, com o volume do
@@ -276,7 +281,8 @@ export class DashboardComponent implements OnInit {
   /** Estado do fluxo: vazio quando nenhum período tem chamado; com pontos antigos na tela, não é erro. */
   protected readonly flowState = computed(() => {
     const points = this.flowPoints();
-    const empty = points.every(point => point.count === 0 && !point.resolvedCount);
+    // Resolvidos só contam pro "vazio" quando a série aparece (flag volumeResolved); desligada, só os criados.
+    const empty = points.every(point => point.count === 0 && !(this.features.volumeResolved && point.resolvedCount));
     return widgetState({
       available: this.flowScope() === 'company' ? this.store.companyStatsAvailable() : true,
       failed: this.flowFailed() && this.shownPoints() === null,
@@ -438,11 +444,11 @@ export class DashboardComponent implements OnInit {
     const scope = this.scope() ?? {};
     const attention = this.operation.attention();
     const awaiting: DashboardMetric[] = [];
-    if (attention?.awaitingAgentCount !== undefined) {
-      awaiting.push({ key: 'awaitingAgent', label: 'Aguardando a equipe', icon: 'bx-message-square-dots', tone: 'warning', value: attention.awaitingAgentCount, hint: 'A última palavra é do solicitante', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Agent, status: 'active' }) });
+    if (attention?.waitingOnAgentCount !== undefined) {
+      awaiting.push({ key: 'awaitingAgent', label: 'Aguardando a equipe', icon: 'bx-message-square-dots', tone: 'warning', value: attention.waitingOnAgentCount, hint: 'A última palavra é do solicitante', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Agent, status: 'active' }) });
     }
-    if (attention?.awaitingRequesterCount !== undefined) {
-      awaiting.push({ key: 'awaitingRequester', label: 'Aguardando o solicitante', icon: 'bx-user-voice', tone: 'info', value: attention.awaitingRequesterCount, hint: 'A equipe respondeu por último', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Requester, status: 'active' }) });
+    if (attention?.waitingOnRequesterCount !== undefined) {
+      awaiting.push({ key: 'awaitingRequester', label: 'Aguardando o solicitante', icon: 'bx-user-voice', tone: 'info', value: attention.waitingOnRequesterCount, hint: 'A equipe respondeu por último', queryParams: toMonitorQueryParams(scope, { awaiting: TicketAwaiting.Requester, status: 'active' }) });
     }
     return [
       { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: attention?.criticalCount ?? null, hint: 'Urgentes, ainda ativos', queryParams: toMonitorQueryParams(scope, { priority: TicketPriority.Urgent, status: 'active' }) },
@@ -609,20 +615,26 @@ export class DashboardComponent implements OnInit {
     // Uma atualização que falhou não conta como atualizada: a hora fica a dos números na tela (com
     // qualquer bloco em erro, mesmo sem números anteriores, nem a hora anda nem se diz "Atualizado agora").
     // Uma falha total (nenhum bloco com números) também termina aqui: quem pediu o "Atualizar" ouve que
-    // não foi possível carregar, em vez de silêncio.
+    // não foi possível carregar, em vez de silêncio. A atualização automática só fala quando o resultado
+    // muda (uma falha nova, a troca entre falha parcial e total, a volta): sucesso contínuo e falha que
+    // persiste ficam em silêncio, pra não interromper quem está lendo a cada 2 min.
     effect(() => {
       if (this.anyLoading()) return;
       const hasData = this.hasAnyData();
       const failed = this.anyFailure();
       if (!hasData && !failed) return;
-      const nothing = this.nothingLoaded();
+      const outcome: DashboardRefreshOutcome = !failed ? 'ok' : this.nothingLoaded() ? 'total' : 'partial';
       untracked(() => {
         if (!failed) this.updatedAtMs.set(Date.now());
-        if (!this.announceNext) return;
-        this.announceNext = false;
+        const previous = this.lastOutcome;
+        this.lastOutcome = outcome;
+        const origin = this.pendingRefresh;
+        if (!origin) return;
+        this.pendingRefresh = null;
         // Com uma troca de recorte pendente, quem fala é o resumo dela (efeito abaixo), não o "Atualizado agora".
         if (this.pendingScopeAnnouncement()) return;
-        this.announce(!failed ? 'Atualizado agora' : nothing ? 'Não foi possível carregar os números' : 'Não foi possível atualizar os números');
+        if (origin === 'auto' && (previous === null || outcome === previous)) return;
+        this.announce(refreshAnnouncement(outcome, origin === 'auto'));
       });
     });
 
@@ -642,7 +654,7 @@ export class DashboardComponent implements OnInit {
       const tick = setInterval(() => { if (!this.document.hidden) this.nowMs.set(Date.now()); }, FRESHNESS_TICK_MS);
       this.destroyRef.onDestroy(() => clearTimeout(this.announceTimer));
       this.destroyRef.onDestroy(() => clearInterval(tick));
-      this.autoRefresh = startDashboardAutoRefresh(this.document, () => this.updatedAtMs(), () => this.refresh(), this.destroyRef);
+      this.autoRefresh = startDashboardAutoRefresh(this.document, () => this.updatedAtMs(), () => this.refresh('auto'), this.destroyRef);
     }
   }
 
@@ -693,9 +705,12 @@ export class DashboardComponent implements OnInit {
     if (this.showMyTickets()) this.myTickets?.reload();
   }
 
-  /** Atualiza tudo que está ligado (automático a cada 2 min), mantendo os números na tela. */
-  refresh(): void {
-    this.announceNext = true;
+  /**
+   * Atualiza tudo que está ligado, mantendo os números na tela: pelo botão (`manual`) ou pelo relógio de
+   * 2 min (`auto`). Se as duas se encontram na mesma carga, vale a do botão: quem pediu ouve o resultado.
+   */
+  refresh(origin: DashboardRefreshOrigin = 'manual'): void {
+    this.pendingRefresh = origin === 'manual' || this.pendingRefresh === 'manual' ? 'manual' : 'auto';
     this.nowMs.set(Date.now());
     this.store.load();
     this.operation.refresh();
@@ -704,7 +719,7 @@ export class DashboardComponent implements OnInit {
 
   /** Botão "Atualizar" do cabeçalho: atualiza agora e recomeça a contagem dos 2 min. */
   refreshNow(): void {
-    this.refresh();
+    this.refresh('manual');
     this.autoRefresh?.restart();
   }
 

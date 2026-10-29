@@ -173,10 +173,51 @@ export function bucketShortLabel(periodStart: string, groupBy: TicketVolumeGroup
 /** Rótulo completo do período, pro tooltip e a tabela ("Semana de 20/10/2026 a 26/10/2026"). */
 export function bucketLongLabel(periodStart: string, groupBy: TicketVolumeGrouping): string {
   const range = bucketRange(periodStart, groupBy);
-  if (groupBy === 'Day') return formatIsoDate(range.from);
+  if (groupBy === 'Day') return `${WEEKDAY_LABELS[weekdayOf(periodStart)]}, ${formatIsoDate(range.from)}`;
   if (groupBy === 'Week') return `Semana de ${formatIsoDate(range.from)} a ${formatIsoDate(range.to)}`;
   const [year, month] = periodStart.split('-');
   return `${MONTH_LABELS[Number(month) - 1]}/${year}`;
+}
+
+/** Nomes dos dias da semana, de domingo (0) a sábado (6). */
+const WEEKDAY_LABELS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+/** Dia da semana (0 = domingo) de uma data local `aaaa-mm-dd`, sem passar pelo fuso da máquina. */
+function weekdayOf(isoDate: string): number {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+/**
+ * Posições dos sábados e domingos no fluxo, pro sombreado do gráfico — só no agrupamento por dia
+ * (semana e mês já cobrem fins de semana dentro de si). A data é a local de São Paulo, como o
+ * back-end agrupa.
+ */
+export function weekendIndexes(points: TicketVolumePoint[], groupBy: TicketVolumeGrouping): number[] {
+  if (groupBy !== 'Day') return [];
+  return points.flatMap((point, index) => {
+    const weekday = weekdayOf(point.periodStart);
+    return weekday === 0 || weekday === 6 ? [index] : [];
+  });
+}
+
+/** Unidade da média, por agrupamento ("por dia"). */
+export const AVERAGE_UNIT_LABELS: Record<TicketVolumeGrouping, string> = { Day: 'por dia', Week: 'por semana', Month: 'por mês' };
+
+/**
+ * Média de chamados criados por período, só sobre os períodos completos: o último (hoje, esta
+ * semana, este mês) ainda está pela metade e puxaria a média pra baixo. Null com menos de dois
+ * períodos completos — uma média de um ponto só não diz nada.
+ */
+export function periodAverage(points: TicketVolumePoint[]): number | null {
+  const complete = points.slice(0, -1);
+  if (complete.length < 2) return null;
+  return complete.reduce((sum, point) => sum + point.count, 0) / complete.length;
+}
+
+/** Média com uma casa decimal em pt-BR ("4,3"), inteira quando não tem fração ("5"). */
+export function formatAverage(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value);
 }
 
 /** Janelas comparadas pela frase de destaque, por agrupamento. */

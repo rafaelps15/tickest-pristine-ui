@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { DashboardStatusCompositionComponent } from './dashboard-status-composition.component';
 import { DashboardNoticeComponent } from './dashboard-notice.component';
 import { DashboardKpi, DashboardKpiStripComponent } from './dashboard-kpi-strip.component';
@@ -136,6 +136,20 @@ describe('componentes de apresentação do Início', () => {
       expect(headers).toContain('Resolvidos');
       expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('Resolvidos por período');
     });
+
+    it('com a série de resolvidos desligada, mostra só os criados mesmo que a resposta traga resolvedCount', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('resolvedEnabled', false);
+      fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]);
+      await fixture.whenStable();
+      fixture.componentInstance.toggleTable();
+      await fixture.whenStable();
+
+      const headers = Array.from(fixture.nativeElement.querySelectorAll('th[scope="col"]') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
+      expect(headers).not.toContain('Resolvidos');
+      expect(fixture.nativeElement.querySelector('caption').textContent).not.toContain('resolvidos');
+    });
   });
 
   describe('DashboardKpiStripComponent', () => {
@@ -212,6 +226,157 @@ describe('componentes de apresentação do Início', () => {
       fixture.componentInstance.toggleTable();
       await fixture.whenStable();
       expect(fixture.nativeElement.querySelector('tbody td').getAttribute('colspan')).toBe('2');
+    });
+  });
+
+  describe('DashboardHeroChartComponent — teclado e referências do gráfico', () => {
+    /** Três dias (sexta, sábado e domingo) com o drill-down ligado. */
+    async function heroWithPoints() {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('points', [
+        { periodStart: '2026-10-23', count: 2 },
+        { periodStart: '2026-10-24', count: 4 },
+        { periodStart: '2026-10-25', count: 1 }
+      ]);
+      fixture.componentRef.setInput('bucketLink', (periodStart: string) => ({ route: '/tickets/monitorar', queryParams: { createdFrom: periodStart, createdTo: periodStart } }));
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    /** Aperta uma tecla na área do gráfico. */
+    function press(fixture: { nativeElement: HTMLElement }, key: string): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true });
+      (fixture.nativeElement.querySelector('.chart-focus') as HTMLElement).dispatchEvent(event);
+      return event;
+    }
+
+    /** O que o leitor de tela ouviu por último. */
+    const announced = (fixture: { nativeElement: HTMLElement }) =>
+      Array.from(fixture.nativeElement.querySelectorAll('[aria-live="polite"]') as NodeListOf<HTMLElement>).map(el => el.textContent?.trim()).join(' | ');
+
+    it('a área do gráfico entra na ordem do Tab e diz como navegar', async () => {
+      const fixture = await heroWithPoints();
+      const area = fixture.nativeElement.querySelector('.chart-focus') as HTMLElement;
+      expect(area.getAttribute('tabindex')).toBe('0');
+      expect(area.getAttribute('aria-label')).toBe('Gráfico de chamados criados por período. Use as setas pra percorrer os períodos e Enter pra abrir a lista do período.');
+    });
+
+    it('setas, Home e End andam pelos períodos e anunciam cada um; Esc tira o destaque', async () => {
+      const fixture = await heroWithPoints();
+
+      expect(press(fixture, 'ArrowRight').defaultPrevented).toBeTrue();
+      await fixture.whenStable();
+      expect(announced(fixture)).toContain('sexta, 23/10/2026: 2 chamados criados.');
+
+      press(fixture, 'ArrowRight');
+      await fixture.whenStable();
+      expect(announced(fixture)).toContain('sábado, 24/10/2026: 4 chamados criados.');
+
+      press(fixture, 'End');
+      await fixture.whenStable();
+      expect(announced(fixture)).toContain('domingo, 25/10/2026: 1 chamado criado.');
+
+      press(fixture, 'Home');
+      await fixture.whenStable();
+      expect(announced(fixture)).toContain('sexta, 23/10/2026');
+
+      press(fixture, 'Escape');
+      await fixture.whenStable();
+      expect(announced(fixture)).not.toContain('sexta, 23/10/2026');
+    });
+
+    it('Enter abre a lista do período destacado', async () => {
+      const fixture = await heroWithPoints();
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+
+      press(fixture, 'Enter');
+      expect(navigate).not.toHaveBeenCalled();
+
+      press(fixture, 'ArrowLeft');
+      press(fixture, 'Enter');
+      expect(navigate).toHaveBeenCalledWith(['/tickets/monitorar'], { queryParams: { createdFrom: '2026-10-25', createdTo: '2026-10-25' } });
+    });
+
+    it('outras teclas não são capturadas (Tab continua saindo do gráfico)', async () => {
+      const fixture = await heroWithPoints();
+      expect(press(fixture, 'Tab').defaultPrevented).toBeFalse();
+    });
+
+    it('o rodapé explica o tracejado da média e as faixas de fim de semana', async () => {
+      const fixture = await heroWithPoints();
+      const footnote = fixture.nativeElement.querySelector('.hero-footnote').textContent;
+      expect(footnote).toContain('Tracejado: média dos períodos completos; faixas claras: sábados e domingos');
+    });
+
+    it('sem base pra média (menos de dois períodos completos), o rodapé não fala dela', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3 }, { periodStart: '2026-10-28', count: 1 }]);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('Tracejado');
+    });
+  });
+
+  describe('DashboardHeroChartComponent — série de resolvidos desligada, com o gráfico desenhado de verdade', () => {
+    /** Três dias com poucos criados e muitos resolvidos (a escala denunciaria a série escondida). */
+    const points = [
+      { periodStart: '2026-10-26', count: 2, resolvedCount: 40 },
+      { periodStart: '2026-10-27', count: 3, resolvedCount: 50 },
+      { periodStart: '2026-10-28', count: 1, resolvedCount: 45 }
+    ];
+
+    /** Cria o gráfico na página e espera o Chart.js desenhar (o canvas está num `@defer (on idle)`). */
+    async function drawn(resolvedEnabled: boolean) {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      document.body.appendChild(fixture.nativeElement);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('resolvedEnabled', resolvedEnabled);
+      fixture.componentRef.setInput('points', points);
+      fixture.componentRef.setInput('bucketLink', (periodStart: string) => ({ route: '/tickets/monitorar', queryParams: { createdFrom: periodStart, createdTo: periodStart } }));
+      for (let attempt = 0; attempt < 60 && !fixture.componentInstance['chart']; attempt++) {
+        await fixture.whenStable();
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      const chart = fixture.componentInstance['chart'];
+      if (!chart) fail('o gráfico não foi desenhado');
+      return { fixture, chart: chart! };
+    }
+
+    afterEach(() => document.querySelectorAll('app-dashboard-hero-chart').forEach(element => element.remove()));
+
+    it('desligada: uma série só, sem legenda, e a escala segue só os criados', async () => {
+      const { chart } = await drawn(false);
+      expect(chart.data.datasets.map(dataset => dataset.label)).toEqual(['Criados']);
+      expect(chart.options.plugins?.legend?.display).toBeFalse();
+      expect(chart.scales['y'].max).toBeLessThan(10);
+    });
+
+    it('ligada: as duas séries, com legenda, e a escala cobre os resolvidos (comportamento de antes)', async () => {
+      const { chart } = await drawn(true);
+      expect(chart.data.datasets.map(dataset => dataset.label)).toEqual(['Criados', 'Resolvidos']);
+      expect(chart.options.plugins?.legend?.display).toBeTrue();
+      expect(chart.scales['y'].max).toBeGreaterThanOrEqual(50);
+    });
+
+    it('desligada: Tab chega na área do gráfico, as setas destacam só a barra de criados e o anúncio não cita resolvidos; Enter abre a lista', async () => {
+      const { fixture, chart } = await drawn(false);
+      const area = fixture.nativeElement.querySelector('.chart-focus') as HTMLElement;
+      expect(area.tabIndex).toBe(0);
+      expect(area.getAttribute('aria-label')).not.toContain('resolvidos');
+      area.focus();
+      expect(document.activeElement).toBe(area);
+
+      area.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      await fixture.whenStable();
+      expect(chart.getActiveElements().map(element => element.datasetIndex)).toEqual([0]);
+      const announcement = Array.from(fixture.nativeElement.querySelectorAll('[aria-live="polite"]') as NodeListOf<HTMLElement>).map(el => el.textContent).join(' ');
+      expect(announcement).toContain('segunda, 26/10/2026: 2 chamados criados.');
+      expect(announcement).not.toContain('resolvido');
+
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      expect(navigate).toHaveBeenCalledWith(['/tickets/monitorar'], { queryParams: { createdFrom: '2026-10-26', createdTo: '2026-10-26' } });
     });
   });
 });

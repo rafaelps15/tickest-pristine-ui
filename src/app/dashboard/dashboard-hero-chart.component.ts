@@ -1,13 +1,13 @@
 import { Component, inject, Injector, OnDestroy, ElementRef, PLATFORM_ID, ChangeDetectionStrategy, DestroyRef, signal, computed, effect, input, output, viewChild, afterNextRender } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import type { Chart as ChartInstance, ChartDataset } from 'chart.js';
+import type { Chart as ChartInstance, ChartDataset, Plugin } from 'chart.js';
 import { TicketDashboardChartScope, TicketVolumeGrouping, TicketVolumePoint, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
 import { formatIsoDate, loadChart } from '../shared';
 import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
 import { DashboardNoticeComponent } from './dashboard-notice.component';
 import { DashboardLink, DashboardStatusCompositionComponent } from './dashboard-status-composition.component';
-import { DashboardStatusComposition, DashboardStatusGroup, DashboardWidgetState, bucketLongLabel, bucketShortLabel, formatCompactCount, formatFullCount } from './dashboard-overview';
+import { AVERAGE_UNIT_LABELS, DashboardStatusComposition, DashboardStatusGroup, DashboardWidgetState, bucketLongLabel, bucketShortLabel, formatAverage, formatCompactCount, formatFullCount, periodAverage, weekendIndexes } from './dashboard-overview';
 
 /** Quantos períodos o back-end devolve por agrupamento (GetTicketVolumeQueryHandler) — usado só sem dados. */
 const VOLUME_DEFAULT_POINTS: Record<TicketVolumeGrouping, number> = { Day: 30, Week: 12, Month: 12 };
@@ -57,6 +57,11 @@ export class DashboardHeroChartComponent implements OnDestroy {
    * filtros e o fluxo continua o da empresa toda — o rodapé diz isso.
    */
   readonly flowFiltered = input(true);
+  /**
+   * A série "Resolvidos" pode aparecer (flag `volumeResolved`, spec 028 integrada). Desligada, o fluxo
+   * mostra só os criados, mesmo que a resposta traga `resolvedCount`.
+   */
+  readonly resolvedEnabled = input(true);
   /** Frase de destaque, ou null (sem amostra suficiente, nenhuma frase). */
   readonly insight = input<string | null>(null);
   /** Composição atual por status, ou null sem resposta. */
@@ -111,6 +116,25 @@ export class DashboardHeroChartComponent implements OnDestroy {
   /** Muda a cada "Tentar novamente" do desenho, pra o efeito redesenhar. */
   private readonly drawAttempt = signal(0);
 
+  /** Média de criados por período, só dos períodos completos (linha tracejada do gráfico); null sem base. */
+  protected readonly average = computed(() => periodAverage(this.points()));
+
+  /** Há sábados e domingos sombreados (só no agrupamento por dia). */
+  protected readonly hasWeekends = computed(() => weekendIndexes(this.points(), this.groupBy()).length > 0);
+
+  /** Período destacado pelo teclado (setas), ou null. */
+  protected readonly activeIndex = signal<number | null>(null);
+
+  /** O que o leitor de tela ouve ao andar pelos períodos com as setas. */
+  protected readonly keyboardAnnouncement = computed(() => {
+    const index = this.activeIndex();
+    return index === null ? '' : this.describeBucket(index);
+  });
+
+  /** Nome acessível da área do gráfico, com o jeito de navegar pelo teclado. */
+  protected readonly chartAriaLabel = computed(() =>
+    `Gráfico de chamados criados${this.hasResolved() ? ' e resolvidos' : ''} por período. Use as setas pra percorrer os períodos${this.bucketLink() ? ' e Enter pra abrir a lista do período' : ''}.`);
+
   /** Colunas da tabela (o colspan das linhas de estado acompanha). */
   protected readonly tableColumns = computed(() => 2 + (this.hasResolved() ? 1 : 0) + (this.bucketLink() ? 1 : 0));
 
@@ -147,10 +171,13 @@ export class DashboardHeroChartComponent implements OnDestroy {
   /** Rótulos curtos dos períodos (eixo e tabela). */
   protected readonly periodLabels = computed(() => this.points().map(point => bucketShortLabel(point.periodStart, this.groupBy())));
 
-  /** O back-end mandou os resolvidos por período (spec 028): o fluxo vira Criados x Resolvidos. */
+  /**
+   * O fluxo vira Criados x Resolvidos: com a série liberada ({@link resolvedEnabled}) e o back-end
+   * mandando os resolvidos por período (spec 028).
+   */
   protected readonly hasResolved = computed(() => {
     const points = this.points();
-    return points.length > 0 && points.every(point => point.resolvedCount !== undefined);
+    return this.resolvedEnabled() && points.length > 0 && points.every(point => point.resolvedCount !== undefined);
   });
 
   /** Destinos de cada período, na ordem dos pontos (null quando não há drill-down). */
@@ -220,6 +247,58 @@ export class DashboardHeroChartComponent implements OnDestroy {
     this.groupByChange.emit(option);
   }
 
+  /**
+   * Teclado na área do gráfico: setas andam pelos períodos (destacando a barra e abrindo o tooltip),
+   * Home/End vão pras pontas, Enter abre a lista do período e Esc tira o destaque.
+   */
+  protected onChartKeydown(event: KeyboardEvent): void {
+    const last = this.points().length - 1;
+    if (last < 0) return;
+    const current = this.activeIndex();
+    let next: number | null = current;
+    switch (event.key) {
+      case 'ArrowRight': next = current === null ? 0 : Math.min(last, current + 1); break;
+      case 'ArrowLeft': next = current === null ? last : Math.max(0, current - 1); break;
+      case 'Home': next = 0; break;
+      case 'End': next = last; break;
+      case 'Escape': next = null; break;
+      case 'Enter': {
+        const link = current === null ? null : this.bucketLinks()[current];
+        if (link) void this.router.navigate([link.route], { queryParams: link.queryParams });
+        return;
+      }
+      default: return;
+    }
+    event.preventDefault();
+    this.highlight(next);
+  }
+
+  /** Ao sair da área do gráfico, o destaque do teclado some. */
+  protected clearActive(): void {
+    this.highlight(null);
+  }
+
+  /** Destaca (ou tira o destaque de) um período no gráfico, como o hover do mouse faria. */
+  private highlight(index: number | null): void {
+    this.activeIndex.set(index);
+    const chart = this.chart;
+    if (!chart) return;
+    const active = index === null ? [] : chart.data.datasets.map((_, datasetIndex) => ({ datasetIndex, index }));
+    chart.setActiveElements(active);
+    const element = index === null ? null : chart.getDatasetMeta(0).data[index];
+    chart.tooltip?.setActiveElements(active, element ? { x: element.x, y: element.y } : { x: 0, y: 0 });
+    chart.update('none');
+  }
+
+  /** Um período em texto, pro leitor de tela ("sábado, 25/10/2026: 4 chamados criados, 3 resolvidos"). */
+  private describeBucket(index: number): string {
+    const point = this.points()[index];
+    if (!point) return '';
+    const created = `${formatFullCount(point.count)} ${point.count === 1 ? 'chamado criado' : 'chamados criados'}`;
+    const resolved = this.hasResolved() ? `, ${formatFullCount(point.resolvedCount ?? 0)} ${point.resolvedCount === 1 ? 'resolvido' : 'resolvidos'}` : '';
+    return `${this.longLabel(point.periodStart)}: ${created}${resolved}.`;
+  }
+
   /** Rótulo completo de um período (tabela e tooltip). */
   protected longLabel(periodStart: string): string {
     return bucketLongLabel(periodStart, this.groupBy());
@@ -256,8 +335,12 @@ export class DashboardHeroChartComponent implements OnDestroy {
     const textColor = color('--tk-text-secondary');
     const gridColor = color('--tk-border');
 
+    const strongText = color('--tk-text-primary');
+    const labelFontPx = (parseFloat(rootStyle.fontSize) || 16) * 0.75;
+    // A barra destacada (hover ou teclado) ganha o contorno do texto principal: o estado selecionado fica claro.
     const bar = (label: string, data: number[], token: string): ChartDataset<'bar', number[]> =>
-      ({ label, data, backgroundColor: color(token), borderColor: edgeColor(color(token)), borderWidth: 1, borderRadius: 3, maxBarThickness: 28 });
+      ({ label, data, backgroundColor: color(token), borderColor: edgeColor(color(token)), borderWidth: 1, borderRadius: 3, maxBarThickness: 28,
+        hoverBorderColor: strongText, hoverBorderWidth: 2 });
     const datasets = [bar('Criados', points.map(point => point.count), '--tk-primary')];
     if (withResolved) {
       datasets.push(bar('Resolvidos', points.map(point => point.resolvedCount ?? 0), '--tk-status-resolved'));
@@ -271,6 +354,64 @@ export class DashboardHeroChartComponent implements OnDestroy {
       return;
     }
 
+    // Sábados e domingos em faixa clara atrás das barras (só por dia): o fim de semana explica os vales.
+    const weekendsPlugin: Plugin<'bar'> = {
+      id: 'tkWeekends',
+      beforeDatasetsDraw: chart => {
+        const indexes = weekendIndexes(this.points(), this.groupBy());
+        const x = chart.scales['x'];
+        if (!indexes.length || !x) return;
+        const count = chart.data.labels?.length ?? 0;
+        const step = count > 1 ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) : x.width;
+        const { top, bottom } = chart.chartArea;
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.fillStyle = gridColor;
+        ctx.globalAlpha = 0.5;
+        for (const index of indexes) ctx.fillRect(x.getPixelForValue(index) - step / 2, top, step, bottom - top);
+        ctx.restore();
+      }
+    };
+    // A média dos períodos completos (linha tracejada, com rótulo) e o valor do maior período acima da barra.
+    const referencePlugin: Plugin<'bar'> = {
+      id: 'tkReference',
+      afterDatasetsDraw: chart => {
+        const y = chart.scales['y'];
+        if (!y) return;
+        const ctx = chart.ctx;
+        const { left, right } = chart.chartArea;
+        ctx.save();
+        // Acompanha o tamanho de fonte escolhido por quem usa (12px no padrão de 16px).
+        ctx.font = `600 ${Math.round(labelFontPx)}px ${Chart.defaults.font.family}`;
+        ctx.fillStyle = textColor;
+        const average = this.average();
+        if (average !== null) {
+          const lineY = Math.round(y.getPixelForValue(average)) + 0.5;
+          ctx.strokeStyle = textColor;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(left, lineY);
+          ctx.lineTo(right, lineY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(`Média ${formatAverage(average)} ${AVERAGE_UNIT_LABELS[this.groupBy()]}`, right - 4, lineY - 3);
+        }
+        const counts = this.points().map(point => point.count);
+        const peak = Math.max(0, ...counts);
+        const element = peak > 0 ? chart.getDatasetMeta(0).data[counts.indexOf(peak)] : undefined;
+        if (element) {
+          ctx.fillStyle = strongText;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(formatFullCount(peak), element.x, element.y - 4);
+        }
+        ctx.restore();
+      }
+    };
+
     this.chart?.destroy();
     this.chartShape = shape;
     const ctx = canvasRef.nativeElement.getContext('2d');
@@ -278,8 +419,11 @@ export class DashboardHeroChartComponent implements OnDestroy {
     this.chart = new Chart(ctx!, {
       type: 'bar',
       data: { labels, datasets },
+      plugins: [weekendsPlugin, referencePlugin],
       options: {
         responsive: true,
+        // Folga no topo pro valor do maior período não encostar na borda.
+        layout: { padding: { top: 18 } },
         maintainAspectRatio: false,
         animation: reducedMotion ? false : { duration: 250, easing: 'easeOutQuart' },
         color: textColor,
@@ -288,6 +432,7 @@ export class DashboardHeroChartComponent implements OnDestroy {
           x: { grid: { display: false }, ticks: { color: textColor, maxRotation: 0, autoSkipPadding: 8 } },
           y: {
             beginAtZero: true,
+            grace: '5%',
             grid: { color: gridColor },
             border: { display: false },
             ticks: { precision: 0, color: textColor, callback: value => formatCompactCount(Number(value)) }
@@ -303,9 +448,15 @@ export class DashboardHeroChartComponent implements OnDestroy {
             }
           }
         },
+        // No toque, o primeiro toque num período só mostra os números dele; o segundo, no mesmo período, abre a lista.
         onClick: (_event, elements) => {
           const index = elements[0]?.index;
-          const link = index === undefined ? null : this.bucketLinks()[index];
+          if (index === undefined) return;
+          if (window.matchMedia('(pointer: coarse)').matches && this.activeIndex() !== index) {
+            this.highlight(index);
+            return;
+          }
+          const link = this.bucketLinks()[index];
           if (link) void this.router.navigate([link.route], { queryParams: link.queryParams });
         },
         onHover: (event, elements) => {

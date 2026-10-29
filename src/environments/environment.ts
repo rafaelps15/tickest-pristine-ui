@@ -8,7 +8,7 @@ export const environment = {
   dashboardFeatures: {
     operationOverview: true,
     averageTimes: true,
-    volumeResolved: true,
+    volumeResolved: false,
     companyStatsForAll: false,
     listPeriodFilter: true
   }

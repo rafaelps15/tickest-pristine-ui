@@ -1,5 +1,5 @@
 import { DestroyRef } from '@angular/core';
-import { DASHBOARD_REFRESH_MS, refreshDelay, startDashboardAutoRefresh } from './dashboard-auto-refresh';
+import { DASHBOARD_REFRESH_MS, refreshAnnouncement, refreshDelay, startDashboardAutoRefresh } from './dashboard-auto-refresh';
 
 /** Documento falso: dispara `visibilitychange` e diz se a aba está visível. */
 class FakeDocument extends EventTarget {
@@ -103,6 +103,15 @@ describe('dashboard-auto-refresh', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
 
     destroy();
+  });
+
+  it('refreshAnnouncement: a falha diz o que não veio; a volta pelo relógio diz que os números voltaram, pelo botão só "Atualizado agora"', () => {
+    expect(refreshAnnouncement('total', true)).toBe('Não foi possível carregar os números');
+    expect(refreshAnnouncement('total', false)).toBe('Não foi possível carregar os números');
+    expect(refreshAnnouncement('partial', true)).toBe('Não foi possível atualizar os números');
+    expect(refreshAnnouncement('partial', false)).toBe('Não foi possível atualizar os números');
+    expect(refreshAnnouncement('ok', true)).toBe('Números de volta: atualizado agora');
+    expect(refreshAnnouncement('ok', false)).toBe('Atualizado agora');
   });
 
   it('para de atualizar quando a tela é destruída', () => {

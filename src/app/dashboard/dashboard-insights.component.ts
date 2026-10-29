@@ -68,6 +68,9 @@ export class DashboardInsightsComponent {
   /** Query params do "Ver a fila pelo prazo" (os filtros, no escopo "Com filtros"). */
   readonly queueParams = input<Params>({});
 
+  /** Se "Atribuir" aparece nos alertas sem responsável: a API exige `tickets:assign` pra atribuir a outra pessoa. */
+  readonly canAssign = input(true);
+
   /** Pede pra recarregar só os alertas ("Atualizar", "Tentar novamente" ou volta pra aba depois de um tempo). */
   readonly refresh = output<void>();
   /** Pede pra atribuir um responsável ao chamado de um alerta sem dono — quem usa abre o diálogo de atribuição. */

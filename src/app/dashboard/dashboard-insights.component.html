@@ -97,7 +97,7 @@
                 }
               </a>
               <!-- Dar um dono ali mesmo, sem abrir o chamado — fora do link (interativo dentro de link é inválido). -->
-              @if (!item.ticket.assignedToName) {
+              @if (!item.ticket.assignedToName && canAssign()) {
                 <button type="button" class="btn btn-sm btn-outline-primary critical-ticket-assign"
                         [attr.aria-label]="'Atribuir responsável ao chamado ' + item.ticket.title" (click)="assign.emit(item.ticket)">
                   Atribuir
