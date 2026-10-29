@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { DestroyRef, Injectable, inject, signal, computed } from '@angular/core';
 import { AccessTokens } from '../entities/access-tokens';
 import { CurrentUser } from '../entities/current-user';
 
@@ -59,6 +59,16 @@ export class SessionService {
     return typeof claim === 'string' ? claim : null;
   });
 
+  constructor() {
+    if (typeof window !== 'undefined') {
+      // Outra aba renovou ou encerrou a sessão: sem isso, esta aba reenviaria o refresh token já trocado e o
+      // back-end trataria como reuso, revogando todas as sessões do usuário.
+      const onStorage = (event: StorageEvent) => this.syncFromStorage(event);
+      window.addEventListener('storage', onStorage);
+      inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
+    }
+  }
+
   /** Códigos de permissão do usuário logado, vindos de GET /users/me — mesma fonte que a autorização da API usa. */
   permissions = computed(() => new Set(this.currentUser()?.permissions ?? []));
 
@@ -91,6 +101,23 @@ export class SessionService {
     this._token.set(null);
     this._refreshToken.set(null);
     this._currentUser.set(null);
+  }
+
+  /** Aplica nesta aba os tokens gravados ou removidos por outra aba da mesma origem. */
+  private syncFromStorage(event: StorageEvent): void {
+    if (event.storageArea !== localStorage) return;
+    if (event.key === null) {
+      this._token.set(null);
+      this._refreshToken.set(null);
+      this._currentUser.set(null);
+      return;
+    }
+    if (event.key === this.ACCESS_TOKEN_KEY) {
+      this._token.set(event.newValue);
+      if (event.newValue === null) this._currentUser.set(null);
+    } else if (event.key === this.REFRESH_TOKEN_KEY) {
+      this._refreshToken.set(event.newValue);
+    }
   }
 
   private getStoredValue(key: string): string | null {

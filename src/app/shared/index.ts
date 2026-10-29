@@ -16,7 +16,6 @@ export * from './utils/http-error.util';
 export * from './utils/password.validators';
 export * from './utils/chart-loader.util';
 export * from './utils/role-badges.util';
-export * from './utils/role-colors.util';
 export * from './utils/persisted-toggle.util';
 export * from './utils/side-panel.util';
 export * from './utils/resource-value.util';

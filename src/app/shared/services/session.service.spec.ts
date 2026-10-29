@@ -25,6 +25,35 @@ describe('SessionService', () => {
 
   afterEach(() => localStorage.clear());
 
+  it('deve adotar os tokens renovados por outra aba', () => {
+    service.saveSession({ accessToken: 'a.b.c', refreshToken: 'antigo' });
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'refresh_token', newValue: 'novo', storageArea: localStorage }));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token', newValue: 'd.e.f', storageArea: localStorage }));
+
+    expect(service.refreshToken()).toBe('novo');
+    expect(service.token()).toBe('d.e.f');
+  });
+
+  it('deve encerrar a sessão quando outra aba remove o token de acesso', () => {
+    service.saveSession({ accessToken: 'a.b.c', refreshToken: 'r' });
+    service.setCurrentUser(user);
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token', newValue: null, storageArea: localStorage }));
+
+    expect(service.isAuthenticated()).toBeFalse();
+    expect(service.currentUser()).toBeNull();
+  });
+
+  it('deve ignorar eventos de storage de outras chaves', () => {
+    service.saveSession({ accessToken: 'a.b.c', refreshToken: 'r' });
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'tickest.outra', newValue: 'x', storageArea: localStorage }));
+
+    expect(service.token()).toBe('a.b.c');
+    expect(service.refreshToken()).toBe('r');
+  });
+
   it('não deve ter permissões antes de setCurrentUser ser chamado', () => {
     expect(service.hasPermission('users:read')).toBeFalse();
     expect(service.currentUser()).toBeNull();
