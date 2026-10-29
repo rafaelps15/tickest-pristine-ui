@@ -1,6 +1,37 @@
 .table th {
   font-size: 0.8125rem;
   text-transform: uppercase;
-  color: #a1acb8;
+  color: var(--tk-text-muted);
   font-weight: 600;
+}
+
+/* Título do ticket é o link pro detalhe — cor de texto, sublinhado só no hover/foco. */
+.ticket-title {
+  color: var(--tk-text-primary);
+  text-decoration: none;
+}
+
+.ticket-title:hover,
+.ticket-title:focus-visible {
+  color: var(--tk-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Resumo da descrição numa linha só, cortado com reticências. */
+.ticket-summary {
+  max-width: 24rem;
+}
+
+/*
+ * No celular (tabela em cards, ver `.table-stack` em styles.css) o resumo ocupa a largura do card:
+ * `width: 0` tira o texto sem quebra do cálculo de largura mínima (senão ele alargava a página
+ * inteira) e `min-width: 100%` o devolve à largura disponível.
+ */
+@media (max-width: 767.98px) {
+  .ticket-summary {
+    width: 0;
+    min-width: 100%;
+    max-width: none;
+  }
 }

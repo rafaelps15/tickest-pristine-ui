@@ -1,0 +1,105 @@
+<div class="text-center mb-4">
+  <h4 class="mb-2 fw-bold">Defina sua nova senha</h4>
+  <p class="text-muted mb-1">Por segurança, troque a senha provisória antes do primeiro acesso.</p>
+  <p class="fw-semibold text-primary mb-0">{{ store.pendingCredentials()?.email }}</p>
+</div>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3" novalidate>
+
+  <div class="mb-4">
+    <label class="form-label" for="newPassword">Nova senha</label>
+    <div class="input-group input-group-merge">
+      <input
+        [type]="showPasswords() ? 'text' : 'password'"
+        id="newPassword"
+        class="form-control form-control-lg"
+        formControlName="newPassword"
+        placeholder="••••••••••••"
+        autocomplete="new-password"
+        autofocus
+        [class.is-invalid]="isFieldInvalid('newPassword')"
+        [attr.aria-describedby]="isFieldInvalid('newPassword') ? 'newPassword-error' : 'newPassword-requirements'"
+      />
+      <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+              [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+        <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+      </button>
+    </div>
+    @if (!isFieldInvalid('newPassword')) {
+      <div class="form-text" id="newPassword-requirements">Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.</div>
+    }
+    @if (isFieldInvalid('newPassword')) {
+      <div class="form-text text-danger" id="newPassword-error">
+        @if (form.controls.newPassword.errors?.['required']) {
+          <div>A nova senha é obrigatória.</div>
+        }
+        @if (form.controls.newPassword.errors?.['minlength']) {
+          <div>A senha deve ter no mínimo 6 caracteres.</div>
+        }
+        @if (form.controls.newPassword.errors?.['uppercase']) {
+          <div>A senha deve conter pelo menos uma letra maiúscula.</div>
+        }
+        @if (form.controls.newPassword.errors?.['specialChar']) {
+          <div>A senha deve conter pelo menos um caractere especial (ex.: #, $, %).</div>
+        }
+      </div>
+    }
+    @if (form.errors?.['sameAsCurrent'] && (form.controls.newPassword.dirty || form.controls.newPassword.touched)) {
+      <div class="form-text text-danger">A nova senha deve ser diferente da senha provisória.</div>
+    }
+  </div>
+
+  <div class="mb-4">
+    <label class="form-label" for="confirmPassword">Confirmar nova senha</label>
+    <div class="input-group input-group-merge">
+      <input
+        [type]="showPasswords() ? 'text' : 'password'"
+        id="confirmPassword"
+        class="form-control form-control-lg"
+        formControlName="confirmPassword"
+        placeholder="••••••••••••"
+        autocomplete="new-password"
+        [class.is-invalid]="isFieldInvalid('confirmPassword') || (form.errors?.['mismatch'] && form.controls.confirmPassword.touched)"
+        [attr.aria-describedby]="isFieldInvalid('confirmPassword') || (form.errors?.['mismatch'] && form.controls.confirmPassword.touched) ? 'confirmPassword-error' : null"
+      />
+      <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+              [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+        <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+      </button>
+    </div>
+    @if (isFieldInvalid('confirmPassword')) {
+      <div class="form-text text-danger" id="confirmPassword-error">A confirmação de senha é obrigatória.</div>
+    } @else if (form.errors?.['mismatch'] && form.controls.confirmPassword.touched) {
+      <div class="form-text text-danger" id="confirmPassword-error">As senhas não coincidem.</div>
+    }
+  </div>
+
+  @if (store.error()) {
+    <div class="alert alert-danger py-3 d-flex align-items-center mb-4" role="alert">
+      <i class="bx bx-error-circle me-2 fs-5"></i>
+      <div class="small fw-bold">{{ store.error() }}</div>
+    </div>
+  }
+
+  <button
+    class="btn btn-primary btn-lg w-100 py-3 fw-bold"
+    type="submit"
+    [disabled]="store.loading()"
+  >
+    @if (store.loading()) {
+      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      Salvando…
+    } @else {
+      Salvar e entrar
+    }
+  </button>
+</form>
+
+<p class="text-center mt-4 mb-1 small text-muted">
+  Não lembra da senha provisória? Volte ao login e tente de novo, ou peça para um administrador reenviá-la.
+</p>
+<p class="text-center mb-0">
+  <button type="button" class="btn btn-link fw-bold text-primary text-decoration-none p-0" (click)="store.cancelPasswordChange()">
+    Voltar ao login
+  </button>
+</p>

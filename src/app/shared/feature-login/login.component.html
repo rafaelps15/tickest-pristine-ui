@@ -1,48 +1,55 @@
 <div class="text-center mb-4">
-  <h4 class="mb-2 fw-bold text-dark">Acesse sua Conta</h4>
+  <h4 class="mb-2 fw-bold">Acesse sua conta</h4>
   <p class="text-muted">Utilize suas credenciais corporativas</p>
 </div>
 
-<form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3">
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3" novalidate>
 
   <div class="mb-4">
-    <label for="email" class="form-label fw-semibold small text-uppercase">E-mail Corporativo</label>
+    <label for="email" class="form-label">E-mail Corporativo</label>
     <input
       type="email"
       class="form-control form-control-lg"
       id="email"
+      name="email"
       formControlName="email"
       placeholder="seu@email.com"
+      autocomplete="username"
       autofocus
       [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched"
+      [attr.aria-describedby]="form.get('email')?.invalid && form.get('email')?.touched ? 'email-error' : null"
     />
     @if (form.get('email')?.errors?.['required']) {
-      <div class="invalid-feedback">O e-mail é obrigatório.</div>
+      <div class="invalid-feedback" id="email-error">O e-mail é obrigatório.</div>
     }
     @if (form.get('email')?.errors?.['email']) {
-      <div class="invalid-feedback">Insira um e-mail válido.</div>
+      <div class="invalid-feedback" id="email-error">Insira um e-mail válido.</div>
     }
   </div>
 
   <div class="mb-4">
     <div class="d-flex justify-content-between align-items-center mb-1">
-      <label class="form-label mb-0 fw-semibold small text-uppercase" for="password">Senha</label>
-      <a href="javascript:void(0);" class="text-primary small fw-semibold">Esqueceu?</a>
+      <label class="form-label mb-0" for="password">Senha</label>
+      <span class="text-muted small">Esqueceu sua senha? Peça para um administrador redefini-la.</span>
     </div>
     <div class="input-group input-group-merge">
       <input
         [type]="showPassword() ? 'text' : 'password'"
         id="password"
+        name="password"
         class="form-control form-control-lg"
         formControlName="password"
         placeholder="••••••••••••"
+        autocomplete="current-password"
         [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched"
+        [attr.aria-describedby]="form.get('password')?.invalid && form.get('password')?.touched ? 'password-error' : null"
       />
-      <span class="input-group-text cursor-pointer" (click)="togglePassword()">
+      <button type="button" class="input-group-text cursor-pointer" (click)="togglePassword()"
+              [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-pressed]="showPassword()">
         <i class="bx" [class.bx-show]="showPassword()" [class.bx-hide]="!showPassword()"></i>
-      </span>
+      </button>
       @if (form.get('password')?.invalid && form.get('password')?.touched) {
-        <div class="invalid-feedback">A senha é necessária.</div>
+        <div class="invalid-feedback" id="password-error">A senha é necessária.</div>
       }
     </div>
   </div>
@@ -55,15 +62,15 @@
   }
 
   <button
-    class="btn btn-primary btn-lg w-100 py-3 fw-bold shadow-sm"
+    class="btn btn-primary btn-lg w-100 py-3 fw-bold"
     type="submit"
-    [disabled]="form.invalid || store.loading()"
+    [disabled]="store.loading()"
   >
     @if (store.loading()) {
       <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-      AUTENTICANDO...
+      Autenticando…
     } @else {
-      ENTRAR NO SISTEMA
+      Entrar no sistema
     }
   </button>
 </form>
@@ -71,6 +78,6 @@
 <p class="text-center mt-4 mb-0">
   <span class="text-muted">Novo por aqui?</span>
   <a routerLink="/register" class="ms-1 fw-bold text-primary text-decoration-none">
-    Crie sua conta
+    Solicite seu acesso
   </a>
 </p>

@@ -1,0 +1,50 @@
+<div class="modal-backdrop fade show"></div>
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="ticketEditDialogTitle"
+     (click)="onBackdropClick($event)">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="modal-header">
+          <div class="min-w-0">
+            <h5 class="modal-title" id="ticketEditDialogTitle">Editar descrição</h5>
+            <p class="text-muted small mb-0 text-truncate">{{ ticket().title }}</p>
+          </div>
+          <button type="button" class="btn-close" aria-label="Fechar edição" (click)="requestClose()"></button>
+        </div>
+
+        <div class="modal-body">
+          @if (error()) {
+            <div class="alert alert-danger border-0 py-2 small" role="alert">{{ error() }}</div>
+          }
+
+          <label class="form-label" for="ticketEditDescription">Descrição</label>
+          <textarea #descriptionField id="ticketEditDescription" class="form-control" rows="5" formControlName="description"
+                    [class.is-invalid]="isDescriptionInvalid()" [attr.aria-describedby]="isDescriptionInvalid() ? 'ticketEditDescriptionError' : 'ticketEditDescriptionHint'"></textarea>
+          @if (isDescriptionInvalid()) {
+            <div id="ticketEditDescriptionError" class="invalid-feedback">
+              @if (form.controls.description.errors?.['required']) {
+                A descrição é obrigatória.
+              } @else if (form.controls.description.errors?.['minlength']) {
+                A descrição deve ter pelo menos 10 caracteres.
+              } @else if (form.controls.description.errors?.['maxlength']) {
+                A descrição deve ter no máximo 500 caracteres.
+              }
+            </div>
+          }
+          <div id="ticketEditDescriptionHint" class="form-text text-end">{{ form.controls.description.value?.length ?? 0 }}/500</div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" (click)="requestClose()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="form.invalid || !form.dirty || saving()">
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

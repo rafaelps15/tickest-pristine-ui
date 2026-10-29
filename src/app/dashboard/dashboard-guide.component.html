@@ -1,0 +1,27 @@
+<div class="card filters-card mb-3">
+  <button type="button" class="btn w-100 text-start d-flex align-items-center justify-content-between p-3 guide-toggle"
+          [attr.aria-expanded]="open()" aria-controls="dashboardGuideBody" (click)="toggle()">
+    <span class="fw-bold">
+      <i class="bx bx-info-circle me-2"></i>Guia da Tela
+    </span>
+    <i class="bx fs-4" [class.bx-chevron-up]="open()" [class.bx-chevron-down]="!open()" aria-hidden="true"></i>
+  </button>
+
+  @if (open()) {
+    <div id="dashboardGuideBody" class="card-body pt-0">
+      <div class="guide-section">
+        <h6 class="guide-section-title">Cards de estatística</h6>
+        <p class="small text-muted mb-2"><strong>Total de Tickets:</strong> todos os chamados da empresa, incluindo fechados e cancelados.</p>
+        <p class="small text-muted mb-2"><strong>Em Aberto:</strong> aguardando atendimento.</p>
+        <p class="small text-muted mb-2"><strong>Em Andamento:</strong> já em atendimento por alguém.</p>
+        <p class="small text-muted mb-0"><strong>Resolvidos:</strong> finalizados com solução.</p>
+      </div>
+
+      <div class="guide-section mb-0">
+        <h6 class="guide-section-title">Gráfico de volume</h6>
+        <p class="small text-muted mb-2">Quantidade de tickets abertos por período — agrupe por dia, semana ou mês com os botões acima do gráfico.</p>
+        <p class="small text-muted mb-0">Os números são de toda a empresa, iguais para qualquer papel logado — não é uma visão pessoal.</p>
+      </div>
+    </div>
+  }
+</div>

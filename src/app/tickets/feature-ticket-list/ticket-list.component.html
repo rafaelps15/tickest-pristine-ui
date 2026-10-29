@@ -1,7 +1,10 @@
 <div class="row mb-4">
   <div class="col-12">
-    <div class="d-flex align-items-center justify-content-between">
-      <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Início /</span> Meus Tickets</h4>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+      <div>
+        <h4 class="fw-bold mb-1"><span class="text-muted fw-light">Início /</span> Meus Tickets</h4>
+        <p class="page-subtitle small mb-0">Os chamados que você abriu, com prioridade e status atuais.</p>
+      </div>
       <a routerLink="/tickets/novo" class="btn btn-primary">
         <i class="bx bx-plus me-1"></i> Novo Ticket
       </a>
@@ -10,27 +13,31 @@
 </div>
 
 @if (store.state().error) {
-  <div class="alert alert-danger border-0 shadow-sm" role="alert">{{ store.state().error }}</div>
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
+    <span>{{ store.state().error }}</span>
+    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForCurrentUser()">Tentar novamente</button>
+  </div>
 }
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
+    <table class="table table-hover align-middle mb-0 table-stack">
       <thead>
         <tr>
-          <th>Título</th>
-          <th>Prioridade</th>
-          <th>Status</th>
-          <th class="text-end">Ações</th>
+          <th scope="col">Título</th>
+          <th scope="col">Abertura</th>
+          <th scope="col">Prioridade</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
         @if (store.state().loading) {
-          <tr><td colspan="4" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary"></span></td></tr>
+          <tr><td colspan="5" class="text-center py-5"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando tickets…</span></span></td></tr>
         } @else if (store.tickets().length === 0) {
           <tr>
-            <td colspan="4" class="text-center py-5 text-muted">
-              <i class="bx bx-ticket display-6 d-block mb-2 opacity-50"></i>
+            <td colspan="5" class="text-center py-5 text-muted">
+              <i class="bx bx-receipt display-6 d-block mb-2 opacity-50"></i>
               Você ainda não abriu nenhum ticket.
               <a routerLink="/tickets/novo" class="d-block small mt-2">Abrir o primeiro ticket</a>
             </td>
@@ -39,20 +46,50 @@
           @for (ticket of store.tickets(); track ticket.id) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ ticket.title }}</div>
-                <div class="text-muted small">{{ ticket.description }}</div>
+                <a [routerLink]="['/tickets', ticket.id]" class="ticket-title fw-semibold">{{ ticket.title }}</a>
+                <div class="ticket-summary text-muted small text-truncate" [title]="ticket.description">{{ ticket.description }}</div>
               </td>
-              <td><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
-              <td><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
-              <td class="text-end">
-                @if (canReopen(ticket)) {
-                  <button type="button" class="btn btn-sm btn-outline-success me-2" (click)="onReopen(ticket)">
-                    <i class="bx bx-refresh"></i>
+              <td class="text-nowrap small" data-label="Abertura">{{ ticket.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
+              <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
+              <td class="text-end table-stack-actions">
+                <div class="dropdown">
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon btn-row-actions rounded-circle"
+                          data-bs-toggle="dropdown" aria-expanded="false" appDropdownFixedPosition
+                          [attr.aria-label]="'Ações para o ticket ' + ticket.title">
+                    @if (isPending(ticket)) {
+                      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    } @else {
+                      <i class="bx bx-dots-vertical-rounded"></i>
+                    }
                   </button>
-                }
-                <button type="button" class="btn btn-sm btn-outline-danger" (click)="onDelete(ticket)">
-                  <i class="bx bx-trash"></i>
-                </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    @if (isActive(ticket)) {
+                      <li>
+                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)">
+                          <i class="bx bx-edit me-2"></i>Editar descrição
+                        </button>
+                      </li>
+                      <li>
+                        <button type="button" class="dropdown-item" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)">
+                          <i class="bx bx-x-circle me-2"></i>Cancelar ticket
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider" /></li>
+                      <li>
+                        <button type="button" class="dropdown-item text-danger" [disabled]="isPending(ticket)" (click)="onDelete(ticket)">
+                          <i class="bx bx-trash me-2"></i>Excluir
+                        </button>
+                      </li>
+                    } @else if (canReopen(ticket)) {
+                      <li>
+                        <button type="button" class="dropdown-item text-success" [disabled]="isPending(ticket)" (click)="onReopen(ticket)">
+                          <i class="bx bx-refresh me-2"></i>Reabrir ticket
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                </div>
               </td>
             </tr>
           }
@@ -60,4 +97,48 @@
       </tbody>
     </table>
   </div>
+
+  @if (store.total() > 0) {
+    <div class="card-footer d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
+      <span class="text-muted small">Exibindo {{ rangeStart() }}–{{ rangeEnd() }} de {{ store.total() }} tickets</span>
+
+      @if (store.totalPages() > 1) {
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasPreviousPage() || store.state().loading" (click)="store.goToPage(store.currentPage() - 1)">
+            Anterior
+          </button>
+
+          @for (pageNumber of pageNumbers(); track $index) {
+            @if (pageNumber === '…') {
+              <span class="px-1 text-muted">…</span>
+            } @else {
+              <button type="button" class="btn btn-sm btn-page" [class.btn-primary]="pageNumber === store.currentPage()" [class.btn-outline-secondary]="pageNumber !== store.currentPage()"
+                      [attr.aria-current]="pageNumber === store.currentPage() ? 'page' : null"
+                      (click)="store.goToPage(pageNumber)">
+                {{ pageNumber }}
+              </button>
+            }
+          }
+
+          <button type="button" class="btn btn-sm btn-page btn-outline-secondary" [disabled]="!store.hasNextPage() || store.state().loading" (click)="store.goToPage(store.currentPage() + 1)">
+            Próxima
+          </button>
+        </div>
+      }
+
+      <div class="d-flex align-items-center gap-2">
+        <label class="form-label small mb-0" for="ticketPageSize">Por página</label>
+        <select id="ticketPageSize" class="form-select form-select-sm w-auto" [value]="store.currentPageSize()" (change)="onPageSizeChange(+$any($event.target).value)">
+          @for (size of pageSizeOptions; track size) {
+            <option [value]="size">{{ size }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
 </div>
+
+@if (editingTicket(); as editing) {
+  <app-ticket-edit-dialog [ticket]="editing" [saving]="isPending(editing)" [error]="store.state().error"
+                           (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}

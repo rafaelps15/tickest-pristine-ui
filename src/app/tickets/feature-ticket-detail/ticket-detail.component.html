@@ -1,0 +1,524 @@
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+      <div class="text-break">
+        <h4 class="fw-bold mb-0"><span class="text-muted fw-light">{{ breadcrumbLabel }}</span> {{ ticket()?.title ?? 'Ticket' }}</h4>
+      </div>
+      <a [routerLink]="backLink" class="btn btn-outline-secondary btn-sm">
+        <i class="bx bx-arrow-back me-1"></i> Voltar
+      </a>
+    </div>
+  </div>
+</div>
+
+@if (detailStore.state().loading) {
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body p-4 text-center py-5">
+      <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando o chamado…</span></span>
+    </div>
+  </div>
+} @else if (ticket(); as t) {
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="badge" [ngClass]="statusBadgeClass[t.status]">{{ statusLabels[t.status] }}</span>
+        <span class="badge" [ngClass]="priorityBadgeClass[t.priority]">{{ priorityLabels[t.priority] }}</span>
+        <span class="badge" [ngClass]="slaStatusBadgeClass[t.slaStatus]">SLA: {{ slaStatusLabels[t.slaStatus] }}</span>
+      </div>
+      <p class="d-flex align-items-start justify-content-between gap-2 mb-4">
+        <span class="text-muted">{{ t.description }}</span>
+        @if (canEditTicket(t)) {
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle flex-shrink-0"
+                  [attr.aria-label]="'Editar a descrição do ticket ' + t.title" (click)="onStartEditDescription(t)">
+            <i class="bx bx-edit"></i>
+          </button>
+        }
+      </p>
+
+      @if (nextStatusOptions(t.status).length > 0 || canReopenTicket(t.status) || canCancelAsOwner(t)) {
+        <div class="d-flex gap-2 flex-wrap mb-4">
+          @for (nextStatus of nextStatusOptions(t.status); track nextStatus) {
+            <button type="button" class="btn btn-sm"
+                    [class.btn-outline-danger]="nextStatus === TicketStatus.Canceled"
+                    [class.btn-outline-primary]="nextStatus !== TicketStatus.Canceled"
+                    [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(nextStatus, t.description)">
+              @if (detailStore.updatingStatus() && pendingStatus() === nextStatus) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              {{ statusActionLabels[nextStatus] }}
+            </button>
+          }
+          @if (canReopenTicket(t.status)) {
+            <button type="button" class="btn btn-sm btn-outline-success" [disabled]="detailStore.reopening()" (click)="onReopen()">
+              @if (detailStore.reopening()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Reabrir chamado
+            </button>
+          }
+          @if (canCancelAsOwner(t)) {
+            <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.updatingStatus()" (click)="onChangeStatus(TicketStatus.Canceled, t.description)">
+              @if (detailStore.updatingStatus() && pendingStatus() === TicketStatus.Canceled) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Cancelar chamado
+            </button>
+          }
+        </div>
+      }
+
+      <dl class="row small mb-0 max-w-700">
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Aberto por</dt>
+        <dd class="col-12 col-sm-9">{{ t.openedByName }}</dd>
+
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Responsável</dt>
+        <dd class="col-12 col-sm-9 d-flex align-items-center gap-2 flex-wrap">
+          {{ t.assignedToName ?? 'Ainda não atribuído' }}
+          @if (canAssignTicket(t.status)) {
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ticketAssignModal" (click)="onOpenAssignModal()">
+              {{ t.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
+            </button>
+          }
+          @if (canRemoveAssignee(t.status, t.assignedToName)) {
+            <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="detailStore.removingAssignee()" (click)="onRemoveAssignee(t.assignedToName!)">
+              @if (detailStore.removingAssignee()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              }
+              Remover responsável
+            </button>
+          }
+        </dd>
+
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Setor</dt>
+        <dd class="col-12 col-sm-9">{{ t.sectorName }}</dd>
+
+        <dt class="col-12 col-sm-3 text-muted fw-normal">Aberto em</dt>
+        <dd class="col-12 col-sm-9">{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+
+        @if (t.resolvedAtUtc) {
+          <dt class="col-12 col-sm-3 text-muted fw-normal">Resolvido em</dt>
+          <dd class="col-12 col-sm-9">{{ t.resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        }
+
+        <!-- Só sem o painel de SLA: com ele, o prazo vigente (que muda a cada reabertura) já está lá —
+             este `dueAtUtc` é sempre o do primeiro ciclo. -->
+        @if (!detailStore.sla()) {
+          <dt class="col-12 col-sm-3 text-muted fw-normal">Prazo</dt>
+          <dd class="col-12 col-sm-9 mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
+            {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+            @if (dueRelativeLabel(t); as relative) {
+              <span class="fw-semibold">— {{ relative }}</span>
+            }
+          </dd>
+        }
+      </dl>
+
+      @if (detailStore.mutationError()) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0 max-w-700" role="alert">{{ detailStore.mutationError() }}</div>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
+    <span>{{ detailStore.state().error ?? 'Não encontramos esse ticket — ele pode ter sido removido.' }}</span>
+    @if (detailStore.state().error) {
+      <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="detailStore.loadTicket(ticketId)">Tentar novamente</button>
+    }
+  </div>
+}
+
+@if (detailStore.sla(); as slaBlock) {
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-header py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h5 class="mb-0 fw-bold">SLA</h5>
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">{{ slaBlock.plan.policyName }} · {{ slaBlock.plan.calendarName }}</span>
+        @if (slaBlock.plan.isLegacy) {
+          <span class="badge bg-label-secondary">Legado (horas corridas)</span>
+        }
+      </div>
+    </div>
+    <div class="card-body p-4">
+      @if (detailStore.slaError()) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mb-3" role="alert">{{ detailStore.slaError() }}</div>
+      }
+
+      <div class="row g-4">
+        @for (objective of currentCycleObjectives(slaBlock); track objective.metric) {
+          <div class="col-12 col-md-6">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+              <span class="fw-semibold small">{{ slaMetricLabels[objective.metric] }}</span>
+              <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
+            </div>
+            @if (objective.state === TicketSlaObjectiveState.NotApplicable) {
+              <p class="text-muted small mb-0">Sem meta de primeira resposta.</p>
+            } @else {
+              @if (objective.dueAtUtc) {
+                <p class="small mb-1" [ngClass]="objectiveUrgencyClass(objective)">
+                  Prazo: {{ objective.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                  @if (objectiveRelativeLabel(objective, slaBlock.serverNowUtc); as relative) {
+                    <span class="fw-semibold">— {{ relative }}</span>
+                  }
+                </p>
+              }
+              @if (objective.consumedMinutes !== null && objective.remainingMinutes !== null) {
+                <p class="text-muted small mb-1">{{ formatBusinessMinutes(objective.remainingMinutes) }} úteis restantes · {{ formatBusinessMinutes(objective.consumedMinutes) }} consumidos</p>
+              }
+              @if (objective.completedAtUtc) {
+                <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+              } @else if (objective.stoppedAtUtc) {
+                <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      @if (previousCycleObjectives(slaBlock).length > 0) {
+        <button type="button" class="btn btn-sm btn-link text-decoration-none ps-0 mt-3" [attr.aria-expanded]="olderCyclesOpen()" aria-controls="slaOlderCycles" (click)="toggleOlderCycles()">
+          <i class="bx fs-5 me-1" [class.bx-chevron-up]="olderCyclesOpen()" [class.bx-chevron-down]="!olderCyclesOpen()" aria-hidden="true"></i>
+          Ciclos anteriores
+        </button>
+
+        @if (olderCyclesOpen()) {
+          <div id="slaOlderCycles" class="mt-2">
+            @for (objective of previousCycleObjectives(slaBlock); track objective.metric + '-' + objective.cycle) {
+              <div class="sla-older-cycle">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                  <span class="small">{{ slaMetricLabels[objective.metric] }} — Ciclo {{ objective.cycle }}</span>
+                  <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
+                </div>
+                @if (objective.completedAtUtc) {
+                  <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                } @else if (objective.stoppedAtUtc) {
+                  <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header py-3">
+    <h5 class="mb-0 fw-bold">Mensagens</h5>
+  </div>
+
+  <div class="card-body p-4">
+    @if (messagesStore.postError()) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ messagesStore.postError() }}</div>
+    }
+    <div class="mb-4">
+      <label class="form-label small" for="ticketNewMessage">Nova mensagem</label>
+      <textarea id="ticketNewMessage" class="form-control" rows="3" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
+                [value]="newMessageContent()" (input)="newMessageContent.set($any($event.target).value)"></textarea>
+      <div class="d-flex align-items-center justify-content-between mt-2">
+        <span class="text-muted small">{{ newMessageContent().length }}/{{ TICKET_MESSAGE_MAX_LENGTH }}</span>
+        <button type="button" class="btn btn-sm btn-primary" [disabled]="!newMessageContent().trim() || messagesStore.posting()" (click)="onSendMessage()">
+          @if (messagesStore.posting()) {
+            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+          }
+          Enviar
+        </button>
+      </div>
+    </div>
+
+    @if (messagesStore.listState().error) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+        <span>{{ messagesStore.listState().error }}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="messagesStore.loadForTicket(ticketId)">Tentar novamente</button>
+      </div>
+    }
+
+    @if (messagesStore.listState().loading) {
+      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando mensagens…</span></span></div>
+    } @else if (messagesStore.messages().length === 0) {
+      <p class="text-muted small mb-0">Nenhuma mensagem ainda.</p>
+    } @else if (ticket(); as t) {
+      @if (messagesStore.mutationError()) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ messagesStore.mutationError() }}</div>
+      }
+      <ul class="list-group list-group-flush">
+        @for (message of messagesStore.messages(); track message.id) {
+          <li class="list-group-item px-0">
+            @if (editingMessageId() === message.id) {
+              <textarea class="form-control mb-2" rows="3" aria-label="Editar mensagem" [attr.maxlength]="TICKET_MESSAGE_MAX_LENGTH"
+                        [value]="editMessageContent()" (input)="editMessageContent.set($any($event.target).value)"></textarea>
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onCancelEdit()">Cancelar</button>
+                <button type="button" class="btn btn-sm btn-primary" [disabled]="!editMessageContent().trim() || messagesStore.savingEdit()" (click)="onSaveEdit(message.id)">
+                  @if (messagesStore.savingEdit()) {
+                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  }
+                  Salvar
+                </button>
+              </div>
+            } @else {
+              <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                <span class="fw-semibold small">
+                  {{ messageAuthorName(message, t) }}
+                  <span class="text-muted fw-normal">— {{ message.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                  @if (message.editedAtUtc) {
+                    <span class="text-muted fw-normal">(editada)</span>
+                  }
+                </span>
+                <div class="d-flex gap-1 flex-shrink-0">
+                  @if (canEditMessage(message)) {
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [attr.aria-label]="'Editar mensagem'" (click)="onStartEdit(message)">
+                      <i class="bx bx-edit" aria-hidden="true"></i>
+                    </button>
+                  }
+                  @if (canDeleteMessage(message)) {
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="messagesStore.deletingMessageId() === message.id"
+                            [attr.aria-label]="'Excluir mensagem'" (click)="onDeleteMessage(message.id)">
+                      @if (messagesStore.deletingMessageId() === message.id) {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                      } @else {
+                        <i class="bx bx-trash" aria-hidden="true"></i>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+              <p class="mb-0 text-break">{{ message.content }}</p>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (messagesStore.hasMore()) {
+        <div class="text-center mt-3">
+          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="messagesStore.loadingMore()" (click)="messagesStore.loadMore()">
+            @if (messagesStore.loadingMore()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            Carregar mais mensagens
+          </button>
+        </div>
+      }
+      @if (messagesStore.loadMoreError()) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ messagesStore.loadMoreError() }}</div>
+      }
+    }
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header py-3 d-flex align-items-center justify-content-between">
+    <h5 class="mb-0 fw-bold">Anexos</h5>
+    <button type="button" class="btn btn-sm btn-primary mb-0" [disabled]="store.uploading()" (click)="openFilePicker()">
+      @if (store.uploading()) {
+        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      } @else {
+        <i class="bx bx-upload me-1" aria-hidden="true"></i>
+      }
+      Anexar arquivo
+    </button>
+    <input #fileInput type="file" class="d-none" [disabled]="store.uploading()" (change)="onFileSelected($event)" />
+  </div>
+
+  <div class="card-body p-4">
+    <!-- Um alerta só pros erros de arquivo (validação, envio, download), pra não empilhar três caixas vermelhas. -->
+    @let attachmentActionError = fileValidationError() ?? store.uploadError() ?? store.downloadError();
+    @if (attachmentActionError) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ attachmentActionError }}</div>
+    }
+    @if (store.listState().error) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+        <span>{{ store.listState().error }}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForTicket(ticketId)">Tentar novamente</button>
+      </div>
+    }
+
+    @if (store.listState().loading) {
+      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando anexos…</span></span></div>
+    } @else if (store.attachments().length === 0) {
+      <p class="text-muted small mb-0">Nenhum anexo enviado ainda.</p>
+    } @else {
+      <ul class="list-group list-group-flush">
+        @for (attachment of store.attachments(); track attachment.id) {
+          <li class="list-group-item d-flex align-items-center justify-content-between px-0">
+            <div class="d-flex align-items-center gap-2 attachment-info">
+              <i class="bx bx-file fs-4 text-muted flex-shrink-0" aria-hidden="true"></i>
+              <div class="text-break">
+                <div class="fw-semibold">{{ attachment.fileName }}</div>
+                <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0">
+              <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="store.download(attachment)">
+                <i class="bx bx-download" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger btn-icon rounded-circle" [disabled]="store.deleting()" [attr.aria-label]="'Excluir ' + attachment.fileName" (click)="onDeleteAttachment(attachment.id, attachment.fileName)">
+                <i class="bx bx-trash" aria-hidden="true"></i>
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+
+      @if (store.hasMore()) {
+        <div class="text-center mt-3">
+          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="store.loadingMore()" (click)="store.loadMore()">
+            @if (store.loadingMore()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            Carregar mais anexos
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mt-3">
+  <div class="card-header py-3">
+    <h5 class="mb-0 fw-bold">Histórico</h5>
+  </div>
+
+  <div class="card-body p-4">
+    @if (historyStore.state().error) {
+      <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
+        <span>{{ historyStore.state().error }}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="historyStore.loadForTicket(ticketId)">Tentar novamente</button>
+      </div>
+    }
+
+    @if (historyStore.state().loading) {
+      <div class="text-center py-4"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando histórico…</span></span></div>
+    } @else if (historyStore.entries().length === 0) {
+      <p class="text-muted small mb-0">Nenhum evento registrado ainda.</p>
+    } @else {
+      <ul class="list-group list-group-flush">
+        @for (entry of historyStore.entries(); track entry.id) {
+          <li class="list-group-item px-0">
+            <div>{{ entry.description }}</div>
+            <div class="text-muted small">{{ entry.occurredAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+          </li>
+        }
+      </ul>
+
+      @if (historyStore.hasMore()) {
+        <div class="text-center mt-3">
+          <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="historyStore.loadingMore()" (click)="historyStore.loadMore()">
+            @if (historyStore.loadingMore()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            Carregar mais eventos
+          </button>
+        </div>
+      }
+      @if (historyStore.loadMoreError()) {
+        <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ historyStore.loadMoreError() }}</div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Modal de atribuição de responsável -->
+<div class="modal fade" id="ticketAssignModal" tabindex="-1" aria-hidden="true" role="dialog" aria-labelledby="ticketAssignModalTitle">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="ticketAssignModalTitle">{{ ticket()?.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}</h5>
+        <button id="ticketAssignModalCloseButton" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        @if (ticket()?.assignedToName; as currentName) {
+          <p class="text-muted small mb-3">Responsável atual: <span class="fw-semibold">{{ currentName }}</span></p>
+        }
+
+        <label class="form-label small" for="ticketAssigneeSearch">Buscar usuário</label>
+        <div class="input-group mb-3">
+          <span class="input-group-text"><i class="bx bx-search"></i></span>
+          <input id="ticketAssigneeSearch" type="text" class="form-control" placeholder="Nome, sobrenome ou e-mail"
+                 [value]="assigneeSearchInput()" (input)="assigneeSearchInput.set($any($event.target).value)" />
+        </div>
+
+        <!-- Anúncio só pra leitor de tela: a contagem muda a cada busca, sem outro sinal sonoro disso. -->
+        <div class="visually-hidden" aria-live="polite">
+          @if (!detailStore.searchingAssignees() && assigneeSearchInput().trim().length > 0) {
+            {{ detailStore.assigneeCandidates().length }} usuário(s) encontrado(s)
+          }
+        </div>
+
+        @if (detailStore.assigneeSearchError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mb-0" role="alert">{{ detailStore.assigneeSearchError() }}</div>
+        } @else if (detailStore.searchingAssignees()) {
+          <div class="text-center py-3"><span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Buscando usuários…</span></span></div>
+        } @else if (assigneeSearchInput().trim().length === 0) {
+          <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
+        } @else if (detailStore.assigneeCandidates().length === 0) {
+          <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+        } @else {
+          <ul class="list-group assignee-candidates" role="listbox" aria-label="Usuários encontrados"
+              [attr.aria-activedescendant]="'assignee-candidate-' + focusedAssigneeIndex()"
+              (keydown)="onAssigneeListKeydown($event, detailStore.assigneeCandidates().length)">
+            @for (candidate of detailStore.assigneeCandidates(); track candidate.id; let i = $index) {
+              <li [id]="'assignee-candidate-' + i" class="list-group-item assignee-candidate" role="option"
+                  [attr.tabindex]="focusedAssigneeIndex() === i ? 0 : -1"
+                  [class.is-selected]="selectedAssigneeId() === candidate.id"
+                  [attr.aria-selected]="selectedAssigneeId() === candidate.id"
+                  (click)="onSelectAssignee(candidate.id, i)" (keydown.enter)="onSelectAssignee(candidate.id, i)">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="assignee-candidate-info">
+                    <div class="fw-semibold assignee-candidate-name text-break">{{ candidate.firstName }} {{ candidate.lastName }}</div>
+                    <div class="small text-break" [class.text-muted]="selectedAssigneeId() !== candidate.id">{{ candidate.email }}</div>
+                    @if (candidate.roles.length > 0) {
+                      <div class="mt-1">
+                        @for (role of visibleCandidateRoles(candidate); track role.name) {
+                          @let color = roleColor(role.name);
+                          <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
+                        }
+                        @if (hiddenCandidateRolesCount(candidate) > 0) {
+                          <span class="badge bg-label-secondary badge-roles-overflow" tabindex="0"
+                                [title]="hiddenCandidateRolesNames(candidate)" [attr.aria-label]="'Funções adicionais: ' + hiddenCandidateRolesNames(candidate)">
+                            +{{ hiddenCandidateRolesCount(candidate) }}
+                          </span>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    @if (candidate.id === ticket()?.assignedToUserId) {
+                      <span class="text-muted small text-nowrap">Atual</span>
+                    }
+                    @if (selectedAssigneeId() === candidate.id) {
+                      <i class="bx bx-check-circle fs-5 assignee-candidate-check" aria-hidden="true"></i>
+                    }
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (detailStore.mutationError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ detailStore.mutationError() }}</div>
+        }
+      </div>
+      <div class="modal-footer flex-column align-items-stretch">
+        @if (ticket()?.assignedToName && selectedAssigneeName(); as newName) {
+          <p class="text-muted small mb-2">Isso substitui <span class="fw-semibold">{{ ticket()?.assignedToName }}</span> por <span class="fw-semibold">{{ newName }}</span> como responsável.</p>
+        }
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" [disabled]="!selectedAssigneeId() || detailStore.assigningTicket()" (click)="onConfirmAssign()">
+            @if (detailStore.assigningTicket()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            }
+            {{ ticket()?.assignedToName ? 'Reatribuir' : 'Atribuir' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@if (editingTicket(); as editing) {
+  <app-ticket-edit-dialog [ticket]="editing" [saving]="detailStore.updatingDescription()" [error]="detailStore.mutationError()"
+                           (save)="onEditSave($event)" (closed)="onEditClosed()" />
+}

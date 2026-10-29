@@ -1,111 +1,152 @@
-@if (isSelfRegistration) {
-  <div class="text-center mb-5">
-    <h4 class="mb-2 fw-bold text-dark h2">Criar conta corporativa</h4>
-    <p class="text-muted small">Preencha as informações para solicitar acesso à plataforma.</p>
-  </div>
-  <ng-container *ngTemplateOutlet="formTemplate"></ng-container>
-  <div class="text-center mt-5">
-    <p class="mb-0 small text-muted">
-      Já possui uma conta ativa?
-      <a routerLink="/login" class="ms-1 fw-bold text-primary text-decoration-none border-bottom border-primary">Fazer login</a>
-    </p>
-  </div>
-} @else {
-  <!-- Layout Administrativo (Dentro do MainLayout) -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex align-items-center justify-content-between">
-        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Administração /</span> Gestão de Usuários</h4>
-        <button type="button" class="btn btn-outline-secondary btn-sm" routerLink="/dashboard">
-          <i class="bx bx-arrow-back me-1"></i> Voltar ao Painel
-        </button>
-      </div>
+<div class="text-center mb-4">
+  <h4 class="mb-2 fw-bold">Solicitar acesso</h4>
+  <p class="text-muted">Preencha os dados para solicitar sua conta corporativa.</p>
+</div>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-3" novalidate>
+
+  @if (store.error()) {
+    <div class="alert alert-danger py-3 d-flex align-items-center mb-4" role="alert">
+      <i class="bx bx-error-circle me-2 fs-5"></i>
+      <div class="small fw-bold">{{ store.error() }}</div>
     </div>
-  </div>
-
-  <div class="card shadow-sm border-0 overflow-hidden">
-    <div class="card-header bg-white py-4 border-bottom">
-      <h5 class="mb-0 fw-bold text-dark">Módulo de Gestão de Usuários</h5>
-      <p class="text-muted small mb-0 mt-1">Gerencie permissões, edite dados ou cadastre novos colaboradores.</p>
+  }
+  @if (store.success()) {
+    <div class="alert alert-success py-3 d-flex align-items-center mb-4" role="alert">
+      <i class="bx bx-check-circle me-2 fs-5"></i>
+      <div class="small fw-bold">Cadastro realizado. A conta já está ativa — você pode fazer login quando quiser.</div>
     </div>
-    <div class="card-body p-4 p-lg-5">
-      <div class="max-w-700 mx-auto">
-        <ng-container *ngTemplateOutlet="formTemplate"></ng-container>
-      </div>
-    </div>
-  </div>
-}
+  }
 
-<!-- Template Reutilizável do Formulário (Padrão Elite) -->
-<ng-template #formTemplate>
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="needs-validation">
-
-    <!-- Feedbacks de Estado -->
-    @if (store.error()) {
-      <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4 fade show" role="alert">
-        <i class="bx bx-error-circle fs-4 me-3"></i>
-        <div class="fw-medium">{{ store.error() }}</div>
-      </div>
-    }
-    @if (store.success()) {
-      <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4 fade show" role="alert">
-        <i class="bx bx-check-circle fs-4 me-3"></i>
-        <div class="fw-medium">Processamento concluído com sucesso.</div>
-      </div>
-    }
-
-    <div class="row g-4">
-      <!-- Seção: Informações Pessoais -->
-      <div class="col-md-6">
-        <label class="form-label-premium">Nome</label>
-        <input type="text" class="form-control form-control-premium" placeholder="Ex: Alberto" formControlName="firstName"
-               [class.is-invalid]="isFieldInvalid('firstName')" />
-        <div class="invalid-feedback">O nome é obrigatório.</div>
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label-premium">Sobrenome</label>
-        <input type="text" class="form-control form-control-premium" placeholder="Ex: Santos Dumont" formControlName="lastName"
-               [class.is-invalid]="isFieldInvalid('lastName')" />
-        <div class="invalid-feedback">O sobrenome é obrigatório.</div>
-      </div>
-
-      <div class="col-12">
-        <label class="form-label-premium">E-mail Corporativo</label>
-        <input type="email" class="form-control form-control-premium" placeholder="colaborador@empresa.com" formControlName="email"
-               [class.is-invalid]="isFieldInvalid('email')" />
-        <div class="invalid-feedback">E-mail corporativo inválido.</div>
-      </div>
-
-      <!-- Seção: Segurança -->
-      <div class="col-md-6">
-        <label class="form-label-premium">Senha de Acesso</label>
-        <input type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="password"
-               [class.is-invalid]="isFieldInvalid('password')" />
-        <div class="invalid-feedback">Mínimo de 6 caracteres.</div>
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label-premium">Confirmar Senha</label>
-        <input type="password" class="form-control form-control-premium" placeholder="••••••••" formControlName="confirmPassword"
-               [class.is-invalid]="isFieldInvalid('confirmPassword') || form.hasError('passwordMismatch')" />
-        <div class="invalid-feedback">
-          @if (form.hasError('passwordMismatch')) { As senhas não coincidem. }
-          @else { Confirmação obrigatória. }
+  <div class="row g-3">
+    <div class="col-12 col-md-6">
+      <label class="form-label" for="registerFirstName">Nome</label>
+      <input id="registerFirstName" type="text" class="form-control" placeholder="Ex: Alberto" formControlName="firstName" autocomplete="given-name"
+             [class.is-invalid]="isFieldInvalid('firstName')"
+             [attr.aria-describedby]="isFieldInvalid('firstName') ? 'firstName-error' : null" />
+      @if (isFieldInvalid('firstName')) {
+        <div class="invalid-feedback" id="firstName-error">
+          @if (form.controls.firstName.errors?.['required']) {
+            O nome é obrigatório.
+          } @else if (form.controls.firstName.errors?.['minlength']) {
+            O nome deve ter no mínimo 2 caracteres.
+          } @else if (form.controls.firstName.errors?.['maxlength']) {
+            O nome deve ter no máximo 50 caracteres.
+          }
         </div>
+      }
+    </div>
+
+    <div class="col-12 col-md-6">
+      <label class="form-label" for="registerLastName">Sobrenome</label>
+      <input id="registerLastName" type="text" class="form-control" placeholder="Ex: Santos Dumont" formControlName="lastName" autocomplete="family-name"
+             [class.is-invalid]="isFieldInvalid('lastName')"
+             [attr.aria-describedby]="isFieldInvalid('lastName') ? 'lastName-error' : null" />
+      @if (isFieldInvalid('lastName')) {
+        <div class="invalid-feedback" id="lastName-error">
+          @if (form.controls.lastName.errors?.['required']) {
+            O sobrenome é obrigatório.
+          } @else if (form.controls.lastName.errors?.['minlength']) {
+            O sobrenome deve ter no mínimo 2 caracteres.
+          } @else if (form.controls.lastName.errors?.['maxlength']) {
+            O sobrenome deve ter no máximo 50 caracteres.
+          }
+        </div>
+      }
+    </div>
+
+    <div class="col-12">
+      <label class="form-label" for="registerEmail">E-mail Corporativo</label>
+      <input id="registerEmail" type="email" class="form-control" placeholder="colaborador@empresa.com" formControlName="email" autocomplete="email"
+             [class.is-invalid]="isFieldInvalid('email')"
+             [attr.aria-describedby]="isFieldInvalid('email') ? 'email-error' : null" />
+      @if (isFieldInvalid('email')) {
+        <div class="invalid-feedback" id="email-error">
+          @if (form.controls.email.errors?.['required']) {
+            O e-mail é obrigatório.
+          } @else {
+            Insira um e-mail corporativo válido.
+          }
+        </div>
+      }
+    </div>
+
+    <div class="col-12 col-md-6">
+      <label class="form-label" for="registerPassword">Senha de Acesso</label>
+      <div class="input-group input-group-merge">
+        <input
+          [type]="showPasswords() ? 'text' : 'password'"
+          id="registerPassword"
+          class="form-control"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="new-password"
+          [class.is-invalid]="isFieldInvalid('password')"
+          [attr.aria-describedby]="isFieldInvalid('password') ? 'password-error' : null"
+        />
+        <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+                [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+          <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+        </button>
+        @if (isFieldInvalid('password')) {
+          <div class="invalid-feedback" id="password-error">
+            @if (form.controls.password.errors?.['required']) {
+              Informe a senha.
+            } @else if (form.controls.password.errors?.['minlength']) {
+              A senha deve ter no mínimo 6 caracteres.
+            } @else if (form.controls.password.errors?.['uppercase']) {
+              A senha deve conter pelo menos uma letra maiúscula.
+            } @else if (form.controls.password.errors?.['specialChar']) {
+              A senha deve conter pelo menos um caractere especial (ex.: #, $, %).
+            }
+          </div>
+        }
       </div>
     </div>
 
-    <div class="mt-5">
-      <button type="submit" class="btn btn-primary btn-premium w-100 shadow-sm"
-              [disabled]="store.loading() || form.invalid">
-        @if (store.loading()) {
-          <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-          PROCESSANDO REQUISIÇÃO...
-        } @else {
-          {{ isSelfRegistration ? 'SOLICITAR REGISTRO' : 'CONFIRMAR CADASTRO' }}
+    <div class="col-12 col-md-6">
+      <label class="form-label" for="registerConfirmPassword">Confirmar Senha</label>
+      <div class="input-group input-group-merge">
+        <input
+          [type]="showPasswords() ? 'text' : 'password'"
+          id="registerConfirmPassword"
+          class="form-control"
+          formControlName="confirmPassword"
+          placeholder="••••••••"
+          autocomplete="new-password"
+          [class.is-invalid]="isFieldInvalid('confirmPassword') || (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched)"
+          [attr.aria-describedby]="(isFieldInvalid('confirmPassword') || (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched)) ? 'confirmPassword-error' : null"
+        />
+        <button type="button" class="input-group-text cursor-pointer" (click)="togglePasswordsVisibility()"
+                [attr.aria-label]="showPasswords() ? 'Ocultar senhas' : 'Mostrar senhas'" [attr.aria-pressed]="showPasswords()">
+          <i class="bx" [class.bx-show]="showPasswords()" [class.bx-hide]="!showPasswords()"></i>
+        </button>
+        @if (form.hasError('passwordMismatch') && form.controls.confirmPassword.touched) {
+          <div class="invalid-feedback" id="confirmPassword-error">As senhas não coincidem.</div>
+        } @else if (isFieldInvalid('confirmPassword')) {
+          <div class="invalid-feedback" id="confirmPassword-error">Confirme a senha.</div>
         }
-      </button>
+      </div>
     </div>
-  </form>
-</ng-template>
+  </div>
+
+  <button
+    class="btn btn-primary btn-lg w-100 py-3 fw-bold mt-4"
+    type="submit"
+    [disabled]="store.loading()"
+  >
+    @if (store.loading()) {
+      <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+      Enviando…
+    } @else {
+      Solicitar acesso
+    }
+  </button>
+</form>
+
+<p class="text-center mt-4 mb-0">
+  <span class="text-muted">Já tem uma conta?</span>
+  <a routerLink="/login" class="ms-1 fw-bold text-primary text-decoration-none">
+    Fazer login
+  </a>
+</p>

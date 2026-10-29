@@ -17,8 +17,12 @@ export function extractErrorMessage(
   // próprio erro de rede (ex.: TypeError "Failed to fetch"), não um corpo de erro da API.
   // Corpo de erro real da API é um ProblemDetails: { title, detail, errors? }.
   if (err.status !== 0) {
-    const validationErrors: Record<string, string[]> | undefined = err.error?.errors;
-    const validationMessage = validationErrors ? Object.values(validationErrors).flat().join(' ') : undefined;
+    // Erros de validação vêm como uma lista de objetos { code, description, type }, não como o
+    // dicionário Record<string, string[]> do formato padrão do ASP.NET.
+    const validationErrors: { description: string }[] | undefined = err.error?.errors;
+    const validationMessage = Array.isArray(validationErrors)
+      ? validationErrors.map(e => e.description).join(' ')
+      : undefined;
     const apiMessage: string | undefined = validationMessage || err.error?.detail || err.error?.title;
     if (apiMessage) return apiMessage;
   }

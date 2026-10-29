@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
+import { ToastService } from '../../shared';
 
 /** Tela de abertura de um novo ticket. */
 @Component({
@@ -17,6 +18,7 @@ import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-prior
 export class TicketCreateComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly router = inject(Router);
+    private readonly toastService = inject(ToastService);
     protected readonly store = inject(TicketsStore);
     protected readonly departmentsStore = inject(DepartmentsStore);
 
@@ -29,13 +31,17 @@ export class TicketCreateComponent implements OnInit {
 
     form = this.fb.group({
         title: ['', [Validators.required, Validators.maxLength(200)]],
-        description: ['', [Validators.required, Validators.maxLength(500)]],
+        description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
         priority: [TicketPriority.Medium, [Validators.required]],
         departmentId: ['', [Validators.required]],
         sectorId: [{ value: '', disabled: true }, [Validators.required]]
     });
 
     private readonly selectedDepartmentId = toSignal(this.form.controls.departmentId.valueChanges, { initialValue: '' });
+
+    /** Departamentos que têm pelo menos um setor — sem setor não há para onde abrir o chamado. */
+    readonly departmentsWithSectors = computed(() =>
+        this.departmentsStore.departments().filter(d => d.sectors.length > 0));
 
     /** Setores do departamento selecionado, para o cascading de Departamento -> Setor. */
     readonly availableSectors = computed(() => {
@@ -53,6 +59,16 @@ export class TicketCreateComponent implements OnInit {
         });
     }
 
+    /** Verifica se um campo está inválido e já foi tocado, pra só mostrar o erro depois da primeira interação. */
+    isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
+        const control = this.form.controls[fieldName];
+        return control.invalid && (control.dirty || control.touched);
+    }
+
+    /**
+     * Abre o chamado; com o formulário inválido, só marca os campos como tocados pra mostrar os erros
+     * (o botão fica habilitado de propósito — desabilitado, quem clica não descobre o que falta).
+     */
     onSubmit(): void {
         if (this.form.invalid) {
             this.form.markAllAsTouched();
@@ -65,6 +81,9 @@ export class TicketCreateComponent implements OnInit {
             description: raw.description!,
             priority: raw.priority!,
             sectorId: raw.sectorId!
-        }, () => this.router.navigate(['/tickets']));
+        }, () => {
+            this.toastService.show('Ticket aberto com sucesso.');
+            this.router.navigate(['/tickets']);
+        });
     }
 }

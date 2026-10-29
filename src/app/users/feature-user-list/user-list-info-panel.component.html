@@ -1,0 +1,75 @@
+<div class="card info-panel h-100">
+  <div class="card-body">
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+      <h5 class="fw-bold mb-0 text-break">{{ user().firstName }} {{ user().lastName }}</h5>
+      <button type="button" class="btn btn-sm btn-icon rounded-circle btn-outline-secondary flex-shrink-0"
+              aria-label="Fechar painel de informações do usuário" (click)="close.emit()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+
+    <div class="mb-3">
+      @if (user().isActive) {
+        <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
+      } @else {
+        <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
+      }
+    </div>
+
+    <dl class="info-list mb-3">
+      <dt>E-mail</dt>
+      <dd class="text-break">{{ user().email }}</dd>
+
+      <dt>Funções</dt>
+      <dd>
+        @for (role of visibleRoles(user()); track role.name) {
+          @let color = roleColor(role.name);
+          <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
+        } @empty {
+          <span class="text-muted small">—</span>
+        }
+        @if (hiddenRolesCount(user()) > 0) {
+          <span class="badge bg-label-secondary" [title]="hiddenRolesNames(user())">+{{ hiddenRolesCount(user()) }}</span>
+        }
+      </dd>
+
+      <dt>Cadastrado em</dt>
+      <dd>{{ user().createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+
+      @if (user().deactivatedAtUtc) {
+        <dt>Desativado em</dt>
+        <dd class="text-danger">{{ user().deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+      }
+    </dl>
+
+    <div class="d-flex flex-column gap-2">
+      <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#userEditModal" (click)="editClick.emit()">
+        <i class="bx bx-edit-alt me-1"></i>Editar cadastro
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#userRolesModal" (click)="assignRolesClick.emit()">
+        <i class="bx bx-shield-quarter me-1"></i>Atribuir funções
+      </button>
+      @if (canToggleActive()) {
+        @if (!user().isActive) {
+          <button type="button" class="btn btn-sm btn-outline-success" [disabled]="activating()" (click)="toggleActiveClick.emit()">
+            @if (activating()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            } @else {
+              <i class="bx bx-check me-1"></i>
+            }
+            Reativar
+          </button>
+        } @else {
+          <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deactivating()" (click)="toggleActiveClick.emit()">
+            @if (deactivating()) {
+              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+            } @else {
+              <i class="bx bx-block me-1"></i>
+            }
+            Desativar
+          </button>
+        }
+      }
+    </div>
+  </div>
+</div>

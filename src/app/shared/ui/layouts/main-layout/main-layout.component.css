@@ -1,7 +1,3 @@
-.cursor-pointer {
-  cursor: pointer;
-}
-
 .layout-wrapper {
   display: flex;
   width: 100%;
@@ -26,6 +22,16 @@
   flex: 1;
   flex-direction: column;
   background: var(--tk-page-bg, #f5f5f9);
+}
+
+/*
+ * `container-p-y` é classe utilitária do template Materio/Sneat original — este projeto só
+ * carrega Bootstrap puro via CDN (ver index.html), então ela nunca teve definição nenhuma: o
+ * conteúdo da página ficava colado na navbar flutuante, sem respiro nenhum entre os dois.
+ */
+.container-p-y {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .app-brand {
@@ -55,16 +61,16 @@
   display: flex;
   align-items: center;
   padding: 0.65rem 1rem;
-  color: #697a8d;
+  color: var(--tk-text-secondary);
   text-decoration: none;
   border-radius: 0.625rem;
   position: relative;
-  transition: background-color 200ms ease, color 200ms ease, padding-left 200ms ease;
+  transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
 }
 
 .menu-item.active .menu-link {
   background: linear-gradient(to right, rgba(105, 108, 255, 0.14), rgba(105, 108, 255, 0.02));
-  color: #696cff;
+  color: var(--tk-primary);
   font-weight: 600;
 }
 
@@ -76,13 +82,13 @@
   bottom: 0.3rem;
   width: 3px;
   border-radius: 999px;
-  background: #696cff;
+  background: var(--tk-primary);
 }
 
 .menu-link:hover {
   background: rgba(105, 108, 255, 0.08);
-  color: #696cff;
-  padding-left: 1.15rem;
+  color: var(--tk-primary);
+  transform: translateX(0.15rem);
 }
 
 .menu-icon {
@@ -103,7 +109,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #a1acb8;
+  color: var(--tk-text-muted);
 }
 
 .menu-item.mt-4 .menu-link {
@@ -115,52 +121,36 @@
   padding-left: 1rem;
 }
 
+/*
+ * position: relative + isolation: isolate (não `backdrop-filter` direto aqui!) — o filtro em si
+ * vive no ::before de baixo. `backdrop-filter`/`filter`/`transform` num ancestral criam um novo
+ * "containing block" que o Popper.js (posicionamento do dropdown do Bootstrap) não detecta de
+ * forma confiável, fazendo o menu do perfil flutuar deslocado. `position: relative` sozinho é
+ * sempre tratado corretamente pelo Popper, por isso é seguro aqui.
+ */
 .layout-navbar {
+  position: relative;
+  isolation: isolate;
+  z-index: 1030;
   margin: 1rem auto 0;
   padding: 0.65rem 1.5rem;
   border-radius: 0.75rem;
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
   box-shadow: 0 0.25rem 1rem rgba(105, 108, 255, 0.08);
 }
 
-.avatar img {
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  transition: box-shadow 200ms ease;
-}
-
-.avatar-online {
-  position: relative;
-}
-
-.avatar-online::after {
+.layout-navbar::before {
   content: "";
   position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #71dd37;
-  border: 2px solid #fff;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  backdrop-filter: blur(8px);
 }
 
-.dropdown-toggle:hover .avatar img {
-  box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.2);
-}
-
-.dropdown-menu {
-  border: none;
-  border-radius: 0.75rem;
-  box-shadow: 0 0.5rem 2rem rgba(105, 108, 255, 0.18);
-  padding: 0.5rem;
-}
-
-.dropdown-item {
-  border-radius: 0.5rem;
-  transition: background-color 150ms ease;
+[data-bs-theme="dark"] .layout-navbar {
+  background: rgba(33, 37, 41, 0.85);
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.3);
 }
 
 .layout-overlay {

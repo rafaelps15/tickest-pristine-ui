@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../../shared/guards/auth.guard';
 import { adminMasterGuard } from '../../shared/guards/admin-master.guard';
+import { pendingPasswordChangeGuard } from '../../shared/guards/pending-password-change.guard';
 
 /** Definição de rotas do sistema. */
 export const routes: Routes = [
@@ -13,6 +14,12 @@ export const routes: Routes = [
         path: 'login',
         loadComponent: () => import('../../shared/feature-login/login.component')
           .then(m => m.LoginComponent)
+      },
+      {
+        path: 'primeiro-acesso',
+        canActivate: [pendingPasswordChangeGuard],
+        loadComponent: () => import('../../shared/feature-first-access/first-access.component')
+          .then(m => m.FirstAccessComponent)
       },
       {
         path: 'register',
@@ -44,26 +51,39 @@ export const routes: Routes = [
           .then(m => m.TicketCreateComponent)
       },
       {
+        // Precisa vir antes de 'tickets/:id' — senão o router casaria "monitorar" como se fosse um id.
+        path: 'tickets/monitorar',
+        canActivate: [adminMasterGuard],
+        data: { requiredPermission: 'tickets:manage' },
+        loadComponent: () => import('../../tickets/feature-ticket-monitor/ticket-monitor.component')
+          .then(m => m.TicketMonitorComponent)
+      },
+      {
+        path: 'tickets/:id',
+        loadComponent: () => import('../../tickets/feature-ticket-detail/ticket-detail.component')
+          .then(m => m.TicketDetailComponent)
+      },
+      {
+        path: 'perfil',
+        loadComponent: () => import('../../users/feature-profile-edit/profile-edit.component')
+          .then(m => m.ProfileEditComponent)
+      },
+      {
         path: 'usuarios',
         canActivate: [adminMasterGuard],
-        data: { requiredPermission: 'users:manage' },
+        data: { requiredPermission: 'users:read' },
         loadComponent: () => import('../../users/feature-user-list/user-list.component')
           .then(m => m.UserListComponent)
       },
       {
         path: 'departamentos',
         canActivate: [adminMasterGuard],
-        data: { requiredPermission: 'departments:manage' },
+        data: { requiredPermission: ['departments:manage', 'sectors:manage'] },
         loadComponent: () => import('../../departments/feature-department-list/department-list.component')
           .then(m => m.DepartmentListComponent)
       },
-      {
-        path: 'setores',
-        canActivate: [adminMasterGuard],
-        data: { requiredPermission: 'sectors:manage' },
-        loadComponent: () => import('../../sectors/feature-sector-list/sector-list.component')
-          .then(m => m.SectorListComponent)
-      },
+      // Setores ficam dentro da tela de departamentos; mantém o endereço antigo funcionando.
+      { path: 'setores', redirectTo: 'departamentos', pathMatch: 'full' },
       {
         path: 'roles',
         canActivate: [adminMasterGuard],

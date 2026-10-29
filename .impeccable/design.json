@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T00:00:00Z",
+  "title": "Design System: Tickest",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Índigo Confiança",
+        "canonical": "#696cff",
+        "tonalRamp": ["#1a1b66", "#2b2d8a", "#3d3fab", "#4f51c7", "#696cff", "#8a8cff", "#b3b5ff", "#e7e7ff"]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Índigo Confiança Escuro",
+        "canonical": "#5f61e6"
+      },
+      "primary-darker": {
+        "role": "primary",
+        "displayName": "Índigo Profundo",
+        "canonical": "#3a3ca3"
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Verde Resolução",
+        "canonical": "#71dd37"
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Âmbar Atenção",
+        "canonical": "#ffab00"
+      },
+      "info": {
+        "role": "semantic",
+        "displayName": "Ciano Andamento",
+        "canonical": "#03c3ec"
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Vermelho Alerta",
+        "canonical": "#ff3e1d"
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Grafite Texto",
+        "canonical": "#2b2c40",
+        "tonalRamp": ["#15151f", "#2b2c40", "#44455c", "#697a8d", "#a1acb8", "#c8ced5", "#e9ecef", "#f5f5f9"]
+      },
+      "text-secondary": { "role": "neutral", "displayName": "Ardósia Secundária", "canonical": "#697a8d" },
+      "text-muted": { "role": "neutral", "displayName": "Névoa Terciária", "canonical": "#a1acb8" },
+      "surface": { "role": "neutral", "displayName": "Branco Superfície", "canonical": "#ffffff" },
+      "page-bg": { "role": "neutral", "displayName": "Lavanda Nebulosa", "canonical": "#f5f5f9" },
+      "border": { "role": "neutral", "displayName": "Contorno Lavanda", "canonical": "#e7e7ff" },
+      "text-primary-dark": { "role": "neutral", "displayName": "Gelo Escuro", "canonical": "#e9ecef" },
+      "text-secondary-dark": { "role": "neutral", "displayName": "Cinza Médio", "canonical": "#adb5bd" },
+      "text-muted-dark": { "role": "neutral", "displayName": "Grafite Esmaecido", "canonical": "#868e96" },
+      "surface-dark": { "role": "neutral", "displayName": "Carvão Superfície", "canonical": "#212529" },
+      "page-bg-dark": { "role": "neutral", "displayName": "Breu de Página", "canonical": "#1a1d20" },
+      "border-dark": { "role": "neutral", "displayName": "Contorno Carvão", "canonical": "#3a3f44" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Sora)", "purpose": "Wordmark 'tickest' em login/registro — único uso da fonte de marca." },
+      "body": { "displayName": "Corpo (Public Sans)", "purpose": "Todo o resto da interface: títulos de tela, tabelas, formulários, texto corrido." },
+      "label": { "displayName": "Rótulo (Public Sans, tracked)", "purpose": "Rótulos de formulário, cabeçalho de tabela, cabeçalho de seção do menu." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 0.125rem 0.375rem rgba(105, 108, 255, 0.08)", "purpose": "Cards e inputs em repouso (claro)." },
+      { "name": "shadow-sm-dark", "value": "0 0.125rem 0.375rem rgba(0, 0, 0, 0.3)", "purpose": "Cards e inputs em repouso (escuro)." },
+      { "name": "shadow-md", "value": "0 0.375rem 1.25rem rgba(105, 108, 255, 0.12)", "purpose": "Navbar flutuante, destaque médio (claro)." },
+      { "name": "shadow-md-dark", "value": "0 0.375rem 1.25rem rgba(0, 0, 0, 0.4)", "purpose": "Navbar flutuante, destaque médio (escuro)." },
+      { "name": "shadow-lg", "value": "0 1rem 3rem rgba(105, 108, 255, 0.18)", "purpose": "Modais — camada mais alta da interface (claro)." },
+      { "name": "shadow-lg-dark", "value": "0 1rem 3rem rgba(0, 0, 0, 0.55)", "purpose": "Modais (escuro)." },
+      { "name": "shadow-auth-card", "value": "0 20px 60px rgba(0, 0, 0, 0.2)", "purpose": "Card de login/registro — elevação dramática exclusiva da entrada, não dark-aware." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "200ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Transição padrão do sistema (cor, sombra, transform)." },
+      { "name": "fade-in-route", "value": "tk-fade-in 250ms ease-out", "purpose": "Entrada suave de cada rota: opacidade 0→1 + translateY 4px→0." }
+    ],
+    "breakpoints": [
+      { "name": "sidebar-collapse", "value": "1199px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Botão de ação primária — gradiente índigo, eleva no hover.",
+      "html": "<button class=\"ds-btn-primary\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 5v14M5 12h14\" stroke-linecap=\"round\"/></svg>Novo Usuário</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 0.4rem; background: linear-gradient(to right, #696cff, #5f61e6); color: #fff; border: none; border-radius: 0.5rem; padding: 0.5rem 1rem; font-weight: 500; font-family: 'Public Sans', system-ui, sans-serif; box-shadow: 0 0.25rem 0.75rem rgba(105,108,255,0.3); transition: transform 200ms cubic-bezier(0.4,0,0.2,1), box-shadow 200ms cubic-bezier(0.4,0,0.2,1), background-color 200ms; } .ds-icon { width: 18px; height: 18px; } .ds-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0.5rem 1.1rem rgba(105,108,255,0.4); background: linear-gradient(to right, #5f61e6, #696cff); } .ds-btn-primary:focus-visible { outline: 2px solid #696cff; outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(0); }"
+    },
+    {
+      "name": "Status Badge (soft)",
+      "kind": "chip",
+      "refersTo": "badge-success",
+      "description": "Badge 'soft' de status — fundo pastel + texto saturado, sempre em pílula.",
+      "html": "<span class=\"ds-badge ds-badge-success\"><span class=\"ds-status-dot\"></span>Ativo</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; font-weight: 500; letter-spacing: 0.02em; padding: 0.4em 0.7em; border-radius: 999px; font-family: 'Public Sans', system-ui, sans-serif; font-size: 0.8125rem; } .ds-badge-success { background-color: #e8fadf; color: #71dd37; } .ds-status-dot { display: inline-block; width: 0.4rem; height: 0.4rem; border-radius: 50%; margin-right: 0.35rem; background-color: currentColor; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Card de estatística do dashboard — sem borda, sombra suave, eleva no hover.",
+      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-label\">Total de Tickets</span><div class=\"ds-stat-value\">128</div></div>",
+      "css": ".ds-stat-card { background: #ffffff; border: none; border-radius: 0.75rem; box-shadow: 0 0.125rem 0.25rem rgba(161,172,184,0.4); padding: 1.25rem; transition: transform 200ms ease-in-out, box-shadow 200ms ease-in-out; font-family: 'Public Sans', system-ui, sans-serif; } .ds-stat-card:hover { transform: translateY(-5px); box-shadow: 0 0.75rem 1.5rem rgba(105,108,255,0.15); } .ds-stat-label { color: #697a8d; font-weight: 500; font-size: 0.875rem; } .ds-stat-value { font-weight: 600; font-size: 1.75rem; color: #2b2c40; margin-top: 0.25rem; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto padrão — borda neutra, anel de foco índigo.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-demo-input\">E-mail</label><input id=\"ds-demo-input\" class=\"ds-input\" type=\"email\" placeholder=\"seu@email.com\" /></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 0.4rem; font-family: 'Public Sans', system-ui, sans-serif; } .ds-label { font-weight: 600; color: #697a8d; font-size: 0.85rem; } .ds-input { border-radius: 0.5rem; border: 1.5px solid #d9dee3; padding: 0.5rem 0.875rem; font-size: 1rem; transition: border-color 200ms cubic-bezier(0.4,0,0.2,1), box-shadow 200ms cubic-bezier(0.4,0,0.2,1); } .ds-input:focus-visible { border-color: #696cff; box-shadow: 0 0 0 0.2rem rgba(105,108,255,0.15); outline: none; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "card",
+      "description": "Item do menu lateral — estado ativo com barra lateral e fundo em gradiente suave.",
+      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 12l9-9 9 9M5 10v10h14V10\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>Dashboard</a>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1rem; color: #697a8d; text-decoration: none; border-radius: 0.625rem; position: relative; font-family: 'Public Sans', system-ui, sans-serif; transition: background-color 200ms ease, color 200ms ease, transform 200ms ease; } .ds-nav-item .ds-icon { width: 20px; height: 20px; } .ds-nav-item-active { background: linear-gradient(to right, rgba(105,108,255,0.14), rgba(105,108,255,0.02)); color: #696cff; font-weight: 600; } .ds-nav-item-active::before { content: ''; position: absolute; left: -0.75rem; top: 0.3rem; bottom: 0.3rem; width: 3px; border-radius: 999px; background: #696cff; } .ds-nav-item:hover { background: rgba(105,108,255,0.08); color: #696cff; transform: translateX(0.15rem); }"
+    },
+    {
+      "name": "Row Actions Menu",
+      "kind": "custom",
+      "description": "Menu de ações por linha de tabela (ícone de três pontos) — substitui fileiras de botões.",
+      "html": "<div class=\"ds-row-actions\"><button class=\"ds-row-actions-toggle\" aria-label=\"Ações\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"currentColor\"><circle cx=\"12\" cy=\"5\" r=\"1.6\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\"/><circle cx=\"12\" cy=\"19\" r=\"1.6\"/></svg></button></div>",
+      "css": ".ds-row-actions-toggle { width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #697a8d; cursor: pointer; transition: border-color 200ms, color 200ms; } .ds-row-actions-toggle:hover, .ds-row-actions-toggle:focus-visible { border-color: #e7e7ff; color: #2b2c40; outline: none; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Painel de Controle Confiável",
+    "overview": "Tickest é a ferramenta que uma empresa usa internamente, todo dia, pra substituir pedidos informais por e-mail e WhatsApp por um canal único e rastreável. Ninguém escolhe usar o Tickest por prazer estético — escolhe porque confia que vai encontrar o que precisa rápido e vai saber o que está acontecendo com cada chamado. Por isso o sistema é construído sobre uma base de admin limpa e consistente (herança visível do padrão Materio/Sneat para Bootstrap 5: sidebar fixa, cards com sombra suave, badges em pílula), com um único acento de cor — o Índigo Confiança — que aparece com disciplina: botões primários, estado ativo do menu, foco de formulário. Nada decora por decorar; cada elemento visual existe pra apoiar uma decisão ou uma ação. O sistema sustenta dois modos — claro e escuro — espelhando a escala de cinza nativa do Bootstrap 5.3 no escuro, pra não haver costura entre os tokens do Tickest e os componentes nativos. As telas de entrada (login/registro) são a única exceção: mantêm um tratamento de marca fixo e mais premium (vidro/blur sobre gradiente), sempre claro, independente da preferência do sistema operacional.",
+    "keyCharacteristics": [
+      "Admin limpo com um único acento de cor usado com disciplina, nunca decorativo",
+      "Suporte real a claro/escuro na área autenticada; login/registro fixos no visual de marca",
+      "Elevação suave e ambiente (sombra tintada de índigo no claro, preta no escuro) — nunca bordas pesadas",
+      "Cantos generosamente arredondados; badges e avatares em pílula/círculo completo",
+      "Tom profissional e confiável, com um toque de acolhimento (saudação por nome no dashboard)",
+      "Português (pt-BR) em toda a interface, incluindo mensagens de erro e rótulos de formulário"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "O Índigo Confiança é a única cor não-semântica do sistema. Se um elemento precisa de cor e não é status/prioridade, a resposta é índigo ou neutro — nunca uma cor nova inventada para aquela tela.", "section": "colors" },
+      { "name": "The Badge Pair Rule", "body": "Toda cor semântica existe em dois pares: um 'soft' para o modo claro, um 'soft dark' para o modo escuro. Nunca usar o par claro diretamente sobre fundo escuro.", "section": "colors" },
+      { "name": "The Brand-Only Display Rule", "body": "Sora nunca aparece fora da wordmark de login/registro — títulos de tela usam Public Sans em peso 700.", "section": "typography" },
+      { "name": "The Tinted-Light, Neutral-Dark Rule", "body": "Sombra no modo claro é tintada da marca; no modo escuro é preto neutro. Nunca o inverso.", "section": "elevation" },
+      { "name": "The Transform-Not-Padding Rule", "body": "Microinterações de deslocamento animam transform, nunca padding/margin.", "section": "components" }
+    ],
+    "dos": [
+      "Do reservar o Índigo Confiança para ação primária e estado ativo",
+      "Do usar o par claro/escuro de cada badge semântico conforme o tema ativo",
+      "Do declarar a camada de grid base (col-12/col-6) antes de col-md-*/col-lg-* em qualquer linha de formulário ou card",
+      "Do agrupar mais de duas ações de linha de tabela num menu \"⋮\" em vez de botões lado a lado",
+      "Do usar transform para microinterações de deslocamento, nunca padding/margin",
+      "Do manter login/registro sempre no tema claro, independente da preferência do sistema operacional"
+    ],
+    "donts": [
+      "Don't usar gradiente em texto — use peso ou tamanho para ênfase",
+      "Don't usar o confirm()/alert() nativo do navegador para qualquer confirmação — sempre o modal de confirmação do sistema",
+      "Don't aplicar sombra tintada de índigo no modo escuro, nem sombra preta pura no modo claro",
+      "Don't inventar uma nova cor de acento para uma tela específica"
+    ]
+  }
+}

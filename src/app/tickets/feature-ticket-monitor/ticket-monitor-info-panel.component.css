@@ -1,0 +1,32 @@
+/* Painel acompanha a rolagem da tabela, sem exigir scroll próprio em telas grandes. */
+.info-panel {
+  position: sticky;
+  top: 1rem;
+}
+
+/* Lista de campos rótulo/valor (Solicitante, Atendente, Setor, Prazo...), mesmo type-scale das labels do Guia da Tela. */
+.info-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+}
+
+.info-list dt {
+  color: var(--tk-text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.info-list dd {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.info-list-title {
+  color: var(--tk-text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

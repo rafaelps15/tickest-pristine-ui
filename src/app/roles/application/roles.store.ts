@@ -2,7 +2,9 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { Role } from '../entities/role';
+import { Permission } from '../entities/permission';
 import { RoleDataService } from '../infrastructure/role.data.service';
 import { PermissionDataService } from '../infrastructure/permission.data.service';
 import { extractErrorMessage } from '../../shared';
@@ -11,8 +13,14 @@ import { extractErrorMessage } from '../../shared';
 export const RolesStore = signalStore(
   { providedIn: 'root' },
   withState({
-    mutationError: null as string | null,
-    permissionsMutationError: null as string | null
+    /** Erro de criação de role — exibido dentro do modal "Nova Função", não na página. */
+    createError: null as string | null,
+    /** Erro de atribuição de permissões — exibido dentro do modal "Permissões", não na página. */
+    assignPermissionsError: null as string | null,
+    /** Erro ao carregar o catálogo de permissões (GET /permissions). */
+    permissionsLoadError: null as string | null,
+    /** Em voo uma atribuição de permissões (PUT /roles/{roleName}/permissions) — evita duplo submit. */
+    assigningPermissions: false
   }),
   withProps(() => ({
     _roleDataService: inject(RoleDataService),
@@ -25,68 +33,102 @@ export const RolesStore = signalStore(
   withComputed((store) => ({
     /** Roles carregadas (GET /roles), usadas tanto na tela de roles quanto no checklist de atribuição de usuários. */
     roles: computed(() => store._listResource.value() ?? []),
-    /** Estado agregado da listagem de roles (dados, carregamento e erro). */
+    /** Estado agregado da listagem de roles (dados, carregamento e erro de carregamento — não de mutação). */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
         data: store._listResource.value() ?? ([] as Role[]),
         loading: store._listResource.isLoading(),
-        error: store.mutationError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar funções')
-          : null)
+        error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar funções') : null
       };
     }),
-    /** Códigos de permissão disponíveis no sistema (GET /permissions). */
-    permissionCodes: computed(() => store._permissionsResource.value() ?? []),
-    /** Estado agregado da listagem de permissões (dados, carregamento e erro). */
+    /** Catálogo de permissões disponíveis no sistema, com nome/descrição/grupo (GET /permissions). */
+    permissions: computed(() => store._permissionsResource.value() ?? []),
+    /** Estado agregado do catálogo de permissões (dados, carregamento e erro). */
     permissionsState: computed(() => {
       const resourceError = store._permissionsResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._permissionsResource.value() ?? ([] as string[]),
+        data: store._permissionsResource.value() ?? ([] as Permission[]),
         loading: store._permissionsResource.isLoading(),
-        error: store.permissionsMutationError() ?? (resourceError
+        error: store.permissionsLoadError() ?? (resourceError
           ? extractErrorMessage(resourceError, {}, 'Erro ao carregar permissões')
           : null)
       };
     })
   })),
+  withComputed((store) => ({
+    /** Catálogo de permissões agrupado por `group`, preservando a ordem de grupos e permissões como vieram da API. */
+    permissionGroups: computed(() => {
+      const groups: { title: string; permissions: Permission[] }[] = [];
+      const indexByTitle = new Map<string, number>();
+
+      for (const permission of store.permissions()) {
+        let index = indexByTitle.get(permission.group);
+        if (index === undefined) {
+          index = groups.length;
+          indexByTitle.set(permission.group, index);
+          groups.push({ title: permission.group, permissions: [] });
+        }
+        groups[index].permissions.push(permission);
+      }
+
+      return groups;
+    })
+  })),
   withMethods((store) => ({
+    /** Nome amigável de um código de permissão; devolve o próprio código se não encontrado no catálogo. */
+    permissionName(code: string): string {
+      return store.permissions().find(permission => permission.code === code)?.name ?? code;
+    },
+
     /** Recarrega a listagem de roles (GET /roles). */
     load(): void {
-      patchState(store, { mutationError: null });
       store._listResource.reload();
     },
 
     /** Recarrega os códigos de permissão disponíveis (GET /permissions). */
     loadPermissions(): void {
-      patchState(store, { permissionsMutationError: null });
+      patchState(store, { permissionsLoadError: null });
       store._permissionsResource.reload();
+    },
+
+    /** Limpa o erro de criação — chamado ao abrir o modal "Nova Função", pra não mostrar o erro de uma tentativa anterior. */
+    clearCreateError(): void {
+      patchState(store, { createError: null });
+    },
+
+    /** Limpa o erro de atribuição de permissões — chamado ao abrir o modal "Permissões" de outra role. */
+    clearAssignPermissionsError(): void {
+      patchState(store, { assignPermissionsError: null });
     },
 
     /** Cria uma nova role (POST /roles) e recarrega a listagem em caso de sucesso. */
     create(name: string, onSuccess?: () => void): void {
       store._roleDataService.create(name).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
+          patchState(store, { createError: null });
           store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao criar função') });
+          patchState(store, { createError: extractErrorMessage(err, {}, 'Erro ao criar função') });
         }
       });
     },
 
-    /** Substitui as permissões associadas a uma role (PUT /roles/{id}/permissions) e recarrega a listagem em caso de sucesso. */
-    assignPermissions(roleId: string, permissionCodes: string[], onSuccess?: () => void): void {
-      store._roleDataService.assignPermissions(roleId, permissionCodes).subscribe({
+    /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions) e recarrega a listagem em caso de sucesso. */
+    assignPermissions(roleName: string, permissionCodes: string[], onSuccess?: () => void): void {
+      patchState(store, { assigningPermissions: true });
+      store._roleDataService.assignPermissions(roleName, permissionCodes).pipe(
+        finalize(() => patchState(store, { assigningPermissions: false }))
+      ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
+          patchState(store, { assignPermissionsError: null });
           store._listResource.reload();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao atribuir permissões') });
+          patchState(store, { assignPermissionsError: extractErrorMessage(err, {}, 'Erro ao atribuir permissões') });
         }
       });
     }
