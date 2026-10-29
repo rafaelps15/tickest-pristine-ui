@@ -15,15 +15,13 @@ import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjective, TicketSlaObjectiveState } from '../entities/ticket-sla';
-import { ConfirmDialogService, SessionService, ToastService, setRoleColor } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { UserSummary } from '../../users';
 import { By } from '@angular/platform-browser';
-import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 /** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
 const FAR_FUTURE = '2999-01-01T00:00:00Z';
-
-const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('TicketDetailComponent', () => {
   /** Objetivo de SLA "em branco", pra só sobrescrever os campos que cada cenário de teste precisa. */
@@ -165,7 +163,6 @@ describe('TicketDetailComponent', () => {
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
-    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     detailStoreFake = createDetailStoreFake();
     attachmentsStoreFake = createAttachmentsStoreFake();
     historyStoreFake = createHistoryStoreFake();
@@ -591,6 +588,15 @@ describe('TicketDetailComponent', () => {
         .find(b => b.textContent?.includes('Atribuir responsável') || b.textContent?.includes('Alterar responsável'));
     }
 
+    it('não mostra "Atribuir responsável" pra quem tem tickets:manage sem tickets:assign', async () => {
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findAssignButton(fixture)).toBeFalsy();
+    });
+
     it('mostra "Atribuir responsável" quando o chamado está ativo e sem responsável', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -808,6 +814,26 @@ describe('TicketDetailComponent', () => {
       expect(findReopenButton(fixture)).toBeTruthy();
     });
 
+    it('mostra "Reabrir chamado" pro dono com tickets:reopen-own, sem tickets:manage', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:reopen-own');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findReopenButton(fixture)).toBeTruthy();
+    });
+
+    it('não mostra "Reabrir chamado" pra quem não é dono nem tem tickets:manage (a API responderia 403)', async () => {
+      sessionServiceFake.userId.set('outro-usuario');
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:reopen-own');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findReopenButton(fixture)).toBeFalsy();
+    });
+
     it('não mostra o botão "Reabrir chamado" pra um chamado ativo', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -866,14 +892,24 @@ describe('TicketDetailComponent', () => {
       expect(findEditButton(fixture)).toBeTruthy();
     });
 
-    it('mostra "Editar" pro dono mesmo sem chamados:manage, com o chamado ativo', async () => {
+    it('mostra "Editar" pro dono com tickets:update-own mesmo sem tickets:manage, com o chamado ativo', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
-      sessionServiceFake.hasPermission.and.returnValue(false);
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:update-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
       expect(findEditButton(fixture)).toBeTruthy();
+    });
+
+    it('não mostra "Editar" pro dono sem tickets:update-own (a API responderia 403)', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.returnValue(false);
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findEditButton(fixture)).toBeFalsy();
     });
 
     it('não mostra "Editar" pra quem não é dono nem administra chamados', async () => {
@@ -898,7 +934,7 @@ describe('TicketDetailComponent', () => {
 
     it('abre o modal limpando o erro de uma mutação anterior, e salva a descrição recarregando o histórico', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
-      sessionServiceFake.hasPermission.and.returnValue(false);
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:update-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       detailStoreFake.updateDescription.and.callFake(
         (_id: string, _desc: string, _status: TicketStatus, onSuccess?: () => void) => onSuccess?.());

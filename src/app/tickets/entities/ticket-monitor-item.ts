@@ -21,6 +21,6 @@ export interface TicketMonitorItem {
   slaWarningAtUtc: string;
   resolvedAtUtc: string | null;
   slaStatus: TicketSlaStatus;
-  /** De quem o chamado espera ação; null quando inativo (spec 029; ausente enquanto o back-end não manda). */
-  awaiting?: TicketAwaiting | null;
+  /** De quem o chamado espera ação; null quando inativo (`waitingOn` da spec 029). */
+  waitingOn?: TicketAwaiting | null;
 }

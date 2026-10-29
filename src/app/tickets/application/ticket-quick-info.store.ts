@@ -47,6 +47,11 @@ export const TicketQuickInfoStore = signalStore(
     /** Define o ticket selecionado no painel; `undefined` limpa o painel, sem nenhuma busca em andamento. */
     select(ticketId: string | undefined): void {
       patchState(store, { ticketId });
+    },
+
+    /** Busca de novo a descrição do chamado selecionado (botão "Tentar novamente" depois de uma falha). */
+    reload(): void {
+      store._detailResource.reload();
     }
   }))
 );

@@ -38,5 +38,6 @@ describe('TicketListGuideComponent', () => {
     expect(text).toContain('editar a descrição');
     expect(text).toContain('15 primeiros minutos');
     expect(text).toContain('reabrir');
+    expect(text).toContain('Para solicitar o cancelamento, entre em contato com quem administra os chamados.');
   });
 });

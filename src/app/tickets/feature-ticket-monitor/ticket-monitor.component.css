@@ -1,5 +1,5 @@
-/* Seletor de Setor (escopo da tela): largura de um campo, não da linha inteira. */
-.monitor-scope-field {
+/* Seletor de Setor (escopo da tela), nas ações do cabeçalho: largura de um campo, não da linha inteira. */
+.monitor-scope {
   min-width: 16rem;
 }
 
@@ -17,10 +17,12 @@
   background: none;
   color: var(--tk-text-primary);
   text-underline-offset: 0.2em;
+  /* Quebra palavra longa só se ela não couber sozinha — sem baixar a largura mínima da coluna. */
+  overflow-wrap: break-word;
 }
 
 .ticket-select:hover {
-  color: var(--tk-primary);
+  color: var(--tk-primary-text);
   text-decoration: underline;
 }
 
@@ -30,26 +32,82 @@
   border-radius: var(--tk-radius-sm);
 }
 
+/* E-mail do solicitante é apoio: quebra onde precisar, pra não alargar a tabela e esconder o "⋮" atrás da rolagem. */
+.requester-email {
+  overflow-wrap: anywhere;
+}
+
+/* Título é a coluna que se lê primeiro: nunca encolhe abaixo de uma frase curta por linha. */
+@media (min-width: 768px) {
+  .table .col-title {
+    min-width: 13rem;
+  }
+}
+
 /*
- * Ao trocar filtro/página com a lista já carregada, a tabela some e vira um spinner solitário.
- * Em vez disso, mantém as linhas atuais visíveis e só esmaece — a troca de página some suave
- * quando os dados novos chegam, sem o "pisca-tudo" de recarregar do zero. Mesmo padrão já usado
- * em Usuários; achado do polish de 2026-10-25 (a tabela do Monitor nunca tinha ganho isso).
+ * A largura mínima da tabela (título com 13rem) não pode subir pelos itens flex do layout e empurrar
+ * a página pro lado: a rolagem horizontal fica dentro do .table-responsive. Mesmo truque do
+ * text-truncate no celular (DESIGN.md): largura 0 com mínimo de 100% não contribui com largura nenhuma.
+ */
+.monitor-table-col {
+  min-width: 0;
+}
+
+.monitor-table-col .table-responsive {
+  width: 0;
+  min-width: 100%;
+}
+
+/* Painel aberto (lg+): Solicitante, Atendente e Setor, que o painel já mostra, saem da tabela pra o título, o SLA e o "⋮" caberem. */
+@media (min-width: 992px) {
+  .table.is-compact .col-requester,
+  .table.is-compact .col-assignee,
+  .table.is-compact .col-sector {
+    /* !important só pra vencer o d-md-table-cell (também !important) da coluna Atendente. */
+    display: none !important;
+  }
+}
+
+/*
+ * Ao trocar filtro/página com a lista já carregada, mantém as linhas atuais visíveis e só esmaece
+ * até os dados novos chegarem, sem o "pisca-tudo" de recarregar do zero — o conteúdo vai mudar, e o
+ * esmaecido diz isso. Mesmo padrão de Usuários. (A atualização automática do Início é outro caso:
+ * ali os números continuam valendo e não esmaecem.)
  */
 .table {
   transition: opacity 150ms ease;
 }
 
 .table.is-refreshing {
-  /* Mesmo esmaecimento das recargas do Início: o texto continua legível enquanto a página nova chega. */
   opacity: 0.6;
   pointer-events: none;
 }
 
+/* "Atualizar" do topo da tabela: discreto, cor de texto secundário, sem competir com a fila. */
+.monitor-refresh {
+  color: var(--tk-text-secondary);
+}
 
-/* Toque: o "Ordenar por" do topo da tabela ganha o alvo mínimo de dedo (44px). */
+.monitor-refresh:hover,
+.monitor-refresh:focus-visible {
+  color: var(--tk-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table {
+    transition: none;
+  }
+
+  .monitor-refresh .bx-spin {
+    animation: none;
+  }
+}
+
+/* Toque: "Ordenar por", "Atualizar" e o título da linha ganham o alvo mínimo de dedo (44px). */
 @media (pointer: coarse) {
-  .monitor-sort {
+  .monitor-sort,
+  .monitor-refresh,
+  .ticket-select {
     min-height: 44px;
   }
 }

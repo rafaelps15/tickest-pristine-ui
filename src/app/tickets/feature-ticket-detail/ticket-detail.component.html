@@ -29,7 +29,7 @@
             }
           </p>
 
-          @if (nextStatusOptions(t).length > 0 || canReopenTicket(t.status) || canCancelSeparately(t)) {
+          @if (nextStatusOptions(t).length > 0 || canReopenTicket(t) || canCancelSeparately(t)) {
             <!-- Uma ação principal por vez: a próxima etapa natural é o primário; Cancelar fica no fim, separado. -->
             <div class="ticket-actions d-flex gap-2 flex-wrap mb-4">
               @for (nextStatus of nextStatusOptions(t); track nextStatus) {
@@ -44,7 +44,7 @@
                   {{ statusActionLabels[nextStatus] }}
                 </button>
               }
-              @if (canReopenTicket(t.status)) {
+              @if (canReopenTicket(t)) {
                 <!-- Resolvido ainda tem "Fechar" como próxima etapa: aí Reabrir é secundário (um primário por vez). -->
                 <button #reopenButton type="button" class="btn btn-sm"
                         [class.btn-primary]="nextStatusOptions(t).length === 0"

@@ -5,12 +5,13 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { MyTicketsSummaryStore } from '../application/my-tickets-summary.store';
-import { TICKET_LIST_DUE_DISPLAY, currentTicketDue } from './ticket-list-due';
+import { currentTicketDue } from './ticket-list-due';
 import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
 import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
+import { canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
 import { DepartmentsStore } from '../../departments';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
@@ -64,14 +65,12 @@ export class TicketListComponent implements OnInit {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
-    /** Cabeçalho da tela — recebe o foco quando o \"⋮\" de origem não existe mais. */
+    /** Cabeçalho da tela — recebe o foco quando a linha de origem não existe mais. */
     private readonly pageHeader = viewChild(PageHeaderComponent);
 
     readonly statusLabels = TICKET_STATUS_LABELS;
     readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
-    /** Como a coluna "Prazo" conta cada situação, na voz de quem abriu o chamado. */
-    readonly dueDisplay = TICKET_LIST_DUE_DISPLAY;
-    /** Prazo e situação do ciclo vigente de cada chamado (o novo, depois de reabrir). */
+    /** Prazo, situação e exibição do ciclo vigente de cada chamado (o novo, depois de reabrir). */
     readonly currentDue = currentTicketDue;
 
     /** Opções do seletor de grupo, na ordem da tela; "Em aberto" é o padrão. */
@@ -92,6 +91,9 @@ export class TicketListComponent implements OnInit {
         if (this.store.tickets().length > 0 || this.store.loadError()) return false;
         return this.store.state().loading || this.store.hasAnyTicket() === null;
     });
+
+    /** Recarga com linhas já na tela (troca de página, depois de uma ação): esmaece a tabela e marca `aria-busy`. */
+    readonly isRefreshing = computed(() => this.store.state().loading && this.store.tickets().length > 0);
 
     /** Texto digitado na busca por título, antes do debounce. */
     readonly searchInput = signal('');
@@ -225,7 +227,7 @@ export class TicketListComponent implements OnInit {
         return this.sessionService.hasPermission(TICKETS_CANCEL_PERMISSION);
     }
 
-    /** Se o "Cancelar chamado" aparece no "⋮": o back-end permite e, pro dono, a janela de 15 min ainda não venceu. */
+    /** Se o "Cancelar" aparece na linha: o back-end permite e, pro dono, a janela de 15 min ainda não venceu. */
     canCancel(ticket: Ticket): boolean {
         return this.isActive(ticket) && isCancelAvailable(ticket, this.now(), this.canCancelAny());
     }
@@ -250,11 +252,17 @@ export class TicketListComponent implements OnInit {
         this.store.setPageSize(pageSize);
     }
 
-    /** Só faz sentido reabrir um ticket que já está inativo (Resolvido/Fechado/Cancelado). */
+    /**
+     * "Reabrir" na linha: chamado inativo e permissão de reabrir. A lista só traz chamados abertos por
+     * quem está logado, então a pessoa é sempre a dona (`tickets:reopen-own` ou `tickets:manage`).
+     */
     canReopen(ticket: Ticket): boolean {
-        return ticket.status === TicketStatus.Resolved
-            || ticket.status === TicketStatus.Closed
-            || ticket.status === TicketStatus.Canceled;
+        return canReopenTicket(ticket.status, true, code => this.sessionService.hasPermission(code));
+    }
+
+    /** "Editar" na linha: chamado ativo e dona com `tickets:update-own` (ou `tickets:manage`). */
+    canEdit(ticket: Ticket): boolean {
+        return canEditTicketDescription(ticket.status, true, code => this.sessionService.hasPermission(code));
     }
 
     /** Só um ticket ativo (Aberto/Em Andamento) pode ter a descrição editada ou ser cancelado. */
@@ -268,9 +276,9 @@ export class TicketListComponent implements OnInit {
     }
 
     /**
-     * Devolve o foco ao "⋮" da linha do ticket depois da próxima renderização. O item clicado no menu
-     * some ao fechar o dropdown (e a confirmação abre por código, sem devolver o foco), então sem isso
-     * o foco cairia no `<body>` e o teclado/leitor de tela voltaria ao topo da página.
+     * Devolve o foco à primeira ação habilitada da linha do ticket depois da próxima renderização. O
+     * botão clicado pode sumir (Cancelar vira Reabrir) e a confirmação abre por código, sem devolver o
+     * foco, então sem isso o foco cairia no `<body>` e o teclado/leitor de tela voltaria ao topo.
      */
     private focusRowActions(ticketId: string): void {
         afterNextRender(() => {
@@ -299,7 +307,7 @@ export class TicketListComponent implements OnInit {
         });
     }
 
-    /** Fecha o modal de reabertura, devolvendo o foco ao "⋮" da linha. */
+    /** Fecha o modal de reabertura, devolvendo o foco às ações da linha. */
     onReopenClosed(): void {
         const ticket = this.reopeningTicket();
         this.reopeningTicket.set(null);
@@ -312,7 +320,7 @@ export class TicketListComponent implements OnInit {
         this.editingTicket.set(ticket);
     }
 
-    /** Fecha o modal de edição sem salvar, devolvendo o foco ao "⋮" da linha. */
+    /** Fecha o modal de edição sem salvar, devolvendo o foco às ações da linha. */
     onEditClosed(): void {
         const ticket = this.editingTicket();
         this.editingTicket.set(null);

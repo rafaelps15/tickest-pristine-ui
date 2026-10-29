@@ -141,7 +141,8 @@ export class TicketDataService {
     }
     params = appendStatsQuery(params, { sectorIds: filters.sectorIds, createdFrom: filters.createdFrom, createdTo: filters.createdTo });
     if (filters.awaiting !== undefined) {
-      params = params.set('awaiting', filters.awaiting);
+      // O parâmetro da API se chama `waitingOn` (spec 029); `awaiting` é só o nome do filtro na tela.
+      params = params.set('waitingOn', filters.awaiting);
     }
     if (filters.slaStatus !== undefined) {
       params = params.set('slaStatus', filters.slaStatus);

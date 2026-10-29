@@ -18,7 +18,7 @@
         <label class="btn btn-outline-secondary" [for]="'ticketStatusGroup-' + option.key">
           {{ option.label }}
           @if (groupCount(option.key); as count) {
-            <span class="status-group-count num" [attr.aria-label]="count + (count === 1 ? ' chamado' : ' chamados')">{{ count }}</span>
+            <span class="status-group-count num">{{ count }}<span class="visually-hidden">{{ count === 1 ? ' chamado' : ' chamados' }}</span></span>
           }
         </label>
       }
@@ -34,7 +34,8 @@
   </div>
 </app-filter-bar>
 
-@if (store.loadError()) {
+<!-- Com a lista vazia, o erro mora só no estado vazio da tabela (um anúncio, uma saída); aqui, só sobre linhas antigas. -->
+@if (store.loadError() && store.tickets().length > 0) {
   <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.loadError() }}</span>
     <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.loadForCurrentUser()">Tentar novamente</button>
@@ -52,7 +53,7 @@
 
 <div class="card shadow-sm border-0">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.state().loading && store.tickets().length > 0">
+    <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="isRefreshing()" [attr.aria-busy]="isRefreshing() || null">
       <caption class="visually-hidden">Chamados que você abriu, do que teve movimentação mais recente para o mais antigo</caption>
       <thead>
         <tr>
@@ -70,9 +71,11 @@
         } @else if (store.loadError() && store.tickets().length === 0) {
           <!-- Erro de leitura nunca vira dado: sem isso, a lista vazia caía em "Nada pendente" logo abaixo do alerta. -->
           <tr>
-            <td colspan="6" class="filtered-empty">
+            <td colspan="6" class="filtered-empty" role="alert">
               <app-empty-state icon="bx-error-circle" title="Não deu pra carregar seus chamados agora"
-                               hint="Eles continuam guardados. Use “Tentar novamente” no aviso acima." />
+                               [hint]="store.loadError() + ' Eles continuam guardados.'">
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.loadForCurrentUser()">Tentar novamente</button>
+              </app-empty-state>
             </td>
           </tr>
         } @else if (store.tickets().length === 0 && store.hasAnyTicket() === false) {
@@ -154,11 +157,15 @@
               <td data-label="Prazo">
                 <!-- O ciclo vigente: num chamado reaberto, o prazo novo (o mesmo da seção SLA do detalhe). -->
                 @let current = currentDue(ticket);
-                @let due = dueDisplay[current.slaStatus];
+                @let due = current.display;
                 <div class="due" [class.due-warning]="due.tone === 'warning'" [class.due-danger]="due.tone === 'danger'">
                   <span class="due-label"><i class="bx {{ due.icon }}" aria-hidden="true"></i>{{ due.label }}</span>
                   @if (due.showDate) {
-                    <span class="due-date small num">{{ current.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                    <span class="due-date small">{{ due.datePrefix }} <span class="num">{{ current.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span></span>
+                  }
+                  <!-- Atrasado não é beco sem saída: leva ao chamado, onde a conversa com o setor já existe (mesma rota do título). -->
+                  @if (due.tone === 'danger') {
+                    <a [routerLink]="['/tickets', ticket.id]" class="due-nudge small" [attr.aria-label]="'Cobrar no chamado ' + ticket.title">Cobrar no chamado</a>
                   }
                 </div>
               </td>
@@ -175,10 +182,12 @@
                     <span class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Salvando…</span></span>
                   }
                   @if (isActive(ticket)) {
-                    <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)"
-                            [attr.aria-label]="'Editar a descrição do chamado ' + ticket.title">
-                      <i class="bx bx-edit me-1" aria-hidden="true"></i>Editar
-                    </button>
+                    @if (canEdit(ticket)) {
+                      <button type="button" class="btn btn-sm btn-outline-secondary" [disabled]="isPending(ticket)" (click)="onStartEdit(ticket)"
+                              [attr.aria-label]="'Editar a descrição do chamado ' + ticket.title">
+                        <i class="bx bx-edit me-1" aria-hidden="true"></i>Editar
+                      </button>
+                    }
                     @if (canCancel(ticket)) {
                       <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isPending(ticket)" (click)="onCancelTicket(ticket)"
                               [attr.aria-label]="'Cancelar o chamado ' + ticket.title + (cancelHint(ticket) ? ', disponível ' + cancelHint(ticket) : '')">

@@ -1,10 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgClass, DatePipe } from '@angular/common';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
-import { TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
 import { TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
@@ -40,6 +40,8 @@ export class TicketMonitorInfoPanelComponent {
   readonly dueRelative = input<string | null>(null);
   /** Se o prazo já passou (pela hora do servidor). */
   readonly overdue = input(false);
+  /** Situação de SLA que a linha mostra (acompanha o relógio); sem ela, a que veio da lista. */
+  readonly slaStatus = input<TicketSlaStatus | null>(null);
   readonly close = output<void>();
   /** Atalho do painel: atribuir o chamado a quem está logado. */
   readonly assignToMeClick = output<void>();
@@ -55,4 +57,9 @@ export class TicketMonitorInfoPanelComponent {
   protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
   protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
   protected readonly awaitingLabels = TICKET_AWAITING_LABELS;
+
+  /** Situação de SLA exibida: a mesma da linha da tabela. */
+  protected readonly shownSlaStatus = computed(() => this.slaStatus() ?? this.ticket().slaStatus);
+  /** Chamado sem SLA não tem prazo pra mostrar. */
+  protected readonly hasDeadline = computed(() => this.ticket().slaStatus !== TicketSlaStatus.NotApplicable);
 }

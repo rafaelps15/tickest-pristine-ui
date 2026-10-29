@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, map } from 'rxjs';
+import { finalize, map, tap } from 'rxjs';
 import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -41,7 +41,9 @@ export const TicketMonitorStore = signalStore(
     /** Candidatos a responsável encontrados na busca do modal "Atribuir responsável". */
     responsibleCandidates: [] as UserSummary[],
     searchingResponsibleCandidates: false,
-    responsibleSearchError: null as string | null
+    responsibleSearchError: null as string | null,
+    /** Hora (ms, relógio do navegador) em que a última página da lista chegou — "Atualizado às" da tela; null antes da primeira. */
+    listLoadedAtMs: null as number | null
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
@@ -63,7 +65,9 @@ export const TicketMonitorStore = signalStore(
     return {
       _listResource: rxResource({
         params: () => store.filters(),
-        stream: ({ params }) => store._ticketDataService.getAll(params)
+        stream: ({ params }) => store._ticketDataService.getAll(params).pipe(
+          tap(() => patchState(store, { listLoadedAtMs: Date.now() }))
+        )
       }),
       // Os números do topo vêm do agregado da operação (GET /tickets/stats/overview, spec 026) com o
       // recorte da tabela que ele aceita: setores (vários), prioridade, responsável e período de abertura.
@@ -216,9 +220,13 @@ export const TicketMonitorStore = signalStore(
       patchState(store, { filters: { ...store.filters(), pageSize, page: 1 } });
     },
 
-    /** Limpa todos os filtros, voltando ao estado padrão. */
+    /**
+     * Limpa os filtros da barra, voltando ao padrão — mas mantém o Setor (escopo da tela, fora da
+     * barra) e o "Por página" (preferência de leitura, não filtro).
+     */
     clearFilters(): void {
-      patchState(store, { filters: TICKET_MONITOR_DEFAULT_FILTERS });
+      const { sectorIds, pageSize } = store.filters();
+      patchState(store, { filters: { ...TICKET_MONITOR_DEFAULT_FILTERS, sectorIds, pageSize } });
     },
 
     /**

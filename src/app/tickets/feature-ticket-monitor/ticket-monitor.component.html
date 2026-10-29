@@ -1,20 +1,15 @@
 <app-page-header title="Monitorar Chamados" subtitle="A fila de chamados, com o prazo de cada um e a situação de SLA."
-                 [crumbs]="[{ label: 'Administração' }]" />
-
-<app-ticket-monitor-guide />
-
-<!--
-  Escopo da tela: o Setor vale pros números de SLA e pra tabela. Fica acima dos números que
-  dependem dele (antes ficava escondido na barra de filtros, abaixo deles, com um parágrafo
-  explicando que "não muda com os outros filtros").
--->
-<div class="monitor-scope d-flex align-items-end flex-wrap gap-3 mb-3">
-  <div class="monitor-scope-field">
+                 [crumbs]="[{ label: 'Administração' }]">
+  <!--
+    Escopo da tela: o Setor vale pros números do topo e pra tabela, por isso fica acima dos dois e
+    fora da barra de filtros — nas ações do cabeçalho, sem gastar uma linha inteira antes da fila.
+  -->
+  <div pageActions class="monitor-scope">
     <label class="form-label small mb-1" for="monitorSector">Setor</label>
     <!-- Cada opção marca a própria seleção ([selected]): as opções chegam depois do select (departamentos
          carregando), e um [value] no select ficaria em "Todos os setores" com um setor aplicado. -->
     <select #sectorSelect id="monitorSector" class="form-select"
-            aria-describedby="monitorSectorHint"
+            aria-describedby="monitorScopeHint"
             (change)="onSectorChange(sectorSelect.value)">
       <option value="" [selected]="sectorValue() === ''">Todos os setores</option>
       @if (drillSectorIds()) {
@@ -30,36 +25,37 @@
       }
     </select>
   </div>
-  <p id="monitorSectorHint" class="text-muted small mb-0 pb-2">Vale pros números do topo e pra tabela.</p>
-</div>
+</app-page-header>
+
+<app-ticket-monitor-guide />
 
 @if (store.slaSummaryState().error) {
-  <!-- Erro dos números numa linha junto deles (os cards mostram "—"), não mais um alerta grande empilhado. -->
-  <p class="small text-danger d-flex flex-wrap align-items-center gap-2 mb-2" role="alert">
+  <!-- Falha técnica é neutra (DESIGN.md): vermelho fica pro risco de SLA, não pra um erro de leitura. -->
+  <p class="small text-secondary d-flex flex-wrap align-items-center gap-2 mb-2" role="alert">
     <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.slaSummaryState().error }}</span>
-    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" (click)="store.reloadSlaSummary()">Tentar novamente</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.reloadSlaSummary()">Tentar novamente</button>
   </p>
 }
 
 <!--
   Resumo de SLA: cada card filtra a tabela pelos ativos com o mesmo SLA que mostra ("Ativos" tira o
-  filtro de SLA). O escopo dos números fica dito acima deles (o recorte que o agregado aceita).
+  filtro de SLA). Uma linha só diz o escopo do Setor e dos números (o recorte que o agregado aceita).
 -->
-<p class="text-muted small mb-2">{{ slaScopeLabel() }}</p>
-<div class="row g-3 mb-4">
+<p id="monitorScopeHint" class="text-muted small mb-2">{{ slaScopeLabel() }}</p>
+<div class="row g-3 mb-3">
   @for (card of slaCards; track card.label) {
     <div class="col-6 col-lg-3">
       <app-stat-card [label]="card.label" [value]="slaCount(card.count)" [hint]="card.hint" [icon]="card.icon" [tone]="card.tone"
                      [loading]="store.slaSummaryState().loading && !store.slaSummary()" [failed]="!!store.slaSummaryState().error && !store.slaSummary()"
                      [pressed]="isSlaCardPressed(card.slaStatus)"
-                     [pressLabel]="'Filtrar a tabela: ' + card.label"
+                     [pressLabel]="slaCardPressLabel(card)"
                      (press)="onSlaCardClick(card.slaStatus)" />
     </div>
   }
 </div>
 
 <app-filter-bar (clear)="onClearFilters()">
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-md-6 col-xl-3">
     <label class="form-label small" for="monitorSearch">Buscar</label>
     <div class="input-group">
       <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
@@ -67,18 +63,19 @@
              [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
     </div>
   </div>
-  <div class="col-6 col-md-2">
+  <div class="col-6 col-md-6 col-xl-3">
     <label class="form-label small" for="monitorStatus">Status</label>
     <select #statusSelect id="monitorStatus" class="form-select" [value]="store.filters().activeOnly ? 'active' : store.filters().status ?? ''"
             (change)="onStatusChange(statusSelect.value)">
       <option value="">Todos os status</option>
-      <option value="active">Ativos (Aberto + Em andamento)</option>
+      <!-- "Ativos" como no card do topo, que diz "Aberto ou em andamento" — o rótulo longo era cortado no campo. -->
+      <option value="active">Ativos</option>
       @for (status of statusOptions; track status) {
         <option [value]="status">{{ statusLabels[status] }}</option>
       }
     </select>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-6 col-xl-3">
     <label class="form-label small" for="monitorSla">SLA</label>
     <select id="monitorSla" class="form-select" [value]="store.filters().slaStatus ?? ''"
             (change)="store.setSlaStatus($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -96,7 +93,7 @@
     </select>
   </div>
   <!-- A fila de quem atende: "Atribuídos a mim" e "Sem responsável" são as duas pontas da mesma pergunta. -->
-  <div class="col-12 col-md-3">
+  <div class="col-12 col-md-6 col-xl-3">
     <label class="form-label small" for="monitorResponsible">Responsável</label>
     <select #responsibleSelect id="monitorResponsible" class="form-select"
             (change)="onResponsibleFilterChange(responsibleSelect.value)">
@@ -118,7 +115,7 @@
   <!-- Filtros de uso menos frequente: recolhidos por padrão; o botão mostra quantos estão aplicados. -->
   <div id="monitorMoreFilters" class="col-12" [hidden]="!moreFiltersOpen()">
     <div class="row g-3 align-items-end">
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorPriority">Prioridade</label>
         <select id="monitorPriority" class="form-select" [value]="store.filters().priority ?? ''"
                 (change)="store.setPriority($any($event.target).value ? +$any($event.target).value : undefined)">
@@ -128,7 +125,7 @@
           }
         </select>
       </div>
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorAwaiting">Aguardando</label>
         <select #awaitingSelect id="monitorAwaiting" class="form-select" [value]="store.filters().awaiting ?? ''"
                 (change)="onAwaitingChange(awaitingSelect.value)">
@@ -138,14 +135,14 @@
           }
         </select>
       </div>
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorCreatedFrom">Aberto de</label>
         <input #createdFromInput id="monitorCreatedFrom" type="date" class="form-control" [value]="store.filters().createdFrom ?? ''"
                [class.is-invalid]="dateError() === 'from'" [attr.aria-invalid]="dateError() === 'from' || null"
                [attr.aria-describedby]="dateError() === 'from' ? 'monitorDateError' : null"
                [max]="store.filters().createdTo ?? ''" (change)="onCreatedDateChange('from', createdFromInput)" />
       </div>
-      <div class="col-6 col-md-4">
+      <div class="col-6 col-md-3">
         <label class="form-label small" for="monitorCreatedTo">Aberto até</label>
         <input #createdToInput id="monitorCreatedTo" type="date" class="form-control" [value]="store.filters().createdTo ?? ''"
                [class.is-invalid]="dateError() === 'to'" [attr.aria-invalid]="dateError() === 'to' || null"
@@ -180,30 +177,45 @@
   </p>
 }
 
-@if (store.listState().error) {
-  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
-    <span>{{ store.listState().error }}</span>
-    <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" (click)="store.load()">Tentar novamente</button>
-  </div>
+@if (store.listState().error && store.tickets().length > 0) {
+  <!-- Recarga que falhou com a lista já na tela: a lista fica, e o aviso (neutro, é falha técnica) diz que ela pode estar velha. -->
+  <p class="small text-secondary d-flex flex-wrap align-items-center gap-2 mb-2" role="alert">
+    <span><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.listState().error }} A lista abaixo é a da última atualização.</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.load()">Tentar novamente</button>
+  </p>
 }
 
-@if (store.mutationError()) {
-  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
+<!-- Com o diálogo "Atribuir responsável" aberto, o erro aparece só dentro dele (aqui ficaria atrás do fundo escurecido). -->
+@if (store.mutationError() && !assigningResponsibleTicketId()) {
+  <div class="alert alert-secondary border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ store.mutationError() }}</span>
     <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar" (click)="store.clearMutationError()"></button>
   </div>
 }
 
 <div class="row g-3">
-  <div class="col-12" [class.col-lg-8]="selectedTicket()">
+  <div class="col-12 monitor-table-col" [class.col-lg-8]="selectedTicket()">
   <div class="card">
-  <!-- Total (anunciado ao trocar filtro) e ordenação, no topo da tabela: ordenar não é filtrar. -->
+  <!--
+    Total (anunciado ao trocar filtro), a idade da lista com o botão de atualizar, e a ordenação, no
+    topo da tabela: ordenar não é filtrar. O prazo relativo anda sozinho; selo e números, só ao atualizar.
+  -->
   <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
-    <span class="small text-muted" aria-live="polite">
-      @if (!store.listState().loading || store.tickets().length > 0) {
-        {{ store.total() === 1 ? '1 chamado' : store.total() + ' chamados' }}
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <span class="small text-muted" aria-live="polite">
+        @if (!store.listState().loading || store.tickets().length > 0) {
+          {{ store.total() === 1 ? '1 chamado' : store.total() + ' chamados' }}
+        }
+      </span>
+      @if (store.listLoadedAtMs(); as updatedAt) {
+        <span class="small text-muted" aria-hidden="true">·</span>
+        <span class="small text-muted">Atualizado às {{ updatedAt | date:'HH:mm' }}</span>
       }
-    </span>
+      <button type="button" class="btn btn-sm btn-link monitor-refresh text-decoration-none px-1"
+              [disabled]="store.listState().loading" (click)="refresh()">
+        <i class="bx bx-refresh me-1" [class.bx-spin]="store.listState().loading" aria-hidden="true"></i>Atualizar
+      </button>
+    </div>
     <div class="d-flex align-items-center gap-2">
       <label class="small text-muted mb-0" for="monitorSort">Ordenar por</label>
       <select #sortSelect id="monitorSort" class="form-select form-select-sm w-auto monitor-sort"
@@ -215,15 +227,16 @@
     </div>
   </div>
   <div class="table-responsive">
+    <!-- Com o painel aberto, a tabela perde um terço da largura: Solicitante, Atendente e Setor (que o painel mostra) saem, e o título mantém a leitura. -->
     <table class="table table-hover align-middle mb-0 table-stack" [class.is-refreshing]="store.listState().loading && store.tickets().length > 0"
-           [attr.aria-busy]="store.listState().loading || null">
+           [class.is-compact]="!!selectedTicket()" [attr.aria-busy]="store.listState().loading || null">
       <caption class="visually-hidden">Chamados do sistema, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
-          <th scope="col">Título</th>
-          <th scope="col">Solicitante</th>
-          <th scope="col" class="d-none d-md-table-cell">Atendente</th>
-          <th scope="col">Setor</th>
+          <th scope="col" class="col-title">Título</th>
+          <th scope="col" class="col-requester">Solicitante</th>
+          <th scope="col" class="d-none d-md-table-cell col-assignee">Atendente</th>
+          <th scope="col" class="col-sector">Setor</th>
           <th scope="col">Prioridade</th>
           <th scope="col">Status</th>
           <th scope="col">SLA e prazo</th>
@@ -233,6 +246,16 @@
       <tbody>
         @if (store.listState().loading && store.tickets().length === 0) {
           <tr><td colspan="8"><app-loading-state label="Carregando chamados…" /></td></tr>
+        } @else if (store.listState().error && store.tickets().length === 0) {
+          <!-- Erro nunca vira dado: sem lista, a falha ocupa o lugar dela (e não o vazio "Ainda não há chamados"). -->
+          <tr>
+            <td colspan="8">
+              <div class="d-flex flex-column align-items-center gap-2 py-4 text-center" role="alert">
+                <span class="text-secondary"><i class="bx bx-error-circle me-1" aria-hidden="true"></i>{{ store.listState().error }}</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" (click)="store.load()">Tentar novamente</button>
+              </div>
+            </td>
+          </tr>
         } @else if (store.tickets().length === 0) {
           <tr>
             <td colspan="8">
@@ -266,39 +289,40 @@
             <!-- A linha inteira é clicável com o mouse; pro teclado/leitor de tela, o botão de verdade é o título
                  (uma linha com role="button" escondia as colunas e o "⋮" de dentro dela). -->
             <tr class="ticket-row" [class.table-active]="selectedTicketId() === ticket.id" (click)="selectTicket(ticket.id, selectButton)">
-              <td>
-                <!-- Nome acessível = título visível (WCAG 2.5.3); o painel aberto/fechado vem do aria-expanded — mesmo padrão de Usuários (DESIGN.md). -->
-                <button #selectButton type="button" class="ticket-select fw-semibold text-start text-break"
+              <td class="col-title">
+                <!-- Nome acessível = título visível (WCAG 2.5.3); o painel aberto/fechado vem do aria-expanded — mesmo padrão de Usuários (DESIGN.md).
+                     Quebra só entre palavras: o .text-break deixava a coluna encolher até uma letra por linha com o painel aberto. -->
+                <button #selectButton type="button" class="ticket-select fw-semibold text-start"
                         [attr.aria-expanded]="selectedTicketId() === ticket.id"
                         (click)="selectTicket(ticket.id, selectButton); $event.stopPropagation()">
                   {{ ticket.title }}
                 </button>
               </td>
-              <td>
+              <td class="col-requester">
                 <div>{{ ticket.requesterName }}</div>
-                <div class="text-muted small">{{ ticket.requesterEmail }}</div>
+                <div class="text-muted small requester-email">{{ ticket.requesterEmail }}</div>
                 <div class="text-muted small d-md-none">
                   Atendente:
                   @if (ticket.assignedToName) {
                     {{ ticket.assignedToName }}
                   } @else {
-                    <span class="fst-italic">não atribuído</span>
+                    <span class="fst-italic">Não atribuído</span>
                   }
                 </div>
               </td>
-              <td class="small d-none d-md-table-cell">
+              <td class="small d-none d-md-table-cell col-assignee">
                 @if (ticket.assignedToName) {
                   {{ ticket.assignedToName }}
                 } @else {
                   <span class="text-muted fst-italic">Não atribuído</span>
                 }
               </td>
-              <td class="small" data-label="Setor">{{ ticket.sectorName }}</td>
+              <td class="small col-sector" data-label="Setor">{{ ticket.sectorName }}</td>
               <td data-label="Prioridade"><span class="badge" [ngClass]="priorityBadgeClass[ticket.priority]">{{ priorityLabels[ticket.priority] }}</span></td>
               <td data-label="Status">
                 <span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span>
-                @if (ticket.awaiting) {
-                  <span class="d-block small text-muted mt-1">{{ awaitingLabels[ticket.awaiting] }}</span>
+                @if (ticket.waitingOn) {
+                  <span class="d-block small text-muted mt-1">{{ awaitingLabels[ticket.waitingOn] }}</span>
                 }
               </td>
               <!--
@@ -307,7 +331,8 @@
               -->
               <td data-label="SLA e prazo">
                 <span class="d-inline-flex flex-column align-items-start gap-1" [title]="'Prazo: ' + (ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">
-                  <span class="badge" [ngClass]="slaStatusBadgeClass[ticket.slaStatus]">{{ slaStatusLabels[ticket.slaStatus] }}</span>
+                  <!-- O selo acompanha o relógio: um "No prazo"/"Em risco" que venceu com a tela aberta vira "Atrasado" na hora. -->
+                  <span class="badge" [ngClass]="slaStatusBadgeClass[displaySlaStatus(ticket)]">{{ slaStatusLabels[displaySlaStatus(ticket)] }}</span>
                   @if (dueRelative(ticket); as relative) {
                     <span class="small text-nowrap" [class.text-danger]="isOverdue(ticket)" [class.fw-semibold]="isOverdue(ticket)">{{ relative }}</span>
                   } @else if (ticket.slaStatus !== slaNotApplicable) {
@@ -365,7 +390,7 @@
     <!-- Abaixo de "lg", o painel vira um overlay de tela cheia (RF-04): a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
-      <app-ticket-monitor-info-panel [ticket]="ticket" [modal]="isOverlayViewport()"
+      <app-ticket-monitor-info-panel [ticket]="ticket" [modal]="isOverlayViewport()" [slaStatus]="displaySlaStatus(ticket)"
                                      [canAssignToMe]="canAssignToMe(ticket)" [canAssignResponsible]="canAssignResponsible(ticket)"
                                      [dueRelative]="dueRelative(ticket)" [overdue]="isOverdue(ticket)"
                                      [assigningToMe]="store.assigningToMeIds().includes(ticket.id)"

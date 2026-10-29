@@ -6,7 +6,7 @@
 
 .ticket-title:hover,
 .ticket-title:focus-visible {
-  color: var(--tk-primary);
+  color: var(--tk-primary-text);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -65,6 +65,13 @@
 
   .table-stack .row-actions-inline {
     justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Alvo de toque de 44px: o título esticado cobre o resto do card, e um toque que erra o botão abria o detalhe. */
+  .table-stack .row-actions-inline .btn {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
   }
 
   /*
@@ -103,14 +110,23 @@
     text-align: end;
   }
 
-  /* Seletor de grupo ocupa a largura toda, com os três botões do mesmo tamanho (alvo de toque cheio). */
+  /*
+   * Seletor de grupo ocupa a largura toda, com alvo de toque de 44px. Cada botão cresce a partir do
+   * próprio texto (não em terços iguais), pra "Em aberto 9" não quebrar em duas linhas ao lado de "Encerrados".
+   */
   .status-group {
     display: flex;
     width: 100%;
   }
 
   .status-group .btn {
-    flex: 1 1 0;
+    flex: 1 1 auto;
+    min-height: 2.75rem;
+    padding-inline: 0.5rem;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -153,7 +169,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Estados vazios de filtro dentro da tabela: sem o espaço à direita reservado pro "⋮" no celular. */
+/* Estados vazios dentro da tabela: sem o recuo à direita que o `.table-stack` dá à 1ª célula no celular. */
 @media (max-width: 767.98px) {
   .table-stack td.filtered-empty {
     padding-right: 0;
@@ -210,26 +226,26 @@
   color: var(--tk-text-muted);
 }
 
-/* No celular a 1ª célula reserva espaço à direita pro "⋮"; a linha do estado vazio não tem "⋮". */
+/* No celular o primeiro uso ganha respiro próprio, sem o recuo à direita da 1ª célula do `.table-stack`. */
 @media (max-width: 767.98px) {
   .table-stack td.first-use {
     padding: 2rem 1rem;
   }
 }
 
-/* Tempo restante pro dono cancelar, ao lado da ação no "⋮": informação, não alerta (cor de texto secundário). */
+/* Tempo restante pro dono cancelar, dentro do botão: menor e mais leve que o rótulo, na mesma cor (sem opacidade). */
 .cancel-hint {
   margin-left: 0.25rem;
-  opacity: 0.85;
+  font-size: 0.75rem;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
-/* Contagem do grupo no seletor ("Em aberto 3"): número discreto, que não compete com o rótulo. */
+/* Contagem do grupo no seletor ("Em aberto 3"): número menor, na cor do rótulo — opacidade derrubava o contraste. */
 .status-group-count {
   margin-left: 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-  opacity: 0.75;
 }
 
 /* Situação do prazo como texto com ícone: o tom muda só quando pede atenção, e o texto sempre diz. */
@@ -248,6 +264,24 @@
 .due-danger .due-label {
   color: var(--tk-danger-text);
   font-weight: 600;
+}
+
+/* "Cobrar no chamado" no atrasado: link secundário em índigo de texto, abaixo da data, sem competir com o "Atrasado". */
+.due-nudge {
+  color: var(--tk-primary-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* No celular fica acima do título esticado sobre o card (z-index 1) e ganha alvo de toque de 44px. */
+@media (max-width: 767.98px) {
+  .due-nudge {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
 }
 
 /* Ações da linha à vista: botões pequenos lado a lado, à direita no desktop. */

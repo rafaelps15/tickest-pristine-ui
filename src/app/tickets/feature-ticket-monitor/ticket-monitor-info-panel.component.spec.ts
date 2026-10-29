@@ -24,12 +24,13 @@ describe('TicketMonitorInfoPanelComponent', () => {
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
 
-  let quickInfoStoreFake: { ticket: ReturnType<typeof signal<TicketDetail | undefined>>; state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>> };
+  let quickInfoStoreFake: { ticket: ReturnType<typeof signal<TicketDetail | undefined>>; state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>; reload: jasmine.Spy };
 
   beforeEach(async () => {
     quickInfoStoreFake = {
       ticket: signal<TicketDetail | undefined>(undefined),
-      state: signal({ loading: false, error: null as string | null })
+      state: signal({ loading: false, error: null as string | null }),
+      reload: jasmine.createSpy('reload')
     };
 
     await TestBed.configureTestingModule({
@@ -126,7 +127,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
 
   it('mostra o prazo relativo recebido da tela, em vermelho e negrito quando atrasado, e de quem é a vez', async () => {
     const fixture = createFixture();
-    fixture.componentRef.setInput('ticket', { ...ticket, awaiting: TicketAwaiting.Agent });
+    fixture.componentRef.setInput('ticket', { ...ticket, waitingOn: TicketAwaiting.Agent });
     fixture.componentRef.setInput('dueRelative', 'venceu há 35 min');
     fixture.componentRef.setInput('overdue', true);
     await fixture.whenStable();
@@ -220,5 +221,37 @@ describe('TicketMonitorInfoPanelComponent', () => {
 
     expect(assignToMe).toHaveBeenCalled();
     expect(assignResponsible).toHaveBeenCalled();
+  });
+
+  it('mostra a situação de SLA que a linha mostra, quando a tela passa uma (o selo acompanha o relógio)', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('slaStatus', TicketSlaStatus.Breached);
+    await fixture.whenStable();
+
+    const badges = [...fixture.nativeElement.querySelectorAll('.badge')].map(b => (b as HTMLElement).textContent?.trim());
+    expect(badges).toContain('Atrasado');
+    expect(badges).not.toContain('No prazo');
+  });
+
+  it('não mostra data de prazo pra chamado sem SLA, como a tabela', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorInfoPanelComponent);
+    fixture.componentRef.setInput('ticket', { ...ticket, slaStatus: TicketSlaStatus.NotApplicable });
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.querySelector('.info-list').textContent as string;
+    expect(text).toContain('Sem prazo de SLA');
+    expect(text).not.toContain('02/01/2026');
+  });
+
+  it('com a descrição que falhou, mostra o erro em tom neutro e tenta de novo pelo store', async () => {
+    quickInfoStoreFake.state.set({ loading: false, error: 'Erro ao carregar os detalhes do chamado' });
+    const fixture = createFixture();
+    await fixture.whenStable();
+
+    const error = [...fixture.nativeElement.querySelectorAll('p')].find(p => (p as HTMLElement).textContent?.includes('Erro ao carregar os detalhes')) as HTMLElement;
+    expect(error.classList).not.toContain('text-danger');
+    (error.querySelector('button') as HTMLButtonElement).click();
+
+    expect(quickInfoStoreFake.reload).toHaveBeenCalled();
   });
 });

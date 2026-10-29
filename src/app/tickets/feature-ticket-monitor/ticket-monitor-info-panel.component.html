@@ -11,7 +11,7 @@
     <div class="d-flex flex-wrap gap-2 mb-3">
       <span class="badge" [ngClass]="statusBadgeClass[ticket().status]">{{ statusLabels[ticket().status] }}</span>
       <span class="badge" [ngClass]="priorityBadgeClass[ticket().priority]">{{ priorityLabels[ticket().priority] }}</span>
-      <span class="badge" [ngClass]="slaStatusBadgeClass[ticket().slaStatus]">{{ slaStatusLabels[ticket().slaStatus] }}</span>
+      <span class="badge" [ngClass]="slaStatusBadgeClass[shownSlaStatus()]">{{ slaStatusLabels[shownSlaStatus()] }}</span>
     </div>
 
     <dl class="info-list mb-3">
@@ -32,16 +32,21 @@
 
       <dt>Prazo</dt>
       <dd>
-        {{ ticket().dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
-        @if (dueRelative(); as relative) {
-          <!-- O mesmo prazo relativo da linha, pela hora do servidor; atrasado também em texto e peso. -->
-          <span class="d-block small" [class.text-danger]="overdue()" [class.fw-semibold]="overdue()" [class.text-muted]="!overdue()">{{ relative }}</span>
+        @if (hasDeadline()) {
+          {{ ticket().dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+          @if (dueRelative(); as relative) {
+            <!-- O mesmo prazo relativo da linha, pela hora do servidor; atrasado também em texto e peso. -->
+            <span class="d-block small" [class.text-danger]="overdue()" [class.fw-semibold]="overdue()" [class.text-muted]="!overdue()">{{ relative }}</span>
+          }
+        } @else {
+          <!-- Como na tabela: chamado sem SLA não mostra uma data de prazo que não vale. -->
+          <span class="text-muted">Sem prazo de SLA</span>
         }
       </dd>
 
-      @if (ticket().awaiting) {
+      @if (ticket().waitingOn) {
         <dt>Aguardando</dt>
-        <dd>{{ awaitingLabels[ticket().awaiting!] }}</dd>
+        <dd>{{ awaitingLabels[ticket().waitingOn!] }}</dd>
       }
 
       @if (ticket().resolvedAtUtc) {
@@ -55,16 +60,21 @@
       @if (quickInfoStore.state().loading) {
         <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando descrição…</span>
       } @else if (quickInfoStore.state().error) {
-        <p class="text-danger small mb-0">{{ quickInfoStore.state().error }}</p>
+        <!-- Falha técnica é neutra (DESIGN.md), com o caminho de volta. -->
+        <p class="text-secondary small d-flex flex-wrap align-items-center gap-2 mb-0">
+          <span>{{ quickInfoStore.state().error }}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="quickInfoStore.reload()">Tentar novamente</button>
+        </p>
       } @else {
         <p class="small mb-0">{{ quickInfoStore.ticket()?.description }}</p>
       }
     </div>
 
-    <!-- Os mesmos atalhos do "⋮" da linha, como no painel de Usuários — o painel nunca tem ação que a tela não tenha. -->
+    <!-- Os mesmos atalhos do "⋮" da linha, como no painel de Usuários — o painel nunca tem ação que a tela não tenha.
+         "Atribuir a mim", quando existe, é a ação principal (um chamado sem ninguém); as outras ficam em contorno. -->
     <div class="d-flex flex-column gap-2">
       @if (canAssignToMe()) {
-        <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="assigningToMe()" (click)="assignToMeClick.emit()">
+        <button type="button" class="btn btn-sm btn-primary" [disabled]="assigningToMe()" (click)="assignToMeClick.emit()">
           @if (assigningToMe()) {
             <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
           } @else {

@@ -365,4 +365,25 @@ describe('TicketMonitorStore', () => {
 
     expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
   });
+
+  it('marca a hora em que a lista chegou ("Atualizado às"), e nenhuma antes da primeira carga', async () => {
+    expect(store.listLoadedAtMs()).toBeNull();
+    const before = Date.now();
+
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.listLoadedAtMs()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('ao limpar os filtros, mantém o setor (escopo da tela) e o "Por página"', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+    store.setSectorIds(['s1']);
+    store.setPageSize(50);
+    store.setStatus(TicketStatus.Open);
+
+    store.clearFilters();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 50, sectorIds: ['s1'] });
+  });
 });

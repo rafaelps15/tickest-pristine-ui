@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, UrlTree } from '@angular/router';
 import { of } from 'rxjs';
 import { TicketListComponent, formatLastActivity } from './ticket-list.component';
 import { TicketsStore } from '../application/tickets.store';
@@ -32,6 +32,9 @@ function rowAction(root: HTMLElement, text: string): HTMLButtonElement | undefin
   return Array.from(root.querySelectorAll('.row-actions-inline button') as NodeListOf<HTMLButtonElement>)
     .find(button => button.textContent?.includes(text));
 }
+
+/** Permissões do perfil Solicitante, dono dos chamados desta lista. */
+const OWNER_PERMISSIONS = (code: string) => code === 'tickets:update-own' || code === 'tickets:reopen-own';
 
 describe('TicketListComponent', () => {
   const openTicket: Ticket = {
@@ -90,7 +93,7 @@ describe('TicketListComponent', () => {
     storeFake = createStoreFake();
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
     toastServiceFake = { show: jasmine.createSpy('show') };
-    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(false) };
+    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.callFake(OWNER_PERMISSIONS) };
     summaryStoreFake = { activeCount: signal<number | null>(3), finishedCount: signal<number | null>(5), totalCount: signal<number | null>(8), reload: jasmine.createSpy('reload') };
     departmentsStoreFake = { departments: signal<{ name: string; sectors: unknown[] }[]>([]) };
 
@@ -151,6 +154,18 @@ describe('TicketListComponent', () => {
     expect(due.textContent).not.toContain('Resolvido no prazo');
     expect(due.querySelector('.due-danger, .due')?.classList).toContain('due-danger');
     expect(due.querySelector('.due-date')?.textContent).toContain('05/01/2026');
+    expect(due.querySelector('.due-date')?.textContent).toContain('venceu em');
+  });
+
+  it('num chamado reaberto sem o prazo novo na lista, não mostra o "Resolvido" do ciclo encerrado', async () => {
+    storeFake.tickets.set([{ ...resolvedTicket, status: TicketStatus.Open, slaStatus: TicketSlaStatus.Missed }]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const due = fixture.nativeElement.querySelector('td[data-label="Prazo"]') as HTMLElement;
+    expect(due.textContent).toContain('Reaberto: prazo novo no chamado');
+    expect(due.textContent).not.toContain('Resolvido');
+    expect(due.querySelector('.due-date')).toBeNull();
   });
 
   it('diz "Sem responsável" (e não "Aguardando atendimento") num chamado encerrado que ninguém assumiu', async () => {
@@ -215,6 +230,15 @@ describe('TicketListComponent', () => {
     retryButton?.click();
 
     expect(storeFake.loadForCurrentUser).toHaveBeenCalledTimes(2);
+  });
+
+  it('esconde "Editar" e "Reabrir" de quem não tem tickets:update-own nem tickets:reopen-own (a API responderia 403)', async () => {
+    sessionServiceFake.hasPermission.and.returnValue(false);
+    storeFake.tickets.set([{ ...openTicket, canCancel: false }, resolvedTicket]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(rowActionLabels(fixture.nativeElement)).toEqual([]);
   });
 
   it('só mostra "Reabrir" para chamados inativos (Resolvido/Fechado/Cancelado)', async () => {
@@ -429,6 +453,8 @@ describe('TicketListComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
     expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
+    // O esmaecido é só visual: o leitor de tela fica sabendo da recarga pelo aria-busy.
+    expect(fixture.nativeElement.querySelector('table').getAttribute('aria-busy')).toBe('true');
   });
 
   it('mostra o erro de uma ação sem "Tentar novamente", e o dispensa pelo botão de fechar', async () => {
@@ -591,7 +617,7 @@ describe('TicketListComponent', () => {
   });
 
   it('com tickets:cancel, mostra "Cancelar" sem prazo e sem contagem', async () => {
-    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:cancel');
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:cancel' || OWNER_PERMISSIONS(code));
     storeFake.tickets.set([{ ...openTicket, ownerCancelDeadlineUtc: minutesFromNow(-60) }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -613,6 +639,32 @@ describe('TicketListComponent', () => {
     expect(text).not.toContain('Nada pendente');
     expect(text).not.toContain('Nenhum chamado aberto ainda');
     expect(text).not.toContain('Carregando chamados…');
+  });
+
+  it('com erro de leitura e lista vazia, diz o erro uma vez só — no estado vazio, com "Tentar novamente" dentro dele', async () => {
+    storeFake.tickets.set([]);
+    storeFake.hasAnyTicket.set(null);
+    storeFake.loadError.set('Erro ao carregar chamados');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const alerts = fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>;
+    expect(alerts.length).toBe(1);
+    const retry = Array.from(alerts[0].querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Tentar novamente'))!;
+    retry.click();
+    expect(storeFake.loadForCurrentUser).toHaveBeenCalledTimes(2);
+  });
+
+  it('com erro de leitura sobre linhas antigas, mantém as linhas e mostra o aviso acima da tabela', async () => {
+    storeFake.tickets.set([openTicket]);
+    storeFake.loadError.set('Erro ao carregar chamados');
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.alert-danger')?.textContent).toContain('Erro ao carregar chamados');
+    expect(fixture.nativeElement.textContent).toContain(openTicket.title);
+    expect(fixture.nativeElement.textContent).not.toContain('Não deu pra carregar seus chamados agora');
   });
 
   it('na busca vazia dentro de um grupo, oferece "Buscar em todos os chamados" e explica o escopo', async () => {
@@ -643,7 +695,9 @@ describe('TicketListComponent', () => {
     await fixture.whenStable();
 
     const counts = Array.from(fixture.nativeElement.querySelectorAll('.status-group-count') as NodeListOf<HTMLElement>).map(c => c.textContent?.trim());
-    expect(counts).toEqual(['3', '5', '8']);
+    // O número à vista e, só pro leitor de tela, o substantivo ("3 chamados") — sem aria-label num <span>.
+    expect(counts).toEqual(['3 chamados', '5 chamados', '8 chamados']);
+    expect(fixture.nativeElement.querySelector('.status-group-count .visually-hidden')?.textContent).toBe(' chamados');
 
     summaryStoreFake.activeCount.set(null);
     summaryStoreFake.finishedCount.set(null);
@@ -668,6 +722,35 @@ describe('TicketListComponent', () => {
     expect(dues[1].textContent).toContain('Atrasado');
     expect(dues[2].textContent).toContain('Sem prazo');
     expect(dues[2].querySelector('.due-date')).toBeNull();
+  });
+
+  it('no atrasado, oferece "Cobrar no chamado" levando ao próprio chamado — e só no atrasado', async () => {
+    storeFake.tickets.set([
+      { ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached },
+      { ...openTicket, id: 'em-risco', slaStatus: TicketSlaStatus.AtRisk },
+      { ...resolvedTicket, id: 'resolvido', slaStatus: TicketSlaStatus.Missed }
+    ]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    const links = Array.from(fixture.nativeElement.querySelectorAll('.due-nudge') as NodeListOf<HTMLAnchorElement>);
+    expect(links.length).toBe(1);
+    expect(links[0].textContent?.trim()).toBe('Cobrar no chamado');
+    expect(links[0].getAttribute('href')).toBe('/tickets/atrasado');
+    expect(links[0].getAttribute('aria-label')).toBe('Cobrar no chamado ' + openTicket.title);
+  });
+
+  it('clicar em "Cobrar no chamado" navega pro detalhe do chamado', async () => {
+    storeFake.tickets.set([{ ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached }]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+
+    (fixture.nativeElement.querySelector('.due-nudge') as HTMLAnchorElement).click();
+
+    expect(navigate).toHaveBeenCalled();
+    expect(router.serializeUrl(navigate.calls.mostRecent().args[0] as UrlTree)).toBe('/tickets/atrasado');
   });
 
   it('reabrindo dentro de "Encerrados", o toast diz que o chamado foi pra "Em aberto"', async () => {

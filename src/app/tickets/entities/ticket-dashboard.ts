@@ -64,10 +64,10 @@ export interface TicketDashboardAttention {
   criticalCount: number;
   /** Ativos sem responsável. */
   unassignedCount: number;
-  /** Ativos esperando o solicitante (spec 029; ausente enquanto o back-end não manda). */
-  awaitingRequesterCount?: number;
-  /** Ativos esperando quem atende (spec 029; ausente enquanto o back-end não manda). */
-  awaitingAgentCount?: number;
+  /** Ativos esperando o solicitante (spec 029; ausente em back-end anterior a ela). */
+  waitingOnRequesterCount?: number;
+  /** Ativos esperando quem atende (spec 029; ausente em back-end anterior a ela). */
+  waitingOnAgentCount?: number;
 }
 
 /** Agregado do recorte numa resposta só (GET /tickets/stats/overview, spec 026 do back-end). */

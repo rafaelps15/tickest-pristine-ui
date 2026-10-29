@@ -82,4 +82,19 @@ describe('TicketQuickInfoStore', () => {
 
     expect(store.state().error).toBe('Você não tem acesso a este chamado.');
   });
+
+  it('busca de novo a descrição do chamado selecionado depois de uma falha', async () => {
+    dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    store.select('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.state().error).toBeTruthy();
+
+    dataService.getById.and.returnValue(of(ticket));
+    store.reload();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getById).toHaveBeenCalledTimes(2);
+    expect(store.state().error).toBeNull();
+    expect(store.ticket()).toEqual(ticket);
+  });
 });

@@ -94,7 +94,8 @@ describe('TicketDataService', () => {
       expect(request.request.params.getAll('sectorId')).toEqual(['s1', 's2']);
       expect(request.request.params.get('createdFrom')).toBe('2026-10-01');
       expect(request.request.params.get('createdTo')).toBe('2026-10-28');
-      expect(request.request.params.get('awaiting')).toBe('2');
+      expect(request.request.params.get('waitingOn')).toBe('2');
+      expect(request.request.params.has('awaiting')).toBeFalse();
       request.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
     });
   });

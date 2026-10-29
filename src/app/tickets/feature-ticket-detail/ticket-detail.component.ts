@@ -23,9 +23,10 @@ import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
-import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
+import { canAssignTicketToOthers, canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
@@ -348,11 +349,11 @@ export class TicketDetailComponent implements OnInit {
     }
 
     /**
-     * Indica se o botão "Editar" (descrição) deve aparecer: quem abriu o chamado ou quem administra
-     * chamados, com o chamado ativo — mesma regra do back-end (`tickets:update-own` ou `tickets:manage`).
+     * Indica se o botão "Editar" (descrição) deve aparecer: dono com `tickets:update-own` ou quem
+     * administra chamados, com o chamado ativo — mesma regra do back-end.
      */
     protected canEditTicket(t: TicketDetail): boolean {
-        return (this.isOwner(t) || this.sessionService.hasPermission('tickets:manage')) && TICKET_ACTIVE_STATUSES.has(t.status);
+        return canEditTicketDescription(t.status, this.isOwner(t), code => this.sessionService.hasPermission(code));
     }
 
     /** Se quem está logado cancela qualquer chamado, sem prazo (`tickets:cancel`). */
@@ -405,9 +406,12 @@ export class TicketDetailComponent implements OnInit {
         });
     }
 
-    /** Indica se o botão "Atribuir/Alterar responsável" deve aparecer: só pra quem administra, com o chamado ativo. */
+    /**
+     * Indica se o botão "Atribuir/Alterar responsável" deve aparecer: o diálogo escolhe qualquer pessoa,
+     * então exige `tickets:manage` e `tickets:assign`, com o chamado ativo.
+     */
     canAssignTicket(status: TicketStatus): boolean {
-        return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(status);
+        return canAssignTicketToOthers(status, code => this.sessionService.hasPermission(code));
     }
 
     /** Indica se o botão "Remover responsável" deve aparecer: só pra quem administra, com o chamado ativo e com responsável atual. */
@@ -446,9 +450,9 @@ export class TicketDetailComponent implements OnInit {
         return TICKET_STATUS_TRANSITIONS[t.status].filter(status => status !== TicketStatus.Canceled || this.canCancelNow(t));
     }
 
-    /** Indica se o botão "Reabrir chamado" deve aparecer: o chamado precisa estar inativo (Resolvido/Fechado/Cancelado). */
-    protected canReopenTicket(status: TicketStatus): boolean {
-        return !TICKET_ACTIVE_STATUSES.has(status);
+    /** Indica se o botão "Reabrir chamado" deve aparecer: chamado inativo e dono com `tickets:reopen-own` ou `tickets:manage`. */
+    protected canReopenTicket(t: TicketDetail): boolean {
+        return canReopenTicket(t.status, this.isOwner(t), code => this.sessionService.hasPermission(code));
     }
 
     /**

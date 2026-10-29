@@ -3,7 +3,7 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { TicketMonitorComponent } from './ticket-monitor.component';
 import { By } from '@angular/platform-browser';
-import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketMonitorStore } from '../application/ticket-monitor.store';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { TicketDetail } from '../entities/ticket';
@@ -53,6 +53,7 @@ describe('TicketMonitorComponent', () => {
       searchingResponsibleCandidates: signal(false),
       responsibleSearchError: signal<string | null>(null),
       assigningResponsible: signal(false),
+      listLoadedAtMs: signal<number | null>(Date.now()),
       load: jasmine.createSpy('load'),
       reloadSlaSummary: jasmine.createSpy('reloadSlaSummary'),
       clearMutationError: jasmine.createSpy('clearMutationError'),
@@ -265,7 +266,7 @@ describe('TicketMonitorComponent', () => {
     const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
     expect(sector.value).toBe('many');
     expect(sector.textContent).toContain('TI (todos os setores)');
-    expect(fixture.nativeElement.textContent).toContain('Os números seguem os mesmos filtros da tabela.');
+    expect(fixture.nativeElement.textContent).toContain('O setor e os filtros valem pros números do topo e pra tabela.');
 
     sector.value = 's1';
     sector.dispatchEvent(new Event('change'));
@@ -322,7 +323,7 @@ describe('TicketMonitorComponent', () => {
   });
 
   it('mostra de quem o chamado espera ação, quando o back-end manda', async () => {
-    storeFake.tickets.set([{ ...ticket, awaiting: TicketAwaiting.Requester }]);
+    storeFake.tickets.set([{ ...ticket, waitingOn: TicketAwaiting.Requester }]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -596,7 +597,7 @@ describe('TicketMonitorComponent', () => {
     const html = fixture.nativeElement.innerHTML as string;
     const headerIndex = html.indexOf('<app-page-header');
     const guideIndex = html.indexOf('<app-ticket-monitor-guide');
-    const slaIndex = html.indexOf('monitor-scope');
+    const slaIndex = html.indexOf('id="monitorScopeHint"');
     const tableIndex = html.indexOf('<table');
 
     expect(headerIndex).toBeGreaterThanOrEqual(0);
@@ -699,14 +700,14 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Os números seguem setor, prioridade, responsável e período — não a busca, o Status, o SLA nem o Aguardando.');
   });
 
-  it('põe o Setor acima dos números do topo, dizendo o escopo deles', async () => {
+  it('põe o Setor nas ações do cabeçalho, acima dos números do topo, com uma linha só dizendo o escopo', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     const sector = fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement;
     const hint = fixture.nativeElement.querySelector(`#${sector.getAttribute('aria-describedby')}`) as HTMLElement;
-    expect(hint.textContent).toContain('Vale pros números do topo e pra tabela.');
-    expect(fixture.nativeElement.textContent).toContain('Os números seguem os mesmos filtros da tabela.');
+    expect(hint.textContent).toContain('O setor e os filtros valem pros números do topo e pra tabela.');
+    expect(sector.closest('app-page-header')).not.toBeNull();
     expect(sector.compareDocumentPosition(fixture.nativeElement.querySelector('app-stat-card')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sector.closest('app-filter-bar')).toBeNull();
   });
@@ -1000,6 +1001,16 @@ describe('TicketMonitorComponent', () => {
     expect(buttons.length).withContext('só os chamados ativos (t1, t2) devem ter o botão').toBe(2);
   });
 
+  it('não mostra "Atribuir responsável" pra quem tem tickets:manage sem tickets:assign, mas mantém "Atribuir a mim"', async () => {
+    hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+    storeFake.tickets.set([{ ...ticket, id: 't1', status: TicketStatus.Open, assignedToUserId: null }]);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelectorAll('button[aria-label*="responsável: "]').length).toBe(0);
+    expect(fixture.componentInstance.canAssignToMe({ ...ticket, status: TicketStatus.Open, assignedToUserId: null })).toBeTrue();
+  });
+
   it('abre o diálogo "Atribuir responsável" pro chamado clicado, sem herdar a busca de uma abertura anterior', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -1051,7 +1062,9 @@ describe('TicketMonitorComponent', () => {
     // Linha junto dos números (que mostram "—"), não um alerta grande empilhado com os da lista.
     const line = fixture.nativeElement.querySelector('p[role="alert"]') as HTMLElement;
     expect(line.textContent).toContain('Erro ao carregar o resumo de SLA');
+    // Falha técnica é neutra: nada de vermelho.
     expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+    expect(line.classList).not.toContain('text-danger');
     (line.querySelector('button') as HTMLButtonElement).click();
 
     expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
@@ -1062,10 +1075,19 @@ describe('TicketMonitorComponent', () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
-    const closeButton = fixture.nativeElement.querySelector('.alert-danger .btn-close') as HTMLButtonElement;
+    const closeButton = fixture.nativeElement.querySelector('.alert .btn-close') as HTMLButtonElement;
     closeButton.click();
 
     expect(storeFake.clearMutationError).toHaveBeenCalled();
+  });
+
+  it('com o diálogo "Atribuir responsável" aberto, o erro de atribuição aparece só dentro dele', async () => {
+    storeFake.mutationError.set('Não foi possível atribuir.');
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    fixture.componentInstance.assigningResponsibleTicketId.set(ticket.id);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.alert .btn-close')).toBeNull();
   });
 
   it('agrupa as ações da linha (atribuir/ver detalhes) num único menu "⋮", em vez de botões soltos', async () => {
@@ -1094,7 +1116,7 @@ describe('TicketMonitorComponent', () => {
     onSuccess();
     await fixture.whenStable();
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('João Pedro agora é o responsável.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Responsável agora: João Pedro.');
     expect(fixture.debugElement.query(By.directive(TicketAssignDialogComponent))).toBeNull();
   });
 
@@ -1105,5 +1127,136 @@ describe('TicketMonitorComponent', () => {
     fixture.componentInstance.onConfirmResponsible({ userId: 'u2', name: 'João Pedro' });
 
     expect(storeFake.assignResponsible).not.toHaveBeenCalled();
+  });
+
+  describe('selo de SLA que acompanha o relógio', () => {
+    it('mostra "Atrasado" na linha e no painel quando um ativo "No prazo" vence com a tela aberta', async () => {
+      storeFake.tickets.set([{ ...ticket, slaStatus: TicketSlaStatus.OnTime, dueAtUtc: new Date(Date.now() - 60_000).toISOString() }]);
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+      fixture.componentInstance.selectedTicketId.set(ticket.id);
+      await fixture.whenStable();
+
+      const cell = fixture.nativeElement.querySelector('td[data-label="SLA e prazo"] .badge') as HTMLElement;
+      expect(cell.textContent?.trim()).toBe('Atrasado');
+      expect(cell.classList).toContain('bg-label-danger');
+      expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel').textContent).toContain('Atrasado');
+    });
+
+    it('mantém o selo da lista enquanto o prazo não passou, e nunca muda o de um chamado já resolvido', async () => {
+      storeFake.tickets.set([
+        { ...ticket, id: 't1', slaStatus: TicketSlaStatus.AtRisk, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() },
+        { ...ticket, id: 't2', status: TicketStatus.Resolved, slaStatus: TicketSlaStatus.Met, resolvedAtUtc: '2026-01-01T13:00:00Z' }
+      ]);
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      const badges = [...fixture.nativeElement.querySelectorAll('td[data-label="SLA e prazo"] .badge')].map(b => (b as HTMLElement).textContent?.trim());
+      expect(badges).toEqual(['Em risco', 'Cumprido']);
+    });
+  });
+
+  describe('cards de SLA', () => {
+    it('dá ao botão de cada card o número junto do rótulo, pra quem tabula ouvir a contagem', async () => {
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      const labels = [...fixture.nativeElement.querySelectorAll('app-stat-card button[aria-pressed]')].map(b => (b as HTMLElement).getAttribute('aria-label'));
+      expect(labels).toContain('Atrasados: 1. Filtrar a tabela');
+      expect(labels).toContain('Ativos: 10. Filtrar a tabela');
+    });
+
+    it('o segundo clique no card já pressionado desfaz o filtro de SLA, sem mexer no status nem na ordenação', async () => {
+      storeFake.filters.set({ ...storeFake.filters(), activeOnly: true, slaStatus: TicketSlaStatus.Breached });
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      fixture.componentInstance.onSlaCardClick(TicketSlaStatus.Breached);
+
+      expect(storeFake.setSlaStatus).toHaveBeenCalledWith(undefined);
+      expect(storeFake.setStatus).not.toHaveBeenCalled();
+      expect(storeFake.setSort).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('idade da lista e "Atualizar"', () => {
+    it('diz a hora da última carga e recarrega lista e números pelo botão "Atualizar"', async () => {
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.card-header').textContent).toContain('Atualizado às');
+      storeFake.load.calls.reset();
+      (fixture.nativeElement.querySelector('.monitor-refresh') as HTMLButtonElement).click();
+
+      expect(storeFake.load).toHaveBeenCalled();
+      expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
+    });
+
+    it('ao voltar pra aba com a lista de mais de 5 minutos, recarrega sozinha; com a lista recente, não', async () => {
+      spyOnProperty(document, 'visibilityState').and.returnValue('visible');
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+      storeFake.load.calls.reset();
+
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(storeFake.load).not.toHaveBeenCalled();
+
+      storeFake.listLoadedAtMs.set(Date.now() - 6 * 60_000);
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(storeFake.load).toHaveBeenCalled();
+      expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
+    });
+  });
+
+  describe('erro da lista', () => {
+    it('sem lista na tela, a falha ocupa o lugar da tabela (nunca o vazio "Ainda não há chamados"), em tom neutro', async () => {
+      storeFake.tickets.set([]);
+      storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
+      storeFake.listState.set({ loading: false, error: 'Erro ao carregar chamados' });
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      const body = fixture.nativeElement.querySelector('tbody') as HTMLElement;
+      expect(body.textContent).toContain('Erro ao carregar chamados');
+      expect(body.textContent).not.toContain('Ainda não há chamados');
+      expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+      (body.querySelector('button') as HTMLButtonElement).click();
+      expect(storeFake.load).toHaveBeenCalled();
+    });
+
+    it('com a lista já na tela, mantém as linhas e avisa acima delas, sem vermelho', async () => {
+      storeFake.listState.set({ loading: false, error: 'Erro ao carregar chamados' });
+      const fixture = TestBed.createComponent(TicketMonitorComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelectorAll('tr.ticket-row').length).toBe(1);
+      const notice = [...fixture.nativeElement.querySelectorAll('p[role="alert"]')].find(p => (p as HTMLElement).textContent?.includes('Erro ao carregar chamados')) as HTMLElement;
+      expect(notice.textContent).toContain('A lista abaixo é a da última atualização.');
+      expect(notice.classList).not.toContain('text-danger');
+    });
+  });
+
+  it('ao limpar os filtros, também tira o aviso de data recusada', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+    fixture.componentInstance.dateError.set('from');
+
+    fixture.componentInstance.onClearFilters();
+
+    expect(fixture.componentInstance.dateError()).toBeNull();
+    expect(storeFake.clearFilters).toHaveBeenCalled();
+  });
+
+  it('com o painel aberto, marca a tabela como compacta (Solicitante e Setor saem no desktop)', async () => {
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+    const table = fixture.nativeElement.querySelector('table') as HTMLElement;
+    expect(table.classList).not.toContain('is-compact');
+
+    fixture.componentInstance.selectedTicketId.set(ticket.id);
+    await fixture.whenStable();
+
+    expect(table.classList).toContain('is-compact');
+    expect(fixture.nativeElement.querySelector('button.ticket-select').classList).not.toContain('text-break');
   });
 });

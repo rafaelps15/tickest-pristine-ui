@@ -20,7 +20,8 @@ import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../../shared/ui/stat-card/stat-card.component';
-import { TicketAssignDialogComponent } from '../ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { canAssignTicketToOthers } from '../ui/ticket-action-permissions';
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
@@ -30,6 +31,8 @@ const DEFAULT_SORT = TicketSortOrder.DueDate;
 
 /** De quanto em quanto tempo o prazo relativo da tabela ("vence em 2h") é recalculado. */
 const CLOCK_TICK_MS = 30_000;
+/** Idade a partir da qual a lista é recarregada sozinha ao voltar pra aba (mesma regra dos Alertas de SLA do Início). */
+const STALE_ON_RETURN_MS = 5 * 60_000;
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
@@ -60,7 +63,7 @@ function parsePageParam(value: string | null): number {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_PAGE;
 }
 
-/** Tela de "Monitorar Tickets": todos os chamados do sistema, com filtros e resumo de SLA (role Administrador/Atendente, permissão tickets:manage). */
+/** Tela "Monitorar Chamados": todos os chamados do sistema, com filtros e resumo de SLA (permissão tickets:manage). */
 @Component({
     selector: 'app-ticket-monitor',
     imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, StatCardComponent, TicketAssignDialogComponent],
@@ -101,7 +104,7 @@ export class TicketMonitorComponent implements OnInit {
 
     /** Os 4 cards de SLA do topo: rótulo, contagem do resumo, legenda, ícone, tom e o filtro que aplicam. */
     protected readonly slaCards: { label: string; count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'; hint: string; icon: string; tone: StatTone; slaStatus: TicketSlaStatus | undefined }[] = [
-        { label: 'Ativos', count: 'activeCount', hint: 'Com o relógio do SLA correndo', icon: 'bx-receipt', tone: 'primary', slaStatus: undefined },
+        { label: 'Ativos', count: 'activeCount', hint: 'Aberto ou em andamento', icon: 'bx-receipt', tone: 'primary', slaStatus: undefined },
         { label: 'No prazo', count: 'onTimeCount', hint: 'Dentro do SLA', icon: 'bx-check-circle', tone: 'success', slaStatus: TicketSlaStatus.OnTime },
         { label: 'Em risco', count: 'atRiskCount', hint: 'A partir de 75% do prazo', icon: 'bx-error-circle', tone: 'warning', slaStatus: TicketSlaStatus.AtRisk },
         { label: 'Atrasados', count: 'breachedCount', hint: 'Já passaram do prazo', icon: 'bx-error', tone: 'danger', slaStatus: TicketSlaStatus.Breached }
@@ -154,15 +157,16 @@ export class TicketMonitorComponent implements OnInit {
     });
 
     /**
-     * Escopo dos números do topo, dito acima dos cards: seguem setor, prioridade, responsável e
-     * período de abertura (o que o agregado aceita); a busca, o Status, o SLA e o Aguardando, não.
+     * Escopo do Setor e dos números do topo, numa linha só acima dos cards: os números seguem setor,
+     * prioridade, responsável e período de abertura (o que o agregado aceita); a busca, o Status, o
+     * SLA e o Aguardando, não — e a linha só fala disso quando algum deles está aplicado.
      */
     readonly slaScopeLabel = computed(() => {
         const f = this.store.filters();
         const ignored = !!f.search || f.status !== undefined || f.slaStatus !== undefined || f.awaiting !== undefined;
         return ignored
             ? 'Os números seguem setor, prioridade, responsável e período — não a busca, o Status, o SLA nem o Aguardando.'
-            : 'Os números seguem os mesmos filtros da tabela.';
+            : 'O setor e os filtros valem pros números do topo e pra tabela.';
     });
 
     /** Qual ponta do período de abertura foi recusada por inverter o intervalo (ou data inválida), ou null. */
@@ -243,6 +247,12 @@ export class TicketMonitorComponent implements OnInit {
     /** Contagem de um card de SLA no resumo carregado (`null` enquanto não há resumo). */
     slaCount(count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount'): number | null {
         return this.store.slaSummary()?.[count] ?? null;
+    }
+
+    /** Nome acessível do botão de um card: o número junto do rótulo ("Atrasados: 86"), pra quem tabula pelos cards ouvir a contagem. */
+    slaCardPressLabel(card: { label: string; count: 'activeCount' | 'onTimeCount' | 'atRiskCount' | 'breachedCount' }): string {
+        const value = this.slaCount(card.count);
+        return `${card.label}: ${value ?? 'indisponível'}. Filtrar a tabela`;
     }
 
     /**
@@ -457,6 +467,21 @@ export class TicketMonitorComponent implements OnInit {
         }
     }
 
+    /** Recarrega a lista e os números do topo (botão "Atualizar" e volta pra aba com a lista velha). */
+    refresh(): void {
+        this.store.load();
+        this.store.reloadSlaSummary();
+    }
+
+    /** Ao voltar pra aba com a lista de mais de 5 minutos, recarrega sozinha — não é polling. */
+    @HostListener('document:visibilitychange')
+    onVisibilityChange(): void {
+        const updatedAt = this.store.listLoadedAtMs();
+        if (document.visibilityState === 'visible' && updatedAt !== null && Date.now() - updatedAt > STALE_ON_RETURN_MS) {
+            this.refresh();
+        }
+    }
+
     /** Troca o status pelo seletor: vazio = todos, "active" = Aberto + Em Andamento, número = um status. */
     onStatusChange(value: string): void {
         const status = Number(value);
@@ -500,6 +525,11 @@ export class TicketMonitorComponent implements OnInit {
      * (`TicketSortOrder.DueDate`) disponível, só não a acionavam.
      */
     onSlaCardClick(slaStatus: TicketSlaStatus | undefined): void {
+        // Clicar de novo no card já pressionado desfaz o filtro de SLA (volta pro "Ativos").
+        if (slaStatus !== undefined && this.isSlaCardPressed(slaStatus)) {
+            this.store.setSlaStatus(undefined);
+            return;
+        }
         // Todo card fala de chamados ativos: o filtro de status vira "Ativos", pra tabela bater com o card.
         this.store.setStatus('active');
         this.store.setSlaStatus(slaStatus);
@@ -512,9 +542,10 @@ export class TicketMonitorComponent implements OnInit {
         return !!filters.activeOnly && filters.slaStatus === slaStatus;
     }
 
-    /** Limpa todos os filtros, incluindo o texto de busca ainda não aplicado (debounce em andamento). */
+    /** Limpa os filtros da barra (o Setor fica), o texto de busca ainda não aplicado e o aviso de data recusada. */
     onClearFilters(): void {
         this.searchInput.set('');
+        this.dateError.set(null);
         this.store.clearFilters();
     }
 
@@ -526,6 +557,15 @@ export class TicketMonitorComponent implements OnInit {
     /** Indica se o chamado já passou do prazo e ainda não foi resolvido, pela hora do servidor. */
     isOverdue(ticket: TicketMonitorItem): boolean {
         return !ticket.resolvedAtUtc && new Date(ticket.dueAtUtc).getTime() < this.nowMs() + this.store.clockOffsetMs();
+    }
+
+    /**
+     * Situação de SLA a mostrar: a da lista, exceto um ativo "No prazo"/"Em risco" cujo prazo já
+     * passou pela hora do servidor — esse vira "Atrasado" sem esperar a próxima carga.
+     */
+    displaySlaStatus(ticket: TicketMonitorItem): TicketSlaStatus {
+        const live = ticket.slaStatus === TicketSlaStatus.OnTime || ticket.slaStatus === TicketSlaStatus.AtRisk;
+        return live && TICKET_ACTIVE_STATUSES.has(ticket.status) && this.isOverdue(ticket) ? TicketSlaStatus.Breached : ticket.slaStatus;
     }
 
     /**
@@ -551,9 +591,12 @@ export class TicketMonitorComponent implements OnInit {
         this.store.assignToMe(ticketId, currentUserId, () => this.toastService.show('Chamado atribuído a você.'));
     }
 
-    /** Indica se o botão "Atribuir responsável" deve aparecer: chamado ativo, pra quem administra a fila (com ou sem responsável atual, pra permitir reatribuir). */
+    /**
+     * Indica se o botão "Atribuir responsável" deve aparecer: chamado ativo (com ou sem responsável, pra
+     * permitir reatribuir) e `tickets:manage` + `tickets:assign`, que a API exige pra atribuir a outra pessoa.
+     */
     canAssignResponsible(ticket: TicketMonitorItem): boolean {
-        return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(ticket.status);
+        return canAssignTicketToOthers(ticket.status, code => this.sessionService.hasPermission(code));
     }
 
     /** Abre o diálogo "Atribuir responsável" para o ticket clicado, sem herdar a busca nem o erro de uma abertura anterior. */
@@ -569,7 +612,7 @@ export class TicketMonitorComponent implements OnInit {
         if (!ticketId) return;
 
         this.store.assignResponsible(ticketId, choice.userId, () => {
-            this.toastService.show(`${choice.name} agora é o responsável.`);
+            this.toastService.show(`Responsável agora: ${choice.name}.`);
             this.assigningResponsibleTicketId.set(undefined);
         });
     }
