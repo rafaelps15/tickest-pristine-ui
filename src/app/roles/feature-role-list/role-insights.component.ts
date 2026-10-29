@@ -22,7 +22,7 @@ export class RoleInsightsComponent {
   /** A lista falhou ao carregar — o card mostra "—" e o motivo em vez de números. */
   readonly failed = input(false);
 
-  /** Quantidade de funções sem nenhuma permissão atribuída — não dão acesso a nada administrativo. */
+  /** Quantidade de funções sem nenhuma permissão atribuída — não liberam nada pra quem as tem. */
   readonly rolesWithoutPermissions = computed(() =>
     this.roles().filter(role => role.permissionCodes.length === 0).length);
 }

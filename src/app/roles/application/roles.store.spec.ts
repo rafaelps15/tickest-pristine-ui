@@ -23,7 +23,7 @@ describe('RolesStore', () => {
   let permissionDataService: jasmine.SpyObj<PermissionDataService>;
 
   beforeEach(() => {
-    roleDataService = jasmine.createSpyObj('RoleDataService', ['getAll', 'create', 'assignPermissions']);
+    roleDataService = jasmine.createSpyObj('RoleDataService', ['getAll', 'assignPermissions']);
     permissionDataService = jasmine.createSpyObj('PermissionDataService', ['getAll']);
     roleDataService.getAll.and.returnValue(of(roles));
     permissionDataService.getAll.and.returnValue(of(permissions));
@@ -53,6 +53,26 @@ describe('RolesStore', () => {
     expect(store.permissions()).toEqual(permissions);
   });
 
+  it('expõe o erro de carga das funções no listState, com a lista vazia', async () => {
+    roleDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.listState().error).toBeTruthy();
+    expect(store.roles()).toEqual([]);
+  });
+
+  it('expõe o erro de carga do catálogo de permissões no permissionsState', async () => {
+    permissionDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.loadPermissions();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.permissionsState().error).toBeTruthy();
+    expect(store.permissions()).toEqual([]);
+  });
+
   it('agrupa as permissões por grupo, preservando a ordem de chegada', async () => {
     store.loadPermissions();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -76,28 +96,6 @@ describe('RolesStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.permissionName('codigo:inexistente')).toBe('codigo:inexistente');
-  });
-
-  it('cria uma role e recarrega a listagem em caso de sucesso', async () => {
-    roleDataService.create.and.returnValue(of('new-id'));
-    const onSuccess = jasmine.createSpy('onSuccess');
-
-    store.create('Supervisor', onSuccess);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(roleDataService.create).toHaveBeenCalledWith('Supervisor');
-    expect(onSuccess).toHaveBeenCalled();
-    expect(store.createError()).toBeNull();
-  });
-
-  it('expõe a mensagem de erro quando a criação de role falhar, sem vazar pra fora do modal', async () => {
-    roleDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
-
-    store.create('Agent');
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.createError()).toBeTruthy();
-    expect(store.listState().error).toBeNull();
   });
 
   it('atribui permissões a uma role e recarrega a listagem em caso de sucesso', async () => {
@@ -135,17 +133,6 @@ describe('RolesStore', () => {
     expect(store.listState().error).toBeNull();
   });
 
-  it('limpa o erro de criação ao chamar clearCreateError', async () => {
-    roleDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
-    store.create('Agent');
-    await TestBed.inject(ApplicationRef).whenStable();
-    expect(store.createError()).toBeTruthy();
-
-    store.clearCreateError();
-
-    expect(store.createError()).toBeNull();
-  });
-
   it('limpa o erro de atribuição de permissões ao chamar clearAssignPermissionsError', async () => {
     roleDataService.assignPermissions.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     store.assignPermissions('Agent', ['tickets:manage']);
@@ -155,18 +142,5 @@ describe('RolesStore', () => {
     store.clearAssignPermissionsError();
 
     expect(store.assignPermissionsError()).toBeNull();
-  });
-
-  it('marca "criando" durante a criação e solta no fim, com sucesso ou erro', async () => {
-    const response = new Subject<string>();
-    roleDataService.create.and.returnValue(response.asObservable());
-
-    store.create('Supervisor');
-    expect(store.creating()).toBeTrue();
-
-    response.next('new-id');
-    response.complete();
-    await TestBed.inject(ApplicationRef).whenStable();
-    expect(store.creating()).toBeFalse();
   });
 });

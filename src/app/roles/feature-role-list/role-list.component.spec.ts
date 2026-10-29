@@ -5,56 +5,57 @@ import { RoleListComponent } from './role-list.component';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
-import { ConfirmDialogService } from '../../shared';
+import { ConfirmDialogService, ToastService } from '../../shared';
 
-const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('RoleListComponent', () => {
   const adminRole: Role = { name: 'Admin', permissionCodes: ['users:read'], isDefault: false, isAdministrator: true };
   const agentRole: Role = { name: 'Agent', permissionCodes: ['tickets:manage'], isDefault: false, isAdministrator: false };
+  const supervisorRole: Role = { name: 'Supervisor', permissionCodes: ['tickets:manage', 'users:read'], isDefault: false, isAdministrator: false };
   const permissions: Permission[] = [
     { code: 'tickets:manage', name: 'Gerenciar tickets', description: 'Gerencia todos os tickets', group: 'Chamados', isAdministrative: false },
+    { code: 'tickets:create', name: 'Abrir tickets', description: 'Abre novos tickets', group: 'Chamados', isAdministrative: false },
     { code: 'users:read', name: 'Ver usuários', description: 'Lista e visualiza usuários', group: 'Usuários', isAdministrative: true }
   ];
+  const ticketPermissions = [permissions[0], permissions[1]];
 
   /** Cria um store falso com signals reais, para o template reagir como no store verdadeiro. */
   function createStoreFake() {
     return {
       roles: signal<Role[]>([adminRole, agentRole]),
       listState: signal({ data: [adminRole, agentRole], loading: false, error: null as string | null }),
-      createError: signal<string | null>(null),
       assignPermissionsError: signal<string | null>(null),
       assigningPermissions: signal(false),
-      creating: signal(false),
       permissions: signal<Permission[]>(permissions),
-      permissionGroups: signal([{ title: 'Chamados', permissions: [permissions[0]] }, { title: 'Usuários', permissions: [permissions[1]] }]),
+      permissionsState: signal({ data: permissions, loading: false, error: null as string | null }),
+      permissionGroups: signal([{ title: 'Chamados', permissions: ticketPermissions }, { title: 'Usuários', permissions: [permissions[2]] }]),
       permissionName: jasmine.createSpy('permissionName').and.callFake(
         (code: string) => permissions.find(p => p.code === code)?.name ?? code
       ),
       load: jasmine.createSpy('load'),
       loadPermissions: jasmine.createSpy('loadPermissions'),
-      create: jasmine.createSpy('create'),
       assignPermissions: jasmine.createSpy('assignPermissions'),
-      clearCreateError: jasmine.createSpy('clearCreateError'),
       clearAssignPermissionsError: jasmine.createSpy('clearAssignPermissionsError')
     };
   }
 
   let storeFake: ReturnType<typeof createStoreFake>;
   let confirmDialogServiceFake: jasmine.SpyObj<ConfirmDialogService>;
+  let toastServiceFake: jasmine.SpyObj<ToastService>;
 
   beforeEach(async () => {
-    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     storeFake = createStoreFake();
     confirmDialogServiceFake = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    toastServiceFake = jasmine.createSpyObj('ToastService', ['show']);
 
     await TestBed.configureTestingModule({
       imports: [RoleListComponent],
       providers: [
         provideZonelessChangeDetection(),
         { provide: RolesStore, useValue: storeFake },
-        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake }
+        { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -67,16 +68,40 @@ describe('RoleListComponent', () => {
     expect(storeFake.loadPermissions).toHaveBeenCalled();
   });
 
-  it('mostra a etiqueta de Administrador e desabilita o botão de permissões para a role administradora', async () => {
+  it('não oferece criar função: o back-end não tem esse endpoint', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Nova Função');
+  });
+
+  it('mostra a etiqueta de Administrador e oferece "Ver permissões" pra ele e "Editar permissões" pras demais', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Administrador');
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('tbody .dropdown-item') as NodeListOf<HTMLButtonElement>)
+      .map(button => button.textContent?.trim());
+    expect(labels.filter(label => label === 'Ver permissões').length).toBe(1);
+    expect(labels.filter(label => label === 'Editar permissões').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('tbody .dropdown-item[disabled]')).toBeNull();
+  });
 
-    const buttons = Array.from(fixture.nativeElement.querySelectorAll('tbody button') as NodeListOf<HTMLButtonElement>)
-      .filter(button => button.textContent?.trim() === 'Permissões');
-    expect((buttons[0] as HTMLButtonElement).disabled).toBeTrue();
-    expect((buttons[1] as HTMLButtonElement).disabled).toBeFalse();
+  it('abre as permissões do Administrador só pra consulta, sem salvar', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    fixture.componentInstance.openPermissionsModal(adminRole);
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#rolePermissionsModal') as HTMLElement;
+    expect(modal.textContent).toContain('gerenciadas pelo sistema');
+    const inputs = Array.from(modal.querySelectorAll('.permission-option input') as NodeListOf<HTMLInputElement>);
+    expect(inputs.length).toBeGreaterThan(0);
+    expect(inputs.every(input => input.disabled)).toBeTrue();
+    expect(modal.querySelector('.modal-footer .btn-primary')).toBeNull();
+
+    fixture.componentInstance.togglePermission('users:read', false);
+    fixture.componentInstance.onAssignPermissionsSubmit();
+    expect(storeFake.assignPermissions).not.toHaveBeenCalled();
   });
 
   it('mostra o nome amigável das permissões em vez do código', async () => {
@@ -106,27 +131,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.clearAssignPermissionsError).toHaveBeenCalled();
   });
 
-  it('limpa o erro de criação ao abrir o modal de nova função', async () => {
-    const fixture = TestBed.createComponent(RoleListComponent);
-    await fixture.whenStable();
-
-    fixture.componentInstance.openCreateModal();
-
-    expect(storeFake.clearCreateError).toHaveBeenCalled();
-  });
-
-  it('mostra o erro de criação dentro do modal de nova função, não na página', async () => {
-    const fixture = TestBed.createComponent(RoleListComponent);
-    fixture.componentInstance.openCreateModal();
-    storeFake.createError.set('Já existe uma função com esse nome.');
-    await fixture.whenStable();
-
-    const modalBody = fixture.nativeElement.querySelector('#roleCreateModal .modal-body');
-    expect(modalBody.textContent).toContain('Já existe uma função com esse nome.');
-  });
-
   it('mostra o erro de atribuição de permissões dentro do modal de permissões, não na página', async () => {
-    storeFake.assignPermissionsError.set('Você não tem permissão para fazer isso.');
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(agentRole);
     storeFake.assignPermissionsError.set('Você não tem permissão para fazer isso.');
@@ -137,12 +142,7 @@ describe('RoleListComponent', () => {
   });
 
   it('mostra no máximo 2 badges de permissão e agrupa o restante em "+N"', async () => {
-    const roleWithManyPermissions: Role = {
-      name: 'Supervisor',
-      permissionCodes: ['tickets:manage', 'users:read', 'tickets:create'],
-      isDefault: false,
-      isAdministrator: false
-    };
+    const roleWithManyPermissions: Role = { ...supervisorRole, permissionCodes: ['tickets:manage', 'users:read', 'tickets:create'] };
     storeFake.roles.set([roleWithManyPermissions]);
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
@@ -150,6 +150,60 @@ describe('RoleListComponent', () => {
     expect(fixture.componentInstance.visiblePermissionCodes(roleWithManyPermissions)).toEqual(['tickets:manage', 'users:read']);
     expect(fixture.componentInstance.hiddenPermissionCount(roleWithManyPermissions)).toBe(1);
     expect(fixture.nativeElement.textContent).toContain('+1');
+  });
+
+  it('o "+N" esconde o número do leitor de tela e entrega os nomes ocultos em texto', async () => {
+    storeFake.roles.set([{ ...supervisorRole, permissionCodes: ['tickets:manage', 'tickets:create', 'users:read'] }]);
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    const cell = fixture.nativeElement.querySelector('td[data-label="Permissões"]') as HTMLElement;
+    expect(cell.querySelector('[aria-hidden="true"]')?.textContent).toBe('+1');
+    expect(cell.querySelector('.visually-hidden')?.textContent).toContain('Ver usuários');
+  });
+
+  it('na recarga com a lista na tela, mantém as linhas esmaecidas em vez do spinner', async () => {
+    storeFake.listState.set({ data: [adminRole, agentRole], loading: true, error: null });
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
+    expect(fixture.nativeElement.textContent).toContain('Agent');
+    expect(fixture.nativeElement.querySelector('app-loading-state')).toBeNull();
+  });
+
+  it('falha de carga sem lista não vira o vazio "nenhuma função" e oferece tentar de novo, sem vermelho', async () => {
+    storeFake.roles.set([]);
+    storeFake.listState.set({ data: [], loading: false, error: 'Erro ao carregar funções' });
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Não foi possível carregar as funções.');
+    expect(text).not.toContain('Nenhuma função disponível');
+    expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+
+    (fixture.nativeElement.querySelector('.role-notice button') as HTMLButtonElement).click();
+    expect(storeFake.load).toHaveBeenCalledTimes(2);
+  });
+
+  it('recarga que falhou com a lista na tela mantém as linhas e avisa acima delas', async () => {
+    storeFake.listState.set({ data: [adminRole, agentRole], loading: false, error: 'Erro ao carregar funções' });
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('mostrando a última carregada');
+    expect(fixture.nativeElement.textContent).toContain('Agent');
+  });
+
+  it('sem nenhuma função, explica de onde elas vêm sem prometer criar uma', async () => {
+    storeFake.roles.set([]);
+    storeFake.listState.set({ data: [], loading: false, error: null });
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nenhuma função disponível.');
+    expect(fixture.nativeElement.querySelector('app-empty-state button')).toBeNull();
   });
 
   it('envia a atribuição de permissões marcadas', async () => {
@@ -190,38 +244,19 @@ describe('RoleListComponent', () => {
     expect(storeFake.assignPermissions).not.toHaveBeenCalled();
   });
 
-  it('o botão "Salvar" do modal de permissões fica desabilitado durante a atribuição', async () => {
-    storeFake.assigningPermissions.set(true);
-    const fixture = TestBed.createComponent(RoleListComponent);
-    fixture.componentInstance.openPermissionsModal(agentRole);
-    await fixture.whenStable();
-
-    const button = fixture.nativeElement.querySelector('#rolePermissionsModal button.btn-primary') as HTMLButtonElement;
-    expect(button.disabled).toBeTrue();
-  });
-
-  it('rejeita uma cor clara demais para o badge, sem salvar nem alterar a cor atual', async () => {
-    const fixture = TestBed.createComponent(RoleListComponent);
-    await fixture.whenStable();
-
-    fixture.componentInstance.onPickColor('Agent', '#ffffff');
-
-    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
-    expect(fixture.componentInstance.colorContrastWarning()).toContain('contraste');
-  });
-
   it('pede confirmação extra ao remover uma permissão administrativa já atribuída', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
-    fixture.componentInstance.openPermissionsModal(adminRole);
+    fixture.componentInstance.openPermissionsModal(supervisorRole);
     fixture.componentInstance.togglePermission('users:read', false);
     fixture.componentInstance.onAssignPermissionsSubmit();
 
     expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
     const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0];
     expect(options.message).toContain('Ver usuários');
-    expect(storeFake.assignPermissions).toHaveBeenCalledWith('Admin', [], jasmine.any(Function));
+    expect(options.message).not.toContain('não só você');
+    expect(storeFake.assignPermissions).toHaveBeenCalledWith('Supervisor', ['tickets:manage'], jasmine.any(Function));
   });
 
   it('não envia a remoção de permissão administrativa quando a confirmação é cancelada', async () => {
@@ -229,113 +264,105 @@ describe('RoleListComponent', () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
-    fixture.componentInstance.openPermissionsModal(adminRole);
+    fixture.componentInstance.openPermissionsModal(supervisorRole);
     fixture.componentInstance.togglePermission('users:read', false);
     fixture.componentInstance.onAssignPermissionsSubmit();
 
     expect(storeFake.assignPermissions).not.toHaveBeenCalled();
   });
 
-  it('envia a criação de uma nova role quando o formulário for válido', async () => {
+  it('o botão "Salvar" do modal de permissões fica desabilitado durante a atribuição, assim como o "Cancelar"', async () => {
+    storeFake.assigningPermissions.set(true);
     const fixture = TestBed.createComponent(RoleListComponent);
-    fixture.componentInstance.openCreateModal();
+    fixture.componentInstance.openPermissionsModal(agentRole);
+    fixture.componentInstance.togglePermission('users:read', true);
     await fixture.whenStable();
 
-    fixture.componentInstance.createForm.setValue({ name: 'Supervisor' });
-    fixture.componentInstance.onCreateSubmit();
-
-    expect(storeFake.create).toHaveBeenCalledWith('Supervisor', jasmine.any(Function));
+    const footer = fixture.nativeElement.querySelector('#rolePermissionsModal .modal-footer') as HTMLElement;
+    expect((footer.querySelector('.btn-primary') as HTMLButtonElement).disabled).toBeTrue();
+    expect((footer.querySelector('.btn-outline-secondary') as HTMLButtonElement).disabled).toBeTrue();
   });
 
-  it('salva a cor escolhida no modal ao criar a role com sucesso', async () => {
+  it('no diálogo de permissões, "Salvar" só habilita com mudança e o rodapé resume o que mudou', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
+    fixture.componentInstance.openPermissionsModal(agentRole);
     await fixture.whenStable();
 
-    fixture.componentInstance.createForm.setValue({ name: 'Supervisor' });
-    fixture.componentInstance.createColor.set('#2e7d14');
-    fixture.componentInstance.onCreateSubmit();
+    const save = () => fixture.nativeElement.querySelector('#rolePermissionsModal .modal-footer .btn-primary') as HTMLButtonElement;
+    expect(save().disabled).toBeTrue();
+    expect(fixture.componentInstance.permissionChangeSummary()).toBe('Nenhuma alteração');
 
-    const onSuccess = storeFake.create.calls.mostRecent().args[1] as () => void;
-    onSuccess();
+    fixture.componentInstance.togglePermission('tickets:create', true);
+    fixture.componentInstance.togglePermission('users:read', true);
+    fixture.componentInstance.togglePermission('tickets:manage', false);
+    await fixture.whenStable();
 
-    expect(fixture.componentInstance.roleColor('Supervisor')).toBe('#2e7d14');
+    expect(save().disabled).toBeFalse();
+    expect(fixture.componentInstance.permissionChangeSummary()).toBe('2 adicionadas e 1 removida');
+    expect(fixture.nativeElement.querySelectorAll('#rolePermissionsModal .permission-option.is-changed').length).toBe(3);
   });
 
-  it('não cria a role e avisa dentro do modal quando a cor escolhida deixaria o badge ilegível', async () => {
+  it('"Todas" marca o grupo inteiro e fica indeterminada com só parte dele marcada', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
-    fixture.componentInstance.openCreateModal();
+    fixture.componentInstance.openPermissionsModal(agentRole);
     await fixture.whenStable();
 
-    fixture.componentInstance.createForm.setValue({ name: 'Supervisor' });
-    fixture.componentInstance.createColor.set('#ffff99');
-    await fixture.whenStable();
-    fixture.componentInstance.onCreateSubmit();
+    const groupBox = fixture.nativeElement.querySelector('#perm-group-0') as HTMLInputElement;
+    expect(groupBox.indeterminate).toBeTrue();
 
-    expect(storeFake.create).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('#roleCreateColor-error')?.textContent).toContain('ilegível');
-    expect(fixture.nativeElement.querySelector('#roleCreateColor').getAttribute('aria-invalid')).toBe('true');
+    groupBox.checked = true;
+    groupBox.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.isChecked('tickets:create')).toBeTrue();
+    expect(fixture.componentInstance.groupSelection(ticketPermissions)).toBe('all');
+
+    fixture.componentInstance.toggleGroup(ticketPermissions, false);
+    expect(fixture.componentInstance.groupSelection(ticketPermissions)).toBe('none');
   });
 
-  it('escolhe e remove a cor de uma função já existente', async () => {
+  it('no diálogo de permissões sem catálogo, mostra o erro com "Tentar novamente" e trava o "Salvar"', async () => {
+    storeFake.permissions.set([]);
+    storeFake.permissionGroups.set([]);
+    storeFake.permissionsState.set({ data: [], loading: false, error: 'Erro ao carregar permissões' });
     const fixture = TestBed.createComponent(RoleListComponent);
+    fixture.componentInstance.openPermissionsModal(agentRole);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
+    const modal = fixture.nativeElement.querySelector('#rolePermissionsModal') as HTMLElement;
+    expect(modal.textContent).toContain('Não foi possível carregar a lista de permissões.');
+    expect((modal.querySelector('.modal-footer .btn-primary') as HTMLButtonElement).disabled).toBeTrue();
 
-    fixture.componentInstance.onPickColor('Agent', '#ff3e1d');
-    expect(fixture.componentInstance.roleColor('Agent')).toBe('#ff3e1d');
-
-    fixture.componentInstance.onClearColor('Agent');
-    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
+    (modal.querySelector('.role-notice button') as HTMLButtonElement).click();
+    expect(storeFake.loadPermissions).toHaveBeenCalledTimes(2);
   });
 
-  it('escolhe a cor no diálogo "Cor do badge", com prévia, e só mostra "Remover cor" quando há uma cor customizada', async () => {
+  it('pede confirmação antes de descartar marcações não salvas, e fecha direto sem mudanças', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(RoleListComponent);
+    fixture.componentInstance.openPermissionsModal(agentRole);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('tbody input[type="color"]')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Remover cor');
-
-    fixture.componentInstance.openColorModal(agentRole);
+    fixture.componentInstance.requestClosePermissions();
     await fixture.whenStable();
-    const input = fixture.nativeElement.querySelector('#roleColorInput') as HTMLInputElement;
-    input.value = '#2e7d14';
-    input.dispatchEvent(new Event('input'));
-    await fixture.whenStable();
-    expect((fixture.nativeElement.querySelector('#roleColorModal .badge-role-custom') as HTMLElement).style.getPropertyValue('--role-color')).toBe('#2e7d14');
+    expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#rolePermissionsModal')).toBeNull();
 
-    fixture.componentInstance.onSaveColor();
+    fixture.componentInstance.openPermissionsModal(agentRole);
+    fixture.componentInstance.togglePermission('users:read', true);
+    fixture.componentInstance.requestClosePermissions();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.roleColor('Agent')).toBe('#2e7d14');
-    expect(fixture.nativeElement.querySelector('#roleColorModal')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('Remover cor');
+    expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#rolePermissionsModal')).not.toBeNull();
   });
 
-  it('mantém o diálogo de cor aberto, com o aviso dentro dele, quando a cor deixaria o badge ilegível', async () => {
+  it('não oferece cor própria para a função: o back-end não guarda cor, e o navegador também não', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
-    fixture.componentInstance.openColorModal(agentRole);
-    fixture.componentInstance.colorDraft.set('#ffffff');
     await fixture.whenStable();
 
-    fixture.componentInstance.onSaveColor();
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.querySelector('#roleColorModal')?.textContent).toContain('contraste');
-    expect(fixture.componentInstance.roleColor('Agent')).toBeNull();
-  });
-
-  it('na Nova Função, "Criar" fica habilitado e um envio vazio diz o que falta', async () => {
-    const fixture = TestBed.createComponent(RoleListComponent);
-    fixture.componentInstance.openCreateModal();
-    await fixture.whenStable();
-
-    const submit = fixture.nativeElement.querySelector('#roleCreateModal button[type="submit"]') as HTMLButtonElement;
-    expect(submit.disabled).toBeFalse();
-    submit.click();
-    await fixture.whenStable();
-
-    expect(storeFake.create).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.querySelector('#roleCreateModal').textContent).toContain('Dê um nome à função.');
+    expect(fixture.nativeElement.textContent).not.toContain('Cor do badge');
+    expect(fixture.nativeElement.querySelector('input[type="color"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.role-color-swatch')).toBeNull();
+    expect(localStorage.getItem('tickest.roleColors')).toBeNull();
   });
 });

@@ -15,11 +15,6 @@ export class RoleDataService {
     return this.http.get<Role[]>(this.apiUrl);
   }
 
-  /** Cria uma nova role (POST /roles). */
-  create(name: string): Observable<string> {
-    return this.http.post<string>(this.apiUrl, { name });
-  }
-
   /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions). */
   assignPermissions(roleName: string, permissionCodes: string[]): Observable<void> {
     return this.http.put<void>(`${this.apiUrl}/${encodeURIComponent(roleName)}/permissions`, { permissionCodes });

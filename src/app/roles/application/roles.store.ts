@@ -9,20 +9,19 @@ import { RoleDataService } from '../infrastructure/role.data.service';
 import { PermissionDataService } from '../infrastructure/permission.data.service';
 import { extractErrorMessage, valueOf } from '../../shared';
 
-/** Store de roles: listagem, criação e atribuição de permissões (RBAC: Users -> Roles -> Permissions). */
+/**
+ * Store de roles: listagem e atribuição de permissões (RBAC: Users -> Roles -> Permissions). As
+ * funções são um catálogo fixo do back-end (identificadas pelo nome) — não há criar nem excluir.
+ */
 export const RolesStore = signalStore(
   { providedIn: 'root' },
   withState({
-    /** Erro de criação de role — exibido dentro do modal "Nova Função", não na página. */
-    createError: null as string | null,
     /** Erro de atribuição de permissões — exibido dentro do modal "Permissões", não na página. */
     assignPermissionsError: null as string | null,
     /** Erro ao carregar o catálogo de permissões (GET /permissions). */
     permissionsLoadError: null as string | null,
     /** Em voo uma atribuição de permissões (PUT /roles/{roleName}/permissions) — evita duplo submit. */
-    assigningPermissions: false,
-    /** Em voo a criação de uma função (POST /roles) — trava o "Criar" e o fechamento do diálogo. */
-    creating: false
+    assigningPermissions: false
   }),
   withProps(() => ({
     _roleDataService: inject(RoleDataService),
@@ -94,31 +93,9 @@ export const RolesStore = signalStore(
       store._permissionsResource.reload();
     },
 
-    /** Limpa o erro de criação — chamado ao abrir o modal "Nova Função", pra não mostrar o erro de uma tentativa anterior. */
-    clearCreateError(): void {
-      patchState(store, { createError: null });
-    },
-
     /** Limpa o erro de atribuição de permissões — chamado ao abrir o modal "Permissões" de outra role. */
     clearAssignPermissionsError(): void {
       patchState(store, { assignPermissionsError: null });
-    },
-
-    /** Cria uma nova role (POST /roles) e recarrega a listagem em caso de sucesso. */
-    create(name: string, onSuccess?: () => void): void {
-      patchState(store, { creating: true });
-      store._roleDataService.create(name).pipe(
-        finalize(() => patchState(store, { creating: false }))
-      ).subscribe({
-        next: () => {
-          patchState(store, { createError: null });
-          store._listResource.reload();
-          onSuccess?.();
-        },
-        error: (err: HttpErrorResponse) => {
-          patchState(store, { createError: extractErrorMessage(err, {}, 'Erro ao criar função') });
-        }
-      });
     },
 
     /** Substitui as permissões associadas a uma role (PUT /roles/{roleName}/permissions) e recarrega a listagem em caso de sucesso. */
