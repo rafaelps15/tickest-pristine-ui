@@ -14,7 +14,7 @@
         <h3 class="section-label mb-1">Gráfico da operação</h3>
         <p class="small text-muted mb-2"><strong>A frase de cima</strong> resume a semana em linguagem simples (ex.: "12 chamados a mais (+18%) nos 7 dias até ontem que nos 7 anteriores"). Com poucos chamados, ela não aparece.</p>
         <p class="small text-muted mb-2"><strong>A barra colorida</strong> mostra como os chamados estão divididos agora: abertos, em andamento, resolvidos e fechados, com número e percentual. Cancelados ficam fora da barra, logo abaixo, pra a soma bater com o total.</p>
-        <p class="small text-muted mb-0"><strong>As barras por período</strong> contam os chamados criados em cada dia, semana ou mês (botões Dia, Semana e Mês). Passe o mouse pra ver os números; clique num período ou num status pra abrir a lista. O botão de tabela, ao lado de Mês, mostra os mesmos números em texto.</p>
+        <p class="small text-muted mb-0"><strong>As barras por período</strong> contam os chamados criados em cada dia, semana ou mês (botões Dia, Semana e Mês)@if (flowFilteredAvailable()) { e, ao lado, as resoluções do período — um chamado reaberto e resolvido de novo conta outra vez}. Num período de mais de um ano, "Dia" fica indisponível. Passe o mouse pra ver os números; clique num período ou num status pra abrir a lista. O botão de tabela, ao lado de Mês, mostra os mesmos números em texto.</p>
       </section>
 
       @if (showOperation()) {
@@ -32,6 +32,13 @@
           <section>
             <h3 class="section-label mb-1">SLA</h3>
             <p class="small text-muted mb-0">O número grande diz quantos dos chamados resolvidos cumpriram o prazo. Os cards mostram os ativos <strong>em risco</strong> (já usaram 75% do prazo, ainda dentro dele) e <strong>no prazo</strong> (com folga), e os resolvidos <strong>cumpridos</strong> e <strong>com atraso</strong>.</p>
+          </section>
+        }
+
+        @if (timesAvailable()) {
+          <section>
+            <h3 class="section-label mb-1">Tempos de atendimento</h3>
+            <p class="small text-muted mb-0">Quanto demora a <strong>primeira resposta</strong> (da abertura até a primeira mensagem de quem atende) e a <strong>resolução</strong> (da abertura até a primeira vez que o chamado foi resolvido), contados em horário útil do plano de SLA. O número grande é a mediana — metade dos chamados levou menos que isso —, que não se deixa puxar por um caso extremo; a média fica ao lado. Com poucos chamados na conta, aparece "Dados insuficientes" em vez de um número enganoso.@if (filteredAvailable()) { Com período no escopo "Com filtros", entram os respondidos ou resolvidos nesse período.}</p>
           </section>
         }
 

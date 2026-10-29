@@ -24,7 +24,7 @@
     <!-- Só o "Atualizado agora" é anunciado, nunca os números (que mudariam a cada 2 min). -->
     <span class="visually-hidden" aria-live="polite">{{ liveAnnouncement() }}</span>
   </div>
-  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" [filteredAvailable]="filteredAvailable()" [flowFilteredAvailable]="flowFilteredAvailable()" />
+  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" [filteredAvailable]="filteredAvailable()" [flowFilteredAvailable]="flowFilteredAvailable()" [timesAvailable]="features.averageTimes" />
   @if (!isAdministrative()) {
     <a pageActions class="btn btn-primary" routerLink="/tickets/novo">
       <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
@@ -56,7 +56,7 @@
   <app-dashboard-hero-chart class="d-block mb-4"
                             [showScope]="showOperation()" [scope]="chartScope()" [filteredAvailable]="filteredAvailable()" [flowFiltered]="flowScope() === 'filtered'"
                             [insight]="insight()" [composition]="composition()" [compositionState]="countsState()" [statusLinks]="statusLinks()"
-                            [points]="flowPoints()" [groupBy]="flowGroupBy()" [flowState]="flowState()" [bucketLink]="bucketLink()"
+                            [points]="flowPoints()" [groupBy]="flowGroupBy()" [unavailableGroupings]="unavailableGroupings()" [flowState]="flowState()" [bucketLink]="bucketLink()"
                             [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()" [range]="scope()"
                             (scopeChange)="setChartScope($event)" (groupByChange)="setGroupBy($event)"
                             [compositionErrorElsewhere]="true" (retryFlow)="reloadFlow()" />
@@ -120,7 +120,7 @@
           </section>
         }
         @if (features.averageTimes) {
-          <app-dashboard-times [announce]="false" [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesError()"
+          <app-dashboard-times [announce]="false" [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesFailed() ? operation.timesError() : null"
                                [hasPeriod]="hasPeriod()" (retry)="operation.reloadTimes()" />
         } @else {
           <section class="card p-3" aria-labelledby="timesTitle">

@@ -53,9 +53,19 @@ export function formatBusinessMinutes(minutes: number): string {
         <!-- Falha técnica em tom neutro: vermelho fica pro risco operacional (SLA vencido). -->
         <div class="card px-3 py-2"><app-dashboard-notice kind="error" [text]="error()!" (retry)="retry.emit()" /></div>
       } @else if (loading() && !times()) {
-        <p class="text-muted small mb-0" role="status">
-          <span class="spinner-border spinner-border-sm text-primary me-2" aria-hidden="true"></span>Carregando os tempos de atendimento…
-        </p>
+        <!-- Esqueleto no formato dos dois cards, como nos grupos de números: a tela não pula quando os tempos chegam. -->
+        <div class="row g-3" role="status">
+          <span class="visually-hidden">Carregando os tempos de atendimento…</span>
+          @for (key of skeletonKeys; track key) {
+            <div class="col-12 col-md-6">
+              <div class="card times-skeleton" aria-hidden="true">
+                <span class="tk-skeleton times-skeleton-label"></span>
+                <span class="tk-skeleton times-skeleton-value"></span>
+                <span class="tk-skeleton times-skeleton-hint"></span>
+              </div>
+            </div>
+          }
+        </div>
       } @else if (times(); as data) {
         <!-- Numa recarga, os tempos ficam como estão: o indicador de atualização é o do cabeçalho da tela. -->
         <div class="row g-3">
@@ -91,6 +101,19 @@ export function formatBusinessMinutes(minutes: number): string {
       }
     </section>
   `,
+  styles: `
+    .times-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1.25rem;
+      min-height: 8.5rem;
+    }
+
+    .times-skeleton-label { width: 40%; height: 0.75rem; }
+    .times-skeleton-value { width: 30%; height: 1.75rem; }
+    .times-skeleton-hint { width: 70%; height: 0.75rem; }
+  `
 })
 export class DashboardTimesComponent {
   /** Tempos do recorte, ou null enquanto não há resposta. */
@@ -109,6 +132,9 @@ export class DashboardTimesComponent {
 
   /** "Tentar novamente". */
   readonly retry = output<void>();
+
+  /** Um esqueleto por card de tempo (primeira resposta e resolução). */
+  protected readonly skeletonKeys = ['firstResponse', 'resolution'];
 
   /** O que entra na conta, conforme o período. */
   readonly description = computed(() => this.hasPeriod()

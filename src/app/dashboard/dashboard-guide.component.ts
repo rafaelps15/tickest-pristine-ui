@@ -39,6 +39,8 @@ export class DashboardGuideComponent {
   readonly filteredAvailable = input(false);
   /** O gráfico por período também segue os filtros (spec 028). */
   readonly flowFilteredAvailable = input(false);
+  /** Os tempos médios de atendimento já estão no ar (spec 027). */
+  readonly timesAvailable = input(false);
 
   /** O diálogo está aberto. */
   readonly open = signal(false);

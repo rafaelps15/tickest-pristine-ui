@@ -6,11 +6,36 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketDashboardOverview, TicketDashboardScope } from '../entities/ticket-dashboard';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
-import { DASHBOARD_FEATURES, SessionService, extractErrorMessage, previousIsoRange } from '../../shared';
+import { TicketAverageTimes } from '../entities/ticket-average-times';
+import { DASHBOARD_FEATURES, SessionService, extractErrorMessage, isoRangeDays, previousIsoRange } from '../../shared';
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
 function widgetError(error: unknown, fallback: string): string | null {
   return error ? extractErrorMessage(error as HttpErrorResponse, {}, fallback) : null;
+}
+
+/** Máximo de pontos que o gráfico de volume aceita (GET /tickets/stats/volume, spec 028, DEC-6). */
+const VOLUME_MAX_POINTS = 366;
+
+/**
+ * Agrupamentos que cabem no período do recorte: dia a dia num período de mais de 366 dias passa do
+ * limite de pontos do back-end (o mesmo vale pra semana em mais de 366 semanas). Sem início, o
+ * back-end usa a janela padrão, que sempre cabe; sem fim, o fim é hoje.
+ */
+function volumeGroupingsThatFit(scope: TicketDashboardScope): TicketVolumeGrouping[] {
+  if (!scope.from) return ['Day', 'Week', 'Month'];
+  const days = isoRangeDays(scope.from, scope.to ?? new Date().toISOString().slice(0, 10));
+  const fits: TicketVolumeGrouping[] = [];
+  if (days <= VOLUME_MAX_POINTS) fits.push('Day');
+  if (Math.ceil(days / 7) + 1 <= VOLUME_MAX_POINTS) fits.push('Week');
+  fits.push('Month');
+  return fits;
+}
+
+/** O agrupamento pedido, ou o menor que cabe no período quando o pedido passa do limite de pontos. */
+function fittingGrouping(groupBy: TicketVolumeGrouping, scope: TicketDashboardScope): TicketVolumeGrouping {
+  const fits = volumeGroupingsThatFit(scope);
+  return fits.includes(groupBy) ? groupBy : fits[0];
 }
 
 /** Se dois recortes pedem exatamente os mesmos chamados (a ordem dos setores importa pouco, mas vem estável da barra). */
@@ -101,7 +126,7 @@ export const TicketDashboardStore = signalStore(
         params: () => {
           const query = allowed() && store._features.volumeResolved && store.chartScope() === 'filtered' ? base() : null;
           return query
-            ? { groupBy: store.groupBy(), query: { ...query, createdFrom: store.scope().from, createdTo: store.scope().to } }
+            ? { groupBy: fittingGrouping(store.groupBy(), store.scope()), query: { ...query, createdFrom: store.scope().from, createdTo: store.scope().to } }
             : undefined;
         },
         stream: ({ params }) => store._ticketDataService.getVolume(params.groupBy, params.query)
@@ -132,13 +157,26 @@ export const TicketDashboardStore = signalStore(
      */
     previousOverview: computed(() => store._previousOverviewResource.hasValue() ? store._previousOverviewResource.value() : null),
 
-    /** Tempos médios do recorte, ou null. */
-    times: computed(() => store._timesResource.hasValue() ? store._timesResource.value() : null),
+    /** Tempos médios do recorte, ou null; como o agregado, uma atualização que falha mantém os anteriores do mesmo recorte. */
+    times: linkedSignal<{ key: string; value: TicketAverageTimes | null }, TicketAverageTimes | null>({
+      source: () => ({
+        key: JSON.stringify(store.scope()),
+        value: store._timesResource.hasValue() ? store._timesResource.value() : null
+      }),
+      computation: (current, previous) => current.value ?? (previous && previous.source.key === current.key ? previous.value : null)
+    }),
     /** Os tempos médios estão carregando. */
     timesLoading: computed(() => store._timesResource.isLoading()),
     /** Erro dos tempos médios. */
     timesError: computed(() => widgetError(store._timesResource.error(), 'Não foi possível carregar os tempos de atendimento.')),
 
+    /** Agrupamento efetivo do gráfico do recorte: o escolhido, ou o menor que cabe num período longo. */
+    trendGroupBy: computed(() => fittingGrouping(store.groupBy(), store.scope())),
+    /** Agrupamentos que não cabem no período do recorte (o botão fica indisponível). */
+    unavailableGroupings: computed((): TicketVolumeGrouping[] => {
+      const fits = volumeGroupingsThatFit(store.scope());
+      return (['Day', 'Week', 'Month'] as TicketVolumeGrouping[]).filter(option => !fits.includes(option));
+    }),
     /** Pontos do gráfico Criados x Resolvidos, do mais antigo pro mais novo (vazio enquanto não há resposta). */
     trend: computed(() => store._trendResource.hasValue() ? store._trendResource.value() : []),
     /** Já chegou o volume do recorte (numa recarga, os pontos anteriores continuam). */
@@ -158,7 +196,11 @@ export const TicketDashboardStore = signalStore(
     /** O agregado falhou e não há números anteriores pra mostrar (os grupos mostram o erro). */
     overviewFailed: computed(() => store.overviewError() !== null && store.overview() === null),
     /** A última atualização do agregado falhou, mas os números anteriores continuam na tela (velhos). */
-    overviewStale: computed(() => store.overviewError() !== null && store.overview() !== null)
+    overviewStale: computed(() => store.overviewError() !== null && store.overview() !== null),
+    /** Os tempos falharam e não há tempos anteriores pra mostrar. */
+    timesFailed: computed(() => store.timesError() !== null && store.times() === null),
+    /** A última atualização dos tempos falhou, mas os anteriores continuam na tela (velhos). */
+    timesStale: computed(() => store.timesError() !== null && store.times() !== null)
   })),
   withMethods((store) => ({
     /** Troca o recorte de todos os widgets (vindo dos filtros da URL); recorte igual não refaz nada. */

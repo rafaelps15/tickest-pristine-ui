@@ -518,6 +518,10 @@ vizinhos — um papel só pra título de bloco, também nos estados "em breve".
   (spec 026); o fluxo do gráfico, só com o volume do recorte (spec 028). Entre as duas, o rodapé do
   gráfico diz "Números com os filtros; o fluxo ainda é o da empresa toda", e o clique num período
   abre a lista sem os filtros, pra bater com a barra.
+- **Resolvidos no fluxo (spec 028):** a série verde conta resoluções no período (um chamado reaberto
+  e resolvido de novo conta outra vez), não o status atual — o Guia diz isso. O back-end aceita até
+  366 pontos: num período de mais de um ano, "Dia" fica `aria-disabled` com "Período longo demais" e
+  o gráfico pede o menor agrupamento que cabe (semana), sem erro.
 - **Abaixo da dobra:** Central de atenção e Alertas de SLA lado a lado; depois SLA detalhado e tempos
   (quem atende a fila) ou "Seus chamados" (quem abre), e as Ações Rápidas.
 - **Um número, um lugar:** "Atrasados" mora só no topo (sexto KPI); a Central mostra críticos, sem
@@ -527,12 +531,14 @@ vizinhos — um papel só pra título de bloco, também nos estados "em breve".
 - **Idade dos números:** "Atualizado há N min" + botão de atualizar nas ações do cabeçalho. A tela
   se atualiza a cada 2 min com a aba visível (pausa com a aba oculta); a recarga mantém os números
   como estão (sem esmaecer) e só gira um indicador discreto no cabeçalho. Uma atualização que falha
-  também mantém os números (incluindo os do agregado) e o cabeçalho diz "Falha ao atualizar · números
+  também mantém os números (incluindo os do agregado e os tempos) e o cabeçalho diz "Falha ao atualizar · números
   das HH:mm"; sem números anteriores, o erro aparece uma vez só (na Central) e os grupos que dependem
   da mesma leitura dizem "Indisponível no momento — veja o aviso acima". O leitor de tela ouve só
   "Atualizado agora", nunca os números.
 - **Tempos:** mediana em destaque (`stat-value`), média ao lado, "horário útil"; abaixo da amostra
-  mínima do back-end, "Dados insuficientes" com quantos entraram na conta.
+  mínima do back-end (`minimumSampleSize`), "Dados insuficientes" com quantos entraram na conta.
+  Carregando, o esqueleto dos dois cards (como nos grupos de números). Com período, entram os
+  respondidos ou resolvidos nele (a data da conclusão, spec 027).
 
 ### Cards de estatística (`<app-stat-card>`, `shared/ui/stat-card`)
 Rótulo, número (`div.stat-value`, nunca heading), legenda e ícone em `.icon-tile` no tom semântico.

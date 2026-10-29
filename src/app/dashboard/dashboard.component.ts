@@ -207,7 +207,11 @@ export class DashboardComponent implements OnInit {
   });
 
   /** Agrupamento do fluxo, do escopo. */
-  protected readonly flowGroupBy = computed(() => this.flowScope() === 'company' ? this.store.groupBy() : this.operation.groupBy());
+  protected readonly flowGroupBy = computed(() => this.flowScope() === 'company' ? this.store.groupBy() : this.operation.trendGroupBy());
+
+  /** Agrupamentos que não cabem no período do recorte (só no fluxo filtrado; a empresa usa as janelas padrão). */
+  protected readonly unavailableGroupings = computed((): TicketVolumeGrouping[] =>
+      this.flowScope() === 'filtered' ? this.operation.unavailableGroupings() : []);
 
   /** Pontos do fluxo como a fonte responde agora (null carregando ou em erro). */
   private readonly livePoints = computed((): TicketVolumePoint[] | null => this.flowScope() === 'company'
@@ -241,7 +245,8 @@ export class DashboardComponent implements OnInit {
   /** A última atualização falhou, mas os números anteriores continuam na tela (velhos). */
   protected readonly staleAfterFailure = computed(() =>
     (this.countsFailed() && this.counts() !== null) || (this.flowFailed() && this.shownPoints() !== null)
-    || (this.filteredAvailable() && this.operation.overviewStale()));
+    || (this.filteredAvailable() && this.operation.overviewStale())
+    || (this.showOperation() && this.features.averageTimes && this.operation.timesStale()));
 
   /** Frase de destaque do gráfico, só com o fluxo carregado. */
   protected readonly insight = computed(() => this.flowState() === 'ready' ? volumeInsight(this.flowPoints(), this.flowGroupBy(), this.features.volumeResolved) : null);

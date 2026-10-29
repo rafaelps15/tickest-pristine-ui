@@ -29,8 +29,11 @@
         <div class="d-flex align-items-center gap-2">
         <div class="btn-group btn-group-sm" role="group" aria-label="Agrupar por dia, semana ou mês">
           @for (option of groupByOptions; track option) {
+            <!-- Fora do limite de pontos: continua na ordem do Tab (aria-disabled), com o motivo à vista no foco. -->
             <button type="button" class="btn" [class.btn-primary]="groupBy() === option" [class.btn-outline-secondary]="groupBy() !== option"
-                    [attr.aria-pressed]="groupBy() === option" (click)="groupByChange.emit(option)">{{ groupByLabels[option] }}</button>
+                    [attr.aria-pressed]="groupBy() === option" [attr.aria-disabled]="unavailableGroupings().includes(option) || null"
+                    [attr.data-tip]="unavailableGroupings().includes(option) ? 'Período longo demais' : null"
+                    (click)="chooseGroupBy(option)">{{ groupByLabels[option] }}@if (unavailableGroupings().includes(option)) {<span class="visually-hidden"> (período longo demais)</span>}</button>
           }
         </div>
         <!-- Só o rótulo muda (sem aria-pressed junto): os dois juntos anunciavam um estado contraditório. -->

@@ -100,6 +100,22 @@ describe('componentes de apresentação do Início', () => {
       expect(chosen).toEqual(['filtered']);
     });
 
+    it('um agrupamento que não cabe no período fica indisponível, diz o motivo e não troca', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('groupBy', 'Week');
+      fixture.componentRef.setInput('unavailableGroupings', ['Day']);
+      const chosen: string[] = [];
+      fixture.componentInstance.groupByChange.subscribe(groupBy => chosen.push(groupBy));
+      await fixture.whenStable();
+
+      const buttons = Array.from(fixture.nativeElement.querySelectorAll('[aria-label="Agrupar por dia, semana ou mês"] button') as NodeListOf<HTMLButtonElement>);
+      expect(buttons[0].getAttribute('aria-disabled')).toBe('true');
+      expect(buttons[0].textContent).toContain('período longo demais');
+      buttons[0].click();
+      buttons[2].click();
+      expect(chosen).toEqual(['Month']);
+    });
+
     it('cada parte indisponível vira "em breve", sem esqueleto e sem repetir o "em breve" dos resolvidos no rodapé', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('compositionState', 'unavailable');

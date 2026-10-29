@@ -21,6 +21,12 @@ describe('DashboardComponent', () => {
     const sla = signal<TicketDashboardSla | null>({ onTimeCount: 3, atRiskCount: 1, breachedCount: 2, metCount: 7, missedCount: 1, notApplicableCount: 0 });
     const attention = signal<TicketDashboardAttention | null>({ breachedCount: 2, criticalCount: 1, unassignedCount: 3 });
     const overviewError = signal<string | null>(null);
+    const times = signal<TicketAverageTimes | null>({
+      firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
+      resolution: { averageMinutes: null, medianMinutes: null, sampleSize: 4 },
+      minimumSampleSize: 5
+    });
+    const timesError = signal<string | null>(null);
     // O agregado inteiro existe enquanto os três blocos existem (como no store, que os deriva dele).
     const overview = computed((): TicketDashboardOverview | null => {
       const [v, s, a] = [volume(), sla(), attention()];
@@ -36,18 +42,18 @@ describe('DashboardComponent', () => {
       previousOverview: signal<TicketDashboardOverview | null>(null),
       overviewLoading: signal(false),
       overviewError,
-      times: signal<TicketAverageTimes | null>({
-        firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
-        resolution: { averageMinutes: null, medianMinutes: null, sampleSize: 4 },
-        minimumSampleSize: 5
-      }),
+      times,
       timesLoading: signal(false),
-      timesError: signal<string | null>(null),
+      timesError,
+      timesFailed: computed(() => timesError() !== null && times() === null),
+      timesStale: computed(() => timesError() !== null && times() !== null),
       trend: signal<TicketVolumePoint[]>([{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]),
       trendHasValue: signal(true),
       trendLoading: signal(false),
       trendError: signal<string | null>(null),
       groupBy: signal<TicketVolumeGrouping>('Day'),
+      trendGroupBy: signal<TicketVolumeGrouping>('Day'),
+      unavailableGroupings: signal<TicketVolumeGrouping[]>([]),
       chartScope: signal<TicketDashboardChartScope>('company'),
       setScope: jasmine.createSpy('setScope'),
       setGroupBy: jasmine.createSpy('setGroupBy'),

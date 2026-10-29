@@ -36,7 +36,7 @@ describe('DashboardTimesComponent', () => {
       .toBe('Tempos de atendimento: primeira resposta, mediana de 1 h 15 min; resolução, dados insuficientes.');
   });
 
-  it('recarregando com tempos na tela: mantém os cards esmaecidos em vez de voltar ao carregamento', async () => {
+  it('recarregando com tempos na tela: mantém os cards como estão em vez de voltar ao carregamento', async () => {
     const fixture = TestBed.createComponent(DashboardTimesComponent);
     fixture.componentRef.setInput('times', {
       firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
@@ -70,5 +70,6 @@ describe('DashboardTimesComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('[role="status"]').textContent).toContain('Carregando os tempos de atendimento');
+    expect(fixture.nativeElement.querySelectorAll('.times-skeleton').length).toBe(2);
   });
 });

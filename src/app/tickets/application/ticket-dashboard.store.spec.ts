@@ -204,6 +204,21 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getOverview.calls.count()).toBe(overviewCalls);
   });
 
+  it('num período de mais de 366 dias, dia a dia não cabe: o gráfico pede por semana e "Dia" fica indisponível', async () => {
+    const store = createStore();
+    store.setScope({ from: '2025-01-01', to: '2026-10-27' });
+    await settle();
+
+    expect(store.trendGroupBy()).toBe('Week');
+    expect(store.unavailableGroupings()).toEqual(['Day']);
+    expect(dataService.getVolume).toHaveBeenCalledWith('Week', jasmine.objectContaining({ createdFrom: '2025-01-01', createdTo: '2026-10-27' }));
+
+    store.setScope({ from: '2026-10-01', to: '2026-10-27' });
+    await settle();
+    expect(store.trendGroupBy()).toBe('Day');
+    expect(store.unavailableGroupings()).toEqual([]);
+  });
+
   it('sem tickets:manage não pergunta nada à API', async () => {
     permissions = new Set();
     const store = createStore();
@@ -253,6 +268,22 @@ describe('TicketDashboardStore', () => {
 
     expect(store.overview()).toBeNull();
     expect(store.overviewFailed()).toBeTrue();
+  });
+
+  it('uma atualização dos tempos que falha mantém os tempos anteriores do recorte', async () => {
+    const store = createStore();
+    await settle();
+    // A tela lê os tempos o tempo todo; é essa leitura que guarda os últimos bons.
+    expect(store.times()).toEqual(TIMES);
+
+    dataService.getTimes.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    store.reloadTimes();
+    await settle();
+
+    expect(store.timesError()).toBeTruthy();
+    expect(store.times()).toEqual(TIMES);
+    expect(store.timesStale()).toBeTrue();
+    expect(store.timesFailed()).toBeFalse();
   });
 
   it('erro nos tempos e no gráfico aparece em cada um', async () => {

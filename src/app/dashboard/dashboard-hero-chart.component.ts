@@ -73,6 +73,8 @@ export class DashboardHeroChartComponent implements OnDestroy {
   readonly points = input<TicketVolumePoint[]>([]);
   /** Agrupamento atual. */
   readonly groupBy = input<TicketVolumeGrouping>('Day');
+  /** Agrupamentos que não cabem no período escolhido (ex.: dia a dia em mais de um ano) — o botão fica indisponível. */
+  readonly unavailableGroupings = input<TicketVolumeGrouping[]>([]);
   /** Estado do fluxo. */
   readonly flowState = input<DashboardWidgetState>('loading');
   /** Drill-down de um período (o início dele), ou null quando a lista não filtra por data. */
@@ -214,6 +216,12 @@ export class DashboardHeroChartComponent implements OnDestroy {
   protected chooseScope(scope: TicketDashboardChartScope): void {
     if (scope === 'filtered' && !this.filteredAvailable()) return;
     if (scope !== this.scope()) this.scopeChange.emit(scope);
+  }
+
+  /** Clique num agrupamento: um que não cabe no período não faz nada (está `aria-disabled`). */
+  protected chooseGroupBy(option: TicketVolumeGrouping): void {
+    if (this.unavailableGroupings().includes(option) || option === this.groupBy()) return;
+    this.groupByChange.emit(option);
   }
 
   /** Rótulo completo de um período (tabela e tooltip). */
