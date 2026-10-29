@@ -1,39 +1,40 @@
-<app-screen-guide storageKey="tickest.userListGuide.open">
+<!--
+  Fechado até na 1ª visita (como Departamentos): aberto, empurrava a primeira linha da tabela pra
+  1086px num desktop 1366×768 (critique de 2026-10-28). Só o que a tela não diz sozinha.
+-->
+<app-screen-guide storageKey="tickest.userListGuide.open" [defaultOpen]="false">
   <app-guide-section title="Status">
     <ul class="list-unstyled mb-0">
       <li class="d-flex align-items-start gap-2 mb-2">
-        <span class="badge bg-label-success flex-shrink-0"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
-        <span class="small text-muted">Pode entrar no sistema normalmente.</span>
+        <app-user-status-badge status="active" class="flex-shrink-0" />
+        <span class="small text-muted">Já criou a senha e entra no sistema normalmente.</span>
       </li>
       <li class="d-flex align-items-start gap-2 mb-2">
-        <span class="badge bg-label-secondary flex-shrink-0"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
-        <span class="small text-muted">Login bloqueado — pode ser reativado a qualquer momento.</span>
+        <app-user-status-badge status="pending" class="flex-shrink-0" />
+        <span class="small text-muted">Ainda não abriu o link do e-mail. O convite vale 72 horas; vencido, use "Reenviar convite" no ⋮ ou no painel.</span>
       </li>
       <li class="d-flex align-items-start gap-2 mb-0">
-        <span class="badge bg-label-warning flex-shrink-0"><span class="status-dot" aria-hidden="true"></span>Convite pendente</span>
-        <span class="small text-muted">Ainda não ativou a conta pelo link do e-mail. Se o convite venceu, use "Reenviar convite" no ⋮.</span>
+        <app-user-status-badge status="inactive" class="flex-shrink-0" />
+        <span class="small text-muted">Login bloqueado. Pode ser reativado a qualquer momento.</span>
       </li>
     </ul>
   </app-guide-section>
 
   <app-guide-section title="Funções">
     <p class="small text-muted mb-0">
-      Aparecem como badges em índigo, ou na cor escolhida para cada uma na tela <strong>Funções</strong>, onde também são cadastradas. Como não há um conjunto fixo, não há legenda aqui.
+      Badges em índigo; as funções são cadastradas na tela <strong>Funções</strong>.
     </p>
   </app-guide-section>
 
   <app-guide-section title="Linha e seleção">
-    <p class="small text-muted mb-2">
-      <strong>Clicar numa linha</strong> (ou no nome, pelo teclado) abre o painel de informações daquele usuário, com os mesmos atalhos do menu ⋮ (editar, atribuir funções, ativar ou desativar).
-    </p>
     <p class="small text-muted mb-0">
-      <strong>Marcar o checkbox</strong> é pra ação em lote (ex.: desativar vários de uma vez) — são seleções independentes, uma não afeta a outra.
+      O nome abre o painel com as informações e os atalhos daquela pessoa. O checkbox é só pra desativar várias de uma vez; a sua conta e quem já está inativo ficam de fora do lote.
     </p>
   </app-guide-section>
 
   <app-guide-section title="Busca">
     <p class="small text-muted mb-0">
-      O termo de busca não fica salvo no link (por privacidade) — recarregar a página limpa a busca, mas mantém os outros filtros.
+      O termo buscado não vai pro link (por privacidade): recarregar a página limpa a busca e mantém os outros filtros.
     </p>
   </app-guide-section>
 </app-screen-guide>

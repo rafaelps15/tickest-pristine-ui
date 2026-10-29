@@ -8,9 +8,7 @@ import { RolesStore } from '../../roles';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { Role } from '../../roles';
-import { SessionService, ConfirmDialogService, ToastService, setRoleColor } from '../../shared';
-
-const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
+import { SessionService, ConfirmDialogService, ToastService } from '../../shared';
 
 describe('UserListComponent', () => {
   const activeUser: UserSummary = {
@@ -33,8 +31,11 @@ describe('UserListComponent', () => {
       filters: signal<UserFilters>(defaultFilters),
       listState: signal({ loading: false, error: null as string | null }),
       listLoadFailed: signal(false),
-      activeCount: signal<number | null>(10),
-      inactiveCount: signal<number | null>(2),
+      listMutationError: signal<string | null>(null),
+      clearListMutationError: jasmine.createSpy('clearListMutationError'),
+      usersPage: signal<object | undefined>({}),
+      statusCounts: signal<{ totalCount: number; activeCount: number; pendingActivationCount: number; inactiveCount: number } | null>(
+        { totalCount: 12, activeCount: 10, pendingActivationCount: 0, inactiveCount: 2 }),
       summaryLoading: signal(false),
       summaryFailed: signal(false),
       profileError: signal<string | null>(null),
@@ -45,9 +46,13 @@ describe('UserListComponent', () => {
       deactivatingIds: signal<string[]>([]),
       activatingIds: signal<string[]>([]),
       resendingInvitationIds: signal<string[]>([]),
+      countingTicketsIds: signal<string[]>([]),
       resendInvitation: jasmine.createSpy('resendInvitation'),
       countOpenAssignedTickets: jasmine.createSpy('countOpenAssignedTickets')
         .and.callFake((_userId: string, onDone: (count: number | null) => void) => onDone(0)),
+      countOpenAssignedTicketsMany: jasmine.createSpy('countOpenAssignedTicketsMany')
+        .and.callFake((_userIds: string[], onDone: (result: { tickets: number; people: number } | null) => void) => onDone({ tickets: 0, people: 0 })),
+      activateMany: jasmine.createSpy('activateMany'),
       success: signal(false),
       error: signal<string | null>(null),
       createdUserId: signal<string | null>(null),
@@ -84,7 +89,6 @@ describe('UserListComponent', () => {
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
-    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     usersStoreFake = createUsersStoreFake();
     rolesStoreFake = { roles: signal<Role[]>([role]), load: jasmine.createSpy('load') };
     sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id') };
@@ -300,7 +304,7 @@ describe('UserListComponent', () => {
     hitArea.click();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.isSelected('u1')).toBeTrue();
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeTrue();
     expect(fixture.componentInstance.infoPanelUserId()).toBeUndefined();
   });
 
@@ -441,7 +445,7 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.onPanelAssignRoles();
 
-    expect(fixture.componentInstance.isChecked('Agent')).toBeTrue();
+    expect(fixture.componentInstance.selectedRoleNames().has('Agent')).toBeTrue();
   });
 
   it('o atalho de ativar/desativar do painel chama desativar pra um usuário ativo, e ativar pra um inativo', async () => {
@@ -473,7 +477,7 @@ describe('UserListComponent', () => {
     expect(text).toContain('01/01/2026');
   });
 
-  it('mantém a lista atual visível (só esmaecida) ao recarregar com filtro/página, em vez de sumir com tudo', async () => {
+  it('mantém a lista legível ao recarregar com filtro/página (sem esmaecer) e diz "Atualizando…" na barra', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
@@ -481,7 +485,50 @@ describe('UserListComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Maria Silva');
-    expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
+    expect(fixture.nativeElement.querySelector('table').classList).not.toContain('is-refreshing');
+    expect(fixture.nativeElement.querySelector('.user-toolbar-status').textContent).toContain('Atualizando…');
+  });
+
+  it('não dispara a busca sozinha ao abrir a tela (a página vinda do link não volta pra 1)', async () => {
+    jasmine.clock().install();
+    try {
+      const fixture = TestBed.createComponent(UserListComponent);
+      fixture.detectChanges();
+      jasmine.clock().tick(400);
+      fixture.detectChanges();
+
+      expect(usersStoreFake.setSearch).not.toHaveBeenCalled();
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('mostra "Limpar filtros" na barra só quando há filtro aplicado, com a contagem do resultado', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.user-clear')).toBeNull();
+
+    usersStoreFake.filters.set({ status: 'Inactive', page: 1, pageSize: 20 });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.user-clear')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.user-toolbar-status').textContent).toContain('1 usuário encontrado.');
+  });
+
+  it('mantém o período recolhido até ser pedido, e à vista quando já há um aplicado', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#userPeriod')).toBeNull();
+
+    (fixture.nativeElement.querySelector('.user-period-toggle') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('#userPeriod legend').textContent).toContain('Período de cadastro');
+    expect(fixture.nativeElement.querySelector('label[for="userCreatedFrom"]').textContent).toContain('De');
+
+    usersStoreFake.filters.set({ status: 'All', createdFrom: '2026-01-01', page: 1, pageSize: 20 });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.user-period-toggle')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#userPeriod')).not.toBeNull();
   });
 
   it('mostra o spinner no lugar da tabela só quando ainda não há nenhum usuário carregado', async () => {
@@ -605,15 +652,15 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.assignRoles).toHaveBeenCalled();
   });
 
-  it('usa a cor customizada da função quando escolhida (prévia local), e o acento padrão quando não há', async () => {
-    setRoleColor('Agent', '#ff3e1d');
+  it('mostra as funções no badge índigo do sistema, sem cor guardada no navegador', async () => {
+    localStorage.setItem('tickest.roleColors', JSON.stringify({ Agent: '#ff3e1d' }));
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
+    localStorage.removeItem('tickest.roleColors');
 
     const badge = fixture.nativeElement.querySelector('td .badge') as HTMLElement;
-    expect(badge.classList).toContain('badge-role-custom');
-    expect(badge.classList).not.toContain('bg-label-primary');
-    expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
+    expect(badge.classList).toContain('bg-label-primary');
+    expect(badge.style.getPropertyValue('--role-color')).toBe('');
   });
 
   it('busca com debounce de 300ms após parar de digitar', async () => {
@@ -828,7 +875,7 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.openAssignRolesModal(activeUser);
 
-    expect(fixture.componentInstance.isChecked('Agent')).toBeTrue();
+    expect(fixture.componentInstance.selectedRoleNames().has('Agent')).toBeTrue();
   });
 
   it('envia a atribuição de roles marcadas', async () => {
@@ -878,8 +925,8 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     fixture.componentInstance.openCreateModal();
-    expect(fixture.componentInstance.isCreateRoleChecked('Requester')).toBeTrue();
-    expect(fixture.componentInstance.isCreateRoleChecked('Agent')).toBeFalse();
+    expect(fixture.componentInstance.createRoleNames().has('Requester')).toBeTrue();
+    expect(fixture.componentInstance.createRoleNames().has('Agent')).toBeFalse();
 
     fixture.componentInstance.toggleCreateRole('Agent', true);
     fixture.componentInstance.createForm.setValue({
@@ -908,7 +955,7 @@ describe('UserListComponent', () => {
 
     expect(fixture.nativeElement.querySelector('#userCreateModal')).not.toBeNull();
     expect(fixture.componentInstance.createForm.getRawValue().email).toBe('');
-    expect(fixture.componentInstance.isCreateRoleChecked('Agent')).toBeTrue();
+    expect(fixture.componentInstance.createRoleNames().has('Agent')).toBeTrue();
     expect(document.activeElement?.id).toBe('userCreateFirstName');
     expect(fixture.componentInstance.createAnnouncement()).toContain('Convite enviado para Ana Costa');
 
@@ -1033,14 +1080,17 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.deactivate).toHaveBeenCalledWith('u1', jasmine.any(Function));
   });
 
-  it('não oferece "Recarregar lista" para erro de uma ação (recarregar não resolve)', async () => {
-    usersStoreFake.listState.set({ loading: false, error: 'Erro ao desativar usuário' });
+  it('mostra o erro de uma ação em vermelho, sem "Tentar novamente" (recarregar não resolve), e fecha no X', async () => {
+    usersStoreFake.listMutationError.set('Erro ao desativar usuário');
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
 
     const alert = fixture.nativeElement.querySelector('.alert-danger') as HTMLElement;
     expect(alert.textContent).toContain('Erro ao desativar usuário');
-    expect(alert.querySelector('button')).toBeNull();
+    expect(alert.textContent).not.toContain('Tentar novamente');
+    (alert.querySelector('.btn-close') as HTMLButtonElement).click();
+
+    expect(usersStoreFake.clearListMutationError).toHaveBeenCalled();
   });
 
   it('o "Desfazer" do toast de desativação reativa o usuário na hora', async () => {
@@ -1118,9 +1168,11 @@ describe('UserListComponent', () => {
 
     fixture.componentInstance.toggleSelection('u1', true);
     fixture.componentInstance.onBulkDeactivate();
-    (usersStoreFake.deactivateMany.calls.mostRecent().args[1] as (ok: number, failed: number) => void)(0, 1);
+    usersStoreFake.listMutationError.set('Não foi possível desativar: Maria Silva.');
+    (usersStoreFake.deactivateMany.calls.mostRecent().args[1] as (ok: string[], failed: number) => void)([], 1);
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('Nenhum usuário foi desativado. O motivo está acima da lista.', 'danger');
+    // O motivo vai no próprio toast — antes ele mandava "olhar acima da lista".
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Nenhum usuário foi desativado. Não foi possível desativar: Maria Silva.', 'danger');
   });
 
   it('mostra "Convite pendente" com a validade, e "Convite expirado" quando não há link válido', async () => {
@@ -1298,11 +1350,11 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
 
     fixture.componentInstance.toggleSelection('u1', true);
-    expect(fixture.componentInstance.isSelected('u1')).toBeTrue();
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeTrue();
     expect(fixture.componentInstance.selectedCount()).toBe(1);
 
     fixture.componentInstance.toggleSelection('u1', false);
-    expect(fixture.componentInstance.isSelected('u1')).toBeFalse();
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeFalse();
     expect(fixture.componentInstance.selectedCount()).toBe(0);
   });
 
@@ -1385,13 +1437,26 @@ describe('UserListComponent', () => {
     fixture.componentInstance.toggleSelection('u1', true);
     fixture.componentInstance.onBulkDeactivate();
     const onDone = usersStoreFake.deactivateMany.calls.mostRecent().args[1];
-    onDone(1, 0);
+    onDone(['u1'], 0);
 
     expect(fixture.componentInstance.selectedCount()).toBe(0);
-    expect(toastServiceFake.show).toHaveBeenCalledWith('1 usuário desativado.');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('1 usuário desativado.', 'success', { label: 'Desfazer', run: jasmine.any(Function) });
   });
 
-  it('mostra um toast informando falha parcial na desativação em lote', async () => {
+  it('o "Desfazer" do lote reativa só quem foi desativado agora', async () => {
+    confirmDialogServiceFake.confirm.and.returnValue(of(true));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    usersStoreFake.deactivateMany.calls.mostRecent().args[1](['u1'], 1);
+    (toastServiceFake.show.calls.mostRecent().args[2] as { run: () => void }).run();
+
+    expect(usersStoreFake.activateMany).toHaveBeenCalledWith(['u1'], jasmine.any(Function));
+  });
+
+  it('mostra um toast informando falha parcial na desativação em lote, ainda com "Desfazer"', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
@@ -1399,9 +1464,37 @@ describe('UserListComponent', () => {
     fixture.componentInstance.toggleSelection('u1', true);
     fixture.componentInstance.onBulkDeactivate();
     const onDone = usersStoreFake.deactivateMany.calls.mostRecent().args[1];
-    onDone(1, 1);
+    onDone(['u1'], 1);
 
-    expect(toastServiceFake.show).toHaveBeenCalledWith('1 de 2 usuários desativados.', 'info');
+    expect(toastServiceFake.show).toHaveBeenCalledWith('1 de 2 usuários desativados.', 'info', { label: 'Desfazer', run: jasmine.any(Function) });
+  });
+
+  it('avisa na confirmação do lote quantos chamados em aberto os selecionados atendem', async () => {
+    usersStoreFake.countOpenAssignedTicketsMany.and.callFake((_ids: string[], onDone: (r: { tickets: number; people: number }) => void) => onDone({ tickets: 5, people: 2 }));
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelection('u1', true);
+    fixture.componentInstance.onBulkDeactivate();
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(usersStoreFake.countOpenAssignedTicketsMany).toHaveBeenCalledWith(['u1'], jasmine.any(Function));
+    expect(options.message).toContain('2 dessas pessoas atendem 5 chamados em aberto, que continuam atribuídos');
+    expect(options.message).toContain('reatribua em Monitorar Chamados');
+  });
+
+  it('lista até 8 nomes na confirmação do lote e resume o resto em "e mais N"', async () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ ...activeUser, id: `m${i}`, firstName: `Pessoa${i}`, lastName: 'Teste' }));
+    usersStoreFake.users.set(many);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.toggleSelectAll(true);
+    fixture.componentInstance.onBulkDeactivate();
+    const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0] as { message: string };
+
+    expect(options.message).toContain('Pessoa7 Teste e mais 2');
+    expect(options.message).not.toContain('Pessoa9');
   });
 
   it('mostra a barra de ação em lote só quando há seleção ativa', async () => {
@@ -1482,17 +1575,74 @@ describe('UserListComponent', () => {
     expect(fixture.nativeElement.querySelector('#userCreateModal')).not.toBeNull();
   });
 
-  it('oferece recarregar a lista quando o carregamento falha', async () => {
+  it('oferece recarregar a lista quando o carregamento falha, num aviso neutro (falha técnica não é risco)', async () => {
     usersStoreFake.listState.set({ loading: false, error: 'Erro ao carregar usuários' });
     usersStoreFake.listLoadFailed.set(true);
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();
     usersStoreFake.loadAll.calls.reset();
 
-    const alert = fixture.nativeElement.querySelector('.alert-danger') as HTMLElement;
+    expect(fixture.nativeElement.querySelector('.alert-danger')).toBeNull();
+    const alert = fixture.nativeElement.querySelector('.alert-secondary') as HTMLElement;
+    expect(alert.textContent).toContain('Erro ao carregar usuários');
     (alert.querySelector('button') as HTMLButtonElement).click();
 
     expect(usersStoreFake.loadAll).toHaveBeenCalled();
+  });
+
+  it('não transforma a falha de carga em "Nenhum usuário cadastrado ainda"', async () => {
+    usersStoreFake.users.set([]);
+    usersStoreFake.total.set(0);
+    usersStoreFake.listState.set({ loading: false, error: 'Erro ao carregar usuários' });
+    usersStoreFake.listLoadFailed.set(true);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum usuário cadastrado ainda');
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeNull();
+    expect(fixture.nativeElement.querySelector('tbody').textContent).toContain('A lista não carregou');
+  });
+
+  it('marca a própria conta com "Você", explica por que ela não tem checkbox e tira o Desativar do ⋮', async () => {
+    usersStoreFake.users.set([{ ...activeUser, id: 'admin-id' }]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const row = fixture.nativeElement.querySelector('tbody tr') as HTMLElement;
+    expect(row.querySelector('.badge.bg-label-primary')?.textContent).toContain('Você');
+    expect(row.querySelector('.col-select input')).toBeNull();
+    expect(row.querySelector('.col-select .visually-hidden')?.textContent).toContain('Sua conta não entra na desativação em lote');
+    expect(row.textContent).toContain('Sua própria conta não pode ser desativada.');
+    expect(row.querySelector('.dropdown-item.text-danger')).toBeNull();
+  });
+
+  it('dá ao celular um "selecionar todos" visível (o cabeçalho da tabela some lá)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const mobile = fixture.nativeElement.querySelector('.select-all-mobile') as HTMLElement;
+    expect(mobile.textContent).toContain('Selecionar todos desta página');
+    (mobile.querySelector('input') as HTMLInputElement).click();
+
+    expect(fixture.componentInstance.selectedUserIds().has('u1')).toBeTrue();
+  });
+
+  it('liga o ⋮ de cada linha ao id (pra devolver o foco) e mostra spinner enquanto conta os chamados', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    usersStoreFake.countingTicketsIds.set(['u1']);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[data-row-actions="u1"] .spinner-border')).not.toBeNull();
+  });
+
+  it('diz "Convite expirado" com o caminho do reenvio quando o convite venceu', async () => {
+    usersStoreFake.users.set([{ ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null }]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.invitation-expired').textContent).toContain('Convite expirado: reenvie pelo ⋮');
   });
 
   it('não aplica um período invertido e explica o problema abaixo dos campos', async () => {

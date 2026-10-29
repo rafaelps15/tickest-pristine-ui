@@ -16,30 +16,43 @@ describe('UserListGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('mostra a legenda de status a partir das duas badges fixas da tela', async () => {
+  /** Cria o Guia já aberto (ele começa fechado até na 1ª visita). */
+  async function createOpen() {
+    localStorage.setItem(STORAGE_KEY, 'true');
     const fixture = TestBed.createComponent(UserListGuideComponent);
     await fixture.whenStable();
+    return fixture;
+  }
+
+  it('começa fechado até na primeira visita, pra não empurrar a lista pra baixo da dobra', async () => {
+    const fixture = TestBed.createComponent(UserListGuideComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.guide-toggle').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('mostra a legenda dos três status fixos da tela, com o badge compartilhado', async () => {
+    const fixture = await createOpen();
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('Ativo');
+    expect(text).toContain('Convite pendente');
     expect(text).toContain('Inativo');
-    expect(text).toContain('Pode entrar no sistema normalmente.');
+    expect(fixture.nativeElement.querySelectorAll('app-user-status-badge').length).toBe(3);
   });
 
-  it('explica a diferença entre clicar na linha (consulta) e marcar o checkbox (lote)', async () => {
-    const fixture = TestBed.createComponent(UserListGuideComponent);
-    await fixture.whenStable();
+  it('explica o que o nome e o checkbox fazem, e quem fica fora do lote', async () => {
+    const fixture = await createOpen();
 
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Clicar numa linha');
-    expect(text).toContain('Marcar o checkbox');
+    expect(text).toContain('O nome abre o painel');
+    expect(text).toContain('a sua conta e quem já está inativo ficam de fora do lote');
   });
 
-  it('explica que o termo de busca não fica salvo no link, por privacidade', async () => {
-    const fixture = TestBed.createComponent(UserListGuideComponent);
-    await fixture.whenStable();
+  it('explica que o termo buscado não vai pro link, por privacidade', async () => {
+    const fixture = await createOpen();
 
-    expect(fixture.nativeElement.textContent).toContain('não fica salvo no link');
+    expect(fixture.nativeElement.textContent).toContain('não vai pro link');
   });
 
   it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
@@ -49,6 +62,6 @@ describe('UserListGuideComponent', () => {
     (fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement).click();
     await fixture.whenStable();
 
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
   });
 });

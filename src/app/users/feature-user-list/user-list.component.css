@@ -1,4 +1,62 @@
-/* .page-subtitle agora é classe global (src/styles.css) — usada em mais de uma tela. */
+/*
+ * Barra de filtros colada à lista (padrão de Departamentos, critique de 2026-10-28): busca, status,
+ * "Período", o resultado e "Limpar filtros" numa linha que quebra no celular. Controles com o
+ * alvo de toque de 2,75rem (44px).
+ */
+.user-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.user-search {
+  flex: 1 1 16rem;
+  max-width: 24rem;
+}
+
+.user-status-filter {
+  flex: 0 1 11rem;
+}
+
+.user-toolbar .form-control,
+.user-toolbar .form-select,
+.user-toolbar .input-group-text,
+.user-toolbar .btn {
+  min-height: 2.75rem;
+}
+
+.user-toolbar-status {
+  display: inline-flex;
+  align-items: center;
+}
+
+.user-clear {
+  margin-inline-start: auto;
+}
+
+/* Celular: a busca ocupa a linha; status e período dividem a de baixo, em vez de uma linha cada. */
+@media (max-width: 575.98px) {
+  .user-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  /* O status leva a sobra: dividido meio a meio, "Todos os status" era cortado. */
+  .user-status-filter {
+    flex: 1 1 auto;
+  }
+
+  .user-period-toggle {
+    flex: 0 0 auto;
+  }
+}
+
+/* Período de cadastro aberto: os dois campos logo abaixo da barra que os abriu, sem moldura própria. */
+.user-period {
+  margin: -0.25rem 0 1rem;
+}
 
 /*
  * Coluna de seleção em lote: largura fixa do alvo de toque de 2,75rem (44px), sem padding próprio —
@@ -9,14 +67,6 @@
   width: 2.75rem;
   padding: 0;
 }
-
-/* Botão de mostrar/ocultar senha: o `input-group-text` mede ~40px de largura; aqui ganha o alvo de toque de 2,75rem (44px). */
-.btn-password-toggle {
-  min-width: 2.75rem;
-  justify-content: center;
-  cursor: pointer;
-}
-
 
 /* Área clicável do checkbox: um <label> que envolve o input e preenche os 44×44px da célula — tocar em qualquer ponto dela marca/desmarca. */
 .select-hit {
@@ -32,6 +82,18 @@
 .select-hit .form-check-input {
   margin: 0;
   cursor: pointer;
+}
+
+/* "Selecionar todos" do celular: o checkbox com o texto ao lado, na linha acima dos cards. */
+.select-all-mobile {
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.select-hit-labelled {
+  justify-content: flex-start;
+  gap: 0.75rem;
+  font-size: 0.875rem;
 }
 
 /*
@@ -71,7 +133,29 @@
  * da célula): vermelho é só pra ação destrutiva ou alerta (DESIGN.md), e quem diz "inativo" é o badge.
  */
 .deactivated-at {
-  font-size: 0.72rem;
+  display: block;
+  font-size: 0.75rem;
+}
+
+/* Validade do convite embaixo do badge de status; vencido em âmbar AA (pede reenvio). */
+.invitation-expiry {
+  display: block;
+  margin-top: 0.125rem;
+}
+
+.invitation-expired {
+  color: var(--tk-warning-text);
+  font-weight: 600;
+}
+
+/*
+ * Valor de uma célula com rótulo no celular (`.table-stack`, `data-label`): um bloco só, alinhado
+ * à direita do rótulo — antes badge e validade do convite viravam dois itens do flex e se separavam.
+ */
+@media (max-width: 767.98px) {
+  .cell-value {
+    text-align: end;
+  }
 }
 
 /*
@@ -86,9 +170,16 @@
 }
 
 .bulk-actions-bar .bx-check-square {
-  color: var(--tk-primary);
+  color: var(--tk-primary-text);
 }
 
+.bulk-actions-bar .btn {
+  min-height: 2.75rem;
+}
+
+.bulk-clear {
+  color: var(--tk-text-secondary);
+}
 
 /* Linha da tabela selecionável (painel "Informações do Usuário"): o clique na linha inteira é atalho de mouse — o alvo de teclado é o botão do nome, abaixo. */
 .user-row {
@@ -99,8 +190,10 @@
  * Botão do nome: abre/fecha o painel pelo teclado e pelo leitor de tela, sem transformar o <tr>
  * inteiro em botão (o que apagava a semântica de linha de tabela e aninhava o checkbox e o menu
  * "⋮" dentro de outro botão). Visual de texto comum — a linha já sinaliza o clique pelo hover.
+ * Altura mínima de 2,75rem: era o único alvo da linha com 24px.
  */
 .btn-row-name {
+  min-height: 2.75rem;
   padding: 0;
   border: none;
   background: none;
@@ -116,27 +209,22 @@
 }
 
 /*
- * Linha com o painel "Informações do Usuário" aberto: tingimento de fundo bem discreto — já
- * suficiente pra diferenciar da seleção em lote, que não tinge a linha (só o próprio checkbox
- * muda), sem precisar de um motivo novo. Achado do critique de 2026-10-25 (P1, duas semânticas de
- * "selecionado" na mesma linha); revisado no polish seguinte pra não usar uma barra de acento
- * colorida — item banido pelo craft-floor do sistema de design ("borda colorida à esquerda/
- * direita acima de 1px"), que uma `box-shadow` inset do mesmo jeito também conta como.
+ * Linha com o painel "Informações do Usuário" aberto: tingimento pela camada de estado da própria
+ * tabela do Bootstrap (`--bs-table-bg-state`, a mesma do hover) — o `background-color` no <tr>
+ * ficava escondido atrás do fundo das células (1,07:1, achado do audit de 2026-10-28) — e o nome no
+ * índigo de texto. Sem barra de acento colorida: banida pelo craft-floor do sistema.
  */
-.user-row-info-open {
-  background-color: rgba(var(--tk-primary-rgb), 0.06);
+.table > tbody > tr.user-row-info-open > td {
+  --bs-table-bg-state: rgba(var(--tk-primary-rgb), 0.1);
 }
 
-/*
- * Ao trocar filtro/página com a lista já carregada, a tabela some e vira um spinner solitário.
- * Em vez disso, mantém as linhas atuais visíveis e só esmaece — a troca de página some suave
- * quando os dados novos chegam, sem o "pisca-tudo" de recarregar do zero.
- */
-.table {
-  transition: opacity 150ms ease;
+.user-row-info-open .btn-row-name {
+  color: var(--tk-primary-text);
 }
 
-.table.is-refreshing {
-  opacity: 0.5;
-  pointer-events: none;
+/* Itens do menu "⋮" com o alvo de toque do sistema em telas de toque (o padrão do dropdown dá ~30px). */
+@media (pointer: coarse) {
+  .dropdown-item {
+    min-height: 2.75rem;
+  }
 }

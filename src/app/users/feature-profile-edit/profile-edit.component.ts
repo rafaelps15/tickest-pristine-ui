@@ -2,6 +2,7 @@ import { Component, inject, effect, signal, untracked, ChangeDetectionStrategy }
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ProfileEditStore } from '../application/profile-edit.store';
+import { USER_NAME_MAX_LENGTH } from '../entities/user-profile';
 import { ToastService, passwordChangeValidator, strongPasswordValidator } from '../../shared';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
@@ -18,10 +19,13 @@ export class ProfileEditComponent {
   protected readonly store = inject(ProfileEditStore);
   private readonly toastService = inject(ToastService);
 
-  /** Formulário com as mesmas regras do UpdateUserProfileCommandValidator, mais o limite de tamanho já usado no cadastro administrativo. */
+  /** Limite de nome e sobrenome nos campos, o mesmo do back-end. */
+  protected readonly nameMaxLength = USER_NAME_MAX_LENGTH;
+
+  /** Formulário com as regras do UpdateUserProfileCommandValidator (até {@link USER_NAME_MAX_LENGTH} caracteres) e mínimo de 2 caracteres. */
   readonly form = this.fb.nonNullable.group({
-    firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-    lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]]
+    firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(USER_NAME_MAX_LENGTH)]],
+    lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(USER_NAME_MAX_LENGTH)]]
   });
 
   /** Formulário com as mesmas regras do ChangeUserPasswordCommandValidator. */

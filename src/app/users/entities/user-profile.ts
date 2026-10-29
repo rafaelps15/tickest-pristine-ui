@@ -1,3 +1,6 @@
+/** Tamanho máximo de nome e de sobrenome aceito pelo back-end (`UserValidationRules.NameMaxLength`). */
+export const USER_NAME_MAX_LENGTH = 100;
+
 /** Perfil do usuário, conforme retornado por GET /users/{id} (UserResponse no back-end). */
 export interface UserProfile {
   id: string;

@@ -18,9 +18,9 @@ function buildPage(items: UserSummary[], page = 1, pageSize = 20, totalCount = i
 }
 
 describe('UsersStore', () => {
-  /** Chamadas de `getAll` feitas pela lista — as do card Resumo pedem 1 item por status e ficam de fora. */
+  /** Chamadas de `getAll` feitas pela lista (o card Resumo usa o GET de contagem à parte). */
   function listCalls(): number {
-    return userDataService.getAll.calls.allArgs().filter(([filters]) => filters.pageSize !== 1).length;
+    return userDataService.getAll.calls.count();
   }
 
   const user: UserSummary = {
@@ -37,9 +37,10 @@ describe('UsersStore', () => {
   let authDataService: jasmine.SpyObj<AuthDataService>;
 
   beforeEach(() => {
-    userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'updateProfile', 'assignRoles', 'deactivate', 'activate', 'resendInvitation', 'countOpenAssignedTickets']);
+    userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'getStatusCounts', 'updateProfile', 'assignRoles', 'deactivate', 'activate', 'resendInvitation', 'countOpenAssignedTickets']);
     authDataService = jasmine.createSpyObj('AuthDataService', ['register']);
     userDataService.getAll.and.returnValue(of(buildPage([user])));
+    userDataService.getStatusCounts.and.returnValue(of({ totalCount: 1, activeCount: 1, pendingActivationCount: 0, inactiveCount: 0 }));
 
     TestBed.configureTestingModule({
       providers: [
@@ -93,6 +94,26 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', search: 'maria', page: 1, pageSize: 20 });
+  });
+
+  it('ignora a mesma busca (vazia ou com espaços), sem voltar a página nem buscar de novo', async () => {
+    store.goToPage(3);
+    await TestBed.inject(ApplicationRef).whenStable();
+    const callsBefore = listCalls();
+
+    store.setSearch('');
+    store.setSearch('   ');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.filters().page).toBe(3);
+    expect(listCalls()).toBe(callsBefore);
+  });
+
+  it('apara os espaços do termo de busca', async () => {
+    store.setSearch('  maria ');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.filters().search).toBe('maria');
   });
 
   it('muda o status e volta pra página 1', async () => {
@@ -422,7 +443,7 @@ describe('UsersStore', () => {
 
     expect(userDataService.deactivate).toHaveBeenCalledWith('u1');
     expect(userDataService.deactivate).toHaveBeenCalledWith('u2');
-    expect(onDone).toHaveBeenCalledWith(2, 0);
+    expect(onDone).toHaveBeenCalledWith(jasmine.arrayWithExactContents(['u1', 'u2']), 0);
     expect(store.listState().error).toBeNull();
     expect(store.deactivatingIds()).toEqual([]);
     expect(listCalls()).toBe(2);
@@ -441,7 +462,7 @@ describe('UsersStore', () => {
     store.deactivateMany(['u1', 'u2'], onDone);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(onDone).toHaveBeenCalledWith(1, 1);
+    expect(onDone).toHaveBeenCalledWith(['u1'], 1);
     expect(store.listState().error).toBe('Não foi possível desativar: João Santos.');
   });
 
@@ -469,7 +490,7 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.deactivate).toHaveBeenCalledTimes(15);
-    expect(onDone).toHaveBeenCalledWith(15, 0);
+    expect(onDone).toHaveBeenCalledWith(jasmine.arrayWithExactContents(ids), 0);
   });
 
   it('não chama a API quando a lista de ids selecionados estiver vazia', () => {
@@ -511,31 +532,103 @@ describe('UsersStore', () => {
     expect(store.deactivatingIds()).toEqual([]);
   });
 
-  it('expõe os totais de ativos e inativos da empresa (do totalCount, não da página) e recarrega ao desativar', async () => {
-    userDataService.getAll.and.callFake((filters: { status: string; pageSize: number }) => of({
-      ...buildPage([user]), totalCount: filters.status === 'Active' ? 42 : filters.status === 'Inactive' ? 3 : 1
-    }));
+  it('expõe os totais da empresa por situação (GET de contagem, não a página) e recarrega ao desativar', async () => {
+    const counts = { totalCount: 50, activeCount: 42, pendingActivationCount: 5, inactiveCount: 3 };
+    userDataService.getStatusCounts.and.returnValue(of(counts));
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.activeCount()).toBe(42);
-    expect(store.inactiveCount()).toBe(3);
+    expect(store.statusCounts()).toEqual(counts);
 
-    const summaryCallsBefore = userDataService.getAll.calls.allArgs().filter(([filters]) => filters.pageSize === 1).length;
+    const summaryCallsBefore = userDataService.getStatusCounts.calls.count();
     userDataService.deactivate.and.returnValue(of(void 0));
     store.deactivate('u1');
     await TestBed.inject(ApplicationRef).whenStable();
-    const summaryCallsAfter = userDataService.getAll.calls.allArgs().filter(([filters]) => filters.pageSize === 1).length;
-    expect(summaryCallsAfter).toBeGreaterThan(summaryCallsBefore);
+    expect(userDataService.getStatusCounts.calls.count()).toBeGreaterThan(summaryCallsBefore);
   });
 
   it('marca o Resumo como falho, sem inventar 0, quando os totais não carregam', async () => {
-    userDataService.getAll.and.callFake((filters: { pageSize: number }) =>
-      filters.pageSize === 1 ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(buildPage([user])));
+    userDataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.summaryFailed()).toBeTrue();
-    expect(store.activeCount()).toBeNull();
+    expect(store.statusCounts()).toBeNull();
+  });
+
+  it('não abre uma segunda contagem de chamados pro mesmo usuário enquanto a primeira está em andamento', () => {
+    const subject = new Subject<number>();
+    userDataService.countOpenAssignedTickets.and.returnValue(subject);
+    const onDone = jasmine.createSpy('onDone');
+
+    store.countOpenAssignedTickets('u1', onDone);
+    store.countOpenAssignedTickets('u1', onDone);
+
+    expect(userDataService.countOpenAssignedTickets).toHaveBeenCalledTimes(1);
+    expect(store.countingTicketsIds()).toEqual(['u1']);
+
+    subject.next(2);
+    subject.complete();
+    expect(onDone).toHaveBeenCalledOnceWith(2);
+    expect(store.countingTicketsIds()).toEqual([]);
+  });
+
+  it('soma os chamados em aberto dos selecionados e conta quantas pessoas atendem algum', () => {
+    userDataService.countOpenAssignedTickets.and.callFake((userId: string) => of(userId === 'u1' ? 3 : userId === 'u2' ? 0 : 1));
+    const onDone = jasmine.createSpy('onDone');
+
+    store.countOpenAssignedTicketsMany(['u1', 'u2', 'u3'], onDone);
+
+    expect(onDone).toHaveBeenCalledWith({ tickets: 4, people: 2 });
+    expect(store.countingTicketsIds()).toEqual([]);
+  });
+
+  it('devolve null na contagem em lote se alguma consulta falhar, sem bloquear a desativação', () => {
+    userDataService.countOpenAssignedTickets.and.callFake((userId: string) =>
+      userId === 'u2' ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(1));
+    const onDone = jasmine.createSpy('onDone');
+
+    store.countOpenAssignedTicketsMany(['u1', 'u2'], onDone);
+
+    expect(onDone).toHaveBeenCalledWith(null);
+    expect(store.countingTicketsIds()).toEqual([]);
+  });
+
+  it('reativa vários usuários de uma vez (o "Desfazer" do lote) e recarrega a listagem', async () => {
+    userDataService.activate.and.returnValue(of(undefined));
+    const onDone = jasmine.createSpy('onDone');
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+    const callsBefore = listCalls();
+
+    store.activateMany(['u1', 'u2'], onDone);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(userDataService.activate).toHaveBeenCalledWith('u1');
+    expect(userDataService.activate).toHaveBeenCalledWith('u2');
+    expect(onDone).toHaveBeenCalledWith(2, 0);
+    expect(store.activatingIds()).toEqual([]);
+    expect(listCalls()).toBeGreaterThan(callsBefore);
+  });
+
+  it('avisa acima da lista quando a reativação em lote falha para alguém', () => {
+    userDataService.activate.and.callFake((userId: string) =>
+      userId === 'u1' ? of(undefined) : throwError(() => new HttpErrorResponse({ status: 500 })));
+    const onDone = jasmine.createSpy('onDone');
+
+    store.activateMany(['u1', 'u2'], onDone);
+
+    expect(onDone).toHaveBeenCalledWith(1, 1);
+    expect(store.listMutationError()).toContain('Não foi possível reativar');
+  });
+
+  it('limpa o erro de ação mostrado acima da lista', () => {
+    userDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    store.deactivate('u1');
+    expect(store.listMutationError()).not.toBeNull();
+
+    store.clearListMutationError();
+
+    expect(store.listMutationError()).toBeNull();
   });
 });

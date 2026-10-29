@@ -27,7 +27,7 @@
           <div class="col-12 col-md-6">
             <label class="form-label" for="firstName">Nome</label>
             <input id="firstName" type="text" class="form-control" formControlName="firstName"
-                   autocomplete="given-name" maxlength="50"
+                   autocomplete="given-name" [maxlength]="nameMaxLength"
                    [class.is-invalid]="isFieldInvalid('firstName')"
                    [attr.aria-describedby]="isFieldInvalid('firstName') ? 'firstName-error' : null" />
             @if (isFieldInvalid('firstName')) {
@@ -37,7 +37,7 @@
                 } @else if (form.controls.firstName.errors?.['minlength']) {
                   O nome deve ter no mínimo 2 caracteres.
                 } @else if (form.controls.firstName.errors?.['maxlength']) {
-                  O nome deve ter no máximo 50 caracteres.
+                  O nome deve ter no máximo {{ nameMaxLength }} caracteres.
                 }
               </div>
             }
@@ -46,7 +46,7 @@
           <div class="col-12 col-md-6">
             <label class="form-label" for="lastName">Sobrenome</label>
             <input id="lastName" type="text" class="form-control" formControlName="lastName"
-                   autocomplete="family-name" maxlength="50"
+                   autocomplete="family-name" [maxlength]="nameMaxLength"
                    [class.is-invalid]="isFieldInvalid('lastName')"
                    [attr.aria-describedby]="isFieldInvalid('lastName') ? 'lastName-error' : null" />
             @if (isFieldInvalid('lastName')) {
@@ -56,7 +56,7 @@
                 } @else if (form.controls.lastName.errors?.['minlength']) {
                   O sobrenome deve ter no mínimo 2 caracteres.
                 } @else if (form.controls.lastName.errors?.['maxlength']) {
-                  O sobrenome deve ter no máximo 50 caracteres.
+                  O sobrenome deve ter no máximo {{ nameMaxLength }} caracteres.
                 }
               </div>
             }

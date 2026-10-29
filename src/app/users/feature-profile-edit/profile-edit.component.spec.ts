@@ -81,6 +81,20 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.save).toHaveBeenCalledWith({ firstName: 'Ana', lastName: 'Costa' });
   });
 
+  it('aceita nome com até 100 caracteres, o limite do back-end, e recusa acima disso', async () => {
+    const fixture = TestBed.createComponent(ProfileEditComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.form.setValue({ firstName: 'A'.repeat(100), lastName: 'Costa' });
+    fixture.componentInstance.onSubmit();
+    expect(storeFake.save).toHaveBeenCalledWith({ firstName: 'A'.repeat(100), lastName: 'Costa' });
+
+    storeFake.save.calls.reset();
+    fixture.componentInstance.form.setValue({ firstName: 'A'.repeat(101), lastName: 'Costa' });
+    fixture.componentInstance.onSubmit();
+    expect(storeFake.save).not.toHaveBeenCalled();
+  });
+
   it('não deve salvar quando o nome estiver vazio', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();

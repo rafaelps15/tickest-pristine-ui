@@ -6,76 +6,118 @@
 </app-page-header>
 
 <app-user-list-guide />
-<app-user-list-insights [activeCount]="store.activeCount()" [inactiveCount]="store.inactiveCount()"
-                        [loading]="store.summaryLoading()" [failed]="store.summaryFailed()" />
+<app-user-list-insights [counts]="store.statusCounts()" [loading]="store.summaryLoading()" [failed]="store.summaryFailed()" />
 
-@if (store.listState().error; as error) {
-  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2" role="alert">
+<!--
+  Falha de carga é técnica, não risco: aviso neutro com "Tentar novamente" (DESIGN.md, Estados de
+  dado). Erro de uma ação (desativar, reenviar convite…) continua em vermelho e some no "X" —
+  recarregar não o resolve.
+-->
+@if (store.listMutationError(); as error) {
+  <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center justify-content-between gap-3" role="alert">
     <span>{{ error }}</span>
-    <!-- Recarregar só resolve falha de carga; erro de uma ação (desativar etc.) não some recarregando. -->
-    @if (store.listLoadFailed()) {
-      <button type="button" class="btn btn-sm btn-outline-danger" (click)="store.loadAll()">
-        <i class="bx bx-refresh me-1"></i>Tentar novamente
-      </button>
-    }
+    <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearListMutationError()"></button>
+  </div>
+} @else if (store.listLoadFailed()) {
+  <div class="alert alert-secondary border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2" role="alert">
+    <span>{{ store.listState().error }}</span>
+    <button type="button" class="btn btn-outline-secondary flex-shrink-0" (click)="store.loadAll()">
+      <i class="bx bx-refresh me-1" aria-hidden="true"></i>Tentar novamente
+    </button>
   </div>
 }
 
-<!-- Filtros -->
-<app-filter-bar (clear)="onClearFilters()">
-      <div class="col-12 col-md-4">
-        <label class="form-label small" for="userSearch">Buscar</label>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bx bx-search"></i></span>
-          <input id="userSearch" type="search" class="form-control" placeholder="Nome, sobrenome ou e-mail"
-                 [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
-        </div>
+<!--
+  Busca, status, período e "Limpar filtros" numa barra colada à lista que afetam (padrão de
+  Departamentos): o card de filtros ocupava ~150px pra quatro campos. O período, de uso raro, fica
+  recolhido atrás de um botão — e à vista sempre que há um aplicado (veio do link, por exemplo).
+-->
+<div class="user-toolbar">
+  <div class="input-group user-search">
+    <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
+    <label class="visually-hidden" for="userSearch">Buscar por nome, sobrenome ou e-mail</label>
+    <input id="userSearch" type="search" class="form-control" placeholder="Nome, sobrenome ou e-mail"
+           [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
+  </div>
+  <div class="user-status-filter">
+    <label class="visually-hidden" for="userStatus">Status</label>
+    <select id="userStatus" class="form-select" [value]="store.filters().status" (change)="onStatusChange($any($event.target).value)">
+      <option value="All">Todos os status</option>
+      <option value="Active">Ativos</option>
+      <option value="Inactive">Inativos</option>
+    </select>
+  </div>
+  <!-- Com um período aplicado, os campos ficam sempre à vista (filtro ativo e invisível é armadilha): o botão só existe pra abrir. -->
+  @if (!hasPeriod()) {
+    <button type="button" class="btn btn-outline-secondary user-period-toggle" aria-controls="userPeriod"
+            [attr.aria-expanded]="periodOpen()" (click)="periodOpen.set(!periodOpen())">
+      <i class="bx bx-calendar me-1" aria-hidden="true"></i>Período<span class="d-none d-sm-inline"> de cadastro</span>
+      <i class="bx ms-1" [class.bx-chevron-down]="!periodOpen()" [class.bx-chevron-up]="periodOpen()" aria-hidden="true"></i>
+    </button>
+  }
+  <!-- Região sempre presente (só o texto muda): criada junto com o texto, o leitor de tela não anuncia o resultado. -->
+  <p class="user-toolbar-status small text-muted mb-0" aria-live="polite">
+    @if (isRefreshing()) {
+      <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Atualizando…
+    } @else if (hasFilters() && !store.listLoadFailed()) {
+      {{ store.total() === 1 ? '1 usuário encontrado.' : store.total() + ' usuários encontrados.' }}
+    }
+  </p>
+  @if (hasFilters()) {
+    <button type="button" class="btn btn-outline-secondary user-clear" (click)="onClearFilters()">
+      <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
+    </button>
+  }
+</div>
+
+@if (periodOpen() || hasPeriod()) {
+  <fieldset id="userPeriod" class="user-period">
+    <!-- O botão logo acima já diz o nome; a legenda fica pro leitor de tela, que entra direto nos campos. -->
+    <legend class="visually-hidden">Período de cadastro</legend>
+    <div class="row g-2">
+      <div class="col-12 col-sm-6 col-lg-3">
+        <label class="form-label small" for="userCreatedFrom">De</label>
+        <input id="userCreatedFrom" type="date" class="form-control"
+               [class.is-invalid]="periodError()" [attr.aria-invalid]="periodError() ? true : null" [attr.aria-describedby]="periodError() ? 'userPeriod-error' : null"
+               [max]="store.filters().createdTo ?? ''"
+               [value]="store.filters().createdFrom ?? ''" (change)="onCreatedFromChange($any($event.target).value)" />
       </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label small" for="userStatus">Status</label>
-        <select id="userStatus" class="form-select" [value]="store.filters().status" (change)="onStatusChange($any($event.target).value)">
-          <option value="All">Todos</option>
-          <option value="Active">Ativos</option>
-          <option value="Inactive">Inativos</option>
-        </select>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <label class="form-label small" for="userCreatedTo">Até</label>
+        <input id="userCreatedTo" type="date" class="form-control"
+               [class.is-invalid]="periodError()" [attr.aria-invalid]="periodError() ? true : null" [attr.aria-describedby]="periodError() ? 'userPeriod-error' : null"
+               [min]="store.filters().createdFrom ?? ''"
+               [value]="store.filters().createdTo ?? ''" (change)="onCreatedToChange($any($event.target).value)" />
       </div>
-      <div class="col-12 col-md-4">
-        <label class="form-label small" for="userCreatedFrom">Período de cadastro</label>
-        <div class="d-flex align-items-center gap-2">
-          <input id="userCreatedFrom" type="date" class="form-control" aria-label="Cadastrado a partir de"
-                 [class.is-invalid]="periodError()" [attr.aria-invalid]="!!periodError()" [attr.aria-describedby]="periodError() ? 'userPeriod-error' : null"
-                 [value]="store.filters().createdFrom ?? ''" (change)="onCreatedFromChange($any($event.target).value)" />
-          <span class="text-muted small">até</span>
-          <input id="userCreatedTo" type="date" class="form-control" aria-label="Cadastrado até"
-                 [class.is-invalid]="periodError()" [attr.aria-invalid]="!!periodError()" [attr.aria-describedby]="periodError() ? 'userPeriod-error' : null"
-                 [value]="store.filters().createdTo ?? ''" (change)="onCreatedToChange($any($event.target).value)" />
-        </div>
-        @if (periodError(); as message) {
-          <div class="invalid-feedback d-block" id="userPeriod-error">{{ message }}</div>
-        }
-      </div>
-</app-filter-bar>
+    </div>
+    @if (periodError(); as message) {
+      <div class="invalid-feedback d-block" id="userPeriod-error" role="alert">{{ message }}</div>
+    }
+  </fieldset>
+}
 
 <!-- Região sempre presente: um aria-live que nasce junto com o conteúdo não anuncia a primeira mudança. -->
 <div class="visually-hidden" aria-live="polite">{{ selectionAnnouncement() }}</div>
 
 @if (selectedCount() > 0) {
   <div class="bulk-actions-bar d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-    <div class="d-flex align-items-center gap-2">
-      <i class="bx bx-check-square fs-5"></i>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+      <i class="bx bx-check-square fs-5" aria-hidden="true"></i>
       <span class="fw-semibold">{{ selectedCount() === 1 ? '1 selecionado' : selectedCount() + ' selecionados' }}</span>
       @if (store.totalPages() > 1) {
         <span class="text-muted small">(só desta página)</span>
       }
-      <button type="button" class="btn btn-link btn-sm text-decoration-none" (click)="clearSelection()">
+      <button type="button" class="btn btn-link text-decoration-none bulk-clear" (click)="clearSelection()">
         Limpar seleção
       </button>
     </div>
-    <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="store.deactivatingIds().length > 0" (click)="onBulkDeactivate()">
-      @if (store.deactivatingIds().length > 0) {
+    <button type="button" class="btn btn-outline-danger" [disabled]="bulkBusy()" (click)="onBulkDeactivate()">
+      @if (bulkBusy()) {
         <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+      } @else {
+        <i class="bx bx-block me-1" aria-hidden="true"></i>
       }
-      <i class="bx bx-block me-1"></i>Desativar selecionados
+      Desativar selecionados
     </button>
   </div>
 }
@@ -83,17 +125,26 @@
 <div class="row g-3">
   <div class="col-12" [class.col-lg-8]="infoPanelUser()">
   <div class="card shadow-sm border-0">
+  @if (eligibleUsersForBulk().length > 0) {
+    <!-- No celular o cabeçalho da tabela some (vira cards): o "selecionar todos" ganha esta linha visível. -->
+    <div class="select-all-mobile d-md-none">
+      <label class="select-hit select-hit-labelled">
+        <input id="userSelectAllMobile" type="checkbox" class="form-check-input"
+               [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()"
+               (change)="toggleSelectAll($any($event.target).checked)" />
+        <span>Selecionar todos desta página</span>
+      </label>
+    </div>
+  }
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0 table-stack"
-           [class.is-refreshing]="store.listState().loading && store.users().length > 0"
-           [attr.aria-busy]="store.listState().loading">
+    <table class="table table-hover align-middle mb-0 table-stack" [attr.aria-busy]="store.listState().loading">
       <caption class="visually-hidden">Usuários da empresa, filtrados conforme os filtros acima</caption>
       <thead>
         <tr>
           <th scope="col" class="col-select">
-            <label class="select-hit">
-              <input type="checkbox" class="form-check-input" aria-label="Selecionar todos os usuários elegíveis desta página"
-                     [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()"
+            <label class="select-hit d-none d-md-flex">
+              <input id="userSelectAll" type="checkbox" class="form-check-input" aria-label="Selecionar todos os usuários elegíveis desta página"
+                     [checked]="allEligibleSelected()" [indeterminate]="someEligibleSelected()" [disabled]="eligibleUsersForBulk().length === 0"
                      (change)="toggleSelectAll($any($event.target).checked)" />
             </label>
           </th>
@@ -101,27 +152,33 @@
           <th scope="col" class="d-none d-md-table-cell">E-mail</th>
           <th scope="col">Funções</th>
           <th scope="col">Status</th>
-          <th scope="col" class="d-none d-md-table-cell">Cadastrado em</th>
+          <th scope="col">Cadastrado em</th>
           <th scope="col" class="text-end">Ações</th>
         </tr>
       </thead>
       <tbody>
         @if (store.listState().loading && store.users().length === 0) {
           <tr><td colspan="7"><app-loading-state label="Carregando usuários…" /></td></tr>
+        } @else if (store.listLoadFailed() && store.users().length === 0) {
+          <!--
+            Falha de carga: o aviso com "Tentar novamente" acima já diz o que fazer. Não cai no vazio —
+            "Nenhum usuário cadastrado ainda" com "Novo Usuário" faria o erro parecer dado (DESIGN.md).
+          -->
+          <tr><td colspan="7" class="text-muted small text-center py-4">A lista não carregou. Use "Tentar novamente" no aviso acima.</td></tr>
         } @else if (store.users().length === 0) {
           <tr>
             <td colspan="7">
-              @if (store.total() === 0 && store.filters().status === 'All' && !store.filters().search && !store.filters().createdFrom && !store.filters().createdTo) {
+              @if (!hasFilters()) {
                 <app-empty-state icon="bx-group" title="Nenhum usuário cadastrado ainda."
                                  hint="Cadastre o primeiro colaborador pra atribuir funções e liberar o acesso ao Tickest.">
-                  <button type="button" class="btn btn-sm btn-primary" (click)="openCreateModal()">
+                  <button type="button" class="btn btn-primary" (click)="openCreateModal()">
                     <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Usuário
                   </button>
                 </app-empty-state>
               } @else {
-                <app-empty-state icon="bx-group" title="Nenhum usuário encontrado com esses filtros."
+                <app-empty-state icon="bx-search-alt" title="Nenhum usuário encontrado com esses filtros."
                                  hint="Tente outro termo de busca, outro status ou um período maior.">
-                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearFilters()">
+                  <button type="button" class="btn btn-outline-secondary" (click)="onClearFilters()">
                     <i class="bx bx-x me-1" aria-hidden="true"></i>Limpar filtros
                   </button>
                 </app-empty-state>
@@ -130,94 +187,105 @@
           </tr>
         } @else {
           @for (user of store.users(); track user.id) {
+            @let self = isCurrentUser(user);
             <!-- O clique em qualquer ponto da linha é só atalho de mouse; teclado e leitor de tela usam o botão do nome, sem tirar do <tr> o papel de linha de tabela. -->
-            <tr class="user-row" [class.user-row-inactive]="isInactive(user)" [class.user-row-new]="highlightedUserId() === user.id"
+            <tr class="user-row" [class.user-row-inactive]="!user.isActive" [class.user-row-new]="highlightedUserId() === user.id"
                 [class.user-row-info-open]="infoPanelUserId() === user.id"
                 (click)="selectRow(user.id)">
               <td class="col-select" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
                 @if (canSelectForBulk(user)) {
                   <label class="select-hit">
-                    <input type="checkbox" class="form-check-input" [attr.aria-label]="'Marcar ' + user.firstName + ' ' + user.lastName + ' para ação em lote'"
-                           [checked]="isSelected(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
+                    <input type="checkbox" class="form-check-input" [attr.aria-label]="'Marcar ' + user.firstName + ' ' + user.lastName + ' para desativar em lote'"
+                           [checked]="selectedUserIds().has(user.id)" (change)="toggleSelection(user.id, $any($event.target).checked)" />
                   </label>
+                } @else {
+                  <!-- Sem checkbox: diz o motivo pro leitor de tela, em vez de uma célula muda. -->
+                  <span class="visually-hidden">{{ self ? 'Sua conta não entra na desativação em lote.' : 'Já inativo: não entra na desativação em lote.' }}</span>
                 }
               </td>
-              <td class="fw-semibold">
+              <td class="fw-semibold table-stack-title">
                 <!-- Nome acessível = texto visível (WCAG 2.5.3); o estado aberto/fechado do painel vem do aria-expanded, sem rótulo que repita o estado. -->
                 <button type="button" class="btn-row-name"
                         [attr.aria-expanded]="infoPanelUserId() === user.id"
+                        [attr.aria-controls]="infoPanelUserId() === user.id ? 'userInfoPanel' : null"
                         (click)="selectRow(user.id); $event.stopPropagation()">
                   {{ user.firstName }} {{ user.lastName }}
                 </button>
-                <div class="text-muted small fw-normal d-md-none">{{ user.email }}</div>
+                @if (self) {
+                  <span class="badge bg-label-primary ms-1">Você</span>
+                }
+                <div class="text-muted small fw-normal text-break d-md-none">{{ user.email }}</div>
               </td>
-              <td class="text-muted small d-none d-md-table-cell">{{ user.email }}</td>
+              <td class="text-muted small text-break d-none d-md-table-cell">{{ user.email }}</td>
               <td data-label="Funções">
-                @for (role of visibleRoles(user); track role.name) {
-                  @let color = roleColor(role.name);
-                  <span class="badge me-1" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
-                } @empty {
-                  <span class="text-muted small">—</span>
-                }
-                @if (hiddenRolesCount(user) > 0) {
-                  <!-- Não é controle (era um span focável com aria-label, que o ARIA proíbe): o leitor de tela lê os nomes ocultos; a lista completa fica no painel do usuário. -->
-                  <span class="badge bg-label-secondary badge-roles-overflow" [title]="hiddenRolesNames(user)">
-                    <span aria-hidden="true">+{{ hiddenRolesCount(user) }}</span><span class="visually-hidden">e mais: {{ hiddenRolesNames(user) }}</span>
-                  </span>
-                }
+                <span class="cell-value">
+                  @for (role of visibleRoles(user); track role.name) {
+                    <span class="badge bg-label-primary me-1">{{ role.name }}</span>
+                  } @empty {
+                    <span class="text-muted small">—</span>
+                  }
+                  @let hiddenCount = hiddenRolesCount(user);
+                  @if (hiddenCount > 0) {
+                    @let hiddenNames = hiddenRolesNames(user);
+                    <!-- Não é controle (era um span focável com aria-label, que o ARIA proíbe): o leitor de tela lê os nomes ocultos; a lista completa fica no painel do usuário. -->
+                    <span class="badge bg-label-secondary badge-roles-overflow" [title]="hiddenNames">
+                      <span aria-hidden="true">+{{ hiddenCount }}</span><span class="visually-hidden">e mais: {{ hiddenNames }}</span>
+                    </span>
+                  }
+                </span>
               </td>
               <td data-label="Status">
-                @if (user.isActive && user.pendingActivation) {
-                  <!-- Ativo mas sem senha: ainda não abriu o convite. Âmbar = esperando alguém, como "Aberto" nos chamados. -->
-                  <span class="badge bg-label-warning"><span class="status-dot" aria-hidden="true"></span>Convite pendente</span>
-                  <div class="invitation-expiry small text-muted">
+                <span class="cell-value">
+                  <app-user-status-badge [status]="statusOf(user)" />
+                  @if (statusOf(user) === 'pending') {
                     @if (user.invitationExpiresAtUtc) {
-                      Vale até {{ user.invitationExpiresAtUtc | date:'dd/MM HH:mm' }}
+                      <span class="invitation-expiry small text-muted">Vale até {{ user.invitationExpiresAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
                     } @else {
-                      Convite expirado
+                      <!-- Vencido pede ação de quem administra: âmbar AA e o caminho, não só "expirado". -->
+                      <span class="invitation-expiry invitation-expired small">Convite expirado: reenvie pelo ⋮</span>
                     }
-                  </div>
-                } @else if (user.isActive) {
-                  <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
-                } @else {
-                  <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
-                }
+                  }
+                </span>
               </td>
-              <td class="text-muted small d-none d-md-table-cell">
-                {{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
-                @if (user.deactivatedAtUtc) {
-                  <div class="deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
-                }
+              <td data-label="Cadastrado em" class="text-muted small">
+                <span class="cell-value">
+                  {{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                  @if (user.deactivatedAtUtc) {
+                    <span class="deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                  }
+                </span>
               </td>
               <td class="text-end table-stack-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
-                <app-row-actions [label]="'Ações para ' + user.firstName + ' ' + user.lastName">
-                  <li>
-                    <button type="button" class="dropdown-item" (click)="openEditModal(user)">
-                      <i class="bx bx-edit-alt me-2"></i>Editar cadastro
-                    </button>
-                  </li>
+                <app-row-actions [label]="'Ações para ' + user.firstName + ' ' + user.lastName" [rowKey]="user.id" [busy]="isRowBusy(user.id)">
                   <li>
                     <button type="button" class="dropdown-item" (click)="openAssignRolesModal(user)">
-                      <i class="bx bx-shield-quarter me-2"></i>Atribuir funções
+                      <i class="bx bx-shield-quarter me-2" aria-hidden="true"></i>Atribuir funções
                     </button>
                   </li>
-                  @if (canResendInvitation(user)) {
+                  <li>
+                    <button type="button" class="dropdown-item" (click)="openEditModal(user)">
+                      <i class="bx bx-edit-alt me-2" aria-hidden="true"></i>Editar cadastro
+                    </button>
+                  </li>
+                  @if (statusOf(user) === 'pending') {
                     <li>
                       <button type="button" class="dropdown-item" [disabled]="store.resendingInvitationIds().includes(user.id)" (click)="onResendInvitation(user)">
-                        <i class="bx bx-envelope me-2"></i>Reenviar convite
+                        <i class="bx bx-envelope me-2" aria-hidden="true"></i>Reenviar convite
                       </button>
                     </li>
                   }
-                  @if (!isCurrentUser(user)) {
-                    <li><hr class="dropdown-divider" /></li>
+                  <li><hr class="dropdown-divider" /></li>
+                  @if (self) {
+                    <li><span class="dropdown-item-text small text-muted">Sua própria conta não pode ser desativada.</span></li>
+                  } @else {
                     <li>
-                      @if (isInactive(user)) {
-                        <button type="button" class="dropdown-item text-success" [disabled]="store.activatingIds().includes(user.id)" (click)="onActivate(user)">
-                          <i class="bx bx-check me-2"></i>Reativar
+                      @if (!user.isActive) {
+                        <button type="button" class="dropdown-item text-success" [disabled]="isRowBusy(user.id)" (click)="onActivate(user)">
+                          <i class="bx bx-check me-2" aria-hidden="true"></i>Reativar
                         </button>
                       } @else {
-                        <button type="button" class="dropdown-item text-danger" [disabled]="store.deactivatingIds().includes(user.id)" (click)="onDeactivate(user)">
-                          <i class="bx bx-block me-2"></i>Desativar
+                        <button type="button" class="dropdown-item text-danger" [disabled]="isRowBusy(user.id)" (click)="onDeactivate(user)">
+                          <i class="bx bx-block me-2" aria-hidden="true"></i>Desativar
                         </button>
                       }
                     </li>
@@ -243,8 +311,8 @@
     <!-- Abaixo de "lg", o painel vira um overlay de tela cheia: a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
-      <app-user-list-info-panel [user]="user" [modal]="isOverlayViewport()" [canToggleActive]="!isCurrentUser(user)"
-                                 [deactivating]="store.deactivatingIds().includes(user.id)"
+      <app-user-list-info-panel [user]="user" [modal]="isOverlayViewport()" [isCurrentUser]="isCurrentUser(user)"
+                                 [deactivating]="store.deactivatingIds().includes(user.id) || store.countingTicketsIds().includes(user.id)"
                                  [activating]="store.activatingIds().includes(user.id)"
                                  [resendingInvitation]="store.resendingInvitationIds().includes(user.id)"
                                  (resendInvitationClick)="onPanelResendInvitation()"
@@ -258,62 +326,45 @@
 
 @if (openDialog() === 'create') {
 <app-dialog id="userCreateModal" title="Novo Usuário" [busy]="store.loading()" (closed)="closeDialog()">
-  <form dialogContent [formGroup]="createForm" (ngSubmit)="onCreateSubmit()">
+  <form dialogContent [formGroup]="createForm" (ngSubmit)="onCreateSubmit()" novalidate>
     <div class="modal-body">
       @if (store.error()) {
         <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.error() }}</div>
       }
+      <p class="small text-muted mb-3">Todos os campos são obrigatórios. As funções podem ficar pra depois.</p>
       <div class="row g-3">
         <div class="col-12 col-md-6">
           <label class="form-label" for="userCreateFirstName">Nome</label>
-          <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
-                 [class.is-invalid]="isCreateFieldInvalid('firstName')"
-                 [attr.aria-describedby]="isCreateFieldInvalid('firstName') ? 'userCreateFirstName-error' : null" />
-          @if (isCreateFieldInvalid('firstName')) {
-            <div class="invalid-feedback" id="userCreateFirstName-error">
-              @if (createForm.controls.firstName.errors?.['required']) {
-                O nome é obrigatório.
-              } @else if (createForm.controls.firstName.errors?.['minlength']) {
-                O nome deve ter no mínimo 2 caracteres.
-              } @else if (createForm.controls.firstName.errors?.['maxlength']) {
-                O nome deve ter no máximo 50 caracteres.
-              }
-            </div>
+          <input id="userCreateFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="off" [maxlength]="nameMaxLength" required
+                 [class.is-invalid]="isFieldInvalid(createForm, 'firstName')" [attr.aria-invalid]="isFieldInvalid(createForm, 'firstName') || null"
+                 [attr.aria-describedby]="isFieldInvalid(createForm, 'firstName') ? 'userCreateFirstName-error' : null" />
+          @if (isFieldInvalid(createForm, 'firstName')) {
+            <div class="invalid-feedback" id="userCreateFirstName-error">{{ nameError(createForm.controls.firstName, 'O nome') }}</div>
           }
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label" for="userCreateLastName">Sobrenome</label>
-          <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
-                 [class.is-invalid]="isCreateFieldInvalid('lastName')"
-                 [attr.aria-describedby]="isCreateFieldInvalid('lastName') ? 'userCreateLastName-error' : null" />
-          @if (isCreateFieldInvalid('lastName')) {
-            <div class="invalid-feedback" id="userCreateLastName-error">
-              @if (createForm.controls.lastName.errors?.['required']) {
-                O sobrenome é obrigatório.
-              } @else if (createForm.controls.lastName.errors?.['minlength']) {
-                O sobrenome deve ter no mínimo 2 caracteres.
-              } @else if (createForm.controls.lastName.errors?.['maxlength']) {
-                O sobrenome deve ter no máximo 50 caracteres.
-              }
-            </div>
+          <input id="userCreateLastName" type="text" class="form-control" formControlName="lastName" autocomplete="off" [maxlength]="nameMaxLength" required
+                 [class.is-invalid]="isFieldInvalid(createForm, 'lastName')" [attr.aria-invalid]="isFieldInvalid(createForm, 'lastName') || null"
+                 [attr.aria-describedby]="isFieldInvalid(createForm, 'lastName') ? 'userCreateLastName-error' : null" />
+          @if (isFieldInvalid(createForm, 'lastName')) {
+            <div class="invalid-feedback" id="userCreateLastName-error">{{ nameError(createForm.controls.lastName, 'O sobrenome') }}</div>
           }
         </div>
         <div class="col-12">
           <label class="form-label" for="userCreateEmail">E-mail</label>
-          <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="off"
-                 [class.is-invalid]="isCreateFieldInvalid('email')"
-                 [attr.aria-describedby]="isCreateFieldInvalid('email') ? 'userCreateInvitationHint userCreateEmail-error' : 'userCreateInvitationHint'" />
-          @if (isCreateFieldInvalid('email')) {
+          <input id="userCreateEmail" type="email" class="form-control" formControlName="email" autocomplete="off" required
+                 [class.is-invalid]="isFieldInvalid(createForm, 'email')" [attr.aria-invalid]="isFieldInvalid(createForm, 'email') || null"
+                 [attr.aria-describedby]="isFieldInvalid(createForm, 'email') ? 'userCreateInvitationHint userCreateEmail-error' : 'userCreateInvitationHint'" />
+          @if (isFieldInvalid(createForm, 'email')) {
             <div class="invalid-feedback" id="userCreateEmail-error">
               @if (createForm.controls.email.errors?.['required']) {
                 O e-mail é obrigatório.
               } @else {
-                Insira um e-mail válido.
+                Insira um e-mail válido, como nome&#64;empresa.com.br.
               }
             </div>
           }
-        </div>
-        <div class="col-12">
           <!-- Spec 008 do back-end: ninguém define senha por outra pessoa. O convite chega no e-mail acima. -->
           <p class="form-text mb-0" id="userCreateInvitationHint">
             <i class="bx bx-envelope me-1" aria-hidden="true"></i>
@@ -323,12 +374,12 @@
       </div>
       <fieldset class="mt-4">
         <legend class="form-label mb-2">Funções</legend>
-        @for (role of rolesStore.roles(); track role.name) {
+        @for (role of rolesStore.roles(); track role.name; let index = $index) {
           <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" [id]="'create-role-' + role.name"
-                   [checked]="isCreateRoleChecked(role.name)"
+            <input class="form-check-input" type="checkbox" [id]="'create-role-' + index"
+                   [checked]="createRoleNames().has(role.name)"
                    (change)="toggleCreateRole(role.name, $any($event.target).checked)" />
-            <label class="form-check-label" [for]="'create-role-' + role.name">
+            <label class="form-check-label" [for]="'create-role-' + index">
               {{ role.name }}
               @if (isAdminRole(role.name)) {
                 <span class="badge bg-label-primary ms-1">Administrador</span>
@@ -337,7 +388,7 @@
             </label>
           </div>
         } @empty {
-          <p class="text-muted small mb-0">Nenhuma função cadastrada ainda — dá pra atribuir depois, pelo menu ⋮ da linha.</p>
+          <p class="text-muted small mb-0">Nenhuma função cadastrada ainda. Dá pra atribuir depois, em "Atribuir funções".</p>
         }
         @if (rolesStore.roles().length > 0 && createRoleNames().size === 0) {
           <div class="alert alert-warning border-0 py-2 small mt-2 mb-0" role="status">
@@ -365,7 +416,7 @@
 
 @if (openDialog() === 'edit') {
 <app-dialog id="userEditModal" title="Editar cadastro" [subtitle]="selectedUserForEdit() ? selectedUserForEdit()!.firstName + ' ' + selectedUserForEdit()!.lastName : null" [busy]="store.updatingProfile()" (closed)="closeDialog()">
-  <form dialogContent [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
+  <form dialogContent [formGroup]="editForm" (ngSubmit)="onEditSubmit()" novalidate>
     <div class="modal-body">
       @if (store.profileError()) {
         <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.profileError() }}</div>
@@ -373,36 +424,20 @@
       <div class="row g-3">
         <div class="col-12 col-md-6">
           <label class="form-label" for="userEditFirstName">Nome</label>
-          <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="given-name" maxlength="50"
-                 [class.is-invalid]="isEditFieldInvalid('firstName')"
-                 [attr.aria-describedby]="isEditFieldInvalid('firstName') ? 'userEditFirstName-error' : null" />
-          @if (isEditFieldInvalid('firstName')) {
-            <div class="invalid-feedback" id="userEditFirstName-error">
-              @if (editForm.controls.firstName.errors?.['required']) {
-                O nome é obrigatório.
-              } @else if (editForm.controls.firstName.errors?.['minlength']) {
-                O nome deve ter no mínimo 2 caracteres.
-              } @else if (editForm.controls.firstName.errors?.['maxlength']) {
-                O nome deve ter no máximo 50 caracteres.
-              }
-            </div>
+          <input id="userEditFirstName" type="text" class="form-control" formControlName="firstName" autocomplete="off" [maxlength]="nameMaxLength" required
+                 [class.is-invalid]="isFieldInvalid(editForm, 'firstName')" [attr.aria-invalid]="isFieldInvalid(editForm, 'firstName') || null"
+                 [attr.aria-describedby]="isFieldInvalid(editForm, 'firstName') ? 'userEditFirstName-error' : null" />
+          @if (isFieldInvalid(editForm, 'firstName')) {
+            <div class="invalid-feedback" id="userEditFirstName-error">{{ nameError(editForm.controls.firstName, 'O nome') }}</div>
           }
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label" for="userEditLastName">Sobrenome</label>
-          <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="family-name" maxlength="50"
-                 [class.is-invalid]="isEditFieldInvalid('lastName')"
-                 [attr.aria-describedby]="isEditFieldInvalid('lastName') ? 'userEditLastName-error' : null" />
-          @if (isEditFieldInvalid('lastName')) {
-            <div class="invalid-feedback" id="userEditLastName-error">
-              @if (editForm.controls.lastName.errors?.['required']) {
-                O sobrenome é obrigatório.
-              } @else if (editForm.controls.lastName.errors?.['minlength']) {
-                O sobrenome deve ter no mínimo 2 caracteres.
-              } @else if (editForm.controls.lastName.errors?.['maxlength']) {
-                O sobrenome deve ter no máximo 50 caracteres.
-              }
-            </div>
+          <input id="userEditLastName" type="text" class="form-control" formControlName="lastName" autocomplete="off" [maxlength]="nameMaxLength" required
+                 [class.is-invalid]="isFieldInvalid(editForm, 'lastName')" [attr.aria-invalid]="isFieldInvalid(editForm, 'lastName') || null"
+                 [attr.aria-describedby]="isFieldInvalid(editForm, 'lastName') ? 'userEditLastName-error' : null" />
+          @if (isFieldInvalid(editForm, 'lastName')) {
+            <div class="invalid-feedback" id="userEditLastName-error">{{ nameError(editForm.controls.lastName, 'O sobrenome') }}</div>
           }
         </div>
       </div>
@@ -428,13 +463,13 @@
         <div class="alert alert-danger border-0 py-2 small" role="alert">{{ store.rolesError() }}</div>
       }
       <fieldset>
-        <legend class="small text-muted mb-3">Marque as funções que {{ selectedUser()?.firstName }} deve ter — as atuais já vêm marcadas.</legend>
-        @for (role of rolesStore.roles(); track role.name) {
+        <legend class="small text-muted mb-3">Marque as funções que {{ selectedUser()?.firstName }} deve ter. As atuais já vêm marcadas.</legend>
+        @for (role of rolesStore.roles(); track role.name; let index = $index) {
           <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" [id]="'role-' + role.name"
-                   [checked]="isChecked(role.name)"
+            <input class="form-check-input" type="checkbox" [id]="'role-' + index"
+                   [checked]="selectedRoleNames().has(role.name)"
                    (change)="toggleRole(role.name, $any($event.target).checked)" />
-            <label class="form-check-label" [for]="'role-' + role.name">
+            <label class="form-check-label" [for]="'role-' + index">
               {{ role.name }}
               @if (isAdminRole(role.name)) {
                 <span class="badge bg-label-primary ms-1">Administrador</span>

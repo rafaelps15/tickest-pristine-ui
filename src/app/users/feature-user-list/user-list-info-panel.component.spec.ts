@@ -2,9 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
 import { UserSummary } from '../entities/user-summary';
-import { setRoleColor } from '../../shared';
-
-const ROLE_COLOR_STORAGE_KEY = 'tickest.roleColors';
 
 describe('UserListInfoPanelComponent', () => {
   const activeUser: UserSummary = {
@@ -14,7 +11,6 @@ describe('UserListInfoPanelComponent', () => {
   };
 
   beforeEach(async () => {
-    localStorage.removeItem(ROLE_COLOR_STORAGE_KEY);
     await TestBed.configureTestingModule({
       imports: [UserListInfoPanelComponent],
       providers: [provideZonelessChangeDetection()]
@@ -179,14 +175,22 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Nenhuma função');
   });
 
-  it('usa a cor customizada da função quando escolhida (prévia local)', async () => {
-    setRoleColor('Agent', '#ff3e1d');
+  it('diz "Convite expirado" em destaque quando o convite venceu', async () => {
+    const fixture = createFixture();
+    fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null });
+    await fixture.whenStable();
+
+    const expired = fixture.nativeElement.querySelector('.invitation-expired') as HTMLElement;
+    expect(expired.textContent).toContain('Convite expirado');
+  });
+
+  it('mostra cada função no badge índigo do sistema', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
     const badge = fixture.nativeElement.querySelector('.info-list .badge') as HTMLElement;
-    expect(badge.classList).toContain('badge-role-custom');
-    expect(badge.style.getPropertyValue('--role-color')).toBe('#ff3e1d');
+    expect(badge.classList).toContain('bg-label-primary');
+    expect(badge.textContent?.trim()).toBe('Agent');
   });
 
   it('mostra a data de desativação só quando o usuário está desativado', async () => {
@@ -199,13 +203,15 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Desativado em');
   });
 
-  it('esconde o botão Ativar/Desativar quando canToggleActive é false (própria conta logada)', async () => {
+  it('na própria conta logada, marca "Você" e troca o Ativar/Desativar por uma explicação', async () => {
     const fixture = createFixture();
-    fixture.componentRef.setInput('canToggleActive', false);
+    fixture.componentRef.setInput('isCurrentUser', true);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).not.toContain('Desativar');
-    expect(fixture.nativeElement.textContent).not.toContain('Reativar');
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).map(button => button.textContent ?? '');
+    expect(buttons.some(text => text.includes('Desativar') || text.includes('Reativar'))).toBeFalse();
+    expect(fixture.nativeElement.textContent).toContain('Você');
+    expect(fixture.nativeElement.textContent).toContain('Sua própria conta não pode ser desativada');
   });
 
   it('mostra "Desativar" para um usuário ativo e "Reativar" para um inativo', async () => {

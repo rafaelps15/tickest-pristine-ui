@@ -4,14 +4,22 @@ import { Observable, map } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { ChangePasswordRequest, UpdateProfileRequest, UserProfile } from '../entities/user-profile';
+import { UserStatusCounts } from '../entities/user-status-counts';
 import { PagedResponse } from '../../shared';
 import { environment } from '../../../environments/environment';
 
 /** Acesso HTTP aos usuários (listagem, detalhe, edição de perfil, atribuição de roles). */
 @Injectable({ providedIn: 'root' })
 export class UserDataService {
+    /** Cliente HTTP do Angular. */
     private readonly http = inject(HttpClient);
+    /** Base dos endpoints de usuários na API. */
     private readonly apiUrl = `${environment.apiUrl}/users`;
+
+    /** Quantos usuários há em cada situação — ativos, convite pendente, inativos (GET /users/stats/status, requer users:read). */
+    getStatusCounts(): Observable<UserStatusCounts> {
+        return this.http.get<UserStatusCounts>(`${this.apiUrl}/stats/status`);
+    }
 
     /** Busca o perfil de um usuário pelo id (GET /users/{id}). */
     getById(userId: string): Observable<UserProfile> {

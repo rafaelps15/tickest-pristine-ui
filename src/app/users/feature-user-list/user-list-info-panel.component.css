@@ -1,0 +1,10 @@
+/* Atalhos do painel com o alvo de toque de 44px do sistema (antes `btn-sm`, ~31px). */
+.panel-actions .btn {
+  min-height: 2.75rem;
+}
+
+/* Convite vencido pede uma ação ("Reenviar convite"): âmbar AA, o mesmo tom do badge "Convite pendente". */
+.invitation-expired {
+  color: var(--tk-warning-text);
+  font-weight: 600;
+}

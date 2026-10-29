@@ -2,7 +2,7 @@ import { signalStore, withState, withProps, withComputed, withMethods, patchStat
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, forkJoin, from, mergeMap, toArray, of, catchError, map, switchMap } from 'rxjs';
+import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } from 'rxjs';
 import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
@@ -12,50 +12,63 @@ import { AuthDataService, CreateUserData, extractErrorMessage, valueOf } from '.
 /** Filtros e paginação padrão: todos os status, primeira página, 20 itens por página. */
 const DEFAULT_FILTERS: UserFilters = { status: 'All', page: 1, pageSize: 20 };
 
-/** Máximo de desativações em lote em voo ao mesmo tempo — evita 100 requisições simultâneas ao selecionar "todos" com pageSize 100. */
-const BULK_DEACTIVATE_CONCURRENCY = 10;
+/** Máximo de requisições em lote em voo ao mesmo tempo (desativar, reativar, contar chamados) — evita 100 simultâneas ao selecionar "todos" com pageSize 100. */
+const BULK_CONCURRENCY = 10;
 
 /** Store de usuários administrados: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 export const UsersStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Filtros e paginação aplicados à listagem (GET /users). */
     filters: DEFAULT_FILTERS,
+    /** Cadastro de um novo usuário em andamento. */
     loading: false,
+    /** O último cadastro terminou com sucesso — a tela fecha o ciclo (toast, destaque da linha). */
     success: false,
+    /** Erro do último cadastro, mostrado dentro do modal "Novo Usuário". */
     error: null as string | null,
     /** Id do último usuário criado — pra tela destacar a linha dele. */
     createdUserId: null as string | null,
     /** O último cadastro criou o usuário, mas a atribuição das funções escolhidas falhou. */
     createRolesFailed: false,
+    /** Erro de uma ação feita da linha ou do painel (desativar, reativar, reenviar convite), mostrado acima da lista. */
     listMutationError: null as string | null,
+    /** Erro do modal "Editar cadastro". */
     profileError: null as string | null,
+    /** Erro do modal "Atribuir funções". */
     rolesError: null as string | null,
+    /** Edição de cadastro em andamento. */
     updatingProfile: false,
+    /** Atribuição de funções em andamento. */
     assigningRoles: false,
+    /** Usuários com desativação em andamento. */
     deactivatingIds: [] as string[],
+    /** Usuários com reativação em andamento. */
     activatingIds: [] as string[],
+    /** Usuários cuja contagem de chamados em aberto (antes de confirmar a desativação) está em andamento. */
+    countingTicketsIds: [] as string[],
     /** Usuários com reenvio de convite em andamento. */
     resendingInvitationIds: [] as string[]
   }),
   withProps(() => ({
+    /** Acesso HTTP aos usuários. */
     _userDataService: inject(UserDataService),
+    /** Acesso HTTP ao cadastro (POST /users/register). */
     _authDataService: inject(AuthDataService)
   })),
   withProps((store) => ({
+    /** Página atual da listagem, recarregada sempre que {@link filters} muda. */
     _listResource: rxResource({
       params: () => store.filters(),
       stream: ({ params }) => store._userDataService.getAll(params)
     }),
     /**
-     * Totais de ativos e inativos da empresa inteira, pro card "Resumo" — não dá pra somar a
-     * página atual (a lista é paginada e filtrada). Sem endpoint de contagem, usa o `totalCount`
-     * de duas consultas de 1 item cada; recarrega só nas ações que mudam esses totais.
+     * Totais da empresa inteira por situação, pro card "Resumo" — não dá pra somar a página atual
+     * (a lista é paginada e filtrada). Um GET só (spec 020), que separa os convites pendentes dos
+     * ativos; recarrega só nas ações que mudam esses totais.
      */
     _summaryResource: rxResource({
-      stream: () => forkJoin({
-        active: store._userDataService.getAll({ status: 'Active', page: 1, pageSize: 1 }),
-        inactive: store._userDataService.getAll({ status: 'Inactive', page: 1, pageSize: 1 })
-      }).pipe(map(({ active, inactive }) => ({ activeCount: active.totalCount, inactiveCount: inactive.totalCount })))
+      stream: () => store._userDataService.getStatusCounts()
     })
   })),
   withComputed((store) => ({
@@ -66,6 +79,7 @@ export const UsersStore = signalStore(
      * também aparece em {@link listState}: só a falha de carga se resolve recarregando.
      */
     listLoadFailed: computed(() => !!store._listResource.error()),
+    /** Estado da lista pra tela: carregando e a mensagem de erro (de ação, ou de carga quando não há erro de ação). */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
@@ -94,10 +108,8 @@ export const UsersStore = signalStore(
     hasPreviousPage: computed(() => store.usersPage()?.hasPreviousPage ?? false),
     /** Indica se existe uma página seguinte à atual. */
     hasNextPage: computed(() => store.usersPage()?.hasNextPage ?? false),
-    /** Total de usuários ativos na empresa (`null` enquanto não há resposta, inclusive em erro). */
-    activeCount: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value().activeCount : null),
-    /** Total de usuários inativos na empresa (`null` enquanto não há resposta, inclusive em erro). */
-    inactiveCount: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value().inactiveCount : null),
+    /** Totais da empresa por situação (`null` enquanto não há resposta, inclusive em erro). */
+    statusCounts: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value() : null),
     /** Os totais do Resumo estão carregando pela primeira vez. */
     summaryLoading: computed(() => store._summaryResource.isLoading() && !store._summaryResource.hasValue()),
     /** Os totais do Resumo falharam. */
@@ -109,10 +121,38 @@ export const UsersStore = signalStore(
      * Falha devolve `null`: o aviso some, mas a desativação não fica bloqueada por causa dele.
      */
     countOpenAssignedTickets(userId: string, onDone: (count: number | null) => void): void {
-      store._userDataService.countOpenAssignedTickets(userId).subscribe({
+      if (store.countingTicketsIds().includes(userId)) return;
+      patchState(store, { countingTicketsIds: [...store.countingTicketsIds(), userId] });
+
+      store._userDataService.countOpenAssignedTickets(userId).pipe(
+        finalize(() => patchState(store, { countingTicketsIds: store.countingTicketsIds().filter(id => id !== userId) }))
+      ).subscribe({
         next: count => onDone(count),
         error: () => onDone(null)
       });
+    },
+
+    /**
+     * Conta, pra confirmação da desativação em lote, quantos chamados em aberto os selecionados
+     * atendem no total e quantas dessas pessoas atendem algum. Uma consulta por pessoa (não há
+     * agregado no back-end), no máximo {@link BULK_CONCURRENCY} em voo. Qualquer falha devolve
+     * `null`: o aviso some, mas a desativação não fica bloqueada por causa dele.
+     */
+    countOpenAssignedTicketsMany(userIds: string[], onDone: (result: { tickets: number; people: number } | null) => void): void {
+      patchState(store, { countingTicketsIds: [...store.countingTicketsIds(), ...userIds] });
+
+      from(userIds).pipe(
+        mergeMap(userId => store._userDataService.countOpenAssignedTickets(userId), BULK_CONCURRENCY),
+        toArray(),
+        map(counts => ({ tickets: counts.reduce((sum, count) => sum + count, 0), people: counts.filter(count => count > 0).length })),
+        catchError(() => of(null)),
+        finalize(() => patchState(store, { countingTicketsIds: store.countingTicketsIds().filter(id => !userIds.includes(id)) }))
+      ).subscribe(result => onDone(result));
+    },
+
+    /** Limpa o erro de ação mostrado acima da lista (o "X" do aviso). */
+    clearListMutationError(): void {
+      patchState(store, { listMutationError: null });
     },
 
     /**
@@ -198,9 +238,15 @@ export const UsersStore = signalStore(
       patchState(store, { profileError: null, rolesError: null });
     },
 
-    /** Muda o termo de busca e volta para a primeira página. */
+    /**
+     * Muda o termo de busca e volta para a primeira página. O mesmo termo não muda nada: sem isso,
+     * o "Limpar filtros" (que já zera a busca) e a 1ª emissão da busca vazia voltavam a página e
+     * disparavam outro GET.
+     */
     setSearch(search: string): void {
-      patchState(store, { filters: { ...store.filters(), search: search || undefined, page: 1 } });
+      const normalized = search.trim() || undefined;
+      if (normalized === store.filters().search) return;
+      patchState(store, { filters: { ...store.filters(), search: normalized, page: 1 } });
     },
 
     /** Muda o filtro de status (Todos/Ativos/Inativos) e volta para a primeira página. */
@@ -311,12 +357,12 @@ export const UsersStore = signalStore(
     /**
      * Desativa vários usuários em lote, com melhor esforço: cada chamada usa o mesmo endpoint
      * individual de desativação (não há endpoint de lote no back-end), no máximo
-     * {@link BULK_DEACTIVATE_CONCURRENCY} em voo ao mesmo tempo — selecionar "todos" com
+     * {@link BULK_CONCURRENCY} em voo ao mesmo tempo — selecionar "todos" com
      * pageSize 100 não deve disparar 100 requisições simultâneas — e falhas de uma não cancelam
      * as demais. Reporta nomes dos que falharam no erro da listagem e recarrega só se pelo menos
      * um teve sucesso.
      */
-    deactivateMany(userIds: string[], onDone?: (succeededCount: number, failedCount: number) => void): void {
+    deactivateMany(userIds: string[], onDone?: (succeededIds: string[], failedCount: number) => void): void {
       if (userIds.length === 0) return;
 
       patchState(store, { listMutationError: null, deactivatingIds: [...store.deactivatingIds(), ...userIds] });
@@ -327,7 +373,7 @@ export const UsersStore = signalStore(
             map(() => ({ userId, ok: true as const })),
             catchError(() => of({ userId, ok: false as const }))
           ),
-          BULK_DEACTIVATE_CONCURRENCY
+          BULK_CONCURRENCY
         ),
         toArray(),
         finalize(() => patchState(store, {
@@ -353,7 +399,45 @@ export const UsersStore = signalStore(
           store._summaryResource.reload();
         }
 
-        onDone?.(succeededIds.length, failedIds.length);
+        onDone?.(succeededIds, failedIds.length);
+      });
+    },
+
+    /**
+     * Reativa vários usuários de uma vez — o "Desfazer" da desativação em lote. Mesmo melhor
+     * esforço e limite de {@link BULK_CONCURRENCY} do {@link deactivateMany}; falha de algum vai
+     * pro erro da listagem.
+     */
+    activateMany(userIds: string[], onDone?: (succeededCount: number, failedCount: number) => void): void {
+      if (userIds.length === 0) return;
+
+      patchState(store, { listMutationError: null, activatingIds: [...store.activatingIds(), ...userIds] });
+
+      from(userIds).pipe(
+        mergeMap(userId =>
+          store._userDataService.activate(userId).pipe(
+            map(() => true),
+            catchError(() => of(false))
+          ),
+          BULK_CONCURRENCY
+        ),
+        toArray(),
+        finalize(() => patchState(store, {
+          activatingIds: store.activatingIds().filter(id => !userIds.includes(id))
+        }))
+      ).subscribe(results => {
+        const succeededCount = results.filter(ok => ok).length;
+        const failedCount = results.length - succeededCount;
+
+        if (failedCount > 0) {
+          patchState(store, { listMutationError: 'Não foi possível reativar um ou mais usuários. Reative pelo menu ⋮ da linha.' });
+        }
+        if (succeededCount > 0) {
+          store._listResource.reload();
+          store._summaryResource.reload();
+        }
+
+        onDone?.(succeededCount, failedCount);
       });
     },
 

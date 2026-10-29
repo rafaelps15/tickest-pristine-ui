@@ -1,36 +1,45 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener, untracked } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener, untracked, afterNextRender, Injector, DestroyRef } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { UsersStore } from '../application/users.store';
 import { UserSummary, UserRoleSummary } from '../entities/user-summary';
+import { USER_NAME_MAX_LENGTH } from '../entities/user-profile';
 import { UserFilters, UserStatus } from '../entities/user-filters';
 import { RolesStore } from '../../roles';
 import {
     SessionService, ConfirmDialogService, ToastService,
     visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
-    getRoleColor, injectSidePanelOverlay, isEscapeFromNestedLayer
+    injectSidePanelOverlay, isEscapeFromNestedLayer
 } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
 import { UserListGuideComponent } from './user-list-guide.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
-import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 import { UserListInsightsComponent } from './user-list-insights.component';
+import { UserStatusBadgeComponent, UserStatusKind, userStatusKind } from './user-status-badge.component';
 
+/** Status padrão da listagem ("Todos"). */
 const DEFAULT_STATUS: UserStatus = 'All';
+/** Página padrão da listagem. */
 const DEFAULT_PAGE = 1;
+/** Tamanho de página padrão da listagem. */
 const DEFAULT_PAGE_SIZE = 20;
+/** Tamanhos de página que o seletor "Por página" oferece (e que a URL aceita). */
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+/** Status aceitos na query string. */
 const STATUS_OPTIONS: UserStatus[] = ['All', 'Active', 'Inactive'];
+/** Formato de data aceito na query string (aaaa-mm-dd). */
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 /** Quanto tempo a linha de quem acabou de ser criado fica destacada na tabela. */
 const NEW_USER_HIGHLIGHT_MS = 4000;
+/** Quantos nomes a confirmação da desativação em lote lista antes de resumir em "e mais N". */
+const BULK_NAMES_SHOWN = 8;
 
 /** Lê o status da query string só se bater com um dos valores aceitos; senão, o padrão ("Todos"). */
 function parseStatusParam(value: string | null): UserStatus {
@@ -56,11 +65,25 @@ function parsePageSizeParam(value: string | null): number {
     return PAGE_SIZE_OPTIONS.includes(parsed) ? parsed : DEFAULT_PAGE_SIZE;
 }
 
+/** Cópia do conjunto com o item adicionado (`checked`) ou removido — as três seleções da tela (funções no cadastro, funções no modal, lote). */
+function toggleInSet(current: Set<string>, item: string, checked: boolean): Set<string> {
+    const next = new Set(current);
+    if (checked) next.add(item); else next.delete(item);
+    return next;
+}
+
+/** "Ana, Bruno e Carla" — lista de nomes em português, com "e mais N" acima de {@link BULK_NAMES_SHOWN}. */
+function joinNames(names: string[]): string {
+    if (names.length > BULK_NAMES_SHOWN) {
+        return `${names.slice(0, BULK_NAMES_SHOWN).join(', ')} e mais ${names.length - BULK_NAMES_SHOWN}`;
+    }
+    return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+}
 
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
     selector: 'app-user-list',
-    imports: [ReactiveFormsModule, DatePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, UserListInsightsComponent],
+    imports: [ReactiveFormsModule, DatePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, UserListInsightsComponent, UserStatusBadgeComponent],
     templateUrl: './user-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './user-list.component.css'
@@ -74,25 +97,36 @@ export class UserListComponent implements OnInit {
         this.openDialog.set(null);
     }
 
+    /** Construtor dos formulários reativos. */
     private readonly fb = inject(FormBuilder);
+    /** Estado da listagem e das ações sobre usuários. */
     protected readonly store = inject(UsersStore);
+    /** Funções cadastradas, pros modais de cadastro e de atribuição. */
     protected readonly rolesStore = inject(RolesStore);
+    /** Sessão de quem está logado — pra proteger a própria conta. */
     private readonly sessionService = inject(SessionService);
+    /** Modal de confirmação global (desativar, reativar). */
     private readonly confirmDialogService = inject(ConfirmDialogService);
+    /** Toasts de confirmação, com "Desfazer"/"Reenviar convite". */
     private readonly toastService = inject(ToastService);
+    /** Rota atual, pra ler e gravar os filtros na query string. */
     private readonly route = inject(ActivatedRoute);
+    /** Roteador, pra refletir os filtros na URL. */
     private readonly router = inject(Router);
+    /** Injector pro `afterNextRender` que devolve o foco depois que a tela redesenha. */
+    private readonly injector = inject(Injector);
 
+    /** Formulário de cadastro (nome, sobrenome, e-mail) do modal "Novo Usuário". */
     createForm = this.fb.group({
-        firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-        lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+        firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(USER_NAME_MAX_LENGTH)]],
+        lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(USER_NAME_MAX_LENGTH)]],
         email: ['', [Validators.required, Validators.email]]
     });
 
     /** Formulário de edição de nome/sobrenome do usuário selecionado. */
     editForm = this.fb.group({
-        firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-        lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]]
+        firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(USER_NAME_MAX_LENGTH)]],
+        lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(USER_NAME_MAX_LENGTH)]]
     });
 
     /** Usuário selecionado para atribuição de roles. */
@@ -107,20 +141,29 @@ export class UserListComponent implements OnInit {
     /** Mensagem de período de cadastro inválido (data inicial depois da final); `null` quando o período é coerente. */
     periodError = signal<string | null>(null);
 
-    /** Texto digitado na busca, antes do debounce — ver o effect de busca no construtor. */
+    /** Se quem usa abriu os campos de período (recolhidos por padrão: filtro de uso raro); com um período aplicado, eles aparecem de qualquer jeito. */
+    readonly periodOpen = signal(false);
+
+    /** Texto digitado na busca, antes do debounce — ver a busca no construtor. */
     searchInput = signal('');
 
     /** Funções marcadas no modal de criação (por nome) — as padrão (`isDefault`) já vêm marcadas ao abrir. */
     createRoleNames = signal<Set<string>>(new Set());
 
-    /** Se o último envio do modal de criação foi "Criar e cadastrar outro" (mantém o modal aberto) em vez de "Criar". */
+    /** Se o último envio do modal de criação foi "Convidar e cadastrar outro" (mantém o modal aberto) em vez de "Enviar convite". */
     private createAnother = false;
 
-    /** Anúncio do modal de criação ao cadastrar e manter aberto ("Ana Costa criada.") — região `aria-live` dentro do modal. */
+    /** Anúncio do modal de criação ao cadastrar e manter aberto ("Convite enviado para Ana Costa. Pronto para o próximo.") — região `aria-live` dentro do modal. */
     readonly createAnnouncement = signal('');
 
     /** Usuário recém-criado, destacado por alguns segundos na tabela pra quem acabou de cadastrar encontrar a linha. */
     readonly highlightedUserId = signal<string | null>(null);
+
+    /** Timer que tira o destaque da linha nova — limpo se a tela for destruída antes. */
+    private highlightTimer: ReturnType<typeof setTimeout> | null = null;
+
+    /** Ids dos usuários marcados para ação em lote, na página atual. */
+    selectedUserIds = signal<Set<string>>(new Set());
 
     /** Texto da região `aria-live` permanente do lote — vazia sem seleção; a região já existe antes, pra primeira marcação ser anunciada. */
     readonly selectionAnnouncement = computed(() => {
@@ -128,9 +171,6 @@ export class UserListComponent implements OnInit {
         if (count === 0) return '';
         return count === 1 ? '1 usuário selecionado' : `${count} usuários selecionados`;
     });
-
-    /** Ids dos usuários marcados para ação em lote, na página atual. */
-    selectedUserIds = signal<Set<string>>(new Set());
 
     /**
      * Usuário selecionado por clique na linha, pro painel "Informações do Usuário" — estado de UI
@@ -144,23 +184,62 @@ export class UserListComponent implements OnInit {
     /** Usuário selecionado, com os dados já carregados na tabela — `undefined` se o id não estiver (mais) na página/filtro atual. */
     infoPanelUser = computed(() => this.store.users().find(user => user.id === this.infoPanelUserId()));
 
+    /** Tamanhos de página oferecidos no rodapé da tabela. */
     readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
     /** Se a janela está abaixo de "lg", onde o painel "Informações do Usuário" vira um diálogo modal de tela cheia. */
     readonly isOverlayViewport = injectSidePanelOverlay();
 
-    /** Verifica se um campo do formulário de criação está inválido e já foi tocado. */
-    isCreateFieldInvalid(fieldName: keyof typeof this.createForm.controls): boolean {
-        const control = this.createForm.controls[fieldName];
-        return control.invalid && (control.dirty || control.touched);
+    /** Se há um período de cadastro aplicado. */
+    readonly hasPeriod = computed(() => !!this.store.filters().createdFrom || !!this.store.filters().createdTo);
+
+    /** Se há algum filtro aplicado (busca, status ou período) — decide entre "Limpar filtros" e o vazio de primeiro uso. */
+    readonly hasFilters = computed(() =>
+        !!this.store.filters().search || this.store.filters().status !== DEFAULT_STATUS || this.hasPeriod());
+
+    /**
+     * Recarga com a lista já na tela (troca de filtro/página): as linhas atuais continuam legíveis
+     * (sem esmaecer — DESIGN.md proíbe `opacity` em texto que precisa ser lido) e só a barra diz
+     * "Atualizando…".
+     */
+    readonly isRefreshing = computed(() => this.store.listState().loading && this.store.users().length > 0);
+
+    /** Usuários elegíveis para seleção em lote na página atual: ativos e diferentes da própria conta. */
+    readonly eligibleUsersForBulk = computed(() => this.store.users().filter(user => this.canSelectForBulk(user)));
+
+    /** Se todos os usuários elegíveis da página estão selecionados — estado do checkbox "selecionar todos". */
+    readonly allEligibleSelected = computed(() => {
+        const eligible = this.eligibleUsersForBulk();
+        return eligible.length > 0 && eligible.every(user => this.selectedUserIds().has(user.id));
+    });
+
+    /** Se o checkbox "selecionar todos" fica indeterminado (alguns, não todos, marcados). */
+    readonly someEligibleSelected = computed(() =>
+        !this.allEligibleSelected() && this.eligibleUsersForBulk().some(user => this.selectedUserIds().has(user.id)));
+
+    /** Se a desativação em lote (ou a contagem de chamados que vem antes dela) está em andamento. */
+    readonly bulkBusy = computed(() => {
+        const counting = this.store.countingTicketsIds();
+        return this.store.deactivatingIds().length > 0 || [...this.selectedUserIds()].some(id => counting.includes(id));
+    });
+
+    /** Verifica se um campo de um dos formulários está inválido e já foi tocado. */
+    isFieldInvalid(form: FormGroup, fieldName: string): boolean {
+        const control = form.get(fieldName);
+        return !!control && control.invalid && (control.dirty || control.touched);
     }
 
-    /** Verifica se um campo do formulário de edição está inválido e já foi tocado. */
-    isEditFieldInvalid(fieldName: keyof typeof this.editForm.controls): boolean {
-        const control = this.editForm.controls[fieldName];
-        return control.invalid && (control.dirty || control.touched);
+    /** Limite de nome e sobrenome nos campos, o mesmo do back-end. */
+    protected readonly nameMaxLength = USER_NAME_MAX_LENGTH;
+
+    /** Mensagem de erro de nome/sobrenome ("O nome é obrigatório."), a mesma no cadastro e na edição. */
+    nameError(control: AbstractControl, subject: string): string {
+        if (control.errors?.['required']) return `${subject} é obrigatório.`;
+        if (control.errors?.['minlength']) return `${subject} deve ter no mínimo 2 caracteres.`;
+        return `${subject} deve ter no máximo ${USER_NAME_MAX_LENGTH} caracteres.`;
     }
 
+    /** Liga os efeitos da tela: fim do cadastro, busca com debounce, URL, seleção, página fora do total e painel órfão. */
     constructor() {
         effect(() => {
             if (this.store.success()) {
@@ -168,8 +247,10 @@ export class UserListComponent implements OnInit {
             }
         });
 
-        // Espera ~300ms após a última tecla antes de disparar a busca, pra não buscar a cada letra digitada.
+        // Espera ~300ms após a última tecla antes de buscar. O `skip(1)` ignora o valor inicial (''),
+        // que voltava `?page=3` do link pra página 1 e disparava um GET a mais ao abrir a tela.
         toObservable(this.searchInput).pipe(
+            skip(1),
             debounceTime(300),
             distinctUntilChanged(),
             takeUntilDestroyed()
@@ -186,7 +267,7 @@ export class UserListComponent implements OnInit {
         // quando o alvo realmente difere da URL atual — evita regravar (e reagir de novo) o mesmo
         // estado que acabou de ser lido dela, ao inicializar. O termo de busca livre fica de fora
         // de propósito: texto livre/dado pessoal não vai na query string (mesma regra já aplicada
-        // em Monitorar Tickets).
+        // em Monitorar Chamados).
         effect(() => {
             const queryParams = { ...this.filtersToQueryParams(this.store.filters()), userId: this.infoPanelUserId() ?? null };
             if (this.matchesCurrentUrl(queryParams)) return;
@@ -202,6 +283,18 @@ export class UserListComponent implements OnInit {
             if (totalPages > 0 && currentPage > totalPages) {
                 this.store.goToPage(totalPages);
             }
+        });
+
+        // Painel de alguém que saiu da lista (desativado com o filtro "Ativos", outra página…): fecha
+        // de verdade — tira o `userId` da URL e devolve o foco, em vez de sumir sem aviso.
+        effect(() => {
+            const userId = this.infoPanelUserId();
+            if (!userId || this.store.listState().loading || !this.store.usersPage()) return;
+            if (!this.infoPanelUser()) untracked(() => this.closeInfoPanel());
+        });
+
+        inject(DestroyRef).onDestroy(() => {
+            if (this.highlightTimer) clearTimeout(this.highlightTimer);
         });
     }
 
@@ -233,7 +326,7 @@ export class UserListComponent implements OnInit {
      * Elemento com foco no momento em que o painel "Informações do Usuário" foi aberto — pra
      * devolver o foco a ele ao fechar, em vez de deixá-lo "perdido" no topo da página. Importa
      * principalmente no overlay de tela cheia (abaixo de "lg"), onde o elemento que abriu o painel
-     * fica fora da área visível enquanto ele está aberto. Mesmo padrão de Monitorar Tickets.
+     * fica fora da área visível enquanto ele está aberto. Mesmo padrão de Monitorar Chamados.
      */
     private lastFocusedElement: HTMLElement | null = null;
 
@@ -251,7 +344,7 @@ export class UserListComponent implements OnInit {
     /** Fecha o painel "Informações do Usuário" (clique no X, no backdrop, ou tecla Esc) e devolve o foco a quem o abriu. */
     closeInfoPanel(): void {
         this.infoPanelUserId.set(undefined);
-        this.lastFocusedElement?.focus();
+        if (this.lastFocusedElement?.isConnected) this.lastFocusedElement.focus();
         this.lastFocusedElement = null;
     }
 
@@ -316,39 +409,38 @@ export class UserListComponent implements OnInit {
         this.createRoleNames.set(new Set(this.rolesStore.roles().filter(role => role.isDefault).map(role => role.name)));
     }
 
-    /** Indica se a função está marcada no modal de criação. */
-    isCreateRoleChecked(roleName: string): boolean {
-        return this.createRoleNames().has(roleName);
-    }
-
     /** Marca ou desmarca uma função no modal de criação. */
     toggleCreateRole(roleName: string, checked: boolean): void {
-        this.createRoleNames.update(current => {
-            const next = new Set(current);
-            if (checked) next.add(roleName); else next.delete(roleName);
-            return next;
-        });
+        this.createRoleNames.update(current => toggleInSet(current, roleName, checked));
     }
 
-    /** Valida e envia o cadastro; `another` mantém o modal aberto pra cadastrar o próximo ("Criar e cadastrar outro"). */
+    /** Valida e envia o cadastro; `another` mantém o modal aberto pra cadastrar o próximo ("Convidar e cadastrar outro"). */
     onCreateSubmit(another = false): void {
         if (this.createForm.invalid) {
             this.createForm.markAllAsTouched();
+            this.focusFirstInvalid('#userCreateModal');
             return;
         }
 
         this.createAnother = another;
         const raw = this.createForm.getRawValue();
         this.store.createUser({
-            firstName: raw.firstName!,
-            lastName: raw.lastName!,
-            email: raw.email!
+            firstName: raw.firstName!.trim(),
+            lastName: raw.lastName!.trim(),
+            email: raw.email!.trim()
         }, Array.from(this.createRoleNames()));
+    }
+
+    /** Leva o foco ao primeiro campo inválido do formulário — quem envia pelo teclado não precisa procurar o erro. */
+    private focusFirstInvalid(containerSelector: string): void {
+        afterNextRender(() => {
+            document.querySelector<HTMLElement>(`${containerSelector} .is-invalid`)?.focus();
+        }, { injector: this.injector });
     }
 
     /**
      * Fecha o ciclo de um cadastro bem-sucedido: avisa (toast, ou alerta de sucesso parcial quando
-     * só as funções falharam), destaca a linha nova e, em "Criar e cadastrar outro", limpa o
+     * só as funções falharam), destaca a linha nova e, em "Convidar e cadastrar outro", limpa o
      * formulário mantendo as funções escolhidas — o próximo contratado costuma ter as mesmas — e
      * devolve o foco ao Nome.
      */
@@ -378,7 +470,8 @@ export class UserListComponent implements OnInit {
         if (!userId) return;
 
         this.highlightedUserId.set(userId);
-        setTimeout(() => {
+        if (this.highlightTimer) clearTimeout(this.highlightTimer);
+        this.highlightTimer = setTimeout(() => {
             if (this.highlightedUserId() === userId) this.highlightedUserId.set(null);
         }, NEW_USER_HIGHLIGHT_MS);
     }
@@ -395,6 +488,7 @@ export class UserListComponent implements OnInit {
     onEditSubmit(): void {
         if (this.editForm.invalid) {
             this.editForm.markAllAsTouched();
+            this.focusFirstInvalid('#userEditModal');
             return;
         }
 
@@ -418,16 +512,9 @@ export class UserListComponent implements OnInit {
         this.selectedRoleNames.set(new Set(user.roles.map(role => role.name)));
     }
 
-    isChecked(roleName: string): boolean {
-        return this.selectedRoleNames().has(roleName);
-    }
-
+    /** Marca ou desmarca uma função no modal de atribuição. */
     toggleRole(roleName: string, checked: boolean): void {
-        this.selectedRoleNames.update(current => {
-            const next = new Set(current);
-            if (checked) next.add(roleName); else next.delete(roleName);
-            return next;
-        });
+        this.selectedRoleNames.update(current => toggleInSet(current, roleName, checked));
     }
 
     /** Nomes das funções de administrador do sistema (`isAdministrator`), pra proteger a própria conta de perder o acesso. */
@@ -471,6 +558,7 @@ export class UserListComponent implements OnInit {
         return this.adminRoleNames().has(roleName);
     }
 
+    /** Salva as funções marcadas (substitui as atuais) — recusado se tiraria do próprio admin o acesso. */
     onAssignRolesSubmit(): void {
         const user = this.selectedUser();
         if (!user || this.removesOwnAdminAccess()) return;
@@ -481,9 +569,9 @@ export class UserListComponent implements OnInit {
         });
     }
 
-    /** Verifica se o usuário está desativado. */
-    isInactive(user: UserSummary): boolean {
-        return !user.isActive;
+    /** Situação do usuário pro badge e pras ações (Ativo, Convite pendente, Inativo). */
+    statusOf(user: UserSummary): UserStatusKind {
+        return userStatusKind(user);
     }
 
     /** Até 2 funções exibidas como badge; o restante vira um badge "+N" (regra compartilhada, ver `shared/utils/role-badges.util`). */
@@ -501,20 +589,36 @@ export class UserListComponent implements OnInit {
         return sharedHiddenRolesNames(user.roles);
     }
 
-    /** Cor escolhida pra uma função — prévia só neste navegador (ver `shared/utils/role-colors.util.ts`); `null` cai no acento padrão. */
-    roleColor(roleName: string): string | null {
-        return getRoleColor(roleName);
-    }
-
     /** Impede desativar/reativar a própria conta logada, que travaria a sessão atual sem recuperação pela UI. */
     isCurrentUser(user: UserSummary): boolean {
         return user.id === this.sessionService.userId();
     }
 
+    /** Se há uma ação em andamento na linha (contando chamados, desativando, reativando, reenviando convite) — vira spinner no ⋮. */
+    isRowBusy(userId: string): boolean {
+        return this.store.countingTicketsIds().includes(userId)
+            || this.store.deactivatingIds().includes(userId)
+            || this.store.activatingIds().includes(userId)
+            || this.store.resendingInvitationIds().includes(userId);
+    }
+
+    /**
+     * Devolve o foco ao "⋮" da linha (a confirmação e o toast o tiraram dali, e o item clicado do
+     * menu deixou de existir). Sem a linha — saiu da lista com o filtro —, o foco vai pra busca.
+     */
+    private focusRowActions(userId: string): void {
+        afterNextRender(() => {
+            const target = document.querySelector<HTMLElement>(`[data-row-actions="${userId}"]`)
+                ?? document.getElementById('userSearch');
+            target?.focus();
+        }, { injector: this.injector });
+    }
+
     /**
      * Desativa o usuário, avisando antes quantos chamados em aberto ele atende — num helpdesk, a
      * pergunta real ao bloquear alguém é o que acontece com a fila dele (achado do critique de
-     * 2026-10-27). Conta pendente de ativação não tem chamados: pula a consulta.
+     * 2026-10-27). Conta pendente de ativação não tem chamados: pula a consulta. Enquanto conta, o
+     * "⋮" gira e um segundo clique não abre outra contagem.
      */
     onDeactivate(user: UserSummary): void {
         if (user.pendingActivation) {
@@ -540,14 +644,17 @@ export class UserListComponent implements OnInit {
             confirmLabel: 'Desativar',
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (confirmed) {
-                this.store.deactivate(user.id, () => {
-                    this.toastService.show(`Acesso de "${name}" desativado.`, 'success', {
-                        label: 'Desfazer',
-                        run: () => this.store.activate(user.id, () => this.toastService.show(`Acesso de "${name}" reativado.`))
-                    });
-                });
+            if (!confirmed) {
+                this.focusRowActions(user.id);
+                return;
             }
+            this.store.deactivate(user.id, () => {
+                this.toastService.show(`Acesso de "${name}" desativado.`, 'success', {
+                    label: 'Desfazer',
+                    run: () => this.store.activate(user.id, () => this.toastService.show(`Acesso de "${name}" reativado.`))
+                });
+                this.focusRowActions(user.id);
+            });
         });
     }
 
@@ -560,31 +667,30 @@ export class UserListComponent implements OnInit {
             confirmLabel: 'Reativar',
             variant: 'success'
         }).subscribe(confirmed => {
-            if (confirmed) {
-                this.store.activate(user.id, () => {
-                    // Reativar quem nunca ativou a conta não traz o convite de volta (spec 008, REQ-10): oferece o reenvio na hora.
-                    if (user.pendingActivation) {
-                        this.toastService.show(`Acesso de "${name}" reativado. Falta reenviar o convite para a conta ser ativada.`, 'info', {
-                            label: 'Reenviar convite',
-                            run: () => this.onResendInvitation(user)
-                        });
-                    } else {
-                        this.toastService.show(`Acesso de "${name}" reativado.`);
-                    }
-                });
+            if (!confirmed) {
+                this.focusRowActions(user.id);
+                return;
             }
+            this.store.activate(user.id, () => {
+                // Reativar quem nunca ativou a conta não traz o convite de volta (spec 008, REQ-10): oferece o reenvio na hora.
+                if (user.pendingActivation) {
+                    this.toastService.show(`Acesso de "${name}" reativado. Falta reenviar o convite para a conta ser ativada.`, 'info', {
+                        label: 'Reenviar convite',
+                        run: () => this.onResendInvitation(user)
+                    });
+                } else {
+                    this.toastService.show(`Acesso de "${name}" reativado.`);
+                }
+                this.focusRowActions(user.id);
+            });
         });
-    }
-
-    /** Indica se dá pra reenviar o convite: conta ainda não ativada e usuário ativo (o back-end recusa desativado). */
-    canResendInvitation(user: UserSummary): boolean {
-        return user.pendingActivation && user.isActive;
     }
 
     /** Reenvia o convite de ativação; o anterior deixa de valer. */
     onResendInvitation(user: UserSummary): void {
         this.store.resendInvitation(user.id, () => {
             this.toastService.show(`Novo convite enviado para ${user.email}. O anterior deixou de valer.`);
+            this.focusRowActions(user.id);
         });
     }
 
@@ -599,18 +705,9 @@ export class UserListComponent implements OnInit {
         return user.isActive && !this.isCurrentUser(user);
     }
 
-    /** Indica se o usuário está marcado na seleção em lote. */
-    isSelected(userId: string): boolean {
-        return this.selectedUserIds().has(userId);
-    }
-
     /** Marca ou desmarca um usuário na seleção em lote. */
     toggleSelection(userId: string, checked: boolean): void {
-        this.selectedUserIds.update(current => {
-            const next = new Set(current);
-            if (checked) next.add(userId); else next.delete(userId);
-            return next;
-        });
+        this.selectedUserIds.update(current => toggleInSet(current, userId, checked));
     }
 
     /** Quantidade de usuários selecionados. */
@@ -618,66 +715,82 @@ export class UserListComponent implements OnInit {
         return this.selectedUserIds().size;
     }
 
-    /** Indica se todos os usuários elegíveis da página estão selecionados — estado do checkbox "selecionar todos". */
-    allEligibleSelected(): boolean {
-        const eligible = this.eligibleUsersForBulk();
-        return eligible.length > 0 && eligible.every(user => this.selectedUserIds().has(user.id));
-    }
-
-    /** Indica se o checkbox "selecionar todos" deve ficar indeterminado (alguns, não todos, marcados). */
-    someEligibleSelected(): boolean {
-        const eligible = this.eligibleUsersForBulk();
-        return eligible.some(user => this.selectedUserIds().has(user.id)) && !this.allEligibleSelected();
-    }
-
     /** Marca ou desmarca de uma vez todos os usuários elegíveis da página atual. */
     toggleSelectAll(checked: boolean): void {
         this.selectedUserIds.set(checked ? new Set(this.eligibleUsersForBulk().map(user => user.id)) : new Set());
     }
 
-    /** Limpa a seleção em lote. */
+    /** Limpa a seleção em lote e leva o foco ao "selecionar todos" — a barra de lote, onde ele estava, some. */
     clearSelection(): void {
         this.selectedUserIds.set(new Set());
+        this.focusSelectAll();
     }
 
-    /** Confirma e desativa em lote todos os usuários selecionados. */
+    /** Foca o "selecionar todos" visível (o do cabeçalho no desktop, a linha própria no celular); sem nenhum, a busca. */
+    private focusSelectAll(): void {
+        afterNextRender(() => {
+            const candidates = ['userSelectAll', 'userSelectAllMobile', 'userSearch']
+                .map(id => document.getElementById(id))
+                .filter((element): element is HTMLElement => !!element && element.offsetParent !== null && !(element as HTMLInputElement).disabled);
+            candidates[0]?.focus();
+        }, { injector: this.injector });
+    }
+
+    /**
+     * Confirma e desativa em lote. Mesmo amparo do individual: conta antes os chamados em aberto
+     * dos selecionados (aviso pra reatribuir; se a contagem falhar, confirma sem ele), lista os
+     * nomes (até {@link BULK_NAMES_SHOWN}, depois "e mais N") e oferece "Desfazer" no toast —
+     * achado do critique de 2026-10-28: o fluxo mais arriscado da tela era o menos amparado.
+     */
     onBulkDeactivate(): void {
         const userIds = Array.from(this.selectedUserIds());
-        if (userIds.length === 0) return;
+        if (userIds.length === 0 || this.bulkBusy()) return;
 
+        this.store.countOpenAssignedTicketsMany(userIds, result => this.confirmBulkDeactivate(userIds, result));
+    }
+
+    /** Segunda metade de {@link onBulkDeactivate}: a confirmação, a desativação e o retorno. */
+    private confirmBulkDeactivate(userIds: string[], openTickets: { tickets: number; people: number } | null): void {
         const names = this.store.users()
-            .filter(user => this.selectedUserIds().has(user.id))
+            .filter(user => userIds.includes(user.id))
             .map(user => `${user.firstName} ${user.lastName}`);
         const label = userIds.length === 1 ? '1 usuário selecionado' : `${userIds.length} usuários selecionados`;
-        const message = names.length <= 8
-            ? `${names.join(', ')}. O acesso dessas pessoas ao Tickest é bloqueado na hora.`
-            : 'O acesso dessas pessoas ao Tickest é bloqueado na hora.';
+        const ticketsWarning = openTickets && openTickets.tickets > 0
+            ? ` ${openTickets.people === 1 ? '1 dessas pessoas atende' : `${openTickets.people} dessas pessoas atendem`} ${openTickets.tickets === 1 ? '1 chamado em aberto, que continua atribuído' : `${openTickets.tickets} chamados em aberto, que continuam atribuídos`}: reatribua em Monitorar Chamados.`
+            : '';
 
         this.confirmDialogService.confirm({
             title: `Desativar ${label}?`,
-            message,
+            message: `${joinNames(names)}. O acesso dessas pessoas ao Tickest é bloqueado na hora.${ticketsWarning} Dá pra desfazer logo depois.`,
             confirmLabel: 'Desativar',
             variant: 'danger'
         }).subscribe(confirmed => {
-            if (!confirmed) return;
+            if (!confirmed) {
+                this.focusSelectAll();
+                return;
+            }
 
-            this.store.deactivateMany(userIds, (succeededCount, failedCount) => {
+            this.store.deactivateMany(userIds, (succeededIds, failedCount) => {
                 this.clearSelection();
+                const undo = { label: 'Desfazer', run: () => this.undoBulkDeactivate(succeededIds) };
                 if (failedCount === 0) {
-                    this.toastService.show(succeededCount === 1 ? '1 usuário desativado.' : `${succeededCount} usuários desativados.`);
-                } else if (succeededCount > 0) {
-                    this.toastService.show(`${succeededCount} de ${succeededCount + failedCount} usuários desativados.`, 'info');
+                    this.toastService.show(succeededIds.length === 1 ? '1 usuário desativado.' : `${succeededIds.length} usuários desativados.`, 'success', undo);
+                } else if (succeededIds.length > 0) {
+                    this.toastService.show(`${succeededIds.length} de ${succeededIds.length + failedCount} usuários desativados. ${this.store.listMutationError() ?? ''}`.trim(), 'info', undo);
                 } else {
-                    // Antes, um lote que falhava inteiro não dizia nada aqui — só o alerta acima da lista.
-                    this.toastService.show('Nenhum usuário foi desativado. O motivo está acima da lista.', 'danger');
+                    this.toastService.show(`Nenhum usuário foi desativado. ${this.store.listMutationError() ?? ''}`.trim(), 'danger');
                 }
             });
         });
     }
 
-    /** Usuários elegíveis para seleção em lote na página atual. */
-    private eligibleUsersForBulk(): UserSummary[] {
-        return this.store.users().filter(user => this.canSelectForBulk(user));
+    /** "Desfazer" da desativação em lote: reativa quem foi desativado agora. */
+    private undoBulkDeactivate(userIds: string[]): void {
+        this.store.activateMany(userIds, (succeededCount, failedCount) => {
+            if (failedCount === 0) {
+                this.toastService.show(succeededCount === 1 ? '1 usuário reativado.' : `${succeededCount} usuários reativados.`);
+            }
+        });
     }
 
     /** Muda o filtro de status da listagem. */
@@ -696,13 +809,13 @@ export class UserListComponent implements OnInit {
     }
 
     /**
-     * Aplica o período só se for coerente ("de" até "até"); invertido, mantém o último período
-     * válido e explica o problema abaixo dos campos — antes a tela só mostrava "Nenhum usuário
-     * encontrado", sem dizer por quê.
+     * Aplica o período só se for coerente ("de" até "até"); invertido (digitado, já que o
+     * calendário já limita com `min`/`max`), mantém o último período válido e explica o problema
+     * abaixo dos campos — antes a tela só mostrava "Nenhum usuário encontrado", sem dizer por quê.
      */
     private applyPeriod(createdFrom: string | undefined, createdTo: string | undefined): void {
         if (createdFrom && createdTo && createdFrom > createdTo) {
-            this.periodError.set('A data inicial precisa ser igual ou anterior à data final.');
+            this.periodError.set('A data inicial precisa ser igual ou anterior à data final. Mantivemos o período anterior.');
             return;
         }
 
@@ -715,11 +828,11 @@ export class UserListComponent implements OnInit {
         this.store.setPageSize(pageSize);
     }
 
-    /** Limpa todos os filtros, incluindo o campo de busca local. */
+    /** Limpa todos os filtros, incluindo o campo de busca local, e leva o foco à busca (o botão some). */
     onClearFilters(): void {
         this.searchInput.set('');
         this.periodError.set(null);
         this.store.clearFilters();
+        afterNextRender(() => document.getElementById('userSearch')?.focus(), { injector: this.injector });
     }
-
 }

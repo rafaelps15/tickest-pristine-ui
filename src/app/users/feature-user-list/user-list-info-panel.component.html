@@ -1,20 +1,17 @@
-<div class="card info-panel h-100" [appSidePanel]="user().id" [sidePanelModal]="modal()" aria-labelledby="userInfoPanelTitle">
+<div id="userInfoPanel" class="card info-panel h-100" [appSidePanel]="user().id" [sidePanelModal]="modal()" aria-labelledby="userInfoPanelTitle">
   <div class="card-body">
     <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
       <h2 id="userInfoPanelTitle" class="h5 info-panel-title fw-bold mb-0 text-break" tabindex="-1" data-side-panel-title>{{ user().firstName }} {{ user().lastName }}</h2>
-      <button type="button" class="btn btn-sm btn-icon rounded-circle btn-outline-secondary flex-shrink-0"
+      <button type="button" class="btn btn-icon rounded-circle btn-outline-secondary flex-shrink-0"
               aria-label="Fechar painel de informações do usuário" (click)="close.emit()">
-        <i class="bx bx-x"></i>
+        <i class="bx bx-x" aria-hidden="true"></i>
       </button>
     </div>
 
-    <div class="mb-3">
-      @if (user().isActive && user().pendingActivation) {
-        <span class="badge bg-label-warning"><span class="status-dot" aria-hidden="true"></span>Convite pendente</span>
-      } @else if (user().isActive) {
-        <span class="badge bg-label-success"><span class="status-dot" aria-hidden="true"></span>Ativo</span>
-      } @else {
-        <span class="badge bg-label-secondary"><span class="status-dot" aria-hidden="true"></span>Inativo</span>
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <app-user-status-badge [status]="status()" />
+      @if (isCurrentUser()) {
+        <span class="badge bg-label-primary">Você</span>
       }
     </div>
 
@@ -27,8 +24,7 @@
         <!-- Todas as funções: o painel é o detalhe — o agrupamento "+N" fica só na tabela, onde falta espaço. -->
         <div class="d-flex flex-wrap gap-1">
           @for (role of user().roles; track role.name) {
-            @let color = roleColor(role.name);
-            <span class="badge" [class.bg-label-primary]="!color" [class.badge-role-custom]="color" [style.--role-color]="color">{{ role.name }}</span>
+            <span class="badge bg-label-primary">{{ role.name }}</span>
           } @empty {
             <span class="text-muted small">Nenhuma função</span>
           }
@@ -38,13 +34,13 @@
       <dt>Cadastrado em</dt>
       <dd>{{ user().createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
 
-      @if (user().pendingActivation) {
+      @if (status() === 'pending') {
         <dt>Convite</dt>
-        <dd>
+        <dd [class.invitation-expired]="!user().invitationExpiresAtUtc">
           @if (user().invitationExpiresAtUtc) {
             Vale até {{ user().invitationExpiresAtUtc | date:'dd/MM/yyyy HH:mm' }}
           } @else {
-            Expirado, sem link válido
+            Convite expirado
           }
         </dd>
       }
@@ -55,15 +51,16 @@
       }
     </dl>
 
-    <div class="d-flex flex-column gap-2">
-      <button type="button" class="btn btn-sm btn-outline-primary" (click)="editClick.emit()">
-        <i class="bx bx-edit-alt me-1"></i>Editar cadastro
+    <!--
+      Hierarquia: "Atribuir funções" é o atalho de todo dia (contornado índigo); os outros são
+      neutros, e o destrutivo/restaurativo fica por último, na cor da sua gravidade.
+    -->
+    <div class="panel-actions d-flex flex-column gap-2">
+      <button type="button" class="btn btn-outline-primary" (click)="assignRolesClick.emit()">
+        <i class="bx bx-shield-quarter me-1" aria-hidden="true"></i>Atribuir funções
       </button>
-      <button type="button" class="btn btn-sm btn-outline-primary" (click)="assignRolesClick.emit()">
-        <i class="bx bx-shield-quarter me-1"></i>Atribuir funções
-      </button>
-      @if (user().pendingActivation && user().isActive) {
-        <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="resendingInvitation()" (click)="resendInvitationClick.emit()">
+      @if (status() === 'pending') {
+        <button type="button" class="btn btn-outline-secondary" [disabled]="resendingInvitation()" (click)="resendInvitationClick.emit()">
           @if (resendingInvitation()) {
             <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
           } @else {
@@ -72,26 +69,31 @@
           Reenviar convite
         </button>
       }
-      @if (canToggleActive()) {
+      <button type="button" class="btn btn-outline-secondary" (click)="editClick.emit()">
+        <i class="bx bx-edit-alt me-1" aria-hidden="true"></i>Editar cadastro
+      </button>
+      @if (!isCurrentUser()) {
         @if (!user().isActive) {
-          <button type="button" class="btn btn-sm btn-outline-success" [disabled]="activating()" (click)="toggleActiveClick.emit()">
+          <button type="button" class="btn btn-outline-success" [disabled]="activating()" (click)="toggleActiveClick.emit()">
             @if (activating()) {
               <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             } @else {
-              <i class="bx bx-check me-1"></i>
+              <i class="bx bx-check me-1" aria-hidden="true"></i>
             }
             Reativar
           </button>
         } @else {
-          <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deactivating()" (click)="toggleActiveClick.emit()">
+          <button type="button" class="btn btn-outline-danger" [disabled]="deactivating()" (click)="toggleActiveClick.emit()">
             @if (deactivating()) {
               <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
             } @else {
-              <i class="bx bx-block me-1"></i>
+              <i class="bx bx-block me-1" aria-hidden="true"></i>
             }
             Desativar
           </button>
         }
+      } @else {
+        <p class="small text-muted mb-0">Sua própria conta não pode ser desativada por aqui.</p>
       }
     </div>
   </div>
