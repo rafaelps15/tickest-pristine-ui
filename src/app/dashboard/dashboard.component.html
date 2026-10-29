@@ -9,10 +9,10 @@
   @if (hasRefreshable()) {
   <div pageActions class="freshness">
     @if (freshness(); as label) {
-      <span class="freshness-label" [class.freshness-failed]="staleAfterFailure()">
+      <span class="freshness-label" [class.freshness-failed]="anyFailure() && !retryingAfterTotalFailure()">
         @if (refreshing()) {
           <span class="spinner-border spinner-border-sm freshness-spinner" aria-hidden="true"></span>
-        } @else if (staleAfterFailure()) {
+        } @else if (anyFailure()) {
           <i class="bx bx-error-circle" aria-hidden="true"></i>
         }
         {{ label }}

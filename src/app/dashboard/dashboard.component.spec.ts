@@ -249,6 +249,201 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.load).not.toHaveBeenCalled();
     });
 
+    it('com um bloco em erro sem números (os Alertas), nunca diz "Atualizado agora": diz que nem todos os números carregaram', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+      const fixture = await render();
+      const label = fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+
+      expect(label.textContent).toContain('Nem todos os números carregaram');
+      expect(label.textContent).not.toContain('Atualizado agora');
+      expect(label.classList).toContain('freshness-failed');
+    });
+
+    it('quando o bloco volta, o cabeçalho volta a dizer "Atualizado agora"', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+      const fixture = await render();
+
+      ticketsStoreFake.criticalTicketsError.set(null);
+      ticketsStoreFake.criticalTicketsLoading.set(true);
+      await fixture.whenStable();
+      ticketsStoreFake.criticalTicketsLoading.set(false);
+      await fixture.whenStable();
+
+      const label = fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+      expect(label.textContent).toContain('Atualizado agora');
+      expect(label.classList).not.toContain('freshness-failed');
+    });
+
+    it('uma atualização que termina com um bloco em erro (sem números) anuncia a falha, não "Atualizado agora"', async () => {
+      asAgent();
+      const fixture = await render();
+      const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+      ticketsStoreFake.criticalTicketsLoading.set(true);
+      await fixture.whenStable();
+      ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+      ticketsStoreFake.criticalTicketsLoading.set(false);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      expect(live()).toBe('Não foi possível atualizar os números');
+      expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
+    });
+
+    it('"Seus chamados" em erro sem números também impede o "Atualizado agora"', async () => {
+      asRequester();
+      myTicketsFake.failed.set(true);
+      myTicketsFake.totalCount.set(null);
+      features.companyStatsForAll = true;
+      const fixture = await render();
+
+      expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
+    });
+
+    /**
+     * Falha total pra quem atende a fila: totais, fluxo e Alertas em erro, e nenhum bloco com números
+     * (nem os tempos, nem o agregado — com a flag desligada, o resource dele fica parado, sem valor).
+     */
+    const failEverything = () => {
+      asAgent();
+      operationFake.volume.set(null);
+      ticketsStoreFake.statusCounts.set(null);
+      ticketsStoreFake.statusCountsFailed.set(true);
+      ticketsStoreFake.volumeHasValue.set(false);
+      ticketsStoreFake.volumeFailed.set(true);
+      ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+      operationFake.times.set(null);
+    };
+
+    it('com algum bloco com números e outro em erro, a falha é parcial: "Nem todos os números carregaram", com a marca de falha', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+      const fixture = await render();
+      const label = fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+
+      expect(label.textContent).toContain('Nem todos os números carregaram');
+      expect(label.textContent).not.toContain('Não foi possível carregar os números');
+      expect(label.querySelector('.bx-error-circle')).not.toBeNull();
+    });
+
+    it('sem nenhum bloco com números e nada carregando, a falha é total: "Não foi possível carregar os números", nunca "Nem todos"', async () => {
+      failEverything();
+      const fixture = await render();
+      const label = fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+
+      expect(label.textContent).toContain('Não foi possível carregar os números');
+      expect(label.textContent).not.toContain('Nem todos os números carregaram');
+      expect(label.textContent).not.toContain('Atualizado agora');
+      expect(label.classList).toContain('freshness-failed');
+      expect(label.querySelector('.bx-error-circle')).not.toBeNull();
+    });
+
+    it('depois de uma falha total, quando os números voltam, o cabeçalho volta a "Atualizado agora", sem a marca de falha', async () => {
+      failEverything();
+      const fixture = await render();
+
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+      ticketsStoreFake.statusCounts.set({ totalCount: 12, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 2 });
+      ticketsStoreFake.statusCountsFailed.set(false);
+      ticketsStoreFake.volumeHasValue.set(true);
+      ticketsStoreFake.volumeFailed.set(false);
+      ticketsStoreFake.criticalTicketsError.set(null);
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+
+      const label = fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+      expect(label.textContent).toContain('Atualizado agora');
+      expect(label.classList).not.toContain('freshness-failed');
+    });
+
+    it('na falha total, o "Atualizar" pedido termina com um anúncio ao leitor de tela (antes, silêncio)', async () => {
+      failEverything();
+      const fixture = await render();
+      const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement).click();
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      expect(live()).toBe('Não foi possível carregar os números');
+    });
+
+    it('falha total → nova tentativa → falha de novo → nova tentativa → volta: "Atualizando…" na carga, nunca "Nem todos" de passagem', async () => {
+      failEverything();
+      const fixture = await render();
+      const label = () => fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+      const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
+      const refresh = () => fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement;
+      const settleAnnouncement = () => new Promise(resolve => setTimeout(resolve, 150));
+      expect(label().textContent).toContain('Não foi possível carregar os números');
+
+      // Nova tentativa: carregando, sem números, com a falha anterior ainda valendo.
+      refresh().click();
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+      expect(label().textContent).toContain('Atualizando…');
+      expect(label().textContent).not.toContain('Nem todos os números carregaram');
+      expect(label().querySelector('.freshness-spinner')).not.toBeNull();
+      expect(label().classList).not.toContain('freshness-failed');
+      expect(refresh().getAttribute('aria-disabled')).toBe('true');
+
+      // A falha persiste: volta o estado de falha total, e quem pediu ouve isso.
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+      await settleAnnouncement();
+      expect(label().textContent).toContain('Não foi possível carregar os números');
+      expect(label().classList).toContain('freshness-failed');
+      expect(label().querySelector('.bx-error-circle')).not.toBeNull();
+      expect(live()).toBe('Não foi possível carregar os números');
+
+      // Outra tentativa, que dá certo.
+      refresh().click();
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+      expect(label().textContent).toContain('Atualizando…');
+      ticketsStoreFake.statusCounts.set({ totalCount: 12, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 2 });
+      ticketsStoreFake.statusCountsFailed.set(false);
+      ticketsStoreFake.volumeHasValue.set(true);
+      ticketsStoreFake.volumeFailed.set(false);
+      ticketsStoreFake.criticalTicketsError.set(null);
+      ticketsStoreFake.statusCountsLoading.set(false);
+      await fixture.whenStable();
+      await settleAnnouncement();
+      expect(label().textContent).toContain('Atualizado agora');
+      expect(label().classList).not.toContain('freshness-failed');
+      expect(live()).toBe('Atualizado agora');
+    });
+
+    it('com números na tela e um bloco em erro, a atualização em curso continua dizendo "Nem todos os números carregaram" (com o indicador e a marca)', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
+      const fixture = await render();
+      const label = () => fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
+
+      ticketsStoreFake.statusCountsLoading.set(true);
+      await fixture.whenStable();
+
+      expect(label().textContent).toContain('Nem todos os números carregaram');
+      expect(label().textContent).not.toContain('Atualizando…');
+      expect(label().querySelector('.freshness-spinner')).not.toBeNull();
+      expect(label().classList).toContain('freshness-failed');
+    });
+
+    it('uma primeira carga que falha toda não anuncia nada sozinha (os avisos de erro dos blocos já falam)', async () => {
+      failEverything();
+      const fixture = await render();
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      expect((fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim()).toBe('');
+    });
+
     it('tem o botão "Guia da tela" no cabeçalho, e o guia não ocupa mais o corpo da tela', async () => {
       const fixture = await render();
       const header = fixture.nativeElement.querySelector('app-page-header') as HTMLElement;

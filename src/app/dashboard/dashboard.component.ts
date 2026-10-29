@@ -534,6 +534,31 @@ export class DashboardComponent implements OnInit {
   protected readonly updatedAtMs = signal<number | null>(null);
   /** Relógio do "Atualizado há N min", avançado a cada 30s. */
   protected readonly nowMs = signal(Date.now());
+
+  /**
+   * Algum bloco ligado falhou sem números anteriores pra mostrar (o aviso de erro está no lugar dele):
+   * os números da operação, os tempos, os Alertas de SLA, os totais por status, o fluxo ou "Seus chamados".
+   */
+  private readonly failedWithoutData = computed(() =>
+    (this.countsFailed() && this.counts() === null) || (this.flowFailed() && this.shownPoints() === null)
+    || (this.filteredAvailable() && this.operation.overviewError() !== null && this.operation.overview() === null)
+    || (this.showOperation() && this.features.averageTimes && this.operation.timesError() !== null && this.operation.times() === null)
+    || this.store.criticalTicketsError() !== null
+    || (this.showMyTickets() && !!this.myTickets?.failed()));
+
+  /** Nenhum bloco tem números na tela, nem desta carga nem de uma anterior (o fluxo e os tempos contam). */
+  private readonly nothingLoaded = computed(() =>
+    !this.hasAnyData() && this.shownPoints() === null && this.operation.times() === null);
+
+  /**
+   * Nova tentativa depois de uma falha total: nenhum bloco tem números, algum falhou e a carga está em
+   * andamento. O cabeçalho diz "Atualizando…" com o indicador de carga, sem a marca de falha.
+   */
+  protected readonly retryingAfterTotalFailure = computed(() => this.anyLoading() && this.failedWithoutData() && this.nothingLoaded());
+
+  /** A última carga não trouxe tudo: algum bloco falhou, com ou sem números anteriores na tela. */
+  protected readonly anyFailure = computed(() => this.staleAfterFailure() || this.failedWithoutData());
+
   /** Texto da idade dos números; depois de uma atualização que falhou, diz de quando são os que estão na tela. */
   protected readonly freshness = computed(() => {
     const updatedAt = this.updatedAtMs();
@@ -543,6 +568,13 @@ export class DashboardComponent implements OnInit {
       const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(updatedAt);
       return `Falha ao atualizar · números das ${time}`;
     }
+    // Um bloco sem números falhou (o aviso dele está na tela): nunca "Atualizado agora". Sem nenhum bloco
+    // com números e nada mais carregando, a falha é total: "nem todos" daria a entender que algum veio.
+    // Na nova tentativa depois dela, "Atualizando…" (nem a falha velha, nem um "nem todos" de passagem).
+    if (this.failedWithoutData()) {
+      if (this.retryingAfterTotalFailure()) return 'Atualizando…';
+      return this.nothingLoaded() && !this.anyLoading() ? 'Não foi possível carregar os números' : 'Nem todos os números carregaram';
+    }
     // Voltando à tela com os números da visita anterior enquanto a recarga não termina: nunca "Atualizado agora".
     if (updatedAt === null && this.anyLoading() && this.hasAnyData()) return 'Atualizando…';
     return freshnessLabel(updatedAt, this.nowMs());
@@ -551,7 +583,8 @@ export class DashboardComponent implements OnInit {
    * Recarregando com números na tela (os desta visita ou, ao voltar, os da anterior): só um indicador
    * discreto no "Atualizado há".
    */
-  protected readonly refreshing = computed(() => this.anyLoading() && (this.updatedAtMs() !== null || this.hasAnyData()));
+  protected readonly refreshing = computed(() =>
+    (this.anyLoading() && (this.updatedAtMs() !== null || this.hasAnyData())) || this.retryingAfterTotalFailure());
   /** Aviso pro leitor de tela a cada atualização — só "Atualizado agora", nunca os números. */
   protected readonly liveAnnouncement = signal('');
 
@@ -573,17 +606,23 @@ export class DashboardComponent implements OnInit {
 
     // Marca a hora de cada carga concluída. Depois de uma atualização, avisa o leitor de tela: limpa e
     // escreve de novo, pra a mesma frase ser lida toda vez (uma região que não muda não é anunciada).
-    // Uma atualização que falhou não conta como atualizada: a hora fica a dos números na tela.
+    // Uma atualização que falhou não conta como atualizada: a hora fica a dos números na tela (com
+    // qualquer bloco em erro, mesmo sem números anteriores, nem a hora anda nem se diz "Atualizado agora").
+    // Uma falha total (nenhum bloco com números) também termina aqui: quem pediu o "Atualizar" ouve que
+    // não foi possível carregar, em vez de silêncio.
     effect(() => {
-      if (this.anyLoading() || !this.hasAnyData()) return;
-      const failed = this.staleAfterFailure();
+      if (this.anyLoading()) return;
+      const hasData = this.hasAnyData();
+      const failed = this.anyFailure();
+      if (!hasData && !failed) return;
+      const nothing = this.nothingLoaded();
       untracked(() => {
         if (!failed) this.updatedAtMs.set(Date.now());
         if (!this.announceNext) return;
         this.announceNext = false;
         // Com uma troca de recorte pendente, quem fala é o resumo dela (efeito abaixo), não o "Atualizado agora".
         if (this.pendingScopeAnnouncement()) return;
-        this.announce(failed ? 'Não foi possível atualizar os números' : 'Atualizado agora');
+        this.announce(!failed ? 'Atualizado agora' : nothing ? 'Não foi possível carregar os números' : 'Não foi possível atualizar os números');
       });
     });
 

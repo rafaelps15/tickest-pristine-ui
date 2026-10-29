@@ -569,10 +569,21 @@ cada card levando a Meus Chamados — com título de card (`h2.h5`, passo headin
   das HH:mm"; sem números anteriores, o erro aparece uma vez só (na faixa do topo, com "Tentar novamente") e
   os grupos que dependem da mesma leitura (Central, SLA, a barra de composição) dizem "Indisponível no
   momento — veja o aviso acima". "Seus chamados" segue a mesma regra: na recarga, os números ficam; numa
-  falha com números na tela, o cabeçalho diz "Falha ao atualizar". Enquanto a nova tentativa
+  falha com números na tela, o cabeçalho diz "Falha ao atualizar". Com algum bloco em erro sem
+  números (Alertas, tempos, "Seus chamados") e outro com números, a falha é parcial: o cabeçalho diz
+  "Nem todos os números carregaram". Sem nenhum bloco com números e nada mais carregando, a falha é
+  total: "Não foi possível carregar os números"; na nova tentativa depois dela, o cabeçalho diz
+  "Atualizando…" com o indicador de carga, sem a marca de falha. Nos dois casos a hora não anda, a marca de falha
+  aparece e a atualização pedida anuncia a falha ("Não foi possível atualizar os números" na parcial,
+  "Não foi possível carregar os números" na total), nunca "Atualizado agora"; a primeira carga não
+  anuncia nada sozinha (os avisos de erro dos blocos já falam). Revisão visual de 2026-10-29.
+  Enquanto a nova tentativa
   carrega, o aviso de erro fica (o resource do Angular mantém o erro num `reload()` com os mesmos
   parâmetros; trocar o recorte zera e mostra o esqueleto): não pisca pro esqueleto nem é lido
-  de novo a cada 2 min. Na atualização, o leitor de tela ouve só "Atualizado agora", nunca os números;
+  de novo a cada 2 min. Nos Alertas, o botão do aviso gira ("Tentando…", `aria-disabled`); se a
+  tentativa pedida no botão falha de novo, o leitor de tela ouve "Ainda não foi possível" uma vez (a
+  atualização automática não anuncia); se dá certo, o foco vai pro título do card, sem tirar o foco de
+  quem já foi pra outro lugar. Na atualização, o leitor de tela ouve só "Atualizado agora", nunca os números;
   ao trocar um filtro ou o escopo, ouve um resumo curto dos números novos ("Números com os filtros: 3
   atrasados, 12 na fila."). Os botões de atualizar usam `aria-disabled` (não `disabled`) enquanto
   carregam, pra não tirar o foco de quem usa teclado.

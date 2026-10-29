@@ -205,7 +205,7 @@ describe('DashboardInsightsComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('.critical-ticket-link').length).toBe(1);
     });
 
-    it('com erro e uma nova tentativa carregando ao mesmo tempo, o aviso fica (sem spinner) e não é recriado nem lido de novo', async () => {
+    it('com erro e uma nova tentativa carregando ao mesmo tempo, o aviso fica (sem o carregando do bloco) e não é recriado nem lido de novo; só o botão dele gira', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
       await fixture.whenStable();
@@ -220,10 +220,64 @@ describe('DashboardInsightsComponent', () => {
       expect(alertDuring).toBe(alertBefore);
       expect(fixture.nativeElement.textContent).not.toContain('Carregando alertas de SLA');
       expect(fixture.nativeElement.querySelectorAll('[role="alert"]').length).toBe(1);
+      const retryButton = alertDuring.querySelector('button') as HTMLButtonElement;
+      expect(retryButton.textContent).toContain('Tentando…');
+      expect(retryButton.getAttribute('aria-disabled')).toBe('true');
 
       fixture.componentRef.setInput('loading', false);
       await fixture.whenStable();
       expect(fixture.nativeElement.querySelector('[role="alert"]')).toBe(alertBefore);
+      expect(retryButton.textContent).toContain('Tentar novamente');
+    });
+
+    it('quando o "Tentar novamente" dá certo, o foco (que cairia no início da página) vai pro título do card', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
+      document.body.appendChild(fixture.nativeElement);
+      await fixture.whenStable();
+
+      const retry = fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+      retry.focus();
+      retry.click();
+      fixture.componentRef.setInput('loading', true);
+      await fixture.whenStable();
+      // A lista volta: o aviso (e o botão focado) sai da tela.
+      fixture.componentRef.setInput('error', null);
+      fixture.componentRef.setInput('loading', false);
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#slaAlertsTitle'));
+      fixture.nativeElement.remove();
+    });
+
+    it('se o "Tentar novamente" falha de novo, o foco fica no botão; uma atualização automática que dá certo depois não mexe no foco', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
+      document.body.appendChild(fixture.nativeElement);
+      await fixture.whenStable();
+
+      const retry = fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+      retry.focus();
+      retry.click();
+      fixture.componentRef.setInput('loading', true);
+      await fixture.whenStable();
+      fixture.componentRef.setInput('loading', false);
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(retry);
+
+      // Depois a pessoa foi pra outro lugar; a atualização automática traz a lista.
+      const elsewhere = document.createElement('button');
+      document.body.appendChild(elsewhere);
+      elsewhere.focus();
+      fixture.componentRef.setInput('loading', true);
+      await fixture.whenStable();
+      fixture.componentRef.setInput('error', null);
+      fixture.componentRef.setInput('loading', false);
+      await fixture.whenStable();
+
+      expect(document.activeElement).toBe(elsewhere);
+      elsewhere.remove();
+      fixture.nativeElement.remove();
     });
 
     it('oferece "Tentar novamente" no erro, que pede uma nova carga', async () => {

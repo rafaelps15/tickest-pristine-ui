@@ -11,7 +11,8 @@
            [class.bx-error]="criticalTickets().length > 0" [class.text-warning]="criticalTickets().length > 0"
            [class.bx-time-five]="criticalTickets().length === 0" [class.text-muted]="criticalTickets().length === 0"></i>
         <div>
-          <h2 id="slaAlertsTitle" class="h5 card-title fw-bold mb-0">Alertas de SLA</h2>
+          <!-- tabindex="-1": recebe o foco quando a nova tentativa dá certo e o botão dela sai da tela. -->
+          <h2 #alertsTitle id="slaAlertsTitle" class="h5 card-title fw-bold mb-0" tabindex="-1">Alertas de SLA</h2>
           <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
           <!-- No escopo "Com filtros", os Alertas seguem os filtros (o mesmo recorte do topo); no da empresa, a empresa toda. -->
           <p class="text-muted small mb-0">{{ filtered() ? 'Com os filtros' : 'Toda a empresa' }}@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
@@ -28,9 +29,9 @@
         </button>
       </div>
 
-      <!-- O erro vem antes do carregamento: numa nova tentativa, o aviso fica (não pisca pro spinner nem é lido de novo). -->
+      <!-- O erro vem antes do carregamento: numa nova tentativa, o aviso fica (não pisca pro spinner nem é lido de novo) e o botão dele gira. -->
       @if (error(); as errorMessage) {
-        <app-dashboard-notice kind="error" [text]="errorMessage" (retry)="refresh.emit()" />
+        <app-dashboard-notice kind="error" [text]="errorMessage" [busy]="loading()" (retry)="retryFromNotice()" />
       } @else if (loading()) {
         <div class="d-flex justify-content-center py-2">
           <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando alertas de SLA…</span>

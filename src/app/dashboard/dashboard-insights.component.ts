@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, inject, DestroyRef, PLATFORM_ID } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked, inject, viewChild, afterNextRender, ElementRef, Injector, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { DatePipe, isPlatformBrowser } from '@angular/common';
 import { Params, RouterLink } from '@angular/router';
 import { TicketMonitorItem, TicketSlaStatus } from '../tickets';
@@ -39,6 +39,8 @@ interface CriticalTicketView {
 export class DashboardInsightsComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly platformId = inject(PLATFORM_ID);
+  /** Injetor pro `afterNextRender` do foco depois de uma nova tentativa que deu certo. */
+  private readonly injector = inject(Injector);
 
   /** Chamados com SLA vencido ou em risco, do prazo mais antigo pro mais novo. */
   readonly criticalTickets = input<TicketMonitorItem[]>([]);
@@ -121,7 +123,36 @@ export class DashboardInsightsComponent {
   /** Timers que tiram cada id de `justCrossedIds` — limpos se o card for destruído antes. */
   private readonly highlightTimers = new Set<ReturnType<typeof setTimeout>>();
 
+  /** Título do card, que recebe o foco quando a nova tentativa dá certo. */
+  private readonly alertsTitle = viewChild<ElementRef<HTMLElement>>('alertsTitle');
+
+  /** A pessoa pediu "Tentar novamente" no aviso de erro e a tentativa ainda não terminou. */
+  private readonly retryPending = signal(false);
+  /** A tentativa pedida já começou a carregar (o fim dela é o próximo `loading` falso). */
+  private retryStarted = false;
+
   constructor() {
+    // Fim da tentativa pedida no aviso: se deu certo, o aviso (e o botão focado nele) sai da tela e o
+    // foco, que cairia no início da página, vai pro título. Se falhou, a pendência acaba aqui — uma
+    // atualização automática que dê certo depois não mexe no foco.
+    effect(() => {
+      const loading = this.loading();
+      const failed = !!this.error();
+      untracked(() => {
+        if (!this.retryPending()) return;
+        if (loading) { this.retryStarted = true; return; }
+        if (failed && !this.retryStarted) return;
+        this.retryPending.set(false);
+        this.retryStarted = false;
+        if (failed) return;
+        // Só depois do desenho o aviso sai da tela e o foco cai no body; se a pessoa já foi pra outro lugar, fica lá.
+        afterNextRender(() => {
+          const focusLost = !document.activeElement || document.activeElement === document.body;
+          if (focusLost) this.alertsTitle()?.nativeElement.focus();
+        }, { injector: this.injector });
+      });
+    });
+
     // Anuncia (e realça) só a transição "em risco → vencido" de um item que já estava na tela;
     // dados novos (primeira carga, recarga) entram no mapa calados.
     effect(() => {
@@ -149,6 +180,12 @@ export class DashboardInsightsComponent {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisibility);
     });
+  }
+
+  /** "Tentar novamente" do aviso de erro: recarrega os alertas e, se der certo, leva o foco ao título. */
+  protected retryFromNotice(): void {
+    this.retryPending.set(true);
+    this.refresh.emit();
   }
 
   /** Marca o item que acabou de vencer pelo tempo do realce (`HIGHLIGHT_MS`) e depois o desmarca. */
