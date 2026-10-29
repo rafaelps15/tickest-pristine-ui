@@ -45,13 +45,10 @@
   color: var(--tk-warning-text);
 }
 
+/* O mesmo fundo âmbar do .bg-label-warning; o token já muda no tema escuro. */
 .insights-chip-warning.active {
-  background-color: #fff2e2; /* o mesmo fundo âmbar do .bg-label-warning */
+  background-color: var(--tk-warning-soft-bg);
   border-color: var(--tk-warning-text);
-}
-
-:host-context([data-bs-theme="dark"]) .insights-chip-warning.active {
-  background-color: rgba(255, 171, 0, 0.16); /* o âmbar do .bg-label-warning escuro */
 }
 
 /* Totais na linha de apoio do Resumo: o número em peso forte, o resto discreto. */

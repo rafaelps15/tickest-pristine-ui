@@ -297,6 +297,43 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleSearchError()).toBeNull();
   });
 
+  it('uma busca de responsável nova cancela a anterior: a resposta antiga e lenta não sobrescreve a atual', () => {
+    const slow = new Subject<PagedResponse<UserSummary>>();
+    const other: UserSummary = { ...candidate, id: 'u-2', firstName: 'Carla' };
+    userDataService.getAll.and.returnValues(slow, of(pageOf([other])));
+
+    store.searchResponsibleCandidates('car');
+    expect(store.searchingResponsible()).toBeTrue();
+    store.searchResponsibleCandidates('carla');
+    slow.next(pageOf([candidate]));
+
+    expect(store.responsibleCandidates()).toEqual([other]);
+    expect(store.responsibleSearchTerm()).toBe('carla');
+    expect(store.searchingResponsible()).toBeFalse();
+  });
+
+  it('guarda o termo da última busca respondida, e o limpa quando a busca fica vazia', () => {
+    userDataService.getAll.and.returnValue(of(pageOf([])));
+
+    store.searchResponsibleCandidates(' carlos ');
+    expect(store.responsibleSearchTerm()).toBe('carlos');
+
+    store.searchResponsibleCandidates('');
+    expect(store.responsibleSearchTerm()).toBeNull();
+  });
+
+  it('falha ao salvar fica no mutationError (do diálogo), não no erro de carga da listagem', async () => {
+    store.load();
+    await TestBed.inject(ApplicationRef).whenStable();
+    departmentDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.create({ name: 'Operações', description: 'Logística' });
+
+    expect(store.mutationError()).toBe('Erro ao criar departamento');
+    expect(store.listState().error).toBeNull();
+    expect(store.departments()).toEqual(departments);
+  });
+
   it('limpa o erro de mutação', () => {
     sectorDataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Conflito' } })));
     store.updateSector('sec-1', { name: 'Suporte' });

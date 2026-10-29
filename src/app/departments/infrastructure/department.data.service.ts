@@ -7,7 +7,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP aos departamentos (listagem, detalhe, criação, atualização e exclusão). */
 @Injectable({ providedIn: 'root' })
 export class DepartmentDataService {
+    /** Cliente HTTP do Angular. */
     private readonly http = inject(HttpClient);
+    /** URL base do recurso na API (/departments). */
     private readonly apiUrl = `${environment.apiUrl}/departments`;
 
     /** Lista todos os departamentos (GET /departments). */
