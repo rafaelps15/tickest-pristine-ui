@@ -28,7 +28,7 @@ and return raw `Observable<T>`.
 
 Every function, property, and class gets a short `/** ... */` doc comment **in Portuguese**
 stating what it does — this is an established convention in this codebase (see e.g.
-`src/app/application/services/tickets.service.ts`, `src/app/core/guards/admin-master.guard.ts`),
+`src/app/tickets/application/tickets.store.ts`, `src/app/shared/guards/admin-master.guard.ts`),
 not optional polish. Apply it to every insertion without being asked. Keep it to what the thing
 *does*, one line where possible:
 
