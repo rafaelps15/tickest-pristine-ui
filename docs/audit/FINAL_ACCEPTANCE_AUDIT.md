@@ -362,6 +362,10 @@ A spec 044 está **em descoberta**: não pode ser aprovada nem implementada ante
 | A-30 (ciclo de SLA vigente em `GET /tickets`) | A spec 024 trata só Meus Chamados e deixa o Monitor fora por decisão do responsável (DEC-3 dela) | Precisa de decisão do responsável antes de virar spec |
 | A-22 (nome de departamento acima de 100 responde 500) | Comportamento decidido na spec 038 (DEC-14, verificada) | Não é requisito novo; o front segue barrando antes |
 
+A-27 (URL de produção) e A-28 (flags do Início) também ficam abertos, mas não dependem do back-end:
+o primeiro é configuração de implantação, e o segundo é decisão do usuário, com os endpoints já
+entregues.
+
 ## Saneamento depois da aceitação (2026-10-30)
 
 Autorizado pelo usuário: os achados C-01 a C-12 da auditoria de conformidade e o A-44.
@@ -394,8 +398,12 @@ autorizado ou dependentes de decisão:
 
 - **Média:** A-23 (tokens em cookie, depende do back-end);
 - **Baixa:**
-  - A-27: URL de produção, valor desconhecido;
-  - A-28: flags do Início, decisão do usuário;
+  - A-24: o back-end não informa as ações permitidas, só `canCancel`; exige contrato novo;
+  - A-27: URL de produção desconhecida (`environment.prod.ts` aponta `localhost`). É configuração
+    de implantação, não depende do back-end;
+  - A-28: flags `volumeResolved` e `companyStatsForAll` desligadas. Os endpoints das specs 028 e
+    031 já estão na `origin/main` do back-end, então ligá-las é decisão do usuário, sem depender
+    do back-end;
   - A-30: ciclo de SLA na listagem, é do back-end;
   - A-33: avisos de orçamento de CSS, anteriores à missão, só aviso;
   - R-05 a R-07: responsividade em telas pequenas;
@@ -405,5 +413,5 @@ autorizado ou dependentes de decisão:
     resultado tipado, sem alterar as skills), C-05, C-09 e C-10;
 - **Convenção:** 6.3, nomes de teste.
 
-As alterações de 2026-10-30 (A-37 a A-46, R-01 a R-04 e o saneamento) estão no working tree, sem
-stage nem commit, aguardando autorização para a integração.
+As alterações de 2026-10-30 (A-37 a A-46, R-01 a R-04 e o saneamento) estão na branch
+`fix/frontend-audit-integration`, no PR #3, sem merge, aguardando a autorização do usuário.
