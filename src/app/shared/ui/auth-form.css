@@ -29,9 +29,10 @@ p.text-muted {
   transition: all 0.2s ease-in-out;
 }
 
+/* Mesma faixa de foco do resto do app (borda + anel sólido de 1px na cor de foco); o halo de 15% dava 1,2:1. */
 .form-control:focus {
-  border-color: var(--tk-primary);
-  box-shadow: 0 0 0 0.2rem rgba(var(--tk-primary-rgb), 0.15);
+  border-color: var(--tk-focus-ring);
+  box-shadow: 0 0 0 1px var(--tk-focus-ring);
   transform: translateY(-1px);
 }
 
@@ -69,7 +70,18 @@ p.text-muted {
 
 .input-group:focus-within .form-control,
 .input-group:focus-within .input-group-text {
-  border-color: var(--tk-primary);
+  border-color: var(--tk-focus-ring);
+}
+
+/*
+ * Senha com "Mostrar senha" colado: o anel vai no grupo (regra global de `.input-group`, no styles.css),
+ * não no campo, que aqui não tem borda do lado do botão. Esta regra tira o anel do campo, que a regra
+ * acima (encapsulada, que vence a global) mantinha, e o deslocamento de 1px: dentro do grupo, ele separava
+ * o campo do anel (um fio de fundo entre os dois embaixo).
+ */
+.input-group .form-control:focus {
+  box-shadow: none;
+  transform: none;
 }
 
 .alert-danger {

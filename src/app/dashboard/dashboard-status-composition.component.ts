@@ -127,10 +127,7 @@ export interface DashboardLink {
 
     a.segment-body:hover { text-decoration: underline; }
 
-    a.segment-body:focus-visible {
-      outline: 2px solid var(--tk-primary);
-      outline-offset: 2px;
-    }
+    /* O foco da fatia (contorno + halo sobre a fatia vizinha) mora com as classes globais do Início, no styles.css. */
 
     /*
      * Rótulo pela largura da fatia: status, número e % quando é larga; status e número quando é média;

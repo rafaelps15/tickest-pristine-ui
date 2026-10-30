@@ -246,7 +246,15 @@ porque âmbar, ciano e verde puros ficam ~2:1 contra o branco (WCAG 1.4.11). "Cr
 
 Vermelho é só risco operacional: falha técnica (erro de leitura) fica em texto secundário.
 
-**Estados de interação:** foco visível com `--tk-primary` (anel de 2px, afastado do elemento);
+**Estados de interação:** foco visível (teclado, `:focus-visible`) com contorno de 2px em
+`--tk-focus-ring`, afastado 2px do elemento. O token é o índigo da marca com folga de contraste:
+`--tk-primary-dark` no claro e `--tk-primary-text` no escuro (≥ 3:1 contra todo fundo vizinho medido; o
+`--tk-primary` puro caía a 3,0–3,6:1 nos cards de alerta e no item de menu em foco). Vale para botões,
+links e qualquer focável (regra-base com `:where()`, que os componentes com regra própria sobrepõem),
+no lugar do anel translúcido do Bootstrap (1,0–2,0:1). Item de menu: contorno por dentro. Botão em
+grupo (Empresa | Com filtros, Dia | Semana | Mês) e fatia da barra de composição: o vizinho encosta,
+então um halo de 6px da superfície separa o contorno da cor ao lado. Toast colorido: contorno na cor
+do texto dele (revisão de acessibilidade de 2026-10-30);
 hover/selecionado em card com a sombra `--tk-shadow-md`; barra destacada no gráfico (hover ou
 teclado) com contorno de 2px em `--tk-text-primary`; desabilitado-mas-focável com `aria-disabled` e
 opacidade 0.65 e o motivo num tooltip de hover/foco ("Em breve", "Período longo demais").
@@ -393,8 +401,12 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 
 ### Inputs / Fields
 - **Style:** borda de 1.5px em cinza neutro, `rounded-sm`, fundo `surface`.
-- **Focus:** borda muda para índigo + anel de foco (`box-shadow` em baixa opacidade da marca) —
-  nunca só `outline: none` sem substituto.
+- **Focus:** a borda vira `--tk-focus-ring` e ganha um anel sólido de 1px colado nela (`box-shadow`),
+  uma faixa de ≥ 2px sem mexer no layout; o anel de 15% da marca dava 1,1:1. Vale também no escuro e no
+  login. Em grupo (busca com ícone, senha com "Mostrar senha"), o anel vai no grupo, não no campo (do lado
+  colado ao vizinho, o do campo sumia), e o botão do grupo tem contorno por dentro, acima do campo; no
+  login, o campo em grupo não sobe 1px no foco. Campo com erro em foco: anel vermelho de 2px, no lugar do
+  anel vermelho de 25% do Bootstrap. Nunca `outline: none` sem substituto.
 - **Error:** classe `.is-invalid` do Bootstrap + mensagem abaixo do campo, nunca só cor.
 
 ### Navigation

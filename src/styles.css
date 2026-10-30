@@ -24,6 +24,8 @@
   --bs-link-hover-color-rgb: 58, 60, 163;
   /* Índigo como texto (link ativo, menu): o --tk-primary puro dá só ~4:1 sobre fundo claro. */
   --tk-primary-text: var(--tk-primary-darker);
+  /* Contorno de foco dos controles do Bootstrap e dos campos: ≥ 4,3:1 em todos os fundos claros medidos (o --tk-primary puro cai a 3,6:1 nos tingidos). */
+  --tk-focus-ring: var(--tk-primary-dark);
 
   --tk-page-bg: #f5f5f9;
   --tk-surface: #ffffff;
@@ -106,6 +108,8 @@
   --tk-info-text: #5fd9f2;
   --tk-danger-text: #ff8669;
   --tk-primary-text: #b3b5ff;
+  /* No escuro, o índigo claro: ≥ 6,3:1 em todos os fundos escuros medidos. */
+  --tk-focus-ring: var(--tk-primary-text);
   --bs-link-color: #b3b5ff;
   --bs-link-color-rgb: 179, 181, 255;
   --bs-link-hover-color: #d1d2ff;
@@ -479,19 +483,53 @@ body {
   transition: border-color var(--tk-transition), box-shadow var(--tk-transition), transform var(--tk-transition);
 }
 
-.form-control:focus, .form-select:focus {
-  border-color: var(--tk-primary);
-  box-shadow: 0 0 0 0.2rem rgba(var(--tk-primary-rgb), 0.15);
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  border-color: var(--tk-border);
+}
+
+/*
+ * Foco do campo: a borda vira o contorno de foco e ganha um anel sólido de 1px colado nela, uma faixa
+ * de 2px ou mais sem mexer no layout (o halo de 15% dava 1,2:1). O seletor escuro existe porque a
+ * regra acima tem a mesma especificidade de `.form-control:focus` e anulava a troca de borda.
+ */
+.form-control:focus,
+.form-select:focus,
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+  border-color: var(--tk-focus-ring);
+  box-shadow: 0 0 0 1px var(--tk-focus-ring);
 }
 
 .input-group:focus-within .form-control,
 .input-group:focus-within .input-group-text {
-  border-color: var(--tk-primary);
+  border-color: var(--tk-focus-ring);
 }
 
-[data-bs-theme="dark"] .form-control,
-[data-bs-theme="dark"] .form-select {
-  border-color: var(--tk-border);
+/*
+ * Campo dentro de um grupo (ícone de busca, "Mostrar senha"): o anel vai no grupo, não no campo. Do lado
+ * colado ao vizinho, o anel do campo some atrás dele e sobrava só a borda (1px de mudança); no grupo, borda
+ * + anel fecham uma faixa de 2,5px nos quatro lados. `:has()` pra o anel do grupo aparecer só com o campo
+ * em foco: um botão do grupo tem o contorno próprio.
+ */
+.input-group:has(> .form-control:focus, > .form-select:focus) {
+  border-radius: var(--tk-radius-sm);
+  box-shadow: 0 0 0 1px var(--tk-focus-ring);
+}
+
+.input-group > .form-control:focus,
+.input-group > .form-select:focus {
+  box-shadow: none;
+}
+
+/* Campo com erro em foco: engrossa a borda vermelha (o erro continua à vista), no lugar do anel vermelho de 25% do Bootstrap. */
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus,
+.was-validated .form-control:invalid:focus,
+.was-validated .form-select:invalid:focus {
+  border-color: var(--bs-form-invalid-border-color);
+  /* 2px: a borda vermelha já existe sem foco, então a única mudança visível no foco é este anel. */
+  box-shadow: 0 0 0 2px var(--bs-form-invalid-border-color);
 }
 
 /*
@@ -535,6 +573,85 @@ body {
   border-color: var(--tk-border);
   background-color: rgba(var(--tk-primary-rgb), 0.08);
   color: var(--tk-text-primary);
+}
+
+/*
+ * Foco visível dos controles do Bootstrap (WCAG 2.4.7/1.4.11): contorno de 2px na cor de foco, afastado
+ * 2px. O anel translúcido de fábrica (1,3–2,2:1) sai pela variável, o que cobre também os estados
+ * pressionados (`.btn.active:focus-visible` e afins, especificidade 0,4,0), que só leem a variável.
+ * Sem `!important`: estas regras empatam com as do Bootstrap e vencem por virem depois dele.
+ */
+.btn {
+  --bs-btn-focus-box-shadow: none;
+}
+
+.btn-close {
+  --bs-btn-close-focus-shadow: none;
+}
+
+.form-check-input:focus {
+  box-shadow: none;
+}
+
+/*
+ * O `:where()` (especificidade zero) estende o mesmo contorno a links e demais focáveis, no lugar do
+ * contorno automático do navegador: os componentes próprios com regra de foco continuam vencendo.
+ */
+:where(a, button, [role='button'], [tabindex], summary):focus-visible,
+.btn:focus-visible,
+.btn-check:focus-visible + .btn,
+.btn-close:focus-visible,
+.form-check-input:focus-visible {
+  outline: 2px solid var(--tk-focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Botão colado a um campo ("Mostrar senha"): contorno por dentro, e o botão focado por cima do campo. O
+ * campo é posicionado e o grupo do Bootstrap encosta os dois com 1px de sobreposição: sem isso, o campo
+ * cobria o contorno (ou metade dele) do lado em que os dois se encostam.
+ */
+.input-group-text:focus-visible {
+  position: relative;
+  z-index: 5;
+  outline-offset: -2px;
+}
+
+/* Item do menu: contorno por dentro, pra não vazar da borda do menu. */
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--tk-focus-ring);
+  outline-offset: -2px;
+}
+
+/*
+ * X branco do "fechar" (tema escuro e toasts) pela imagem, não pelo `filter` do Bootstrap: o filtro
+ * (inversão + cinza) também pintava o contorno de foco, que saía cinza em vez de índigo. O X fica igual.
+ */
+[data-bs-theme="dark"] .btn-close,
+.btn-close-white {
+  --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23fff'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e");
+  filter: none;
+}
+
+/* No toast colorido, o contorno usa a cor do texto dele (o mesmo par de ≥ 4,5:1 do `text-bg-*`); o índigo some sobre verde e vermelho. */
+.toast.text-bg-success,
+.toast.text-bg-danger {
+  --tk-focus-ring: #fff;
+}
+
+.toast.text-bg-info {
+  --tk-focus-ring: #000;
+}
+
+/*
+ * Num grupo de botões, o focado fica por cima do vizinho, pra o contorno não ser coberto. O vizinho
+ * encosta sem folga (Empresa | Com filtros, Dia | Semana | Mês) e pode ser o próprio índigo pressionado
+ * (1:1): um halo da superfície, mais largo que o contorno, separa o anel da cor ao lado.
+ */
+.btn-group > .btn:focus-visible,
+.btn-group > .btn-check:focus-visible + .btn {
+  z-index: 3;
+  box-shadow: 0 0 0 6px var(--tk-surface);
 }
 
 .dropdown-item.text-danger:hover,
@@ -1111,6 +1228,22 @@ router-outlet + * {
 .status-fill-inProgress { background-color: var(--tk-status-in-progress); --edge: var(--tk-status-in-progress-edge); }
 .status-fill-resolved { background-color: var(--tk-status-resolved); --edge: var(--tk-status-resolved-edge); }
 .status-fill-closed { background-color: var(--tk-status-closed); --edge: var(--tk-status-closed-edge); color: var(--tk-status-closed-label); }
+
+/*
+ * Foco da fatia da barra de composição: o contorno afastado cai sobre a fatia vizinha, colorida
+ * (1,2–2,3:1). Um halo da superfície, mais largo que o contorno, o separa dela; a fatia focada sobe
+ * sobre as vizinhas (cada fatia é um container de consulta, que já isola a pilha dela).
+ */
+.composition-segment:focus-within {
+  position: relative;
+  z-index: 1;
+}
+
+.composition-segment a:focus-visible {
+  outline: 2px solid var(--tk-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--tk-surface);
+}
 
 /* Marcador redondo da cor do status, ao lado de um rótulo (a cor nunca é o único sinal). */
 .status-dot {
