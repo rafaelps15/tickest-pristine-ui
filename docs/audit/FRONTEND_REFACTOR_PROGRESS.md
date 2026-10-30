@@ -110,8 +110,16 @@ Matriz completa em `FINAL_ACCEPTANCE_AUDIT.md`.
 `src/app/shared/ui/auth-form.css` pertencem à sessão b345b068, por decisão do usuário. Elas estão no
 mesmo working tree, sem commit, e não fazem parte desta validação.
 
+### Estado em 2026-10-29, 23h
+
+- A sessão b345b068 commitou e publicou na `origin/main` (`04ca7e1`…`7c5b362`) o foco visível e
+  as correções desta revisão. Esta sessão não fez esses commits nem o push.
+- **Validação do `7c5b362`:** `tsc` exit 0, build de produção OK e 1311 testes.
+- **Verificação do foco por pixels na aplicação real** (sessão de Administrador, dois temas):
+  305 → 19 reprovados, 0 regressões; os 19 foram explicados em captura.
+- **Pendente de autorização:** A-37 (borda de erro dos campos inválidos).
+- **Working tree:** só os documentos de `docs/audit` atualizados depois do commit, sem stage.
+
 ### Próximo passo
 
-- Conferência na aplicação real, com uma conta autenticada (pendente; ver `FINAL_ACCEPTANCE_AUDIT.md`).
-- Conclusão e validação do foco visível pela sessão b345b068.
-- Commit das correções desta revisão, só com autorização do usuário.
+Decisão do usuário sobre o A-37 e, se quiser, o commit desta última atualização dos documentos.

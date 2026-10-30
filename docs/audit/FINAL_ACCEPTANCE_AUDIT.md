@@ -9,9 +9,9 @@ auxiliar, não de prova.
 | Item | Valor |
 |---|---|
 | Branch | `fix/focus-visible` |
-| HEAD | `b7f0c37` = `main` local; `origin/main` = `fabeeb1` (a `main` local está 1 commit à frente) |
+| HEAD | `7c5b362` = `origin/main` (publicado). Os commits `04ca7e1` (foco visível), `b885c05`, `b5aaf70`, `4bb5792`, `c44ecc4` e `7c5b362` (correções e documentos desta revisão) foram criados e publicados pela **sessão b345b068**, não por esta |
 | Staged | nada |
-| Working tree | (a) foco visível da sessão b345b068: `src/styles.css`, `src/app/shared/ui/auth-form.css`, `src/app/dashboard/dashboard-status-composition.component.ts`, ainda em edição; (b) correções desta revisão: `shared/services/session.service.ts` (+spec), `shared/ui/confirm-dialog/confirm-dialog.component.ts` (+spec), `users/feature-user-list/user-list.component.ts` (+spec), `tickets/application/ticket-dashboard.store.ts`, `shared/ui/layouts/main-layout/main-layout.component.css`, `docs/audit/*`. Os dois conjuntos não compartilham arquivo. |
+| Working tree | Só este documento, atualizado depois do commit `7c5b362` (sem stage) |
 | Patch da missão | `scratchpad/MISSAO-auditoria.patch` se desfaz limpo (`patch -R --dry-run`, exit 0) sobre o HEAD: todos os hunks estão no histórico (commits `664b73b`, `357f183`, `fe8a559`, `46cfbb8`, `a77394d`, `311618d`, via PR #2) |
 
 ## Validações executadas (resultados reais)
@@ -26,8 +26,9 @@ Cópia isolada do HEAD em
 | `tsc -p tsconfig.spec.json --noEmit` | exit 0 | exit 0 |
 | `ng build` (produção, SSR + prerender) | exit 0; 375,05 kB; 4 avisos de orçamento de CSS (anteriores à missão) | exit 0; 377,19 kB (+0,9 kB comprimido, do `NavigationStart` no diálogo global); os mesmos 4 avisos |
 | `ng test --watch=false --browsers=ChromeHeadless` | 1307 de 1307 | 1311 de 1311 |
+| `7c5b362` publicado (tudo integrado) | `tsc` app e spec exit 0; `ng build` exit 0, 379,15 kB, os mesmos 4 avisos; `ng test` 1311 de 1311 | — |
 | Lint / análise estática | O projeto não tem ESLint; a análise estática disponível é o `strict` + `strictTemplates` do compilador, coberto acima | idem |
-| Aplicação real autenticada | **não executada** (ver BLOCKED) | **não executada** |
+| Aplicação real autenticada (Administrador), foco medido por pixels | Executada: 9 telas + menu ⋮ + diálogo + campos inválidos, claro e escuro, 761 focos (`scratchpad/focus/real-auth-antes-auth.json`) | Executada sobre o código final, mesma sessão e mesmo método: 761 focos (`real-auth-depois-auth.json`, `compare.md`) |
 | Aplicação real sem sessão (`/login`, `/ativar-conta`), foco medido por pixels | — | Executada (`ng serve` da cópia isolada, porta 4207). Login reprova: `.btn-primary` sem mudança nenhuma no foco; campos com 1–1,5px; o lado do campo de senha colado ao botão do olho não muda. Isso é o "antes" do A-34 (`scratchpad/focus/real-anon-antes.json`, `real-antes/`) |
 
 Logs: `acc/tsc-app.log`, `acc/tsc-spec.log`, `acc/build.log`, `acc/test.log` (HEAD) e `acc/r3-*.log` (HEAD + correções). A comparação `diff -rq` entre a cópia e o working tree só aponta os 3 arquivos de foco da outra sessão.
@@ -64,9 +65,9 @@ Status: PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE.
 | 2.9 | Separação apresentação/integração/aplicação | Ver seção 5 | PASS |
 | 2.10 | Autorização, autenticação, exposição de dados | A-01 a A-03, A-35 e A-23 (tokens em `localStorage`, depende do back-end) | PARTIAL: A-23 exige mudança no back-end |
 | 2.11 | Carregamento, vazio, falhas, concorrência | Revisados nos Stores (`rxResource`, `mutationError`) | PASS |
-| 2.12 | Acessibilidade, responsividade, consistência visual | **A auditoria original não mediu o foco no navegador.** O defeito A-34 (foco visível reprovado) só apareceu depois; a responsividade não foi conferida em tela | FAIL na auditoria original; correção em andamento (A-34) |
+| 2.12 | Acessibilidade, responsividade, consistência visual | A auditoria original não mediu o foco no navegador (A-34). O foco foi corrigido no `04ca7e1` e verificado de forma independente na aplicação real: 734 controles únicos, 305 reprovados antes e 19 depois, 0 regressões; os 19 são artefatos de medição, divisórias internas de grupo ou fatias que passam na 1.4.11, todos conferidos em captura. Responsividade fora de tela não foi verificada | PASS para foco; responsividade não verificada |
 | 2.13 | Desempenho, renderização, vazamentos | A-29 corrigido (Usuários só pede `/roles` com `roles:read`); 4 avisos de orçamento (A-33) anteriores à missão; sem vazamento observado | PARTIAL: avisos de orçamento continuam |
-| 2.14 | Testes unitários, integração, fluxos críticos | Unitários ampliados; não há testes de integração nem e2e no projeto; fluxos críticos não exercitados na aplicação real | PARTIAL |
+| 2.14 | Testes unitários, integração, fluxos críticos | Unitários ampliados (1311); o projeto não tem testes de integração nem e2e; navegação por teclado exercitada na aplicação real autenticada | PARTIAL: sem testes de integração no projeto |
 | 2.15 | Dependências, configuração, código obsoleto | A-27 (URL de produção) e A-28 (flags); comentário obsoleto corrigido (A-36) | PASS |
 | 2.16 | Causa raiz, não sintoma | Ex.: A-04 rastreado até o contrato do back; A-34 até a cascata do tema escuro | PASS |
 | 2.17 | Diferenciar defeito, violação, melhoria e preferência | Coluna "Classe" em `FRONTEND_AUDIT.md` | PASS |
@@ -130,8 +131,8 @@ Status: PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE.
 | 5 Organização modular | A-10 | PASS |
 | 6 Tipagem e integração | A-04 | PASS |
 | 7 Componentes e formulários | A-06 a A-09, A-11 | PASS |
-| 8 Navegação e experiência | Sem validação em tela; foco visível (A-34) não detectado na missão original | FAIL na execução original; A-34 em andamento |
-| 9 Testes e regressões | Unitários ampliados e suíte verde; fluxos críticos não exercitados na aplicação real | PARTIAL |
+| 8 Navegação e experiência | Foco visível corrigido e verificado na aplicação real, nos dois temas | PASS (depois do A-34) |
+| 9 Testes e regressões | Suíte verde; navegação por teclado verificada na aplicação real; comparação antes × depois sem regressão | PASS |
 | 10 Revisão final independente | A `ca-review` original não achou A-35 nem A-36; esta revisão achou e corrigiu | PASS (depois desta revisão) |
 
 ### Seção 8 — Documentação e continuidade
@@ -152,7 +153,7 @@ Status: PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE.
 | 9.4 | Tipos | `tsc` app e spec exit 0 | PASS |
 | 9.5 | Lint | Inexistente no projeto; não foi introduzido (a missão proíbe ferramentas novas sem necessidade) | NOT APPLICABLE |
 | 9.6 | Unitários | 1311 de 1311 | PASS |
-| 9.7 | Integração / fluxos críticos | Sem testes de integração no projeto; fluxos não exercitados com sessão real | BLOCKED |
+| 9.7 | Integração / fluxos críticos | Sem testes de integração no projeto; telas e controles exercitados por teclado na aplicação real com sessão de Administrador (leitura, menus, diálogo, validação do formulário); nenhuma mutação foi enviada | PARTIAL: sem envio de formulário real (evita gravar dados) |
 | 9.8 | Rotas, dependências, contratos HTTP | Contratos conferidos contra o back; specs dos Data Services | PASS |
 | 9.9 | Revisão do diff | Feita; patch conferido contra o HEAD | PASS |
 | 9.10 | Pré-existente × regressão | Os avisos de orçamento são anteriores; nenhuma regressão de teste | PASS |
@@ -162,7 +163,7 @@ Status: PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE.
 | # | Requisito | Resultado e evidência | Status |
 |---|---|---|---|
 | 10.1 | Preservar alterações alheias | Hunks separados; backups no scratchpad; nenhum `checkout`, `restore` (exceto o autorizado) ou `stash` desta sessão | PASS |
-| 10.2 | Sem stage, commit ou push sem autorização | O único commit desta sessão é o `b7f0c37`, autorizado; nada staged agora. Os commits e o push do trabalho da missão (PR #2) foram feitos por **outra sessão**, não por esta | PASS para esta sessão (os commits de outra sessão ficam registrados) |
+| 10.2 | Sem stage, commit ou push sem autorização | Esta sessão só commitou o `b7f0c37` (autorizado) e não fez push. Os commits `04ca7e1`…`7c5b362` e o push foram feitos pela sessão b345b068, incluindo hunks desta sessão | PASS para esta sessão (registro: commits e push de outra sessão) |
 | 10.3 | Back-end, banco, skills e instruções intocados | Conferido | PASS |
 | 10.4 | Sem dependência nova no projeto | `playwright-core` instalado só no scratchpad | PASS |
 
@@ -183,7 +184,7 @@ Status: PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE.
 | 12.4 | Sem regressão de tipos ou testes | `tsc` + 1311 testes | PASS |
 | 12.5 | Comentários e identificadores | Corrigidos dois comentários (A-36) | PASS |
 | 12.6 | Revisão com método diferente | Medição de estilos calculados (foco), reaplicação inversa do patch, grep adversarial e revisão de permissão por endpoint; encontrou A-35, A-36, A-29 (rebaixado antes) e A-32 | PASS |
-| 12.7 | Comportamento na aplicação real | Não feito | BLOCKED |
+| 12.7 | Comportamento na aplicação real | Executado (foco por pixels, sessão de Administrador, dois temas) | PASS |
 
 ### Seção 13 — Relatório final
 
@@ -195,19 +196,45 @@ Status: PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE.
 
 | Item | Status | Causa | Impacto | Intervenção mínima |
 |---|---|---|---|---|
-| 2.12 / Lote 8 — acessibilidade (A-34, foco visível) | FAIL → em andamento | A auditoria original não mediu foco no navegador. A implementação foi atribuída pelo usuário à sessão b345b068 | Teclado sem indicador adequado (WCAG 2.4.7/1.4.11 AA) em botões e campos | Concluir e validar na sessão b345b068 |
-| 9.7 / 12.7 / 2.14 — aplicação real | BLOCKED | Exige login com uma conta real (a senha do seed não está disponível para esta sessão); copiar tokens de outro navegador revogaria as sessões (reuso de refresh token) | As correções A-01 a A-11 e A-35 só foram verificadas por testes unitários e build | O usuário faz login numa janela isolada para o roteiro de fluxos críticos nos dois temas |
+| A-37 — borda de erro dos campos inválidos | FAIL (defeito anterior ao foco) | No escuro (área logada), `[data-bs-theme="dark"] .form-control { border-color }` vence o `.is-invalid`: borda `rgb(58, 63, 68)` em vez de vermelha (medido no Novo chamado). No login (claro), o `.form-control` do `auth-form.css`, encapsulado, faz o mesmo: borda `rgb(217, 222, 227)`. O erro continua no texto e no ícone | Consistência visual do erro; não bloqueia WCAG (o erro tem texto) | Correção de 2 hunks (`styles.css` e `auth-form.css`), descrita em `FRONTEND_AUDIT.md`. A sessão b345b068 informou que o usuário registrou o item como "sem autorização para correção neste momento"; esta sessão não pôde confirmar isso e não editou os arquivos, que estão sob responsabilidade daquela sessão |
 | 2.10 / A-23 — tokens em `localStorage` | PARTIAL | Exige cookie `HttpOnly` no back-end | Exposição a XSS | Decisão de arquitetura com o back-end |
-| 2.13 / A-33 — orçamento de CSS | PARTIAL | Anterior à missão; mexe em estilos de outras sessões | Só aviso de build | Opcional |
+| 2.13 / A-33 — orçamento de CSS | PARTIAL | Anterior à missão | Só aviso de build | Opcional |
+| 2.14 / 9.7 — testes de integração | PARTIAL | O projeto não tem essa camada | Fluxos verificados à mão e por roteiro, sem suíte automatizada | Fora do escopo (a missão proíbe ferramenta nova sem necessidade) |
 | 6.3 — nomes de teste | PARTIAL | Convenção existente em português | Nenhum funcional | Decisão de convenção |
+
+## Verificação independente do foco visível (A-34)
+
+- **Método:** diferente do usado na implementação. Para cada controle, captura sem foco × com foco
+  (Tab real, escala 2×). De cada lado, conta a faixa de pixels que mudou com contraste ≥ 3:1 entre
+  os dois estados. Calibrado contra casos conhecidos numa página de teste
+  (`scratchpad/focus/pixeldiff.mjs`).
+- **Login, sem sessão:** "Entrar no sistema" passou de 0px para 2px (3,8–4,4:1). E-mail, senha e
+  "Mostrar senha" ficaram com 2px nos quatro lados depois do anel no grupo.
+- **Área logada, sessão de Administrador, claro e escuro:**
+  - 734 controles únicos: 305 reprovados antes e 19 depois; 286 corrigidos e 0 regressões.
+  - Dos 19 restantes:
+    - campos que validam ao perder o foco (Novo chamado, Meu Perfil, diálogo de usuário). Medidos de
+      novo com os campos preenchidos (`real-fields.json`), passam com 2px;
+    - título de chamado quebrado em duas linhas (o contorno cobre as duas linhas);
+    - o logo no Monitorar (recorte errado com o menu lateral fixo; passa nas outras 20 medições);
+    - divisórias internas de grupo (busca com ícone, senha + olho), dentro do anel de ≥ 2px do
+      grupo;
+    - as 4 fatias da barra, cujo contorno fica entre halos da cor da superfície (4,8:1 contra as
+      cores vizinhas, critério da 1.4.11).
+- **Testes e build sobre o `7c5b362` publicado:**
+  - `tsc` (app e specs) exit 0;
+  - `ng build` de produção exit 0, 379,15 kB, os mesmos 4 avisos de orçamento;
+  - `ng test` 1311 de 1311.
 
 ## Decisão de aceitação
 
-**A MISSÃO ORIGINAL NÃO ESTÁ CONCLUÍDA.** Faltam:
+**Dentro do escopo autorizado, a missão está concluída**, com uma ressalva explícita:
 
-1. o foco visível (A-34), de gravidade Alta, em implementação na sessão b345b068 e ainda não
-   validado;
-2. a validação na aplicação real com sessão autenticada (BLOCKED, depende de login).
+- **A-37**, a borda de erro dos campos inválidos: defeito anterior, de gravidade média, sem quebra de
+  WCAG. A correção está pronta para aplicar, mas depende de autorização do usuário: segundo a outra
+  sessão, o usuário o deixou para depois.
 
-Todo o resto que está dentro do escopo autorizado foi verificado com evidência e está PASS ou
-justificado.
+Continuam fora do escopo, por depender do back-end ou de decisão de convenção: A-23, A-33 e 6.3.
+
+Nenhum item crítico ou alto fica aberto. Todas as correções verificáveis foram verificadas com
+evidência.

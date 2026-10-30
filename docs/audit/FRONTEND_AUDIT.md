@@ -34,7 +34,8 @@ listas são do servidor. Os problemas reais encontrados:
 | A-10 | Média | Skill | Início (shell) importa componente interno de `tickets/ui` | Corrigido |
 | A-11 | Baixa | Defeito | Novo pedido de confirmação deixava o anterior sem resposta | Corrigido |
 | A-12 a A-27 | — | Mantido / Melhoria / Pendência | Ver seções abaixo | Documentado |
-| A-34 | Alta | Defeito | Foco visível: anéis do Bootstrap entre 1,2:1 e 2,2:1, `.btn-primary` e campos sem indicador no tema escuro, campos com 1,5px | Em implementação em outra sessão (ver abaixo) |
+| A-34 | Alta | Defeito | Foco visível: anéis do Bootstrap entre 1,2:1 e 2,2:1, `.btn-primary` e campos sem indicador no tema escuro, campos com 1,5px | Corrigido no `04ca7e1` (sessão b345b068) e verificado na aplicação real (ver `FINAL_ACCEPTANCE_AUDIT.md`) |
+| A-37 | Média | Defeito | Campo inválido sem borda vermelha no tema escuro (área logada) e no login (claro); o erro fica só no texto e no ícone | Pendente de autorização (ver abaixo) |
 | A-35 | Média | Defeito | Achado na revisão final: login com outra conta em outra aba deixava esta aba com usuário, permissões e dados da conta anterior | Corrigido |
 | A-36 | Baixa | Defeito | Achado na revisão final: comentário com nome do template de referência e comentário desatualizado sobre rotas do back-end | Corrigido |
 
@@ -169,9 +170,36 @@ b345b068 (`fv-antes.json`: 298 focos, 171 abaixo de 3:1, na aplicação real).
   com a mesma especificidade, e o erro fica só na mensagem. Repassado à sessão responsável
   (`styles.css` está no escopo dela).
 
-**Estado:** a implementação foi atribuída pelo usuário à sessão b345b068, na branch
-`fix/focus-visible`. As alterações estão no working tree, sem commit. Esta auditoria não as
-considera concluídas nem validadas.
+**Estado:** corrigido no commit `04ca7e1` pela sessão b345b068 (publicado em `origin/main`).
+
+Verificação independente desta sessão, por pixels, na aplicação real com sessão de Administrador,
+nos dois temas:
+
+- 734 controles: 305 reprovados antes, 19 depois, 0 regressões;
+- os 19 foram conferidos em captura: são artefatos de medição, divisórias internas de grupo ou
+  fatias da barra que passam na 1.4.11.
+
+### A-37 — Borda de erro dos campos inválidos (Média)
+
+**Evidência (aplicação real, estilos calculados):**
+
+- Novo chamado no escuro: borda `rgb(58, 63, 68)` em vez de vermelha, porque
+  `[data-bs-theme="dark"] .form-control, [data-bs-theme="dark"] .form-select { border-color }` vem
+  depois do `.form-control.is-invalid` do Bootstrap, com a mesma especificidade.
+- Login (claro): borda `rgb(217, 222, 227)`, porque o `.form-control` do `auth-form.css` é
+  encapsulado e vence o `.is-invalid`.
+
+O erro continua no texto e no ícone, então não há quebra de WCAG; o defeito é de consistência visual.
+
+**Correção pronta, não aplicada:**
+
+- (a) excluir `.is-invalid` da regra escura do `styles.css` (`:not(.is-invalid)`);
+- (b) no `auth-form.css`, `.form-control.is-invalid { border-color: var(--bs-form-invalid-border-color) }`,
+  com o foco do inválido em anel vermelho de 2px, como no global.
+
+A sessão b345b068 informou que o usuário deixou o item "sem autorização para correção neste
+momento". Os dois arquivos estão sob responsabilidade dela.
+
 
 ### A-35 — Troca de conta em outra aba (Média)
 
