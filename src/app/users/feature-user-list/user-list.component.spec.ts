@@ -84,14 +84,14 @@ describe('UserListComponent', () => {
 
   let usersStoreFake: ReturnType<typeof createUsersStoreFake>;
   let rolesStoreFake: { roles: ReturnType<typeof signal<Role[]>>; load: jasmine.Spy };
-  let sessionServiceFake: { userId: jasmine.Spy };
+  let sessionServiceFake: { userId: jasmine.Spy; hasPermission: jasmine.Spy };
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
     usersStoreFake = createUsersStoreFake();
     rolesStoreFake = { roles: signal<Role[]>([role]), load: jasmine.createSpy('load') };
-    sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id') };
+    sessionServiceFake = { userId: jasmine.createSpy('userId').and.returnValue('admin-id'), hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
     toastServiceFake = { show: jasmine.createSpy('show') };
 
@@ -116,6 +116,15 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.resetState).toHaveBeenCalled();
     expect(usersStoreFake.loadAll).toHaveBeenCalled();
     expect(rolesStoreFake.load).toHaveBeenCalled();
+  });
+
+  it('não pede as funções a quem não tem roles:read (a API responderia 403)', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code !== 'roles:read');
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    expect(usersStoreFake.loadAll).toHaveBeenCalled();
+    expect(rolesStoreFake.load).not.toHaveBeenCalled();
   });
 
   it('restaura status, período, página e tamanho de página a partir da query string ao inicializar', async () => {

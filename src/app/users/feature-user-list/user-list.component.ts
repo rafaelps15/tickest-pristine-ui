@@ -319,7 +319,10 @@ export class UserListComponent implements OnInit {
         this.infoPanelUserId.set(params.get('userId') || undefined);
         this.store.resetState();
         this.store.loadAll();
-        this.rolesStore.load();
+        // GET /roles exige roles:read; sem ela, a chamada só daria 403 e uma recarga extra de /users/me (filtro e funções ficam vazios).
+        if (this.sessionService.hasPermission('roles:read')) {
+            this.rolesStore.load();
+        }
     }
 
     /**
