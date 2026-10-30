@@ -39,7 +39,9 @@ estavam no `FRONTEND_REFACTOR_PROGRESS.md`.
   publicados pela sessão b345b068.
 - O trabalho de 2026-10-30 (A-37 a A-46, R-01 a R-04 e o saneamento C-01 a C-12 e A-44) foi
   integrado, com autorização do usuário, na branch `fix/frontend-audit-integration`, criada a partir
-  da `main` em `a4cedca`. O merge na `main` depende de nova autorização.
+  da `main` em `a4cedca`, publicada e aberta no PR #3
+  (https://github.com/rafaelps15/tickest-pristine-ui/pull/3). O merge na `main` depende de nova
+  autorização.
 
   | Commit | Conteúdo |
   |---|---|
@@ -48,7 +50,7 @@ estavam no `FRONTEND_REFACTOR_PROGRESS.md`.
   | `8473d24` | A-38, A-39, C-03 e C-12 (responsáveis elegíveis e política de anexos) |
   | `591bc90` | A-42, A-43, A-44, C-01, C-02, C-04, C-06 e C-11 (sessão) |
   | `838e94f` | R-01 a R-04, A-41, A-45, A-46, C-07 e C-11 (menu lateral) |
-  | commit seguinte | estes documentos e o `DESIGN.md` |
+  | `ba6b751` | estes documentos e o `DESIGN.md` |
 
   Os commits agrupam arquivos inteiros. O A-38 e o A-39 ficam juntos porque o spec do detalhe
   cobre os dois; o A-42 e o A-43, porque o spec do interceptor tem os ajustes do resultado tipado.
