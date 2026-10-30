@@ -8,7 +8,7 @@ import { TicketAttachmentsStore } from '../application/ticket-attachments.store'
 import { TicketHistoryStore } from '../application/ticket-history.store';
 import { TicketMessagesStore } from '../application/ticket-messages.store';
 import { TicketDetail } from '../entities/ticket';
-import { TicketAttachment } from '../entities/ticket-attachment';
+import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
 import { TicketMessage } from '../entities/ticket-message';
 import { TicketHistoryAction, TicketHistoryEntry } from '../entities/ticket-history';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -16,12 +16,18 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjective, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
-import { UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
 import { By } from '@angular/platform-browser';
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 /** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
 const FAR_FUTURE = '2999-01-01T00:00:00Z';
+
+/** Política de anexos como o back-end devolve (10 MB, PDF e PNG). */
+const ATTACHMENT_POLICY: TicketAttachmentPolicy = {
+  maxFileSizeBytes: 10_485_760, maxAttachmentsPerTicket: 20, maxTotalBytesPerTicket: 104_857_600,
+  allowedTypes: [{ contentType: 'application/pdf', extensions: ['.pdf'] }, { contentType: 'image/png', extensions: ['.png'] }]
+};
 
 describe('TicketDetailComponent', () => {
   /** Objetivo de SLA "em branco", pra só sobrescrever os campos que cada cenário de teste precisa. */
@@ -65,10 +71,7 @@ describe('TicketDetailComponent', () => {
     id: 'm1', ticketId: 't1', authorUserId: 'u1', content: 'Já verifiquei, aguardando peça.',
     createdAtUtc: '2026-01-01T12:00:00Z', editedAtUtc: null
   };
-  const candidate: UserSummary = {
-    id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
-  };
+  const candidate: TicketAssignee = { id: 'u2', fullName: 'João Pedro', sectorId: 's1', sectorName: 'Suporte' };
 
   /** Cria um store de detalhe falso com signals reais. */
   function createDetailStoreFake() {
@@ -85,7 +88,7 @@ describe('TicketDetailComponent', () => {
       slaRefreshing: signal(false),
       slaError: signal<string | null>(null),
       refreshSla: jasmine.createSpy('refreshSla'),
-      assigneeCandidates: signal<UserSummary[]>([]),
+      assigneeCandidates: signal<TicketAssignee[]>([]),
       searchingAssignees: signal(false),
       assigneeSearchError: signal<string | null>(null),
       loadTicket: jasmine.createSpy('loadTicket'),
@@ -116,6 +119,7 @@ describe('TicketDetailComponent', () => {
   function createAttachmentsStoreFake() {
     return {
       attachments: signal<TicketAttachment[]>([attachment]),
+      policy: signal<TicketAttachmentPolicy | null>(ATTACHMENT_POLICY),
       hasMore: signal(false),
       loadingMore: signal(false),
       loadMore: jasmine.createSpy('loadMore'),
@@ -375,6 +379,34 @@ describe('TicketDetailComponent', () => {
 
     expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
     expect(fixture.componentInstance.fileValidationError()).toContain('não é suportado');
+  });
+
+  it('sem a política carregada, envia direto e deixa a validação para o back-end', async () => {
+    attachmentsStoreFake.policy.set(null);
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const file = new File(['x'], 'script.exe', { type: 'application/x-msdownload' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [file] });
+    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
+
+    expect(attachmentsStoreFake.upload).toHaveBeenCalledWith(file, jasmine.any(Function));
+    expect(fixture.componentInstance.fileValidationError()).toBeNull();
+  });
+
+  it('usa o limite de tamanho da política do back-end na mensagem', async () => {
+    attachmentsStoreFake.policy.set({ ...ATTACHMENT_POLICY, maxFileSizeBytes: 2 * 1024 * 1024 });
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const file = new File([new Uint8Array(3 * 1024 * 1024)], 'medio.pdf', { type: 'application/pdf' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [file] });
+    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
+
+    expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.fileValidationError()).toBe('O arquivo excede o tamanho máximo permitido de 2.0 MB.');
   });
 
   it('envia o upload quando o arquivo é válido', async () => {

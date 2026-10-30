@@ -4,7 +4,7 @@ import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { TicketAttachmentsStore } from './ticket-attachments.store';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
-import { TicketAttachment } from '../entities/ticket-attachment';
+import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
 import { CursorPage } from '../../shared';
 
 describe('TicketAttachmentsStore', () => {
@@ -20,12 +20,18 @@ describe('TicketAttachmentsStore', () => {
     return { items, nextCursorDate: last?.uploadedAtUtc ?? null, nextCursorId: last?.id ?? null, hasNextPage };
   }
 
+  const policy: TicketAttachmentPolicy = {
+    maxFileSizeBytes: 10_485_760, maxAttachmentsPerTicket: 20, maxTotalBytesPerTicket: 104_857_600,
+    allowedTypes: [{ contentType: 'application/pdf', extensions: ['.pdf'] }, { contentType: 'image/png', extensions: ['.png'] }]
+  };
+
   let store: InstanceType<typeof TicketAttachmentsStore>;
   let dataService: jasmine.SpyObj<TicketAttachmentDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketAttachmentDataService', ['getAll', 'upload', 'download', 'delete']);
+    dataService = jasmine.createSpyObj('TicketAttachmentDataService', ['getAll', 'upload', 'download', 'delete', 'getPolicy']);
     dataService.getAll.and.returnValue(of(pageOf([attachment])));
+    dataService.getPolicy.and.returnValue(of(policy));
 
     TestBed.configureTestingModule({
       providers: [
@@ -35,6 +41,28 @@ describe('TicketAttachmentsStore', () => {
       ]
     });
     store = TestBed.inject(TicketAttachmentsStore);
+  });
+
+  it('expõe a política de anexos lida do back-end', async () => {
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getPolicy).toHaveBeenCalledTimes(1);
+    expect(store.policy()).toEqual(policy);
+  });
+
+  it('deixa a política nula quando a leitura falha, sem afetar a lista de anexos', async () => {
+    dataService.getPolicy.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), TicketAttachmentsStore, { provide: TicketAttachmentDataService, useValue: dataService }]
+    });
+    const failing = TestBed.inject(TicketAttachmentsStore);
+    failing.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(failing.policy()).toBeNull();
+    expect(failing.attachments()).toEqual([attachment]);
+    expect(failing.listState().error).toBeNull();
   });
 
   it('carrega os anexos do chamado informado', async () => {
