@@ -237,6 +237,21 @@ describe('TicketDashboardStore', () => {
     expect(store.unavailableGroupings()).toEqual([]);
   });
 
+  it('sem fim no período, conta até hoje em Brasília: às 23:30 de 31/10, 366 dias ainda cabem dia a dia', async () => {
+    // 02:30 UTC de 01/11 é 23:30 de 31/10 em Brasília; com a data UTC, o período teria 367 dias e "Dia" sumiria.
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date('2026-11-01T02:30:00Z'));
+    try {
+      const store = createStore();
+      store.setScope({ from: '2025-10-31' });
+
+      expect(store.unavailableGroupings()).toEqual([]);
+      expect(store.trendGroupBy()).toBe('Day');
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
   it('sem tickets:manage não pergunta nada à API', async () => {
     permissions = new Set();
     const store = createStore();

@@ -1,6 +1,11 @@
-import { formatIsoDate, isIsoDate, previousIsoRange, shiftIsoDate } from './iso-date.util';
+import { formatIsoDate, isIsoDate, previousIsoRange, shiftIsoDate, todayInSaoPaulo } from './iso-date.util';
 
 describe('iso-date.util', () => {
+  it('todayInSaoPaulo usa a data de Brasília, não a UTC, perto da meia-noite', () => {
+    expect(todayInSaoPaulo(new Date('2026-11-01T02:30:00Z'))).toBe('2026-10-31');
+    expect(todayInSaoPaulo(new Date('2026-11-01T03:00:00Z'))).toBe('2026-11-01');
+  });
+
   it('valida e formata datas aaaa-mm-dd', () => {
     expect(isIsoDate('2026-10-28')).toBeTrue();
     expect(isIsoDate('2026-02-30')).toBeFalse();

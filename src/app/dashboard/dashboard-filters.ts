@@ -46,11 +46,6 @@ const PRIORITIES: TicketPriority[] = [TicketPriority.Low, TicketPriority.Medium,
 /** Valores aceitos em `?assignee=`. */
 const ASSIGNEES: TicketDashboardAssignee[] = ['me', 'none'];
 
-/** Hoje no horário de Brasília (`aaaa-mm-dd`) — as datas da API são de `America/Sao_Paulo`. */
-export function todayInSaoPaulo(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
-}
-
 /** Soma (ou subtrai) dias de uma data `aaaa-mm-dd` (o mesmo cálculo do shared, com o nome que a tela usa). */
 export const addDays = shiftIsoDate;
 
