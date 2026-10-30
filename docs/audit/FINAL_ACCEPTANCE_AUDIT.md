@@ -40,8 +40,8 @@ estavam no `FRONTEND_REFACTOR_PROGRESS.md`.
 - O trabalho de 2026-10-30 (A-37 a A-46, R-01 a R-04 e o saneamento C-01 a C-12 e A-44) foi
   integrado, com autorização do usuário, na branch `fix/frontend-audit-integration`, criada a partir
   da `main` em `a4cedca`, publicada e aberta no PR #3
-  (https://github.com/rafaelps15/tickest-pristine-ui/pull/3). O merge na `main` depende de nova
-  autorização.
+  (https://github.com/rafaelps15/tickest-pristine-ui/pull/3). Mergeado na `main` em 2026-10-30
+  (ver "Integração na `main`").
 
   | Commit | Conteúdo |
   |---|---|
@@ -51,6 +51,8 @@ estavam no `FRONTEND_REFACTOR_PROGRESS.md`.
   | `591bc90` | A-42, A-43, A-44, C-01, C-02, C-04, C-06 e C-11 (sessão) |
   | `838e94f` | R-01 a R-04, A-41, A-45, A-46, C-07 e C-11 (menu lateral) |
   | `ba6b751` | estes documentos e o `DESIGN.md` |
+  | `2caefb4` | registro do PR #3 e do commit dos documentos |
+  | `f449599` | lista de pendências alinhada entre os documentos e o PR |
 
   Os commits agrupam arquivos inteiros. O A-38 e o A-39 ficam juntos porque o spec do detalhe
   cobre os dois; o A-42 e o A-43, porque o spec do interceptor tem os ajustes do resultado tipado.
@@ -413,5 +415,39 @@ autorizado ou dependentes de decisão:
     resultado tipado, sem alterar as skills), C-05, C-09 e C-10;
 - **Convenção:** 6.3, nomes de teste.
 
-As alterações de 2026-10-30 (A-37 a A-46, R-01 a R-04 e o saneamento) estão na branch
-`fix/frontend-audit-integration`, no PR #3, sem merge, aguardando a autorização do usuário.
+As alterações de 2026-10-30 (A-37 a A-46, R-01 a R-04 e o saneamento) foram integradas na `main`
+pelo PR #3 (ver "Integração na `main`").
+
+## Integração na `main` (2026-10-30)
+
+Merge autorizado pelo usuário depois da revisão do PR.
+
+| Item | Valor |
+|---|---|
+| PR | #3 (https://github.com/rafaelps15/tickest-pristine-ui/pull/3) |
+| Branch de origem | `fix/frontend-audit-integration`, criada a partir da `main` em `a4cedca`; mantida, local e remota |
+| Versão revisada | `f449599`, a cabeça do PR com 8 commits e 61 arquivos |
+| Commit de merge | `9962947` (merge commit, que preserva os commits por achado) |
+| Data | 2026-10-30, 17:58 UTC (14:58 em Brasília) |
+| Antes do merge | PR aberto contra `main`, sem conflito (`MERGEABLE`, `CLEAN`); o repositório não tem checks configurados |
+| Conteúdo integrado | `git diff f449599 9962947` vazio: a `main` tem exatamente a versão revisada |
+| Estado depois | `main` local = `origin/main` = `9962947`, working tree limpo |
+| Fora da integração | Back-end, spec 044, skills e `CLAUDE.md` |
+
+**Pendências que continuam abertas:**
+
+- **Dependem do back-end:**
+  - A-23: tokens em cookie `HttpOnly`;
+  - A-24: ações permitidas na resposta;
+  - A-30: ciclo de SLA vigente em `GET /tickets`.
+- **Não dependem do back-end:**
+  - A-27: URL de produção desconhecida;
+  - A-28: flags `volumeResolved` e `companyStatsForAll`, decisão do usuário.
+- **Baixas e aceitas:** R-05 a R-07.
+- **Outras baixas:**
+  - A-33: avisos de orçamento de CSS;
+  - a espera de até cerca de 15s do A-42 antes da tela de sessão indisponível.
+- **Em parte:** C-07, sem a diretiva de foco preso, com o breakpoint repetido no TS e no CSS.
+- **Mantidos com justificativa:** C-01, C-05, C-09 e C-10.
+- **Convenção:** 6.3, nomes de teste.
+- **Back-end:** a cor da função (BR-001) está na spec 044, em descoberta.
