@@ -3,6 +3,12 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { SessionService } from './session.service';
 import { CurrentUser } from '../entities/current-user';
 
+/** Monta um JWT sem assinatura com a claim `sub` (o SessionService só decodifica o payload). */
+function jwtFor(sub: string, nonce = ''): string {
+  const payload = btoa(JSON.stringify({ sub, nonce })).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return `header.${payload}.signature`;
+}
+
 describe('SessionService', () => {
   const user: CurrentUser = {
     id: 'user-1',
@@ -43,6 +49,29 @@ describe('SessionService', () => {
 
     expect(service.isAuthenticated()).toBeFalse();
     expect(service.currentUser()).toBeNull();
+  });
+
+  it('deve recarregar a aplicação quando outra aba entra com outra conta', () => {
+    const reload = spyOn<any>(service, 'reloadForAccountSwitch');
+    service.saveSession({ accessToken: jwtFor('user-1'), refreshToken: 'r' });
+    service.setCurrentUser(user);
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token', newValue: jwtFor('user-2'), storageArea: localStorage }));
+
+    expect(service.userId()).toBe('user-2');
+    expect(service.currentUser()).toBeNull();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('não deve recarregar quando outra aba só renova o token da mesma conta', () => {
+    const reload = spyOn<any>(service, 'reloadForAccountSwitch');
+    service.saveSession({ accessToken: jwtFor('user-1'), refreshToken: 'r' });
+    service.setCurrentUser(user);
+
+    window.dispatchEvent(new StorageEvent('storage', { key: 'auth_token', newValue: jwtFor('user-1', 'renovado'), storageArea: localStorage }));
+
+    expect(service.currentUser()).toEqual(user);
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it('deve ignorar eventos de storage de outras chaves', () => {

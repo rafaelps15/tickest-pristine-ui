@@ -113,11 +113,26 @@ export class SessionService {
       return;
     }
     if (event.key === this.ACCESS_TOKEN_KEY) {
+      const previousUserId = this.userId();
       this._token.set(event.newValue);
-      if (event.newValue === null) this._currentUser.set(null);
+      if (event.newValue === null) {
+        this._currentUser.set(null);
+        return;
+      }
+      const nextUserId = this.userId();
+      if (previousUserId !== null && nextUserId !== null && previousUserId !== nextUserId) {
+        // Outra conta entrou em outra aba: permissões e dados já carregados aqui são da conta anterior.
+        this._currentUser.set(null);
+        this.reloadForAccountSwitch();
+      }
     } else if (event.key === this.REFRESH_TOKEN_KEY) {
       this._refreshToken.set(event.newValue);
     }
+  }
+
+  /** Recarrega a aplicação pra descartar o estado em memória da conta anterior (Stores, menu, permissões). */
+  protected reloadForAccountSwitch(): void {
+    window.location.reload();
   }
 
   private getStoredValue(key: string): string | null {
