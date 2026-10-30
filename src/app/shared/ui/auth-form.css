@@ -84,6 +84,19 @@ p.text-muted {
   transform: none;
 }
 
+/* Campo com erro: a borda deste arquivo (encapsulada, que vence a global) apagava a borda vermelha do Bootstrap, inclusive na senha em foco. */
+.form-control.is-invalid,
+.input-group:focus-within .form-control.is-invalid {
+  border-color: var(--bs-form-invalid-border-color);
+}
+
+/* Em foco, o mesmo anel vermelho de 2px do resto do app (styles.css), também no campo dentro do grupo da senha. */
+.form-control.is-invalid:focus,
+.input-group .form-control.is-invalid:focus {
+  border-color: var(--bs-form-invalid-border-color);
+  box-shadow: 0 0 0 2px var(--bs-form-invalid-border-color);
+}
+
 .alert-danger {
   border: none;
   background-color: #ffe5e5;
