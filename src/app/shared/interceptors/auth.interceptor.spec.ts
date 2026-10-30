@@ -16,7 +16,7 @@ describe('authInterceptor', () => {
 
   beforeEach(() => {
     currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
-    currentUserService.load.and.returnValue(of(true));
+    currentUserService.load.and.returnValue(of({ status: 'loaded' as const }));
 
     TestBed.configureTestingModule({
       providers: [
@@ -113,16 +113,18 @@ describe('authInterceptor — renovação do token', () => {
     retry.flush([]);
   });
 
-  it('deve manter a sessão e devolver o 401 quando a renovação falha por erro passageiro', () => {
-    tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
-    let status: number | undefined;
-    http.get('/tickets').subscribe({ error: (error: HttpErrorResponse) => status = error.status });
+  for (const status of [0, 429, 503]) {
+    it(`deve manter a sessão e repassar o erro da renovação (${status}), não o 401 original, quando ela falha de forma passageira`, () => {
+      tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status })));
+      let received: number | undefined;
+      http.get('/tickets').subscribe({ error: (error: HttpErrorResponse) => received = error.status });
 
-    httpTesting.expectOne('/tickets').flush(null, { status: 401, statusText: 'Unauthorized' });
+      httpTesting.expectOne('/tickets').flush(null, { status: 401, statusText: 'Unauthorized' });
 
-    expect(status).toBe(401);
-    expect(session.clearSession).not.toHaveBeenCalled();
-  });
+      expect(received).toBe(status);
+      expect(session.clearSession).not.toHaveBeenCalled();
+    });
+  }
 
   it('deve encerrar a sessão quando o back-end recusa a renovação', () => {
     tokenRefresh.refresh.and.returnValue(of(null));
@@ -131,5 +133,85 @@ describe('authInterceptor — renovação do token', () => {
     httpTesting.expectOne('/tickets').flush(null, { status: 401, statusText: 'Unauthorized' });
 
     expect(session.clearSession).toHaveBeenCalled();
+  });
+});
+
+describe('authInterceptor + CurrentUserService — falha na renovação ao carregar o usuário logado', () => {
+  let httpTesting: HttpTestingController;
+  let currentUserService: CurrentUserService;
+  let session: { token: () => string | null; refreshToken: () => string | null; currentUser: () => null; setCurrentUser: jasmine.Spy; clearSession: jasmine.Spy };
+  let tokenRefresh: jasmine.SpyObj<TokenRefreshService>;
+  let router: jasmine.SpyObj<Router>;
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    session = {
+      token: () => 'token-vencido', refreshToken: () => 'refresh', currentUser: () => null,
+      setCurrentUser: jasmine.createSpy('setCurrentUser'), clearSession: jasmine.createSpy('clearSession')
+    };
+    tokenRefresh = jasmine.createSpyObj('TokenRefreshService', ['refresh']);
+    router = jasmine.createSpyObj('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        CurrentUserService,
+        { provide: SessionService, useValue: session },
+        { provide: TokenRefreshService, useValue: tokenRefresh },
+        { provide: Router, useValue: router }
+      ]
+    });
+    httpTesting = TestBed.inject(HttpTestingController);
+    currentUserService = TestBed.inject(CurrentUserService);
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+    jasmine.clock().uninstall();
+  });
+
+  /** Responde 401 (token vencido) a cada tentativa de GET /users/me, avançando o relógio entre elas. */
+  function answerEveryAttemptWith401(attempts: number, delaysMs: number[]): void {
+    for (let i = 0; i < attempts; i++) {
+      httpTesting.expectOne(req => req.url.endsWith('/users/me')).flush(null, { status: 401, statusText: 'Unauthorized' });
+      if (i < delaysMs.length) jasmine.clock().tick(delaysMs[i]);
+    }
+  }
+
+  it('token vencido e renovação sem rede: resulta em "unavailable" (tela de sessão indisponível), sem apagar a sessão', () => {
+    tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    let result: unknown;
+
+    currentUserService.load().subscribe(value => result = value);
+    answerEveryAttemptWith401(5, [1000, 2000, 4000, 8000]);
+
+    expect(result).toEqual({ status: 'unavailable', reason: 'offline' });
+    expect(session.clearSession).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('token vencido e renovação com 429: resulta em "unavailable" por limite de requisições', () => {
+    tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
+    let result: unknown;
+
+    currentUserService.load().subscribe(value => result = value);
+    answerEveryAttemptWith401(5, [1000, 2000, 4000, 8000]);
+
+    expect(result).toEqual({ status: 'unavailable', reason: 'rate-limited' });
+    expect(session.clearSession).not.toHaveBeenCalled();
+  });
+
+  it('renovação recusada pelo back-end: continua sendo sessão recusada ("unauthenticated"), sem novas tentativas', () => {
+    tokenRefresh.refresh.and.returnValue(of(null));
+    let result: unknown;
+
+    currentUserService.load().subscribe(value => result = value);
+    answerEveryAttemptWith401(1, []);
+
+    expect(result).toEqual({ status: 'unauthenticated' });
+    expect(session.clearSession).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 });

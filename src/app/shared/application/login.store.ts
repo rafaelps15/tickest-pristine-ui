@@ -9,6 +9,7 @@ import { AuthDataService } from '../infrastructure/auth.data.service';
 import { SessionService } from '../services/session.service';
 import { CurrentUserService } from '../services/current-user.service';
 import { extractErrorMessage } from '../utils/http-error.util';
+import { sessionUnavailableUrlTree } from '../utils/session-unavailable.util';
 
 /** Código do erro (UserErrors.PasswordChangeRequired) com que a API barra o login de uma senha provisória. */
 const PASSWORD_CHANGE_REQUIRED = 'Users.PasswordChangeRequired';
@@ -28,8 +29,11 @@ function hasErrorCode(err: HttpErrorResponse, status: number, code: string): boo
 export const LoginStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Login ou troca da senha provisória em andamento. */
     loading: false,
+    /** Mensagem de falha mostrada no formulário, ou `null`. */
     error: null as string | null,
+    /** Credenciais guardadas enquanto a troca da senha provisória não termina, ou `null`. */
     pendingCredentials: null as LoginCredentials | null
   }),
   withProps(() => ({
@@ -39,11 +43,26 @@ export const LoginStore = signalStore(
     _router: inject(Router)
   })),
   withMethods((store) => {
-    /** Salva os tokens, carrega o usuário logado e só então navega para o dashboard. */
+    /**
+     * Salva os tokens, carrega o usuário logado e só então navega para o dashboard. Falha passageira vai pra
+     * tela de sessão indisponível (a sessão acabou de ser criada e continua válida); recusa limpa a sessão e
+     * fica no login com a mensagem.
+     */
     const startSession = (tokens: AccessTokens): void => {
       store._session.saveSession(tokens);
-      store._currentUserService.load().subscribe(() => {
-        store._router.navigate(['/dashboard']);
+      store._currentUserService.load().subscribe(result => {
+        if (result.status === 'loaded') {
+          store._router.navigate(['/dashboard']);
+          return;
+        }
+
+        if (result.status === 'unavailable') {
+          store._router.navigateByUrl(sessionUnavailableUrlTree(store._router, result.reason, '/dashboard'));
+          return;
+        }
+
+        store._session.clearSession();
+        patchState(store, { error: 'Não foi possível carregar seus dados de acesso. Entre novamente.' });
       });
     };
 

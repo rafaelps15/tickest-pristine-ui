@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { SessionService } from '../services/session.service';
 import { TokenRefreshService } from '../services/token-refresh.service';
 import { CurrentUserService } from '../services/current-user.service';
+import { isTransientHttpError } from '../utils/http-error.util';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -30,8 +31,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                 }
                 // Access token expirado: tenta renovar via refresh token e repetir a requisição original.
                 return tokenRefresh.refresh().pipe(
-                    // Falha de rede ou do servidor na renovação não invalida a sessão: devolve o 401 original.
-                    catchError(() => throwError(() => error)),
+                    // Falha passageira na renovação (rede, 429, 5xx) não invalida a sessão: devolve o erro dela, e não o
+                    // 401 original, pra quem chamou não ler a falha como sessão recusada (ver CurrentUserService.load).
+                    catchError((refreshError: unknown) => throwError(() => isTransientHttpError(refreshError) ? refreshError : error)),
                     switchMap(newToken => {
                         if (!newToken) {
                             session.clearSession();
