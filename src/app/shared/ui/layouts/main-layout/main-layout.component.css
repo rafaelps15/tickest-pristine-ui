@@ -25,9 +25,9 @@
 }
 
 /*
- * `container-p-y` é classe utilitária do template Materio/Sneat original — este projeto só
- * carrega Bootstrap puro via CDN (ver index.html), então ela nunca teve definição nenhuma: o
- * conteúdo da página ficava colado na navbar flutuante, sem respiro nenhum entre os dois.
+ * `container-p-y` não existe no Bootstrap puro carregado via CDN (ver index.html), então ela nunca
+ * teve definição nenhuma: o conteúdo da página ficava colado na navbar flutuante, sem respiro
+ * nenhum entre os dois.
  */
 .container-p-y {
   padding-top: 1.5rem;

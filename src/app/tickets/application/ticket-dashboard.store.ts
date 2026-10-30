@@ -53,7 +53,7 @@ export type TicketDashboardChartScope = 'company' | 'filtered';
  * (GET /tickets/stats/times) e o gráfico Criados x Resolvidos do recorte (GET /tickets/stats/volume),
  * todos com o mesmo recorte. Cada um tem o seu `rxResource`: carrega, falha e se recupera sozinho, e
  * trocar o recorte cancela as requisições em voo. Todo número vem do servidor. Cada leitura só sai
- * com a sua flag em `DASHBOARD_FEATURES` ligada — o back-end ainda não entrega essas rotas.
+ * com a sua flag em `DASHBOARD_FEATURES` ligada, que acompanha a liberação de cada rota no ambiente.
  */
 export const TicketDashboardStore = signalStore(
   { providedIn: 'root' },
