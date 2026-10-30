@@ -1,4 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationStart, Router } from '@angular/router';
+import { filter } from 'rxjs';
 import { ConfirmDialogService, ConfirmDialogVariant } from '../../services/confirm-dialog.service';
 import { DialogComponent } from '../dialog/dialog.component';
 
@@ -42,6 +45,16 @@ export class ConfirmDialogComponent {
 
   /** Pedido de confirmação atual, vindo do serviço. */
   protected readonly options = this.confirmDialogService.options;
+
+  constructor() {
+    // Montado fora do router-outlet, o modal sobreviveria à troca de tela: confirmar ali executaria a ação da tela anterior.
+    inject(Router).events.pipe(
+      filter(event => event instanceof NavigationStart),
+      takeUntilDestroyed()
+    ).subscribe(() => {
+      if (this.options()) this.cancel();
+    });
+  }
 
   /** Classe do botão de confirmação, de acordo com a gravidade da ação. */
   protected confirmButtonClass(variant: ConfirmDialogVariant | undefined): string {

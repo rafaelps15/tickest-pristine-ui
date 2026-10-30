@@ -3,6 +3,11 @@ import { Component, provideZonelessChangeDetection, signal } from '@angular/core
 import { ConfirmDialogComponent } from './confirm-dialog.component';
 import { ConfirmDialogService } from '../../services/confirm-dialog.service';
 import { DialogComponent } from '../dialog/dialog.component';
+import { provideRouter, Router } from '@angular/router';
+
+/** Tela vazia só pra navegar nos testes. */
+@Component({ template: '' })
+class EmptyPageComponent {}
 
 describe('ConfirmDialogComponent', () => {
   let service: ConfirmDialogService;
@@ -10,13 +15,27 @@ describe('ConfirmDialogComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ConfirmDialogComponent],
-      providers: [provideZonelessChangeDetection()]
+      providers: [provideZonelessChangeDetection(), provideRouter([{ path: 'outra', component: EmptyPageComponent }])]
     }).compileComponents();
 
     service = TestBed.inject(ConfirmDialogService);
   });
 
   afterEach(() => document.body.classList.remove('modal-open'));
+
+  it('cancela o pedido aberto quando a navegação troca de tela, sem executar a ação', async () => {
+    const fixture = TestBed.createComponent(ConfirmDialogComponent);
+    let result: boolean | undefined;
+    service.confirm({ title: 'Desativar?', message: '...' }).subscribe(value => result = value);
+    await fixture.whenStable();
+
+    await TestBed.inject(Router).navigateByUrl('/outra');
+    await fixture.whenStable();
+
+    expect(result).toBeFalse();
+    expect(service.options()).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
+  });
 
   it('não renderiza nada sem pedido de confirmação', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
