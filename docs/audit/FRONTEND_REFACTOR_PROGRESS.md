@@ -76,8 +76,42 @@ Backup do recurso de cor removido: `...\scratchpad\backup-br001\`.
 outras sessões, e não houve sessão autenticada nesta missão), e testes de integração e e2e (o
 projeto não tem).
 
+### Integração no Git (registrada depois)
+
+Outra sessão do Claude commitou e mergeou o trabalho desta missão sem passar por um commit único:
+
+- os hunks foram divididos entre `664b73b` (shared), `357f183` (tickets), `fe8a559` (roles),
+  `46cfbb8` (users), `a77394d` (dashboard) e `311618d` (documentos);
+- todos foram mergeados na `main` pelo PR #2 (`fabeeb1`) e publicados;
+- o commit `9354b3e` apagou este arquivo e o `FRONTEND_REFACTOR_PLAN.md`;
+- o `b7f0c37` (local, sem push, autorizado pelo usuário) os restaurou exatamente como estavam no
+  `311618d`.
+
+Conferência: o patch da missão (`MISSAO-auditoria.patch`) se desfaz limpo sobre o HEAD, ou seja,
+todos os hunks estão no histórico.
+
+## Revisão final de aceitação — 2026-10-29
+
+Matriz completa em `FINAL_ACCEPTANCE_AUDIT.md`.
+
+**Correções feitas nesta revisão** (working tree, sem stage nem commit):
+
+- **A-35:** troca de conta em outra aba recarrega a aplicação.
+  `shared/services/session.service.ts` (+2 testes).
+- **A-36:** dois comentários. `tickets/application/ticket-dashboard.store.ts` e
+  `shared/ui/layouts/main-layout/main-layout.component.css`.
+- **A-29:** Usuários só pede `GET /roles` com `roles:read`.
+  `users/feature-user-list/user-list.component.ts` (+1 teste).
+- **A-32:** o diálogo de confirmação é cancelado ao trocar de tela.
+  `shared/ui/confirm-dialog/confirm-dialog.component.ts` (+1 teste).
+- Este arquivo e o `FRONTEND_AUDIT.md`.
+
+**Fora desta sessão:** as alterações de foco visível (A-34) em `src/styles.css` e
+`src/app/shared/ui/auth-form.css` pertencem à sessão b345b068, por decisão do usuário. Elas estão no
+mesmo working tree, sem commit, e não fazem parte desta validação.
+
 ### Próximo passo
 
-Revisão do usuário. Para commitar só esta missão, o patch acima serve de referência para um stage
-seletivo (caminhos sem prefixo, `-p0`; gerado sem considerar o CR do fim de linha). Antes, confira
-se os arquivos compartilhados com outras sessões não mudaram de novo.
+- Conferência na aplicação real, com uma conta autenticada (pendente; ver `FINAL_ACCEPTANCE_AUDIT.md`).
+- Conclusão e validação do foco visível pela sessão b345b068.
+- Commit das correções desta revisão, só com autorização do usuário.

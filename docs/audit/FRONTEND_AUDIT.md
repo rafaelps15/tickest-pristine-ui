@@ -34,6 +34,9 @@ listas são do servidor. Os problemas reais encontrados:
 | A-10 | Média | Skill | Início (shell) importa componente interno de `tickets/ui` | Corrigido |
 | A-11 | Baixa | Defeito | Novo pedido de confirmação deixava o anterior sem resposta | Corrigido |
 | A-12 a A-27 | — | Mantido / Melhoria / Pendência | Ver seções abaixo | Documentado |
+| A-34 | Alta | Defeito | Foco visível: anéis do Bootstrap entre 1,2:1 e 2,2:1, `.btn-primary` e campos sem indicador no tema escuro, campos com 1,5px | Em implementação em outra sessão (ver abaixo) |
+| A-35 | Média | Defeito | Achado na revisão final: login com outra conta em outra aba deixava esta aba com usuário, permissões e dados da conta anterior | Corrigido |
+| A-36 | Baixa | Defeito | Achado na revisão final: comentário com nome do template de referência e comentário desatualizado sobre rotas do back-end | Corrigido |
 
 ## Achados corrigidos
 
@@ -136,6 +139,61 @@ esperava a primeira confirmação nunca recebia resposta.
 **Correção:** o pedido anterior responde `false` e completa. Teste novo em
 `confirm-dialog.service.spec.ts`.
 
+### A-34 — Foco visível abaixo de WCAG 2.4.7/1.4.11 (Alta)
+
+**Evidência:** a auditoria original não mediu o foco no navegador. Medições posteriores (2026-10-29,
+estilos calculados) mostraram:
+
+- o anel translúcido do Bootstrap entre 1,2:1 e 2,2:1 em todos os botões;
+- no tema escuro, o `.btn-primary` sem indicador nenhum (`[data-bs-theme="dark"] .btn-primary {
+  box-shadow }` apaga o anel);
+- no tema escuro, os campos sem troca de borda (`[data-bs-theme="dark"] .form-control { border-color }`
+  vence o `:focus`);
+- os campos com indicador de 1,5px.
+
+As medições estão no scratchpad desta sessão (`focus/PROPOSTA-TECNICA-FOCO.md`) e no da sessão
+b345b068 (`fv-antes.json`: 298 focos, 171 abaixo de 3:1, na aplicação real).
+
+**Verificação independente por pixels** (captura sem foco × com foco, mudança ≥ 3:1; roteiro
+`scratchpad/focus/pixeldiff.mjs`, calibrado contra os casos conhecidos):
+
+- **Correção de diagnóstico:** `.btn-outline-secondary` ("Guia da tela", "Com filtros") ganha no
+  foco o fundo de hover preenchido (4,7:1 no claro, 8,2:1 no escuro). Já passava na 1.4.11 pela troca
+  de fundo; a medição por estilo calculado só olhava o anel e o marcou como reprovado. Reprovam de fato:
+  `.btn-primary`, o botão fantasma (`.btn-row-actions`), `.btn-danger`, `.btn-link`, o checkbox, o
+  fechar e os campos.
+- **Campo com erro no claro:** a borda vermelha já existe sem foco, então a mudança no foco é só o
+  anel de 1px (abaixo dos 2px exigidos). Repassado à sessão responsável.
+- **Defeito anterior, no tema escuro:** campos inválidos perdem a borda vermelha.
+  `[data-bs-theme="dark"] .form-control { border-color }` vem depois do `.is-invalid` do Bootstrap,
+  com a mesma especificidade, e o erro fica só na mensagem. Repassado à sessão responsável
+  (`styles.css` está no escopo dela).
+
+**Estado:** a implementação foi atribuída pelo usuário à sessão b345b068, na branch
+`fix/focus-visible`. As alterações estão no working tree, sem commit. Esta auditoria não as
+considera concluídas nem validadas.
+
+### A-35 — Troca de conta em outra aba (Média)
+
+**Evidência:** a correção A-01 aplicava nesta aba o token gravado por outra, mas mantinha o
+`currentUser` carregado. Se outra aba entrava com **outra** conta, esta aba seguia com:
+
+- o menu, as permissões (`hasPermission`) e os botões da conta anterior;
+- os dados já carregados nos Stores.
+
+**Correção:** `SessionService.syncFromStorage` compara o `sub` do token anterior com o do novo e,
+se a conta mudou, limpa o usuário e recarrega a aplicação (`reloadForAccountSwitch`). A simples
+renovação da mesma conta não recarrega. Testes: dois casos novos em `session.service.spec.ts`.
+
+### A-36 — Comentários fora da regra (Baixa)
+
+- `shared/ui/layouts/main-layout/main-layout.component.css` citava o nome do template de
+  referência, o que a regra de comentários proíbe.
+- `tickets/application/ticket-dashboard.store.ts` dizia que o back-end ainda não entregava
+  `/tickets/stats/{overview,times,volume}`, que já estão na `origin/main`.
+
+Os dois foram reescritos.
+
 ## Analisado e mantido (responsabilidade legítima do front)
 
 | Id | Onde | Por que fica |
@@ -161,11 +219,11 @@ esperava a primeira confirmação nunca recebia resposta.
 | A-25 | Baixa | Limites de anexo fixos em `tickets/entities/ticket-attachment.ts`, embora exista `GET ticket-attachments/policy` | Os valores coincidem hoje (10 MB, 11 tipos). Passar a ler a política e checar também os limites por chamado (20 arquivos, 100 MB) é melhoria de integração. |
 | A-26 | Baixa | Busca de responsável usa `GET /users` (exige `users:read`), não `GET /tickets/assignees` (elegíveis, spec 030) | Muda o comportamento da busca nos três diálogos; precisa de decisão de produto sobre quem aparece. |
 | A-27 | Baixa | `environment.prod.ts` aponta `http://localhost:5195` (TODO no arquivo) | A URL de produção não está no repositório; não foi inventada. |
-| A-28 | Baixa | Flags `volumeResolved` e `companyStatsForAll` desligadas, embora as specs 028 e 031 estejam na `origin/main` | Estado deixado pelo usuário em outra sessão ("volumeResolved off até validar"); ligar é decisão dele. O comentário "o back-end ainda não entrega essas rotas" em `ticket-dashboard.store.ts` está desatualizado. |
-| A-29 | Baixa | O 403 de `GET /roles` na tela Usuários (quem tem `users:read` sem `roles:read`) dispara um `GET /users/me` a cada abertura | Efeito só de desempenho. |
+| A-28 | Baixa | Flags `volumeResolved` e `companyStatsForAll` desligadas, embora as specs 028 e 031 estejam na `origin/main` | Estado deixado pelo usuário em outra sessão ("volumeResolved off até validar"); ligar é decisão dele. O comentário desatualizado em `ticket-dashboard.store.ts` foi corrigido na revisão final (A-36). |
+| A-29 | Baixa | O 403 de `GET /roles` na tela Usuários (quem tem `users:read` sem `roles:read`) disparava um `GET /users/me` a cada abertura | **Corrigido na revisão final:** a tela só pede as funções com `roles:read` (`user-list.component.ts`, +1 teste). |
 | A-30 | Baixa | O `slaStatus` e o `dueAtUtc` de `GET /tickets` são do primeiro ciclo de SLA, inclusive depois de reabrir | Está no back-end (`GetTicketsQueryHandler`); a spec 024 cobre só Meus Chamados, e o branch dela ainda não foi mergeado. O Monitorar herda o valor do servidor. |
 | A-31 | Baixa | Linha "Prazo" do detalhe, quando o painel de SLA não carrega, usa o relógio do navegador e o prazo do primeiro ciclo | Fallback já documentado no template; o painel de SLA, que é o caminho normal, usa o relógio do servidor. |
-| A-32 | Baixa | Callbacks de diálogos de confirmação sem teardown em Usuários, Funções e Departamentos | O `Subject` completa sempre (inclusive com a correção A-11) e o callback só chama o Store; sem vazamento observado. |
+| A-32 | Média | O diálogo de confirmação global sobrevivia à troca de tela ("voltar" do navegador com ele aberto); confirmar executava a ação destrutiva da tela anterior | **Corrigido na revisão final:** o `ConfirmDialogComponent` cancela o pedido aberto em `NavigationStart` (+1 teste). Não há guard `canDeactivate` que dependa dele. |
 | A-33 | Baixa | 4 avisos de orçamento de CSS por componente (anteriores à missão) | Reduzir exige mexer em estilos que outras sessões estão editando. |
 
 ## Conformidade com as skills
