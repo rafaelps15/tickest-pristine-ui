@@ -2,11 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
 import { AssigneeCandidate, TicketAssignDialogComponent } from './ticket-assign-dialog.component';
 
-const candidate: AssigneeCandidate = {
-  id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-  roles: [{ name: 'Atendente' }]
-};
-const other: AssigneeCandidate = { ...candidate, id: 'u3', firstName: 'Ana', lastName: 'Lima', email: 'ana.lima@empresa.com' };
+const candidate: AssigneeCandidate = { id: 'u2', fullName: 'João Pedro', sectorName: 'Suporte' };
+const other: AssigneeCandidate = { id: 'u3', fullName: 'Ana Lima', sectorName: null };
 
 /** Tela de teste que liga o diálogo como as telas reais (detalhe e Monitorar). */
 @Component({
@@ -84,11 +81,11 @@ describe('TicketAssignDialogComponent', () => {
   it('pede pra digitar quando a busca está vazia, e avisa quando não encontra ninguém', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Digite para buscar um usuário ativo.');
+    expect(fixture.nativeElement.textContent).toContain('Digite o nome de quem atende a fila.');
 
     type(fixture, 'inexistente');
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Nenhum usuário encontrado.');
+    expect(fixture.nativeElement.textContent).toContain('Ninguém que atenda a fila com esse nome.');
   });
 
   it('mostra o erro de busca (ex.: sem permissão users:read) em vez da lista', async () => {
@@ -135,17 +132,18 @@ describe('TicketAssignDialogComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('mostra as funções no badge índigo e agrupa as além da segunda num "+N"', async () => {
+  it('mostra o nome completo e o setor de cada responsável, e "Sem setor" quando não há', async () => {
     const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.candidates.set([{ ...candidate, roles: [{ name: 'Atendente' }, { name: 'Administrador' }, { name: 'Supervisor' }] }]);
-    type(fixture, 'joão');
+    fixture.componentInstance.candidates.set([candidate, other]);
+    type(fixture, 'a');
     await fixture.whenStable();
 
-    const badge = options(fixture)[0].querySelector('.badge') as HTMLElement;
-    expect(badge.classList).toContain('bg-label-primary');
-    const overflow = options(fixture)[0].querySelector('.badge-roles-overflow') as HTMLElement;
-    expect(overflow.textContent).toContain('+1');
-    expect(overflow.hasAttribute('tabindex')).toBeFalse();
+    const [first, second] = options(fixture);
+    expect(first.textContent).toContain('João Pedro');
+    expect(first.textContent).toContain('Suporte');
+    expect(second.textContent).toContain('Ana Lima');
+    expect(second.textContent).toContain('Sem setor');
+    expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
   });
 
   it('só confirma com um candidato marcado, emitindo id e nome', async () => {

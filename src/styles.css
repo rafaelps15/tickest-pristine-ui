@@ -462,6 +462,14 @@ body {
   background-color: rgba(var(--tk-primary-rgb), 0.03);
 }
 
+/*
+ * Contêiner posicionado: o `.visually-hidden` das células é `position: absolute` e, sem isso, tinha
+ * o bloco de contenção fora da rolagem da tabela, alargando a página inteira no tablet.
+ */
+.table-responsive {
+  position: relative;
+}
+
 .table-hover tbody tr {
   transition: background-color var(--tk-transition);
 }
@@ -486,6 +494,12 @@ body {
 [data-bs-theme="dark"] .form-control,
 [data-bs-theme="dark"] .form-select {
   border-color: var(--tk-border);
+}
+
+/* Campo com erro no escuro: a regra acima tem a mesma especificidade da borda vermelha do Bootstrap e vem depois, então a apagava. */
+[data-bs-theme="dark"] .form-control.is-invalid,
+[data-bs-theme="dark"] .form-select.is-invalid {
+  border-color: var(--bs-form-invalid-border-color);
 }
 
 /*

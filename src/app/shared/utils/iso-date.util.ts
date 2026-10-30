@@ -5,6 +5,11 @@ export function isIsoDate(value: string | null | undefined): value is string {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+/** Hoje no horário de Brasília (`aaaa-mm-dd`) — as datas da API são de `America/Sao_Paulo`. */
+export function todayInSaoPaulo(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
 /** Data `aaaa-mm-dd` como `dd/mm/aaaa`. */
 export function formatIsoDate(date: string): string {
   const [year, month, day] = date.split('-');

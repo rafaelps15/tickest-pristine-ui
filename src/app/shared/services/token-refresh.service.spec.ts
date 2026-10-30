@@ -17,7 +17,7 @@ describe('TokenRefreshService', () => {
     authDataService = jasmine.createSpyObj('AuthDataService', ['refresh']);
     session = { refreshToken: () => 'refresh-1', saveSession: jasmine.createSpy('saveSession') };
     currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
-    currentUserService.load.and.returnValue(of(true));
+    currentUserService.load.and.returnValue(of({ status: 'loaded' as const }));
 
     TestBed.configureTestingModule({
       providers: [
@@ -58,6 +58,16 @@ describe('TokenRefreshService', () => {
     service.refresh().subscribe({ error: (error: HttpErrorResponse) => status = error.status });
 
     expect(status).toBe(0);
+    expect(session.saveSession).not.toHaveBeenCalled();
+  });
+
+  it('deve repassar o erro quando o servidor limita as requisições (429), sem encerrar a sessão', () => {
+    authDataService.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
+    let status: number | undefined;
+
+    service.refresh().subscribe({ error: (error: HttpErrorResponse) => status = error.status });
+
+    expect(status).toBe(429);
     expect(session.saveSession).not.toHaveBeenCalled();
   });
 

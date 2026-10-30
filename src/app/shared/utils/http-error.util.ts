@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 /** Mensagens de fallback por status HTTP, sobrescrevíveis por chamada. */
 export type HttpErrorStatusMessages = Record<number, string>;
 
+/** Mensagens usadas quando a chamada não traz uma própria para o status. */
 const DEFAULT_STATUS_MESSAGES: HttpErrorStatusMessages = {
   0: 'Não foi possível conectar ao servidor. Verifique sua conexão.'
 };
@@ -28,4 +29,13 @@ export function extractErrorMessage(
   }
 
   return statusMessages[err.status] ?? DEFAULT_STATUS_MESSAGES[err.status] ?? fallback;
+}
+
+/**
+ * Indica se a falha é passageira — sem resposta do servidor (status 0), limite de requisições (429)
+ * ou erro do servidor (5xx) —, e não uma recusa da sessão ou da operação. Falha passageira não
+ * pode encerrar a sessão.
+ */
+export function isTransientHttpError(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && (error.status === 0 || error.status === 429 || error.status >= 500);
 }

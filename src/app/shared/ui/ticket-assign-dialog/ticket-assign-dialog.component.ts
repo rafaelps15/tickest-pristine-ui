@@ -1,25 +1,25 @@
 import { Component, ChangeDetectionStrategy, computed, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, skip } from 'rxjs';
-import { hiddenRolesCount, hiddenRolesNames, visibleRoles } from '../../utils/role-badges.util';
 import { DialogComponent } from '../dialog/dialog.component';
 
 /**
- * Pessoa que pode ser escolhida como responsável: só os campos que o diálogo mostra. Estrutural, pra
- * `shared` não depender do domínio de usuários; o `AssigneeCandidate` de `users` já satisfaz.
+ * Responsável elegível que o diálogo lista: os campos de GET /tickets/assignees que ele mostra.
+ * Estrutural, pra `shared` não depender do domínio de chamados; o `TicketAssignee` já satisfaz.
  */
 export interface AssigneeCandidate {
+  /** Id do usuário. */
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  roles: { name: string }[];
+  /** Nome completo. */
+  fullName: string;
+  /** Setor do usuário, ou `null` sem setor. */
+  sectorName: string | null;
 }
 
 /**
  * Diálogo "Atribuir/Alterar responsável" de um chamado — o mesmo no detalhe e no Monitorar
  * Chamados (antes o Monitorar atribuía no primeiro clique, sem confirmar, e o detalhe pedia
- * seleção + confirmação). Busca usuários ativos (com debounce), lista os candidatos como listbox
+ * seleção + confirmação). Busca os elegíveis (com debounce), lista os candidatos como listbox
  * navegável por setas, marca um e só atribui no botão de confirmar, avisando quando substitui o
  * responsável atual. Componente burro: quem usa liga `search`/`confirm` ao Store certo.
  */
@@ -69,7 +69,7 @@ export class TicketAssignDialogComponent {
   /** Nome do candidato marcado. */
   protected readonly selectedName = computed(() => {
     const candidate = this.candidates().find(c => c.id === this.selectedId());
-    return candidate ? `${candidate.firstName} ${candidate.lastName}` : null;
+    return candidate ? candidate.fullName : null;
   });
 
   constructor() {
@@ -114,20 +114,5 @@ export class TicketAssignDialogComponent {
     const userId = this.selectedId();
     const name = this.selectedName();
     if (userId && name) this.confirm.emit({ userId, name });
-  }
-
-  /** Até 2 funções do candidato como badge; o resto vira "+N". */
-  protected visibleRoles(candidate: AssigneeCandidate) {
-    return visibleRoles(candidate.roles);
-  }
-
-  /** Quantas funções ficaram no "+N". */
-  protected hiddenRolesCount(candidate: AssigneeCandidate): number {
-    return hiddenRolesCount(candidate.roles);
-  }
-
-  /** Nomes das funções no "+N", pro `title`. */
-  protected hiddenRolesNames(candidate: AssigneeCandidate): string {
-    return hiddenRolesNames(candidate.roles);
   }
 }

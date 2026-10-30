@@ -13,7 +13,7 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { PagedResponse } from '../../shared';
-import { UserDataService, UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
 
 describe('TicketMonitorStore', () => {
   const ticket: TicketMonitorItem = {
@@ -37,21 +37,16 @@ describe('TicketMonitorStore', () => {
     return { items, page, pageSize, totalCount, totalPages, hasPreviousPage: page > 1, hasNextPage: page < totalPages };
   }
 
-  const candidate: UserSummary = {
-    id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
-  };
+  const candidate: TicketAssignee = { id: 'u2', fullName: 'João Pedro', sectorId: 's1', sectorName: 'Suporte' };
 
   let store: InstanceType<typeof TicketMonitorStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
-  let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getOverview', 'assignTicket']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getAll', 'getOverview', 'assignTicket', 'getAssignees']);
     dataService.getAll.and.returnValue(of(pageOf([ticket])));
     dataService.getOverview.and.returnValue(of(overview));
-    userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
-    userDataService.getAll.and.returnValue(of({
+    dataService.getAssignees.and.returnValue(of({
       items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
     }));
 
@@ -59,8 +54,7 @@ describe('TicketMonitorStore', () => {
       providers: [
         provideZonelessChangeDetection(),
         TicketMonitorStore,
-        { provide: TicketDataService, useValue: dataService },
-        { provide: UserDataService, useValue: userDataService }
+        { provide: TicketDataService, useValue: dataService }
       ]
     });
     store = TestBed.inject(TicketMonitorStore);
@@ -296,7 +290,7 @@ describe('TicketMonitorStore', () => {
   it('não busca candidatos a responsável com o termo vazio', () => {
     store.searchResponsibleCandidates('');
 
-    expect(userDataService.getAll).not.toHaveBeenCalled();
+    expect(dataService.getAssignees).not.toHaveBeenCalled();
     expect(store.responsibleCandidates()).toEqual([]);
   });
 
@@ -304,17 +298,17 @@ describe('TicketMonitorStore', () => {
     store.searchResponsibleCandidates('joão');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'joão', page: 1, pageSize: 8 });
+    expect(dataService.getAssignees).toHaveBeenCalledWith('joão', undefined, 1, 8);
     expect(store.responsibleCandidates()).toEqual([candidate]);
   });
 
-  it('mostra mensagem própria quando falta permissão pra buscar usuários (403)', async () => {
-    userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+  it('mostra mensagem própria quando a busca de responsáveis é negada (403)', async () => {
+    dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.searchResponsibleCandidates('joão');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.responsibleSearchError()).toBe('Você não tem permissão para buscar usuários.');
+    expect(store.responsibleSearchError()).toBe('Você não tem permissão para buscar responsáveis.');
     expect(store.responsibleCandidates()).toEqual([]);
   });
 

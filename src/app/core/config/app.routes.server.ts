@@ -14,6 +14,8 @@ export const serverRoutes: ServerRoute[] = [
   // O token do convite vem no fragmento (#token=), que nunca chega ao servidor: só o navegador sabe qual estado mostrar.
   { path: 'ativar-conta', renderMode: RenderMode.Client },
   { path: 'primeiro-acesso', renderMode: RenderMode.Client },
+  // Depende da sessão salva no navegador para decidir entre tentar de novo e mandar pro login.
+  { path: 'sessao-indisponivel', renderMode: RenderMode.Client },
   { path: 'dashboard', renderMode: RenderMode.Client },
   { path: 'tickets', renderMode: RenderMode.Client },
   { path: 'tickets/novo', renderMode: RenderMode.Client },

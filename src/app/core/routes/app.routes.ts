@@ -27,6 +27,12 @@ export const routes: Routes = [
         loadComponent: () => import('../../shared/feature-activate-account/activate-account.component')
           .then(m => m.ActivateAccountComponent)
       },
+      {
+        // Sessão salva, mas GET /users/me falhou por 429, 5xx ou rede: deixa tentar de novo em vez de mandar pro login (A-42).
+        path: 'sessao-indisponivel',
+        loadComponent: () => import('../../shared/feature-session-unavailable/session-unavailable.component')
+          .then(m => m.SessionUnavailableComponent)
+      },
       { path: '', redirectTo: 'login', pathMatch: 'full' }
     ]
   },

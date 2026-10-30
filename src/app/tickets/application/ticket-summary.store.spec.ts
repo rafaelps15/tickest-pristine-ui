@@ -11,13 +11,12 @@ import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { SessionService, DASHBOARD_FEATURES, DashboardFeatures } from '../../shared';
-import { UserDataService, UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
 
 describe('TicketSummaryStore', () => {
   let store: InstanceType<typeof TicketSummaryStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
   let sessionService: jasmine.SpyObj<SessionService>;
-  let userDataService: jasmine.SpyObj<UserDataService>;
   let features: DashboardFeatures;
 
   const statusCounts: TicketStatusCounts = {
@@ -44,7 +43,7 @@ describe('TicketSummaryStore', () => {
   }
 
   beforeEach(async () => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll', 'getSlaSummary', 'assignTicket']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getStatusCounts', 'getVolume', 'getAll', 'getSlaSummary', 'assignTicket', 'getAssignees']);
     // Servidor 2 minutos à frente do navegador — o prazo relativo do card deve seguir o servidor.
     dataService.getSlaSummary.and.callFake(() => of({
       activeCount: 0, onTimeCount: 0, atRiskCount: 0, breachedCount: 0,
@@ -59,8 +58,6 @@ describe('TicketSummaryStore', () => {
     dataService.getAll.and.callFake(filters => of(filters.slaStatus === TicketSlaStatus.Breached
       ? { items: [breachedTicket], page: 1, pageSize: 5, totalCount: 7, totalPages: 2, hasPreviousPage: false, hasNextPage: true }
       : { items: [criticalTicket], page: 1, pageSize: 5, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
-
-    userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
 
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
@@ -78,7 +75,6 @@ describe('TicketSummaryStore', () => {
         TicketSummaryStore,
         { provide: TicketDataService, useValue: dataService },
         { provide: SessionService, useValue: sessionService },
-        { provide: UserDataService, useValue: userDataService },
         { provide: DASHBOARD_FEATURES, useValue: features }
       ]
     });
@@ -335,15 +331,15 @@ describe('TicketSummaryStore', () => {
   });
 
   describe('atribuir responsável a um alerta de SLA', () => {
-    const candidate = { id: 'u9', firstName: 'Ana', lastName: 'Lima', email: 'ana@empresa.com' } as UserSummary;
+    const candidate: TicketAssignee = { id: 'u9', fullName: 'Ana Lima', sectorId: null, sectorName: null };
 
-    it('busca candidatos ativos pelo texto digitado e expõe a lista', async () => {
-      userDataService.getAll.and.returnValue(of({ items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
+    it('busca os responsáveis elegíveis pelo texto digitado e expõe a lista', async () => {
+      dataService.getAssignees.and.returnValue(of({ items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
 
       store.searchAssignees('  ana ');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'ana', page: 1, pageSize: 8 });
+      expect(dataService.getAssignees).toHaveBeenCalledWith('ana', undefined, 1, 8);
       expect(store.assigneeCandidates()).toEqual([candidate]);
       expect(store.searchingAssignees()).toBeFalse();
     });
@@ -351,17 +347,17 @@ describe('TicketSummaryStore', () => {
     it('não busca com texto vazio e limpa a lista', () => {
       store.searchAssignees('   ');
 
-      expect(userDataService.getAll).not.toHaveBeenCalled();
+      expect(dataService.getAssignees).not.toHaveBeenCalled();
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
     it('expõe mensagem de erro própria quando a busca é negada (403)', async () => {
-      userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+      dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.searchAssignees('ana');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(store.assigneeSearchError()).toBe('Você não tem permissão para buscar usuários.');
+      expect(store.assigneeSearchError()).toBe('Você não tem permissão para buscar responsáveis.');
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
@@ -409,8 +405,7 @@ describe('TicketSummaryStore', () => {
           provideZonelessChangeDetection(),
           TicketSummaryStore,
           { provide: TicketDataService, useValue: dataService },
-          { provide: SessionService, useValue: sessionService },
-        { provide: UserDataService, useValue: userDataService }
+          { provide: SessionService, useValue: sessionService }
         ]
       });
       store = await createStore();

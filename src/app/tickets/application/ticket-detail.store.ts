@@ -6,14 +6,14 @@ import { finalize } from 'rxjs';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSla } from '../entities/ticket-sla';
-import { UserDataService, UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
+import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
 import { extractErrorMessage, valueOf } from '../../shared';
 
 /**
  * Store do detalhe de um ticket, carregado pelo id (GET /tickets/{id}), e das mutações feitas a
- * partir dessa tela — atribuir/remover o responsável, inclusive a busca de usuários candidatos
- * para atribuição (GET /users, da própria tela, sem uma Store de busca reutilizável — ver o método
- * `searchAssignees`).
+ * partir dessa tela — atribuir/remover o responsável, inclusive a busca de candidatos elegíveis
+ * para atribuição (GET /tickets/assignees — ver o método `searchAssignees`).
  */
 export const TicketDetailStore = signalStore(
   { providedIn: 'root' },
@@ -34,13 +34,12 @@ export const TicketDetailStore = signalStore(
     _slaOverride: null as TicketSla | null,
     slaRefreshing: false,
     slaError: null as string | null,
-    assigneeCandidates: [] as UserSummary[],
+    assigneeCandidates: [] as TicketAssignee[],
     searchingAssignees: false,
     assigneeSearchError: null as string | null
   }),
   withProps(() => ({
-    _ticketDataService: inject(TicketDataService),
-    _userDataService: inject(UserDataService)
+    _ticketDataService: inject(TicketDataService)
   })),
   withProps((store) => ({
     _detailResource: rxResource({
@@ -136,9 +135,8 @@ export const TicketDetailStore = signalStore(
     },
 
     /**
-     * Busca usuários ativos candidatos a responsável, pelo nome/sobrenome/e-mail (GET /users) — exige
-     * a permissão `users:read`, que é diferente de `tickets:manage`; quem administra chamados mas não
-     * usuários recebe aqui a mensagem de permissão, não um resultado vazio silencioso.
+     * Busca candidatos a responsável pelo nome (GET /tickets/assignees): só quem a atribuição aceita
+     * (ativo com `tickets:manage`, a mesma regra do back-end) e sem exigir `users:read`.
      */
     searchAssignees(search: string): void {
       const trimmed = search.trim();
@@ -149,15 +147,13 @@ export const TicketDetailStore = signalStore(
 
       patchState(store, { searchingAssignees: true, assigneeSearchError: null });
 
-      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
+      searchEligibleAssignees(store._ticketDataService, trimmed).pipe(
         finalize(() => patchState(store, { searchingAssignees: false }))
       ).subscribe({
-        next: (page) => patchState(store, { assigneeCandidates: page.items }),
+        next: (candidates) => patchState(store, { assigneeCandidates: candidates }),
         error: (err: HttpErrorResponse) => patchState(store, {
           assigneeCandidates: [],
-          assigneeSearchError: extractErrorMessage(err, {
-            403: 'Você não tem permissão para buscar usuários.'
-          }, 'Erro ao buscar usuários.')
+          assigneeSearchError: assigneeSearchErrorMessage(err)
         })
       });
     },

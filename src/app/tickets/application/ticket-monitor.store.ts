@@ -13,7 +13,8 @@ import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, valueOf } from '../../shared';
-import { UserDataService, UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
+import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
 
 /**
  * Filtros e paginação padrão: a fila de trabalho — só os ativos (Aberto + Em andamento), o prazo
@@ -39,15 +40,14 @@ export const TicketMonitorStore = signalStore(
     /** Se a atribuição de um responsável escolhido no modal "Atribuir responsável" está em andamento. */
     assigningResponsible: false,
     /** Candidatos a responsável encontrados na busca do modal "Atribuir responsável". */
-    responsibleCandidates: [] as UserSummary[],
+    responsibleCandidates: [] as TicketAssignee[],
     searchingResponsibleCandidates: false,
     responsibleSearchError: null as string | null,
     /** Hora (ms, relógio do navegador) em que a última página da lista chegou — "Atualizado às" da tela; null antes da primeira. */
     listLoadedAtMs: null as number | null
   }),
   withProps(() => ({
-    _ticketDataService: inject(TicketDataService),
-    _userDataService: inject(UserDataService)
+    _ticketDataService: inject(TicketDataService)
   })),
   withProps((store) => {
     /**
@@ -269,11 +269,8 @@ export const TicketMonitorStore = signalStore(
     },
 
     /**
-     * Busca usuários ativos candidatos a responsável, pelo nome/sobrenome/e-mail (GET /users), pro
-     * modal "Atribuir responsável" — mesmo padrão de busca já usado no detalhe do chamado
-     * (`TicketDetailStore.searchAssignees`) e no seletor de responsável de Departamentos, cada tela
-     * com sua própria cópia por ora (achado não-bloqueante de duplicação, registrado nos dois
-     * critiques anteriores). Exige a permissão `users:read`, diferente de `tickets:manage`.
+     * Busca candidatos a responsável pelo nome (GET /tickets/assignees), pro modal "Atribuir
+     * responsável": só quem a atribuição aceita (ativo com `tickets:manage`), sem exigir `users:read`.
      */
     searchResponsibleCandidates(search: string): void {
       const trimmed = search.trim();
@@ -284,15 +281,13 @@ export const TicketMonitorStore = signalStore(
 
       patchState(store, { searchingResponsibleCandidates: true, responsibleSearchError: null });
 
-      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
+      searchEligibleAssignees(store._ticketDataService, trimmed).pipe(
         finalize(() => patchState(store, { searchingResponsibleCandidates: false }))
       ).subscribe({
-        next: (page) => patchState(store, { responsibleCandidates: page.items }),
+        next: (candidates) => patchState(store, { responsibleCandidates: candidates }),
         error: (err: HttpErrorResponse) => patchState(store, {
           responsibleCandidates: [],
-          responsibleSearchError: extractErrorMessage(err, {
-            403: 'Você não tem permissão para buscar usuários.'
-          }, 'Erro ao buscar usuários.')
+          responsibleSearchError: assigneeSearchErrorMessage(err)
         })
       });
     },

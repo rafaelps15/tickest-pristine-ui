@@ -1,0 +1,23 @@
+<div class="text-center mb-4">
+  <h1 #heading class="h4 mb-2 fw-bold" tabindex="-1">{{ text().title }}</h1>
+  <p class="text-muted mb-2">{{ text().detail }}</p>
+  <p class="text-muted small mb-0">Sua sessão continua ativa: não é preciso entrar de novo.</p>
+</div>
+
+<p class="visually-hidden" role="status" aria-live="polite">
+  @if (store.retrying()) {
+    Tentando carregar seus dados…
+  } @else if (store.failedAttempts() > 0) {
+    Ainda não foi possível ({{ store.failedAttempts() }}ª tentativa). {{ text().title }}.
+  }
+</p>
+
+<button type="button" class="btn btn-primary w-100" (click)="retry()" [disabled]="store.retrying()" [attr.aria-busy]="store.retrying()">
+  @if (store.retrying()) {
+    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Tentando…
+  } @else {
+    Tentar novamente
+  }
+</button>
+
+<button type="button" class="btn btn-link w-100 mt-2" (click)="signOut()" [disabled]="store.retrying()">Sair da conta</button>

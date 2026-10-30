@@ -10,7 +10,8 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { DASHBOARD_FEATURES, extractErrorMessage, SessionService, valueOf } from '../../shared';
-import { UserDataService, UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
+import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
 const CRITICAL_TICKETS_LIMIT = 5;
@@ -48,7 +49,7 @@ export const TicketSummaryStore = signalStore(
     /** A tela ainda não sabe o recorte dos Alertas (departamento da URL esperando a lista): a busca fica parada. */
     criticalScopeHeld: false,
     /** Candidatos a responsável do diálogo "Atribuir" dos Alertas de SLA. */
-    assigneeCandidates: [] as UserSummary[],
+    assigneeCandidates: [] as TicketAssignee[],
     /** Buscando candidatos a responsável. */
     searchingAssignees: false,
     /** Erro da busca de candidatos a responsável. */
@@ -61,7 +62,6 @@ export const TicketSummaryStore = signalStore(
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
     _sessionService: inject(SessionService),
-    _userDataService: inject(UserDataService),
     _features: inject(DASHBOARD_FEATURES)
   })),
   withProps((store) => {
@@ -200,9 +200,8 @@ export const TicketSummaryStore = signalStore(
     },
 
     /**
-     * Busca usuários ativos candidatos a responsável (GET /users), pro diálogo "Atribuir" dos
-     * Alertas de SLA — mesmo padrão do Monitor (`TicketMonitorStore.searchResponsibleCandidates`) e
-     * do detalhe; cada tela com sua cópia por ora (duplicação já registrada nos critiques).
+     * Busca candidatos a responsável pelo nome (GET /tickets/assignees), pro diálogo "Atribuir" dos
+     * Alertas de SLA: só quem a atribuição aceita (ativo com `tickets:manage`), sem exigir `users:read`.
      */
     searchAssignees(search: string): void {
       const trimmed = search.trim();
@@ -213,15 +212,13 @@ export const TicketSummaryStore = signalStore(
 
       patchState(store, { searchingAssignees: true, assigneeSearchError: null });
 
-      store._userDataService.getAll({ status: 'Active', search: trimmed, page: 1, pageSize: 8 }).pipe(
+      searchEligibleAssignees(store._ticketDataService, trimmed).pipe(
         finalize(() => patchState(store, { searchingAssignees: false }))
       ).subscribe({
-        next: (page) => patchState(store, { assigneeCandidates: page.items }),
+        next: (candidates) => patchState(store, { assigneeCandidates: candidates }),
         error: (err: HttpErrorResponse) => patchState(store, {
           assigneeCandidates: [],
-          assigneeSearchError: extractErrorMessage(err, {
-            403: 'Você não tem permissão para buscar usuários.'
-          }, 'Erro ao buscar usuários.')
+          assigneeSearchError: assigneeSearchErrorMessage(err)
         })
       });
     },

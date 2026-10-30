@@ -19,7 +19,6 @@ import { TicketAssignee } from '../entities/ticket-assignee';
 import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { Department, DepartmentsStore } from '../../departments';
 import { DASHBOARD_FEATURES, SessionService, ToastService } from '../../shared';
-import { UserSummary } from '../../users';
 
 describe('TicketMonitorComponent', () => {
   const ticket: TicketMonitorItem = {
@@ -49,7 +48,7 @@ describe('TicketMonitorComponent', () => {
       hasNextPage: signal(false),
       assigningToMeIds: signal<string[]>([]),
       mutationError: signal<string | null>(null),
-      responsibleCandidates: signal<UserSummary[]>([]),
+      responsibleCandidates: signal<TicketAssignee[]>([]),
       searchingResponsibleCandidates: signal(false),
       responsibleSearchError: signal<string | null>(null),
       assigningResponsible: signal(false),

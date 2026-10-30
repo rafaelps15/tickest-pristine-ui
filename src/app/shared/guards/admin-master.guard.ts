@@ -1,8 +1,9 @@
 import { inject } from '@angular/core';
-import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
 import { map } from 'rxjs';
 import { SessionService } from '../services/session.service';
 import { CurrentUserService } from '../services/current-user.service';
+import { redirectWhenUserNotLoaded } from './auth.guard';
 
 /**
  * Guard para rotas administrativas.
@@ -12,9 +13,10 @@ import { CurrentUserService } from '../services/current-user.service';
  * de códigos quando qualquer um deles basta (ex. `["departments:manage", "sectors:manage"]`).
  * As permissões vêm de GET /users/me (ver CurrentUserService/SessionService), por isso
  * aqui garantimos que o usuário logado já foi carregado antes de checar a permissão —
- * sem isso, o usuário só descobria via 403 da API depois de já estar na tela.
+ * sem isso, o usuário só descobria via 403 da API depois de já estar na tela. Se o carregamento
+ * falhar, segue o mesmo destino do `authGuard` (tela de sessão indisponível ou login).
  */
-export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
   const session = inject(SessionService);
   const currentUserService = inject(CurrentUserService);
   const router = inject(Router);
@@ -27,7 +29,10 @@ export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =
   const acceptedPermissions = requiredPermission === undefined ? [] : [requiredPermission].flat();
 
   return currentUserService.ensureLoaded().pipe(
-    map(() => {
+    map(result => {
+      if (result.status !== 'loaded') {
+        return redirectWhenUserNotLoaded(result, router, session, state.url);
+      }
       if (acceptedPermissions.length > 0 && !acceptedPermissions.some(code => session.hasPermission(code))) {
         return router.createUrlTree(['/dashboard']);
       }

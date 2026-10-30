@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { TicketAttachment } from '../entities/ticket-attachment';
+import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
 import { CursorPage, PageCursor } from '../../shared';
 import { environment } from '../../../environments/environment';
 
@@ -28,6 +28,11 @@ export class TicketAttachmentDataService {
     }
 
     return this.http.get<CursorPage<TicketAttachment>>(`${this.apiUrl}/tickets/${ticketId}/attachments`, { params });
+  }
+
+  /** Busca os limites e os tipos aceitos nos anexos (GET /ticket-attachments/policy). */
+  getPolicy(): Observable<TicketAttachmentPolicy> {
+    return this.http.get<TicketAttachmentPolicy>(`${this.apiUrl}/ticket-attachments/policy`);
   }
 
   /** Envia um novo anexo pro ticket (POST /tickets/{ticketId}/attachments, multipart/form-data). */

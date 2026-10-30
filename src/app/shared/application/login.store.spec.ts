@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, UrlTree } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LoginStore } from './login.store';
 import { AuthDataService } from '../infrastructure/auth.data.service';
@@ -24,8 +24,8 @@ describe('LoginStore', () => {
     dataService = jasmine.createSpyObj('AuthDataService', ['login', 'changeRequiredPassword', 'logout']);
     session = jasmine.createSpyObj('SessionService', ['saveSession', 'refreshToken', 'clearSession']);
     currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
-    currentUserService.load.and.returnValue(of(true));
-    router = jasmine.createSpyObj('Router', ['navigate']);
+    currentUserService.load.and.returnValue(of({ status: 'loaded' as const }));
+    router = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl', 'createUrlTree']);
 
     TestBed.configureTestingModule({
       providers: [
@@ -57,6 +57,33 @@ describe('LoginStore', () => {
     expect(session.saveSession).toHaveBeenCalledWith(tokens);
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     expect(store.error()).toBeNull();
+  });
+
+  it('não vai para o dashboard e leva à tela de sessão indisponível quando o usuário não carrega por falha passageira', () => {
+    const unavailableTree = {} as UrlTree;
+    router.createUrlTree.and.returnValue(unavailableTree);
+    currentUserService.load.and.returnValue(of({ status: 'unavailable' as const, reason: 'server-error' as const }));
+    dataService.login.and.returnValue(of(tokens));
+
+    store.login(credentials);
+
+    expect(router.navigate).not.toHaveBeenCalledWith(['/dashboard']);
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/sessao-indisponivel'], {
+      queryParams: { motivo: 'server-error', retorno: '/dashboard' }
+    });
+    expect(router.navigateByUrl).toHaveBeenCalledWith(unavailableTree);
+    expect(session.clearSession).not.toHaveBeenCalled();
+  });
+
+  it('não vai para o dashboard, limpa a sessão e mostra o erro quando a API recusa o usuário recém-logado', () => {
+    currentUserService.load.and.returnValue(of({ status: 'unauthenticated' as const }));
+    dataService.login.and.returnValue(of(tokens));
+
+    store.login(credentials);
+
+    expect(router.navigate).not.toHaveBeenCalledWith(['/dashboard']);
+    expect(session.clearSession).toHaveBeenCalled();
+    expect(store.error()).toBe('Não foi possível carregar seus dados de acesso. Entre novamente.');
   });
 
   it('deve guardar as credenciais e ir para o primeiro acesso quando a senha for provisória', () => {

@@ -7,7 +7,7 @@ import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketDashboardOverview, TicketDashboardScope } from '../entities/ticket-dashboard';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketAverageTimes } from '../entities/ticket-average-times';
-import { DASHBOARD_FEATURES, SessionService, extractErrorMessage, isoRangeDays, previousIsoRange } from '../../shared';
+import { DASHBOARD_FEATURES, SessionService, extractErrorMessage, isoRangeDays, previousIsoRange, todayInSaoPaulo } from '../../shared';
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
 function widgetError(error: unknown, fallback: string): string | null {
@@ -20,11 +20,12 @@ const VOLUME_MAX_POINTS = 366;
 /**
  * Agrupamentos que cabem no período do recorte: dia a dia num período de mais de 366 dias passa do
  * limite de pontos do back-end (o mesmo vale pra semana em mais de 366 semanas). Sem início, o
- * back-end usa a janela padrão, que sempre cabe; sem fim, o fim é hoje.
+ * back-end usa a janela padrão, que sempre cabe; sem fim, o fim é hoje em Brasília (a data UTC
+ * contava um dia a mais entre 21h e meia-noite).
  */
 function volumeGroupingsThatFit(scope: TicketDashboardScope): TicketVolumeGrouping[] {
   if (!scope.from) return ['Day', 'Week', 'Month'];
-  const days = isoRangeDays(scope.from, scope.to ?? new Date().toISOString().slice(0, 10));
+  const days = isoRangeDays(scope.from, scope.to ?? todayInSaoPaulo());
   const fits: TicketVolumeGrouping[] = [];
   if (days <= VOLUME_MAX_POINTS) fits.push('Day');
   if (Math.ceil(days / 7) + 1 <= VOLUME_MAX_POINTS) fits.push('Week');

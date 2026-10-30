@@ -5,30 +5,30 @@
         <p class="text-muted small mb-3">Responsável atual: <span class="fw-semibold">{{ current }}</span></p>
       }
 
-      <label class="form-label small" for="ticketAssigneeSearch">Buscar usuário</label>
+      <label class="form-label small" for="ticketAssigneeSearch">Buscar responsável</label>
       <div class="input-group mb-3">
         <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
-        <input id="ticketAssigneeSearch" type="search" class="form-control" placeholder="Nome, sobrenome ou e-mail" data-dialog-focus
+        <input id="ticketAssigneeSearch" type="search" class="form-control" placeholder="Nome ou sobrenome" data-dialog-focus
                [value]="searchText()" (input)="onSearchInput($any($event.target).value)" />
       </div>
 
       <!-- Anúncio só pra leitor de tela: a contagem muda a cada busca, sem outro sinal sonoro disso. -->
       <div class="visually-hidden" aria-live="polite">
         @if (!searching() && searchText().trim().length > 0) {
-          {{ candidates().length }} usuário(s) encontrado(s)
+          {{ candidates().length }} responsável(is) encontrado(s)
         }
       </div>
 
       @if (searchError()) {
         <div class="alert alert-danger border-0 py-2 small mb-0" role="alert">{{ searchError() }}</div>
       } @else if (searching()) {
-        <div class="text-center py-3"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Buscando usuários…</span></div>
+        <div class="text-center py-3"><span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Buscando responsáveis…</span></div>
       } @else if (searchText().trim().length === 0) {
-        <p class="text-muted small mb-0">Digite para buscar um usuário ativo.</p>
+        <p class="text-muted small mb-0">Digite o nome de quem atende a fila.</p>
       } @else if (candidates().length === 0) {
-        <p class="text-muted small mb-0">Nenhum usuário encontrado.</p>
+        <p class="text-muted small mb-0">Ninguém que atenda a fila com esse nome.</p>
       } @else {
-        <ul #list class="list-group assignee-candidates" role="listbox" aria-label="Usuários encontrados"
+        <ul #list class="list-group assignee-candidates" role="listbox" aria-label="Responsáveis encontrados"
             (keydown)="onListKeydown($event, list)">
           @for (candidate of candidates(); track candidate.id; let i = $index) {
             <li class="list-group-item assignee-candidate" role="option"
@@ -38,20 +38,8 @@
                 (click)="select(candidate.id, i)" (keydown.enter)="select(candidate.id, i)" (keydown.space)="$event.preventDefault(); select(candidate.id, i)">
               <div class="d-flex align-items-start justify-content-between gap-2">
                 <div class="assignee-candidate-info">
-                  <div class="fw-semibold assignee-candidate-name text-break">{{ candidate.firstName }} {{ candidate.lastName }}</div>
-                  <div class="small text-break" [class.text-muted]="selectedId() !== candidate.id">{{ candidate.email }}</div>
-                  @if (candidate.roles.length > 0) {
-                    <div class="mt-1">
-                      @for (role of visibleRoles(candidate); track role.name) {
-                        <span class="badge bg-label-primary me-1">{{ role.name }}</span>
-                      }
-                      @if (hiddenRolesCount(candidate) > 0) {
-                        <span class="badge bg-label-secondary badge-roles-overflow" [title]="hiddenRolesNames(candidate)">
-                          +{{ hiddenRolesCount(candidate) }}<span class="visually-hidden">: {{ hiddenRolesNames(candidate) }}</span>
-                        </span>
-                      }
-                    </div>
-                  }
+                  <div class="fw-semibold assignee-candidate-name text-break">{{ candidate.fullName }}</div>
+                  <div class="small text-break" [class.text-muted]="selectedId() !== candidate.id">{{ candidate.sectorName ?? 'Sem setor' }}</div>
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                   @if (candidate.id === currentUserId()) {

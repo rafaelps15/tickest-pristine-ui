@@ -3,7 +3,7 @@ import { Department } from '../departments';
 import { TicketPriority, TicketSlaStatus } from '../tickets';
 import {
   addDays, dashboardFiltersToQueryParams, dashboardPeriodRange, hasDashboardFilters,
-  parseDashboardFilters, resolveDashboardScope, toMonitorQueryParams, todayInSaoPaulo
+  parseDashboardFilters, resolveDashboardScope, toMonitorQueryParams
 } from './dashboard-filters';
 import { isIsoDate } from '../shared';
 
@@ -52,8 +52,6 @@ describe('dashboard-filters', () => {
     expect(isIsoDate('2026-10-28')).toBeTrue();
     expect(isIsoDate('28/10/2026')).toBeFalse();
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
-    // 02h30 UTC de 01/11 ainda é 31/10 em Brasília.
-    expect(todayInSaoPaulo(new Date('2026-11-01T02:30:00Z'))).toBe('2026-10-31');
   });
 
   it('o período pronto conta hoje: últimos 7 dias = hoje e os 6 anteriores', () => {

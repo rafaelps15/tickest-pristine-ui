@@ -16,7 +16,6 @@ import {
     TicketSla, TicketSlaObjective, TICKET_SLA_METRIC_LABELS,
     TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS
 } from '../entities/ticket-sla';
-import { TICKET_ATTACHMENT_LIMITS } from '../entities/ticket-attachment';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
 import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
@@ -560,20 +559,23 @@ export class TicketDetailComponent implements OnInit {
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
-    /** Valida o arquivo escolhido (tamanho/tipo) e, se válido, envia o upload. */
+    /**
+     * Valida o arquivo escolhido (tamanho/tipo) pela política do back-end e, se válido, envia o upload.
+     * Sem a política (carregando ou com falha), envia direto: o back-end valida e devolve o motivo.
+     */
     onFileSelected(event: Event): void {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0];
         input.value = '';
         if (!file) return;
 
-        if (file.size > TICKET_ATTACHMENT_LIMITS.maxFileSizeBytes) {
-            const maxMb = TICKET_ATTACHMENT_LIMITS.maxFileSizeBytes / (1024 * 1024);
-            this.fileValidationError.set(`O arquivo excede o tamanho máximo permitido de ${maxMb} MB.`);
+        const policy = this.store.policy();
+        if (policy && file.size > policy.maxFileSizeBytes) {
+            this.fileValidationError.set(`O arquivo excede o tamanho máximo permitido de ${this.formatSize(policy.maxFileSizeBytes)}.`);
             return;
         }
 
-        if (!TICKET_ATTACHMENT_LIMITS.allowedContentTypes.has(file.type)) {
+        if (policy && !policy.allowedTypes.some(type => type.contentType === file.type)) {
             this.fileValidationError.set(`O tipo de arquivo "${file.type || 'desconhecido'}" não é suportado.`);
             return;
         }

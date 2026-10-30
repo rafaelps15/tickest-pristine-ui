@@ -381,7 +381,7 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
 - **Cor de função:** todas as funções usam o badge índigo (`bg-label-primary`). A prévia de cor
   por função guardada no navegador foi removida na auditoria de 2026-10-29 (era persistência
   simulada de um atributo da função que o back-end não tem); volta quando o back-end guardar a
-  cor (`docs/audit/BACKEND_RECONSTRUCTION.md`, BR-001).
+  cor (spec 044 do back-end, `tickest-pristine/specs/044-cor-do-badge-da-funcao`).
 - **Status do usuário** (`<app-user-status-badge>`, `users/feature-user-list`): Ativo (verde),
   Convite pendente (âmbar), Inativo (neutro), com o ponto `.badge-dot` — o mesmo componente na
   tabela, no painel e no Guia. (`.badge-dot`, não `.status-dot`: esse é o marcador de status de
@@ -418,6 +418,12 @@ completos. Não há elementos com cantos retos nem clipping customizado — tudo
   desloca o item 0.15rem para a direita (`transform`, nunca `padding` — ver Named Rule abaixo).
 - **Navbar:** barra flutuante com vidro/blur ancorada no topo do conteúdo, não no topo da viewport.
 - **Mobile (<1199px):** sidebar vira off-canvas deslizante, com overlay escurecido.
+  - Fechada, a gaveta fica `inert`, fora do Tab.
+  - Ao abrir, o foco vai para "Fechar menu", o resto da página fica `inert` e o Tab dá a volta
+    dentro da gaveta (toasts e diálogo global ficam fora do layout).
+  - Escolher um item ou o logo fecha a gaveta e leva o foco ao `h1` da nova tela.
+  - Esc, "Fechar menu" e o overlay fecham a gaveta e devolvem o foco ao ☰.
+  - A gaveta tem a altura da janela e rolagem própria, para os itens não sumirem no celular deitado.
 
 ### Row Actions (menu "⋮")
 Quando uma linha de tabela tem mais de duas ações possíveis, elas vão num menu dropdown
@@ -765,7 +771,8 @@ clique fora não fecham no meio do salvamento. Cancelar fica à esquerda do prim
 ### Atribuir responsável (`<app-ticket-assign-dialog>`, `shared/ui`)
 Igual no detalhe e no Monitorar: busca com debounce, candidatos como listbox navegável por setas,
 marca um e só atribui no botão "Atribuir"/"Reatribuir" — com o aviso "Isso substitui X por Y"
-quando já há responsável. Nunca atribuir no primeiro clique.
+quando já há responsável. Nunca atribuir no primeiro clique. A lista traz só quem a atribuição
+aceita (`GET /tickets/assignees`: ativo com `tickets:manage`), com nome completo e setor, sem e-mail.
 
 ### Detalhe do chamado
 De `lg` pra cima, duas colunas: à esquerda o trabalho (resumo com as ações, conversa e anexos); à
@@ -808,7 +815,7 @@ nem exclui — e por isso não tem "Nova Função" (critique de 2026-10-28; o `P
   "Salvar" só habilita com mudança; fechar com marcações não salvas pede "Descartar as alterações?".
   O Administrador tem "Ver permissões": o mesmo diálogo, só leitura, com o motivo à vista.
 - **Catálogo que não carregou:** o diálogo diz o que falhou, com "Tentar novamente", e trava o "Salvar".
-- **Cor do badge:** removida em 2026-10-29 (ver "Cor de função" acima e BR-001).
+- **Cor do badge:** removida em 2026-10-29 (ver "Cor de função" acima e a spec 044 do back-end).
 
 ### Confirm Dialog
 Toda confirmação de ação sensível (excluir, desativar, reativar) usa o modal de confirmação

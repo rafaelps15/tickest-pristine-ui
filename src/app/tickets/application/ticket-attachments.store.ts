@@ -39,9 +39,12 @@ export const TicketAttachmentsStore = signalStore(
       stream: ({ params }) => params !== undefined
         ? store._ticketAttachmentDataService.getAll(params)
         : of(EMPTY_PAGE)
-    })
+    }),
+    _policyResource: rxResource({ stream: () => store._ticketAttachmentDataService.getPolicy() })
   })),
   withComputed((store) => ({
+    /** Limites e tipos aceitos nos anexos, vindos do back-end; `null` enquanto carrega ou se a leitura falhar. */
+    policy: computed(() => valueOf(store._policyResource) ?? null),
     /** Anexos já carregados do ticket atual, do mais novo para o mais antigo (ordem aplicada pelo back-end). */
     attachments: computed(() => [...(valueOf(store._listResource)?.items ?? []), ...store.olderAttachments()]),
     /** Página de onde sai o cursor da próxima: a última carregada por "carregar mais" ou, antes disso, a primeira. */

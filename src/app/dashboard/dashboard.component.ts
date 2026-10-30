@@ -4,11 +4,11 @@ import { Params, RouterLink } from '@angular/router';
 import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketSlaStatus, TicketPriority, TicketStatusCounts, TicketDashboardChartScope, TicketDashboardScope } from '../tickets';
 import { DepartmentsStore } from '../departments';
 import { DashboardFiltersService } from './dashboard-filters.service';
-import { DashboardFilters, dashboardFilterChips, resolveDashboardScope, toMonitorQueryParams, todayInSaoPaulo } from './dashboard-filters';
+import { DashboardFilters, dashboardFilterChips, resolveDashboardScope, toMonitorQueryParams } from './dashboard-filters';
 import { DashboardTimesComponent } from './dashboard-times.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
 import { DashboardMetric, DashboardMetricGroupComponent, DashboardMetricLead } from './dashboard-metric-group.component';
-import { DASHBOARD_FEATURES, SessionService, ToastService } from '../shared';
+import { DASHBOARD_FEATURES, SessionService, ToastService, todayInSaoPaulo } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { DashboardHeroChartComponent } from './dashboard-hero-chart.component';
@@ -20,8 +20,6 @@ import { DashboardAutoRefresh, DashboardRefreshOrigin, DashboardRefreshOutcome, 
 import { PageHeaderComponent } from '../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../shared/ui/stat-card/stat-card.component';
 import { EmptyStateComponent } from '../shared/ui/data-state/data-state.components';
-// O shell pode ligar peças de um domínio direto (como faz com as telas feature-*): o diálogo depende de
-// UserSummary (domínio users), por isso mora em tickets/ui e não em shared/ui.
 import { TicketAssignDialogComponent } from '../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 
 /** De quanto em quanto tempo o "Atualizado há N min" do cabeçalho anda. */

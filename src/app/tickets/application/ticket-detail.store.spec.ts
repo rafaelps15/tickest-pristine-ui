@@ -9,7 +9,7 @@ import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjectiveState } from '../entities/ticket-sla';
-import { UserDataService, UserSummary } from '../../users';
+import { TicketAssignee } from '../entities/ticket-assignee';
 
 /** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
 const FAR_FUTURE = '2999-01-01T00:00:00Z';
@@ -39,25 +39,20 @@ describe('TicketDetailStore', () => {
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime, sla
   };
-  const candidate: UserSummary = {
-    id: 'u2', email: 'joao.pedro@empresa.com', firstName: 'João', lastName: 'Pedro',
-    roles: [{ name: 'Atendente' }], isActive: true, createdAtUtc: '2025-01-01T12:00:00Z', deactivatedAtUtc: null, pendingActivation: false, invitationExpiresAtUtc: null
-  };
+  const candidate: TicketAssignee = { id: 'u2', fullName: 'João Pedro', sectorId: 's1', sectorName: 'Suporte' };
 
   let store: InstanceType<typeof TicketDetailStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
-  let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'reopen', 'getSla']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'reopen', 'getSla', 'getAssignees']);
     dataService.getById.and.returnValue(of(ticket));
     dataService.removeAssignee.and.returnValue(of(undefined));
     dataService.assignTicket.and.returnValue(of(undefined));
     dataService.update.and.returnValue(of(undefined));
     dataService.reopen.and.returnValue(of(undefined));
     dataService.getSla.and.returnValue(of(sla));
-    userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
-    userDataService.getAll.and.returnValue(of({
+    dataService.getAssignees.and.returnValue(of({
       items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false
     }));
 
@@ -65,8 +60,7 @@ describe('TicketDetailStore', () => {
       providers: [
         provideZonelessChangeDetection(),
         TicketDetailStore,
-        { provide: TicketDataService, useValue: dataService },
-        { provide: UserDataService, useValue: userDataService }
+        { provide: TicketDataService, useValue: dataService }
       ]
     });
     store = TestBed.inject(TicketDetailStore);
@@ -406,11 +400,11 @@ describe('TicketDetailStore', () => {
   });
 
   describe('searchAssignees', () => {
-    it('busca usuários ativos pelo termo informado', async () => {
+    it('busca só os responsáveis elegíveis (GET /tickets/assignees) pelo termo informado', async () => {
       store.searchAssignees('joão');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'joão', page: 1, pageSize: 8 });
+      expect(dataService.getAssignees).toHaveBeenCalledWith('joão', undefined, 1, 8);
       expect(store.assigneeCandidates()).toEqual([candidate]);
       expect(store.searchingAssignees()).toBeFalse();
     });
@@ -418,17 +412,17 @@ describe('TicketDetailStore', () => {
     it('não busca e limpa os candidatos quando o termo é vazio (só espaços)', () => {
       store.searchAssignees('   ');
 
-      expect(userDataService.getAll).not.toHaveBeenCalled();
+      expect(dataService.getAssignees).not.toHaveBeenCalled();
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
-    it('expõe mensagem própria quando falta a permissão users:read (403)', async () => {
-      userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+    it('expõe mensagem própria quando a busca é negada (403)', async () => {
+      dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.searchAssignees('joão');
       await TestBed.inject(ApplicationRef).whenStable();
 
-      expect(store.assigneeSearchError()).toBe('Você não tem permissão para buscar usuários.');
+      expect(store.assigneeSearchError()).toBe('Você não tem permissão para buscar responsáveis.');
       expect(store.assigneeCandidates()).toEqual([]);
     });
 

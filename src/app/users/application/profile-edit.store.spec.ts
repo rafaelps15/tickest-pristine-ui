@@ -19,7 +19,7 @@ describe('ProfileEditStore', () => {
     dataService = jasmine.createSpyObj('UserDataService', ['getById', 'updateProfile', 'changePassword']);
     dataService.getById.and.returnValue(of(profile));
     currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
-    currentUserService.load.and.returnValue(of(true));
+    currentUserService.load.and.returnValue(of({ status: 'loaded' as const }));
 
     TestBed.configureTestingModule({
       providers: [
