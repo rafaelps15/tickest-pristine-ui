@@ -11,67 +11,67 @@ const AUTH_ENDPOINTS = ['/users/login', '/users/login/new-password', '/users/ref
 
 /** Interceptor para injeção do token JWT, renovação automática em 401 e tratamento de erros de autorização. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-    const session = inject(SessionService);
-    const tokenRefresh = inject(TokenRefreshService);
-    const currentUserService = inject(CurrentUserService);
-    const router = inject(Router);
+  const session = inject(SessionService);
+  const tokenRefresh = inject(TokenRefreshService);
+  const currentUserService = inject(CurrentUserService);
+  const router = inject(Router);
 
-    const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => req.url.includes(endpoint));
+  const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => req.url.includes(endpoint));
 
-    const sentToken = session.token();
+  const sentToken = session.token();
 
-    return next(withToken(req, sentToken)).pipe(
-        catchError((error: HttpErrorResponse) => {
-            if (error.status === 401 && !isAuthEndpoint) {
-                const currentToken = session.token();
-                if (currentToken && currentToken !== sentToken) {
-                    // A sessão já foi renovada enquanto esta requisição estava em voo: repete com o token novo,
-                    // sem uma segunda troca de refresh token.
-                    return next(withToken(req, currentToken));
-                }
-                // Access token expirado: tenta renovar via refresh token e repetir a requisição original.
-                return tokenRefresh.refresh().pipe(
-                    // Falha passageira na renovação (rede, 429, 5xx) não invalida a sessão: devolve o erro dela, e não o
-                    // 401 original, pra quem chamou não ler a falha como sessão recusada (ver CurrentUserService.load).
-                    catchError((refreshError: unknown) => throwError(() => isTransientHttpError(refreshError) ? refreshError : error)),
-                    switchMap(newToken => {
-                        if (!newToken) {
-                            session.clearSession();
-                            router.navigate(['/login']);
-                            return throwError(() => error);
-                        }
-
-                        return next(withToken(req, newToken));
-                    })
-                );
+  return next(withToken(req, sentToken)).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401 && !isAuthEndpoint) {
+        const currentToken = session.token();
+        if (currentToken && currentToken !== sentToken) {
+          // A sessão já foi renovada enquanto esta requisição estava em voo: repete com o token novo,
+          // sem uma segunda troca de refresh token.
+          return next(withToken(req, currentToken));
+        }
+        // Access token expirado: tenta renovar via refresh token e repetir a requisição original.
+        return tokenRefresh.refresh().pipe(
+          // Falha passageira na renovação (rede, 429, 5xx) não invalida a sessão: devolve o erro dela, e não o
+          // 401 original, pra quem chamou não ler a falha como sessão recusada (ver CurrentUserService.load).
+          catchError((refreshError: unknown) => throwError(() => isTransientHttpError(refreshError) ? refreshError : error)),
+          switchMap(newToken => {
+            if (!newToken) {
+              session.clearSession();
+              router.navigate(['/login']);
+              return throwError(() => error);
             }
 
-            if (error.status === 401) {
-                // Refresh token também inválido/expirado (ou 401 na própria chamada de autenticação): desloga.
-                session.clearSession();
-                router.navigate(['/login']);
-            }
+            return next(withToken(req, newToken));
+          })
+        );
+      }
 
-            if (error.status === 403 && !isAuthEndpoint) {
-                // 403 é falta de permissão, não sessão inválida — mantém a sessão, só atualiza o menu (a permissão pode ter mudado).
-                // Num endpoint de autenticação o 403 é regra de negócio (ex.: troca de senha pendente) e ainda não há sessão.
-                currentUserService.load().subscribe();
-            }
+      if (error.status === 401) {
+        // Refresh token também inválido/expirado (ou 401 na própria chamada de autenticação): desloga.
+        session.clearSession();
+        router.navigate(['/login']);
+      }
 
-            return throwError(() => error);
-        })
-    );
+      if (error.status === 403 && !isAuthEndpoint) {
+        // 403 é falta de permissão, não sessão inválida — mantém a sessão, só atualiza o menu (a permissão pode ter mudado).
+        // Num endpoint de autenticação o 403 é regra de negócio (ex.: troca de senha pendente) e ainda não há sessão.
+        currentUserService.load().subscribe();
+      }
+
+      return throwError(() => error);
+    })
+  );
 };
 
 /** Clona a requisição adicionando o header `Authorization` com o token informado, se houver. */
 function withToken(req: HttpRequest<unknown>, token: string | null): HttpRequest<unknown> {
-    if (!token) {
-        return req;
-    }
+  if (!token) {
+    return req;
+  }
 
-    return req.clone({
-        setHeaders: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+  return req.clone({
+    setHeaders: {
+      Authorization: `Bearer ${token}`
+    }
+  });
 }

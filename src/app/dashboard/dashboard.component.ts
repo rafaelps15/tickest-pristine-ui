@@ -78,12 +78,12 @@ interface DashboardAdminLink {
  * Atualiza sozinha a cada 2 minutos com a aba visível. Vive no shell porque cruza domínios.
  */
 @Component({
-    selector: 'app-dashboard',
-    imports: [RouterLink, EmptyStateComponent, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent, DashboardHeroChartComponent, DashboardKpiStripComponent, DashboardNoticeComponent],
-    templateUrl: './dashboard.component.html',
-    changeDetection: ChangeDetectionStrategy.OnPush,
+  selector: 'app-dashboard',
+  imports: [RouterLink, EmptyStateComponent, PageHeaderComponent, DashboardGuideComponent, DashboardInsightsComponent, StatCardComponent, TicketAssignDialogComponent, DashboardFilterBarComponent, DashboardMetricGroupComponent, DashboardTimesComponent, DashboardHeroChartComponent, DashboardKpiStripComponent, DashboardNoticeComponent],
+  templateUrl: './dashboard.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DashboardFiltersService],
-    styleUrls: ['./dashboard.component.css']
+  styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
   /** Números da empresa (totais e volume), Alertas de SLA e o diálogo "Atribuir". */

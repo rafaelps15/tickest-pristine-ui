@@ -4,25 +4,25 @@ import { RouterModule } from '@angular/router';
 
 /** Layout para as páginas de autenticação (Login, Registro, etc). */
 @Component({
-    selector: 'app-auth-layout',
-    imports: [RouterModule],
-    template: `
-    <div class="auth-layout-container">
-      <div class="auth-layout-card border-0">
-        <div class="auth-layout-header">
-          <div class="brand-wrapper d-flex justify-content-center align-items-center mb-5">
-            <img src="/img/logo/logo_letra.png" alt="Tickest" style="width: 48px; height: auto;">
-            <span class="ms-1 text-primary brand-text">ickest</span>
-          </div>
-        </div>
-        <div class="auth-layout-body">
-          <router-outlet></router-outlet>
+  selector: 'app-auth-layout',
+  imports: [RouterModule],
+  template: `
+  <div class="auth-layout-container">
+    <div class="auth-layout-card border-0">
+      <div class="auth-layout-header">
+        <div class="brand-wrapper d-flex justify-content-center align-items-center mb-5">
+          <img src="/img/logo/logo_letra.png" alt="Tickest" style="width: 48px; height: auto;">
+          <span class="ms-1 text-primary brand-text">ickest</span>
         </div>
       </div>
+      <div class="auth-layout-body">
+        <router-outlet></router-outlet>
+      </div>
     </div>
-  `,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    styles: [`
+  </div>
+`,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
     .auth-layout-container {
       min-height: 100vh;
       display: flex;

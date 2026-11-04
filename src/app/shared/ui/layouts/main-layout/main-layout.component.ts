@@ -24,12 +24,12 @@ export function activeTicketsMenu(url: string): 'mine' | 'monitor' | null {
 
 /** Layout da área autenticada (com navegação), usado pelas rotas protegidas. */
 @Component({
-    selector: 'app-main-layout',
-    imports: [RouterModule, UserMenuComponent, SideMenuNavComponent, FocusTrapDirective],
-    templateUrl: './main-layout.component.html',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrls: ['./main-layout.component.css'],
-    host: { '(document:keydown.escape)': 'onEscape()' }
+  selector: 'app-main-layout',
+  imports: [RouterModule, UserMenuComponent, SideMenuNavComponent, FocusTrapDirective],
+  templateUrl: './main-layout.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrls: ['./main-layout.component.css'],
+  host: { '(document:keydown.escape)': 'onEscape()' }
 })
 export class MainLayoutComponent implements OnInit, OnDestroy {
   /** Plataforma: tema e breakpoint só são lidos no navegador (não no SSR). */

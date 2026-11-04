@@ -20,19 +20,19 @@ export type HasPermission = (code: string) => boolean;
  * `UpdateTicketCommandHandler` (dono com `tickets:update-own`, ou `tickets:manage`) com o chamado ativo.
  */
 export function canEditTicketDescription(status: TicketStatus, isOwner: boolean, hasPermission: HasPermission): boolean {
-    if (!TICKET_ACTIVE_STATUSES.has(status)) return false;
-    return (isOwner && hasPermission(TICKETS_UPDATE_OWN_PERMISSION)) || hasPermission(TICKETS_MANAGE_PERMISSION);
+  if (!TICKET_ACTIVE_STATUSES.has(status)) return false;
+  return (isOwner && hasPermission(TICKETS_UPDATE_OWN_PERMISSION)) || hasPermission(TICKETS_MANAGE_PERMISSION);
 }
 
 /** Espelha `ReopenTicketCommandHandler`: dono com `tickets:reopen-own`, ou `tickets:manage`, com o chamado inativo. */
 export function canReopenTicket(status: TicketStatus, isOwner: boolean, hasPermission: HasPermission): boolean {
-    if (TICKET_ACTIVE_STATUSES.has(status)) return false;
-    return (isOwner && hasPermission(TICKETS_REOPEN_OWN_PERMISSION)) || hasPermission(TICKETS_MANAGE_PERMISSION);
+  if (TICKET_ACTIVE_STATUSES.has(status)) return false;
+  return (isOwner && hasPermission(TICKETS_REOPEN_OWN_PERMISSION)) || hasPermission(TICKETS_MANAGE_PERMISSION);
 }
 
 /** Espelha o endpoint de atribuição (`tickets:manage`) somado ao `AssignTicketCommandHandler` para outra pessoa (`tickets:assign`). */
 export function canAssignTicketToOthers(status: TicketStatus, hasPermission: HasPermission): boolean {
-    return TICKET_ACTIVE_STATUSES.has(status)
-        && hasPermission(TICKETS_MANAGE_PERMISSION)
-        && hasPermission(TICKETS_ASSIGN_PERMISSION);
+  return TICKET_ACTIVE_STATUSES.has(status)
+    && hasPermission(TICKETS_MANAGE_PERMISSION)
+    && hasPermission(TICKETS_ASSIGN_PERMISSION);
 }

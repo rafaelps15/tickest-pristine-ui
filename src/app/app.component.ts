@@ -12,32 +12,32 @@ import { CurrentUserService } from './shared';
  * de nova tentativa da primeira carga do usuário logado.
  */
 @Component({
-    selector: 'app-root',
-    imports: [RouterOutlet, ConfirmDialogComponent, ToastContainerComponent, SessionRetryNoticeComponent],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-        <router-outlet />
-        @if (navigating() && currentUserService.retrying()) {
-            <app-session-retry-notice />
-        }
-        <app-confirm-dialog />
-        <app-toast-container />
-    `
+  selector: 'app-root',
+  imports: [RouterOutlet, ConfirmDialogComponent, ToastContainerComponent, SessionRetryNoticeComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <router-outlet />
+    @if (navigating() && currentUserService.retrying()) {
+      <app-session-retry-notice />
+    }
+    <app-confirm-dialog />
+    <app-toast-container />
+  `
 })
 export class AppComponent {
-    /** Carregamento do usuário logado, que diz quando GET /users/me está numa nova tentativa. */
-    protected readonly currentUserService = inject(CurrentUserService);
+  /** Carregamento do usuário logado, que diz quando GET /users/me está numa nova tentativa. */
+  protected readonly currentUserService = inject(CurrentUserService);
 
-    /**
-     * Uma navegação está esperando (o guard aguarda GET /users/me): só aí a tela fica vazia. Nas recargas
-     * em segundo plano do usuário, sem navegação pendente, o aviso não aparece.
-     */
-    protected readonly navigating = toSignal(
-        inject(Router).events.pipe(
-            filter(e => e instanceof NavigationStart || e instanceof NavigationEnd || e instanceof NavigationCancel
-                || e instanceof NavigationError || e instanceof NavigationSkipped),
-            map(e => e instanceof NavigationStart)
-        ),
-        { initialValue: false }
-    );
+  /**
+   * Uma navegação está esperando (o guard aguarda GET /users/me): só aí a tela fica vazia. Nas recargas
+   * em segundo plano do usuário, sem navegação pendente, o aviso não aparece.
+   */
+  protected readonly navigating = toSignal(
+    inject(Router).events.pipe(
+      filter(e => e instanceof NavigationStart || e instanceof NavigationEnd || e instanceof NavigationCancel
+        || e instanceof NavigationError || e instanceof NavigationSkipped),
+      map(e => e instanceof NavigationStart)
+    ),
+    { initialValue: false }
+  );
 }

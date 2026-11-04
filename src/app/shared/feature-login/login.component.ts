@@ -4,12 +4,12 @@ import { LoginStore } from '../application/login.store';
 
 /** UI de autenticação. */
 @Component({
-    selector: 'app-login',
-    imports: [ReactiveFormsModule],
-    templateUrl: './login.component.html',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    // Visual compartilhado com a tela de primeiro acesso (ver shared/ui/auth-form.css).
-    styleUrls: ['../ui/auth-form.css']
+  selector: 'app-login',
+  imports: [ReactiveFormsModule],
+  templateUrl: './login.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  // Visual compartilhado com a tela de primeiro acesso (ver shared/ui/auth-form.css).
+  styleUrls: ['../ui/auth-form.css']
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
