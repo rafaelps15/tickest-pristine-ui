@@ -214,9 +214,9 @@
                 @if (self) {
                   <span class="badge bg-label-primary ms-1">Você</span>
                 }
-                <div class="text-muted small fw-normal text-break d-md-none">{{ user.email }}</div>
+                <div class="text-muted small fw-normal text-break d-md-none">{{ emailLocalPart(user.email) }}<wbr>{{ emailDomainPart(user.email) }}</div>
               </td>
-              <td class="text-muted small text-break d-none d-md-table-cell">{{ user.email }}</td>
+              <td class="text-muted small text-break d-none d-md-table-cell">{{ emailLocalPart(user.email) }}<wbr>{{ emailDomainPart(user.email) }}</td>
               <td data-label="Funções">
                 <span class="cell-value">
                   @for (role of visibleRoles(user); track role.name) {

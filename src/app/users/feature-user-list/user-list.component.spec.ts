@@ -256,6 +256,16 @@ describe('UserListComponent', () => {
     expect(row.querySelector('button.btn-row-name')).toBeTruthy();
   });
 
+  it('quebra o e-mail antes do "@", não no meio do domínio (R-06)', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    const cell = fixture.nativeElement.querySelector('tbody tr.user-row td.d-md-table-cell') as HTMLTableCellElement;
+    expect(cell.textContent?.trim()).toBe('maria@empresa.com');
+    const wbr = cell.querySelector('wbr');
+    expect(wbr?.nextSibling?.textContent).toBe('@empresa.com');
+  });
+
   it('marca a linha com o painel aberto com uma classe distinta da seleção em lote', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     await fixture.whenStable();

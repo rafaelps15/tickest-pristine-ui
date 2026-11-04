@@ -572,6 +572,18 @@ export class UserListComponent implements OnInit {
         });
     }
 
+    /** Parte do e-mail antes do "@" — a tabela quebra a linha ali, não no meio do domínio. */
+    emailLocalPart(email: string): string {
+        const at = email.lastIndexOf('@');
+        return at > 0 ? email.slice(0, at) : email;
+    }
+
+    /** Parte do e-mail a partir do "@" (vazia se não houver "@"). */
+    emailDomainPart(email: string): string {
+        const at = email.lastIndexOf('@');
+        return at > 0 ? email.slice(at) : '';
+    }
+
     /** Situação do usuário pro badge e pras ações (Ativo, Convite pendente, Inativo). */
     statusOf(user: UserSummary): UserStatusKind {
         return userStatusKind(user);
