@@ -1,0 +1,65 @@
+<ul class="menu-inner py-3">
+  <!-- Principal -->
+  <li class="menu-header small text-uppercase">
+    <span class="menu-header-text">Principal</span>
+  </li>
+  <li class="menu-item" routerLinkActive="active">
+    <a routerLink="/dashboard" class="menu-link">
+      <i class="menu-icon tf-icons bx bx-home-circle"></i>
+      <div>Início</div>
+    </a>
+  </li>
+
+  <li class="menu-item" [class.active]="activeTicketsItem() === 'mine'">
+    <a routerLink="/tickets" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'mine' ? 'page' : null">
+      <i class="menu-icon tf-icons bx bx-receipt"></i>
+      <div>Meus Chamados</div>
+    </a>
+  </li>
+
+  <!-- Administração -->
+  @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:manage') ||
+       sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage') ||
+       sessionService.hasPermission('tickets:manage')) {
+    <li class="menu-header small text-uppercase">
+      <span class="menu-header-text">Administração</span>
+    </li>
+  }
+
+  @if (sessionService.hasPermission('tickets:manage')) {
+    <li class="menu-item" [class.active]="activeTicketsItem() === 'monitor'">
+      <a routerLink="/tickets/monitorar" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'monitor' ? 'page' : null">
+        <i class="menu-icon tf-icons bx bx-list-check"></i>
+        <div>Monitorar Chamados</div>
+      </a>
+    </li>
+  }
+
+  @if (sessionService.hasPermission('users:read')) {
+    <li class="menu-item" routerLinkActive="active">
+      <a routerLink="/usuarios" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-group"></i>
+        <div>Usuários</div>
+      </a>
+    </li>
+  }
+
+  @if (sessionService.hasPermission('roles:manage')) {
+    <li class="menu-item" routerLinkActive="active">
+      <a routerLink="/roles" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-shield-quarter"></i>
+        <div>Funções</div>
+      </a>
+    </li>
+  }
+
+  @if (sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage')) {
+    <li class="menu-item" routerLinkActive="active">
+      <a routerLink="/departamentos" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-sitemap"></i>
+        <div>Departamentos e setores</div>
+      </a>
+    </li>
+  }
+
+</ul>

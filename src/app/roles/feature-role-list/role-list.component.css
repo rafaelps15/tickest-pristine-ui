@@ -1,16 +1,3 @@
-/*
- * Recarga com a lista já na tela (depois de salvar permissões, "Tentar novamente"): mantém as
- * linhas e só esmaece, em vez de trocar a tabela por um spinner — mesmo padrão de Usuários.
- */
-.table {
-  transition: opacity 150ms ease;
-}
-
-.table.is-refreshing {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
 /* Nome, amostra de cor e badges de estado numa linha só, quebrando juntos no celular. */
 .role-name {
   display: flex;

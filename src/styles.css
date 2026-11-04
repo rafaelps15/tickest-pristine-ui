@@ -1285,3 +1285,66 @@ router-outlet + * {
 @media (prefers-reduced-motion: reduce) {
   .tk-skeleton { animation: none; }
 }
+
+/*
+ * Padrões repetidos entre telas, centralizados aqui (A-33): cada tela tinha a própria cópia, e o CSS
+ * de componente passava do orçamento de 2 kB.
+ */
+
+/* Datas, horas e contagens em algarismos de largura fixa, pra alinharem de linha em linha. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nome ou descrição sem espaço (URL, sigla longa) quebra dentro do bloco em vez de alargar a página. */
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Recarga com a lista já na tela (trocar de página, "Tentar novamente", depois de uma ação): mantém as
+ * linhas e só esmaece, em vez de trocar a tabela por um spinner que destruía o foco do "⋮".
+ */
+.table {
+  transition: opacity 150ms ease;
+}
+
+.table.is-refreshing {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/*
+ * Item recém-criado (card, setor ou linha de tabela): um realce índigo que se desfaz em 4s — quem salvou
+ * acha o que criou depois que a lista reordena. Termina na superfície do card, não em `transparent`, que
+ * mostrava o fundo da página por 4s e voltava de uma vez. Com movimento reduzido, o tingido fica parado.
+ */
+.item-new,
+.item-new-row > td {
+  animation: tk-new-item 4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tk-new-item {
+  from { background-color: color-mix(in srgb, var(--tk-primary) 14%, var(--bs-card-bg)); }
+  to { background-color: var(--bs-card-bg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item-new,
+  .item-new-row > td {
+    animation: none;
+    background-color: color-mix(in srgb, var(--tk-primary) 8%, var(--bs-card-bg));
+  }
+}
+
+/* Toque: itens de menu e o X de fechar com o alvo mínimo de 44px (o padrão do Bootstrap dá ~30px e 16px). */
+@media (pointer: coarse) {
+  .dropdown-item {
+    min-height: 2.75rem;
+  }
+
+  .btn-close {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}

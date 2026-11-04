@@ -20,6 +20,8 @@ import { PaginationComponent } from '../../shared/ui/pagination/pagination.compo
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { TicketListGuideComponent } from './ticket-list-guide.component';
+import { TicketListFirstUseComponent } from './ticket-list-first-use.component';
+import { TicketListDueCellComponent } from './ticket-list-due-cell.component';
 
 /** Formato da data completa da última atividade, para o leitor de tela e o tooltip. */
 const FULL_DATE_FORMAT = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -47,7 +49,7 @@ export function formatLastActivity(isoUtc: string, nowMs: number): string {
 /** Tela de listagem dos tickets do usuário logado. */
 @Component({
     selector: 'app-ticket-list',
-    imports: [CommonModule, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, EmptyStateComponent, FilterBarComponent, TicketListGuideComponent],
+    imports: [CommonModule, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, PaginationComponent, LoadingStateComponent, EmptyStateComponent, FilterBarComponent, TicketListGuideComponent, TicketListFirstUseComponent, TicketListDueCellComponent],
     templateUrl: './ticket-list.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrl: './ticket-list.component.css'

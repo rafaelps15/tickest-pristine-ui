@@ -82,25 +82,7 @@
           <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro chamado. -->
           <tr>
             <td colspan="6" class="first-use py-5">
-              <div class="first-use-body">
-                <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
-                <h2 class="h5 fw-bold mb-2">Nenhum chamado aberto ainda</h2>
-                <p class="first-use-lead mb-3">
-                  Precisa de algo de outro departamento? Abra um chamado em vez de mandar e-mail ou WhatsApp:
-                  o pedido chega ao setor certo e você acompanha tudo por aqui.
-                </p>
-                <ol class="first-use-steps small mb-3">
-                  <li>Descreva o que precisa e escolha o setor que vai atender.</li>
-                  <li>O setor assume o chamado e o status muda aqui, nesta lista.</li>
-                  <li>A conversa fica dentro do chamado, com prazo de atendimento.</li>
-                </ol>
-                @if (attendingDepartments()) {
-                  <p class="first-use-departments small mb-4">Atendem chamados: {{ attendingDepartments() }}.</p>
-                }
-                <a routerLink="/tickets/novo" class="btn btn-primary">
-                  <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro chamado
-                </a>
-              </div>
+              <app-ticket-list-first-use [attendingDepartments]="attendingDepartments()" />
             </td>
           </tr>
         } @else if (store.tickets().length === 0 && store.search()) {
@@ -157,17 +139,7 @@
               <td data-label="Prazo">
                 <!-- O ciclo vigente: num chamado reaberto, o prazo novo (o mesmo da seção SLA do detalhe). -->
                 @let current = currentDue(ticket);
-                @let due = current.display;
-                <div class="due" [class.due-warning]="due.tone === 'warning'" [class.due-danger]="due.tone === 'danger'">
-                  <span class="due-label"><i class="bx {{ due.icon }}" aria-hidden="true"></i>{{ due.label }}</span>
-                  @if (due.showDate) {
-                    <span class="due-date small">{{ due.datePrefix }} <span class="num">{{ current.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}</span></span>
-                  }
-                  <!-- Atrasado não é beco sem saída: leva ao chamado, onde a conversa com o setor já existe (mesma rota do título). -->
-                  @if (due.tone === 'danger') {
-                    <a [routerLink]="['/tickets', ticket.id]" class="due-nudge small" [attr.aria-label]="'Cobrar no chamado ' + ticket.title">Cobrar no chamado</a>
-                  }
-                </div>
+                <app-ticket-list-due-cell [display]="current.display" [dueAtUtc]="current.dueAtUtc" [ticketId]="ticket.id" [ticketTitle]="ticket.title" />
               </td>
               <td data-label="Status"><span class="badge" [ngClass]="statusBadgeClass[ticket.status]">{{ statusLabels[ticket.status] }}</span></td>
               <td class="text-nowrap small" data-label="Atualizado">

@@ -189,7 +189,7 @@
           @for (user of store.users(); track user.id) {
             @let self = isCurrentUser(user);
             <!-- O clique em qualquer ponto da linha é só atalho de mouse; teclado e leitor de tela usam o botão do nome, sem tirar do <tr> o papel de linha de tabela. -->
-            <tr class="user-row" [class.user-row-inactive]="!user.isActive" [class.user-row-new]="highlightedUserId() === user.id"
+            <tr class="user-row" [class.user-row-inactive]="!user.isActive" [class.item-new-row]="highlightedUserId() === user.id"
                 [class.user-row-info-open]="infoPanelUserId() === user.id"
                 (click)="selectRow(user.id)">
               <td class="col-select" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">

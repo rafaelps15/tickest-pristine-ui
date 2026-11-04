@@ -107,27 +107,6 @@
 }
 
 /*
- * Linha de quem acabou de ser criado: tinge em índigo diluído e esmaece em 4s — quem cadastrou
- * encontra a pessoa sem procurar. Com movimento reduzido, o tingimento fica parado e some de uma
- * vez quando a classe sai (a cor ainda diz "é esta"; só a transição vai embora).
- */
-.user-row-new > td {
-  animation: tk-new-row 4s ease-out;
-}
-
-@keyframes tk-new-row {
-  from { background-color: rgba(var(--tk-primary-rgb), 0.16); }
-  to { background-color: transparent; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .user-row-new > td {
-    animation: none;
-    background-color: rgba(var(--tk-primary-rgb), 0.1);
-  }
-}
-
-/*
  * Data de desativação: linha secundária dentro de "Cadastrado em", só quando existe — evita uma
  * coluna própria que ficaria vazia ("—") na maioria das linhas. Cor neutra (herda o `text-muted`
  * da célula): vermelho é só pra ação destrutiva ou alerta (DESIGN.md), e quem diz "inativo" é o badge.
@@ -202,9 +181,8 @@
   text-align: start;
 }
 
+/* O contorno é o anel de foco global (styles.css); aqui só o canto arredondado. */
 .btn-row-name:focus-visible {
-  outline: 2px solid var(--tk-primary);
-  outline-offset: 2px;
   border-radius: var(--tk-radius-sm);
 }
 
@@ -220,11 +198,4 @@
 
 .user-row-info-open .btn-row-name {
   color: var(--tk-primary-text);
-}
-
-/* Itens do menu "⋮" com o alvo de toque do sistema em telas de toque (o padrão do dropdown dá ~30px). */
-@media (pointer: coarse) {
-  .dropdown-item {
-    min-height: 2.75rem;
-  }
 }

@@ -101,13 +101,22 @@
   }
 
   /*
-   * No card, responsável/setor e SLA/data ficam empilhados à direita do rótulo, como os outros
-   * valores. `.table-stack` na frente pra vencer as regras base de `.assignment`/`.due` abaixo.
+   * No card, responsável e setor ficam empilhados à direita do rótulo, como os outros valores (o prazo
+   * faz o mesmo no próprio componente). `.table-stack` na frente pra vencer a regra base de `.assignment`.
    */
-  .table-stack .assignment,
-  .table-stack .due {
+  .table-stack .assignment {
     align-items: flex-end;
     text-align: end;
+  }
+
+  /* Estados vazios dentro da tabela: sem o recuo à direita que o `.table-stack` dá à 1ª célula. */
+  .table-stack td.filtered-empty {
+    padding-right: 0;
+  }
+
+  /* O primeiro uso ganha respiro próprio, sem o mesmo recuo. */
+  .table-stack td.first-use {
+    padding: 2rem 1rem;
   }
 
   /*
@@ -151,88 +160,6 @@
   color: var(--tk-text-muted);
 }
 
-/* Prazo: a situação do SLA lidera (dá pra ler sem decifrar a data); a data vem abaixo. */
-.due {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-}
-
-.due-date {
-  color: var(--tk-text-secondary);
-  white-space: nowrap;
-}
-
-/* Datas e horas em algarismos de largura fixa, pra colunas de tempo alinharem de linha em linha. */
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Estados vazios dentro da tabela: sem o recuo à direita que o `.table-stack` dá à 1ª célula no celular. */
-@media (max-width: 767.98px) {
-  .table-stack td.filtered-empty {
-    padding-right: 0;
-  }
-}
-
-/*
- * Ao trocar de página ou recarregar depois de uma ação, mantém as linhas atuais e só esmaece — sem
- * trocar a tabela por um spinner, o que destruía o "⋮" com o foco. Mesmo padrão do Monitor.
- */
-.table {
-  transition: opacity 150ms ease;
-}
-
-.table.is-refreshing {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/*
- * Estado vazio de primeiro uso: bloco centralizado na tabela, com a lista de passos alinhada à
- * esquerda (centralizar texto de várias linhas atrapalha a leitura).
- */
-.first-use-body {
-  max-width: 34rem;
-  margin: 0 auto;
-  text-align: center;
-  white-space: normal;
-}
-
-.first-use-icon {
-  display: block;
-  margin-bottom: 0.75rem;
-  color: var(--tk-primary);
-}
-
-.first-use-lead {
-  color: var(--tk-text-secondary);
-}
-
-.first-use-steps {
-  display: inline-block;
-  margin: 0;
-  padding-left: 1.25rem;
-  text-align: left;
-  color: var(--tk-text-primary);
-}
-
-.first-use-steps li + li {
-  margin-top: 0.25rem;
-}
-
-.first-use-departments {
-  color: var(--tk-text-muted);
-}
-
-/* No celular o primeiro uso ganha respiro próprio, sem o recuo à direita da 1ª célula do `.table-stack`. */
-@media (max-width: 767.98px) {
-  .table-stack td.first-use {
-    padding: 2rem 1rem;
-  }
-}
-
 /* Tempo restante pro dono cancelar, dentro do botão: menor e mais leve que o rótulo, na mesma cor (sem opacidade). */
 .cancel-hint {
   margin-left: 0.25rem;
@@ -246,42 +173,6 @@
   margin-left: 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-}
-
-/* Situação do prazo como texto com ícone: o tom muda só quando pede atenção, e o texto sempre diz. */
-.due-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  color: var(--tk-text-primary);
-}
-
-.due-warning .due-label {
-  color: var(--tk-warning-text);
-  font-weight: 600;
-}
-
-.due-danger .due-label {
-  color: var(--tk-danger-text);
-  font-weight: 600;
-}
-
-/* "Cobrar no chamado" no atrasado: link secundário em índigo de texto, abaixo da data, sem competir com o "Atrasado". */
-.due-nudge {
-  color: var(--tk-primary-text);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-
-/* No celular fica acima do título esticado sobre o card (z-index 1) e ganha alvo de toque de 44px. */
-@media (max-width: 767.98px) {
-  .due-nudge {
-    position: relative;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    min-height: 2.75rem;
-  }
 }
 
 /* Ações da linha à vista: botões pequenos lado a lado, à direita no desktop. */

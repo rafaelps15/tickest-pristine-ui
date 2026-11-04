@@ -3,8 +3,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationSkipped, Router, RouterModule } from '@angular/router';
 import { filter, map, take } from 'rxjs';
-import { SessionService } from '../../../services/session.service';
 import { UserMenuComponent } from '../../user-menu/user-menu.component';
+import { SideMenuNavComponent } from './side-menu-nav.component';
 import { FocusTrapDirective } from '../../directives/focus-trap.directive';
 
 /**
@@ -25,7 +25,7 @@ export function activeTicketsMenu(url: string): 'mine' | 'monitor' | null {
 /** Layout da área autenticada (com navegação), usado pelas rotas protegidas. */
 @Component({
     selector: 'app-main-layout',
-    imports: [RouterModule, UserMenuComponent, FocusTrapDirective],
+    imports: [RouterModule, UserMenuComponent, SideMenuNavComponent, FocusTrapDirective],
     templateUrl: './main-layout.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./main-layout.component.css'],
@@ -34,8 +34,6 @@ export function activeTicketsMenu(url: string): 'mine' | 'monitor' | null {
 export class MainLayoutComponent implements OnInit, OnDestroy {
   /** Plataforma: tema e breakpoint só são lidos no navegador (não no SSR). */
   private readonly platformId = inject(PLATFORM_ID);
-  /** Sessão: usuário logado e permissões que decidem os itens do menu. */
-  protected readonly sessionService = inject(SessionService);
   /** Router: URL atual e fim da navegação para o foco depois da gaveta. */
   private readonly router = inject(Router);
 

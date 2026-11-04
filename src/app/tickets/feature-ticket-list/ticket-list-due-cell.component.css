@@ -1,0 +1,56 @@
+/* Sem caixa própria: a `.due` continua sendo o valor da célula (par rótulo/valor do `.table-stack` no celular). */
+:host {
+  display: contents;
+}
+
+.due {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.due-date {
+  color: var(--tk-text-secondary);
+  white-space: nowrap;
+}
+
+/* Situação do prazo como texto com ícone: o tom muda só quando pede atenção, e o texto sempre diz. */
+.due-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--tk-text-primary);
+}
+
+.due-warning .due-label {
+  color: var(--tk-warning-text);
+  font-weight: 600;
+}
+
+.due-danger .due-label {
+  color: var(--tk-danger-text);
+  font-weight: 600;
+}
+
+/* "Cobrar no chamado" no atrasado: link secundário em índigo de texto, abaixo da data, sem competir com o "Atrasado". */
+.due-nudge {
+  color: var(--tk-primary-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (max-width: 767.98px) {
+  /* No card do celular, situação e data ficam empilhadas à direita do rótulo, como os outros valores. */
+  :host-context(.table-stack) .due {
+    align-items: flex-end;
+    text-align: end;
+  }
+
+  /* Acima do título esticado sobre o card (z-index 1), com alvo de toque de 44px. */
+  .due-nudge {
+    position: relative;
+    z-index: 2;
+    min-height: 2.75rem;
+  }
+}

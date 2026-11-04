@@ -1,0 +1,19 @@
+<div class="first-use-body">
+  <i class="bx bx-receipt display-6 first-use-icon" aria-hidden="true"></i>
+  <h2 class="h5 fw-bold mb-2">Nenhum chamado aberto ainda</h2>
+  <p class="first-use-lead mb-3">
+    Precisa de algo de outro departamento? Abra um chamado em vez de mandar e-mail ou WhatsApp:
+    o pedido chega ao setor certo e você acompanha tudo por aqui.
+  </p>
+  <ol class="first-use-steps small mb-3">
+    <li>Descreva o que precisa e escolha o setor que vai atender.</li>
+    <li>O setor assume o chamado e o status muda aqui, nesta lista.</li>
+    <li>A conversa fica dentro do chamado, com prazo de atendimento.</li>
+  </ol>
+  @if (attendingDepartments()) {
+    <p class="first-use-departments small mb-4">Atendem chamados: {{ attendingDepartments() }}.</p>
+  }
+  <a routerLink="/tickets/novo" class="btn btn-primary">
+    <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro chamado
+  </a>
+</div>

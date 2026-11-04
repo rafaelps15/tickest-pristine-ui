@@ -990,11 +990,11 @@ describe('UserListComponent', () => {
 
       expect(fixture.nativeElement.querySelector('#userCreateModal')).toBeNull();
       const row = fixture.nativeElement.querySelector('tbody tr.user-row') as HTMLTableRowElement;
-      expect(row.classList).toContain('user-row-new');
+      expect(row.classList).toContain('item-new-row');
 
       jasmine.clock().tick(4001);
       fixture.detectChanges();
-      expect(row.classList).not.toContain('user-row-new');
+      expect(row.classList).not.toContain('item-new-row');
     } finally {
       jasmine.clock().uninstall();
     }

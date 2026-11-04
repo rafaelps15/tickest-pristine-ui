@@ -1,0 +1,36 @@
+/*
+ * Bloco centralizado na tabela, com a lista de passos alinhada à esquerda (centralizar texto de
+ * várias linhas atrapalha a leitura).
+ */
+.first-use-body {
+  max-width: 34rem;
+  margin: 0 auto;
+  text-align: center;
+  white-space: normal;
+}
+
+.first-use-icon {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--tk-primary);
+}
+
+.first-use-lead {
+  color: var(--tk-text-secondary);
+}
+
+.first-use-steps {
+  display: inline-block;
+  margin: 0;
+  padding-left: 1.25rem;
+  text-align: left;
+  color: var(--tk-text-primary);
+}
+
+.first-use-steps li + li {
+  margin-top: 0.25rem;
+}
+
+.first-use-departments {
+  color: var(--tk-text-muted);
+}
