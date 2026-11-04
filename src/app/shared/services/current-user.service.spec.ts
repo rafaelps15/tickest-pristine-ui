@@ -142,6 +142,29 @@ describe('CurrentUserService', () => {
 
       expect(attempts).toBe(1);
       expect(results).toEqual([{ status: 'unauthenticated' }]);
+      expect(service.retrying()).toBeFalse();
+    });
+
+    it('marca "tentando de novo" depois da primeira falha passageira e desmarca quando termina', () => {
+      failThenSucceed(503);
+      expect(service.retrying()).toBeFalse();
+
+      service.load().subscribe();
+      expect(service.retrying()).toBeTrue();
+
+      jasmine.clock().tick(1000);
+      expect(service.retrying()).toBeFalse();
+    });
+
+    it('desmarca "tentando de novo" quando desiste e devolve "indisponível"', () => {
+      failThenSucceed(0, 0, 0, 0, 0);
+
+      service.load().subscribe();
+      jasmine.clock().tick(1000 + 2000 + 4000);
+      expect(service.retrying()).toBeTrue();
+
+      jasmine.clock().tick(8000);
+      expect(service.retrying()).toBeFalse();
     });
   });
 

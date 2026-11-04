@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { Observable, of, throwError, timer } from 'rxjs';
 import { catchError, finalize, map, retry, shareReplay } from 'rxjs/operators';
 import { AuthDataService } from '../infrastructure/auth.data.service';
@@ -24,6 +24,11 @@ export class CurrentUserService {
   /** Carregamento em andamento, compartilhado por quem pedir ao mesmo tempo; `null` quando não há. */
   private inFlight$: Observable<CurrentUserLoadResult> | null = null;
 
+  /** Uma falha passageira já aconteceu e o carregamento está esperando ou fazendo uma nova tentativa. */
+  private readonly retryingSignal = signal(false);
+  /** Leitura pública de {@link retryingSignal}: o shell mostra um aviso enquanto a primeira tela espera. */
+  readonly retrying = this.retryingSignal.asReadonly();
+
   /**
    * Busca o usuário logado e grava na sessão. Falha passageira (rede, 429, 5xx) tenta de novo antes de
    * desistir e, se continuar, devolve `unavailable` com o motivo: a sessão pode seguir válida, então
@@ -37,9 +42,11 @@ export class CurrentUserService {
     this.inFlight$ = this.authDataService.getCurrentUser().pipe(
       retry({
         count: CURRENT_USER_RETRY_DELAYS_MS.length,
-        delay: (error: unknown, attempt: number) => isTransientHttpError(error)
-          ? timer(CURRENT_USER_RETRY_DELAYS_MS[attempt - 1])
-          : throwError(() => error)
+        delay: (error: unknown, attempt: number) => {
+          if (!isTransientHttpError(error)) return throwError(() => error);
+          this.retryingSignal.set(true);
+          return timer(CURRENT_USER_RETRY_DELAYS_MS[attempt - 1]);
+        }
       }),
       map((user): CurrentUserLoadResult => {
         this.session.setCurrentUser(user);
@@ -49,7 +56,10 @@ export class CurrentUserService {
         const reason = transientFailureReason(error);
         return of<CurrentUserLoadResult>(reason ? { status: 'unavailable', reason } : { status: 'unauthenticated' });
       }),
-      finalize(() => { this.inFlight$ = null; }),
+      finalize(() => {
+        this.inFlight$ = null;
+        this.retryingSignal.set(false);
+      }),
       shareReplay(1)
     );
 
