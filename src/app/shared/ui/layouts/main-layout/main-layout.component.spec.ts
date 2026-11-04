@@ -17,7 +17,7 @@ describe('MainLayoutComponent', () => {
     }).compileComponents();
   });
 
-  it('abre e fecha o menu off-canvas por botões com nome acessível e aria-expanded', async () => {
+  it('opens and closes the off-canvas menu through buttons with an accessible name and aria-expanded', async () => {
     const fixture = TestBed.createComponent(MainLayoutComponent);
     await fixture.whenStable();
 
@@ -37,7 +37,7 @@ describe('MainLayoutComponent', () => {
     expect(openButton.getAttribute('aria-expanded')).toBe('false');
   });
 
-  describe('gaveta abaixo do xl (teclado e foco)', () => {
+  describe('drawer below xl (keyboard and focus)', () => {
     /** Se a janela está abaixo do xl (gaveta) na simulação do matchMedia. */
     let offCanvas = true;
 
@@ -65,14 +65,14 @@ describe('MainLayoutComponent', () => {
       };
     }
 
-    it('com a gaveta fechada, os controles dela ficam fora do Tab (inert)', async () => {
+    it('with the drawer closed, its controls stay out of the Tab order (inert)', async () => {
       const { menu, page } = await render();
 
       expect(menu.hasAttribute('inert')).toBeTrue();
       expect(page.hasAttribute('inert')).toBeFalse();
     });
 
-    it('ao abrir, o foco entra na gaveta e o resto da página fica inerte', async () => {
+    it('when opened, focus enters the drawer and the rest of the page becomes inert', async () => {
       const { fixture, menu, page, openButton, closeButton } = await render();
 
       openButton.click();
@@ -83,7 +83,7 @@ describe('MainLayoutComponent', () => {
       expect(document.activeElement).toBe(closeButton);
     });
 
-    it('Esc fecha a gaveta e devolve o foco ao botão que a abriu', async () => {
+    it('Esc closes the drawer and returns focus to the button that opened it', async () => {
       const { fixture, menu, page, openButton } = await render();
       openButton.click();
       await fixture.whenStable();
@@ -97,7 +97,7 @@ describe('MainLayoutComponent', () => {
       expect(document.activeElement).toBe(openButton);
     });
 
-    it('o botão "Fechar menu" e a sombra também devolvem o foco ao botão que abriu', async () => {
+    it('the "Fechar menu" button and the backdrop also return focus to the button that opened it', async () => {
       const { fixture, openButton, closeButton, overlay } = await render();
 
       openButton.click();
@@ -121,7 +121,7 @@ describe('MainLayoutComponent', () => {
       ]);
     }
 
-    it('ao escolher um item da gaveta, o foco vai para o título da nova tela', async () => {
+    it('when choosing a drawer item, focus goes to the title of the new screen', async () => {
       useStubRoutes();
       const { fixture, openButton } = await render();
       openButton.click();
@@ -136,7 +136,7 @@ describe('MainLayoutComponent', () => {
       expect(heading.getAttribute('tabindex')).toBe('-1');
     });
 
-    it('escolher o item da tela atual também leva o foco ao título, sem voltar ao topo do documento', async () => {
+    it('choosing the item of the current screen also moves focus to the title, without jumping back to the top of the document', async () => {
       useStubRoutes();
       const { fixture, openButton } = await render();
       await TestBed.inject(Router).navigateByUrl('/dashboard');
@@ -150,7 +150,7 @@ describe('MainLayoutComponent', () => {
       expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.layout-page h1'));
     });
 
-    it('o logo da gaveta também fecha a gaveta e leva o foco ao título do Início', async () => {
+    it('the drawer logo also closes the drawer and moves focus to the title of Início', async () => {
       useStubRoutes();
       const { fixture, openButton } = await render();
       openButton.click();
@@ -163,7 +163,7 @@ describe('MainLayoutComponent', () => {
       expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.layout-page h1'));
     });
 
-    it('clicar fora de um item (num cabeçalho da lista) só fecha a gaveta, sem mover o foco pro conteúdo', async () => {
+    it('clicking outside an item (on a list heading) only closes the drawer, without moving focus to the content', async () => {
       useStubRoutes();
       const { fixture, openButton } = await render();
       openButton.click();
@@ -176,7 +176,7 @@ describe('MainLayoutComponent', () => {
       expect(document.activeElement?.tagName).not.toBe('H1');
     });
 
-    it('com a gaveta aberta, o Tab dá a volta dentro dela e não sai para toasts ou o diálogo global', async () => {
+    it('with the drawer open, Tab wraps around inside it and does not leave for toasts or the global dialog', async () => {
       const { fixture, menu, openButton } = await render();
       openButton.click();
       await fixture.whenStable();
@@ -196,7 +196,7 @@ describe('MainLayoutComponent', () => {
       expect(document.activeElement).toBe(last);
     });
 
-    it('no meio da gaveta o Tab segue o caminho normal (não é interceptado)', async () => {
+    it('in the middle of the drawer, Tab follows the normal path (it is not intercepted)', async () => {
       const { fixture, menu, openButton } = await render();
       openButton.click();
       await fixture.whenStable();
@@ -209,7 +209,7 @@ describe('MainLayoutComponent', () => {
       expect(tab.defaultPrevented).toBeFalse();
     });
 
-    it('no desktop (xl ou maior) o menu fica sempre acessível, sem inert', async () => {
+    it('on desktop (xl or larger) the menu is always accessible, without inert', async () => {
       offCanvas = false;
       const { menu, page } = await render();
 
@@ -220,20 +220,20 @@ describe('MainLayoutComponent', () => {
 });
 
 describe('activeTicketsMenu', () => {
-  it('ativa "Meus Chamados" na lista, no Novo Chamado e no detalhe', () => {
+  it('activates "Meus Chamados" on the list, on Novo Chamado and on the detail', () => {
     expect(activeTicketsMenu('/tickets')).toBe('mine');
     expect(activeTicketsMenu('/tickets?page=2')).toBe('mine');
     expect(activeTicketsMenu('/tickets/novo')).toBe('mine');
     expect(activeTicketsMenu('/tickets/8cc6644c-af6d-4c71-bb70-74d713b42cf0')).toBe('mine');
   });
 
-  it('ativa "Monitorar Chamados" no Monitor e no detalhe aberto a partir dele', () => {
+  it('activates "Monitorar Chamados" on the Monitor and on the detail opened from it', () => {
     expect(activeTicketsMenu('/tickets/monitorar')).toBe('monitor');
     expect(activeTicketsMenu('/tickets/monitorar?status=1')).toBe('monitor');
     expect(activeTicketsMenu('/tickets/t1?from=monitor')).toBe('monitor');
   });
 
-  it('não ativa nenhum item de chamados fora de /chamados', () => {
+  it('does not activate any ticket item outside /chamados', () => {
     expect(activeTicketsMenu('/dashboard')).toBeNull();
     expect(activeTicketsMenu('/usuarios')).toBeNull();
   });

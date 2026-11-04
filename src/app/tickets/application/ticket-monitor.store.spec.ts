@@ -60,7 +60,7 @@ describe('TicketMonitorStore', () => {
     store = TestBed.inject(TicketMonitorStore);
   });
 
-  it('carrega a primeira página de chamados e o resumo de SLA com os filtros padrão', async () => {
+  it('loads the first page of tickets and the SLA summary with the default filters', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
@@ -72,7 +72,7 @@ describe('TicketMonitorStore', () => {
     expect(store.slaSummary()).toEqual(jasmine.objectContaining(slaSummary));
   });
 
-  it('expõe a mensagem de erro quando a listagem falhar', async () => {
+  it('exposes the error message when the listing fails', async () => {
     dataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.load();
@@ -81,7 +81,7 @@ describe('TicketMonitorStore', () => {
     expect(store.listState().error).toBe('Você não tem permissão para monitorar os chamados do sistema.');
   });
 
-  it('expõe a mensagem de erro quando o resumo de SLA falhar, e recarrega ao chamar reloadSlaSummary', async () => {
+  it('exposes the error message when the SLA summary fails, and reloads when calling reloadSlaSummary', async () => {
     dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.load();
@@ -98,7 +98,7 @@ describe('TicketMonitorStore', () => {
     expect(store.slaSummaryState().error).toBeNull();
   });
 
-  it('limpa o erro de atribuição ao chamar clearMutationError', async () => {
+  it('clears the assignment error when calling clearMutationError', async () => {
     dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
     store.assignToMe('t1', 'u1');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -109,7 +109,7 @@ describe('TicketMonitorStore', () => {
     expect(store.mutationError()).toBeNull();
   });
 
-  it('filtra por status e volta pra primeira página', async () => {
+  it('filters by status and goes back to the first page', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     store.goToPage(1);
 
@@ -119,7 +119,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ status: TicketStatus.Open, page: 1 }));
   });
 
-  it('filtra por prioridade', async () => {
+  it('filters by priority', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setPriority(TicketPriority.Urgent);
@@ -128,7 +128,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ priority: TicketPriority.Urgent }));
   });
 
-  it('os números do topo seguem setores (vários), prioridade, responsável e período, como a tabela', async () => {
+  it('the top numbers follow sectors (several), priority, assignee and period, like the table', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setSectorIds(['s1', 's2']);
@@ -144,7 +144,7 @@ describe('TicketMonitorStore', () => {
     });
   });
 
-  it('a busca, o SLA e o Aguardando valem só pra tabela: não refazem os números do topo', async () => {
+  it('the search, the SLA and the Aguardando apply only to the table: they do not redo the top numbers', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     const calls = dataService.getOverview.calls.count();
 
@@ -156,7 +156,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getOverview.calls.count()).toBe(calls);
   });
 
-  it('filtra pelo período de abertura e por "aguardando", voltando pra página 1', async () => {
+  it('filters by opening period and by "aguardando", going back to page 1', async () => {
     store.goToPage(3);
     store.setCreatedRange('2026-10-01', '2026-10-28');
     store.setAwaiting(TicketAwaiting.Agent);
@@ -167,7 +167,7 @@ describe('TicketMonitorStore', () => {
     }));
   });
 
-  it('filtra por situação de SLA', async () => {
+  it('filters by SLA status', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setSlaStatus(TicketSlaStatus.Breached);
@@ -176,7 +176,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ slaStatus: TicketSlaStatus.Breached }));
   });
 
-  it('busca por termo', async () => {
+  it('searches by term', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setSearch('impressora');
@@ -185,7 +185,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ search: 'impressora' }));
   });
 
-  it('filtra só por chamados sem responsável', async () => {
+  it('filters only by tickets without an assignee', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setUnassignedOnly(true);
@@ -194,7 +194,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ unassignedOnly: true, page: 1 }));
   });
 
-  it('filtra pelos chamados de um responsável, desligando "só sem responsável" (e vice-versa)', () => {
+  it('filters by the tickets of one assignee, turning off "só sem responsável" (and vice versa)', () => {
     store.setUnassignedOnly(true);
     store.setAssignedToUserId('u1');
     expect(store.filters()).toEqual(jasmine.objectContaining({ assignedToUserId: 'u1', unassignedOnly: undefined, page: 1 }));
@@ -203,7 +203,7 @@ describe('TicketMonitorStore', () => {
     expect(store.filters()).toEqual(jasmine.objectContaining({ assignedToUserId: undefined, unassignedOnly: true }));
   });
 
-  it('muda a ordenação', async () => {
+  it('changes the sort order', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.setSort(TicketSortOrder.DueDate);
@@ -212,7 +212,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sort: TicketSortOrder.DueDate }));
   });
 
-  it('navega para a página informada', async () => {
+  it('navigates to the given page', async () => {
     dataService.getAll.and.returnValue(of(pageOf([ticket], 1, 45)));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -222,7 +222,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ page: 2 }));
   });
 
-  it('muda o tamanho da página e volta pra primeira', async () => {
+  it('changes the page size and goes back to the first page', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     store.goToPage(2);
 
@@ -232,7 +232,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ pageSize: 50, page: 1 }));
   });
 
-  it('atribui o chamado ao usuário informado e recarrega a listagem', async () => {
+  it('assigns the ticket to the given user and reloads the listing', async () => {
     dataService.assignTicket.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
     dataService.getAll.calls.reset();
@@ -246,7 +246,7 @@ describe('TicketMonitorStore', () => {
     expect(store.assigningToMeIds()).toEqual([]);
   });
 
-  it('marca só o chamado em questão como "atribuindo", sem afetar outros, enquanto a atribuição está em voo', async () => {
+  it('marks only the ticket in question as "atribuindo", without affecting others, while the assignment is in flight', async () => {
     let resolveAssign!: () => void;
     dataService.assignTicket.and.returnValue(new Observable<void>(subscriber => {
       resolveAssign = () => { subscriber.next(); subscriber.complete(); };
@@ -263,7 +263,7 @@ describe('TicketMonitorStore', () => {
     expect(store.assigningToMeIds()).toEqual([]);
   });
 
-  it('mostra uma mensagem específica por código de erro ao falhar a atribuição, sem recarregar a listagem', async () => {
+  it('shows a specific message per error code when the assignment fails, without reloading the listing', async () => {
     dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
     await TestBed.inject(ApplicationRef).whenStable();
     dataService.getAll.calls.reset();
@@ -276,7 +276,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
-  it('chama onSuccess depois de recarregar a listagem, ao atribuir com sucesso', async () => {
+  it('calls onSuccess after reloading the listing, on a successful assignment', async () => {
     dataService.assignTicket.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
     const onSuccess = jasmine.createSpy('onSuccess');
@@ -287,14 +287,14 @@ describe('TicketMonitorStore', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('não busca candidatos a responsável com o termo vazio', () => {
+  it('does not search for assignee candidates with an empty term', () => {
     store.searchResponsibleCandidates('');
 
     expect(dataService.getAssignees).not.toHaveBeenCalled();
     expect(store.responsibleCandidates()).toEqual([]);
   });
 
-  it('busca candidatos a responsável pelo termo informado', async () => {
+  it('searches for assignee candidates by the given term', async () => {
     store.searchResponsibleCandidates('joão');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -302,7 +302,7 @@ describe('TicketMonitorStore', () => {
     expect(store.responsibleCandidates()).toEqual([candidate]);
   });
 
-  it('mostra mensagem própria quando a busca de responsáveis é negada (403)', async () => {
+  it('shows its own message when the assignee search is denied (403)', async () => {
     dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.searchResponsibleCandidates('joão');
@@ -312,7 +312,7 @@ describe('TicketMonitorStore', () => {
     expect(store.responsibleCandidates()).toEqual([]);
   });
 
-  it('limpa a busca de candidatos a responsável', () => {
+  it('clears the assignee candidate search', () => {
     store.searchResponsibleCandidates('joão');
     store.clearResponsibleSearch();
 
@@ -320,7 +320,7 @@ describe('TicketMonitorStore', () => {
     expect(store.responsibleSearchError()).toBeNull();
   });
 
-  it('atribui o responsável escolhido, recarrega a listagem e chama onSuccess', async () => {
+  it('assigns the chosen assignee, reloads the listing and calls onSuccess', async () => {
     dataService.assignTicket.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
     dataService.getAll.calls.reset();
@@ -336,7 +336,7 @@ describe('TicketMonitorStore', () => {
     expect(store.mutationError()).toBeNull();
   });
 
-  it('mostra uma mensagem específica por código de erro ao falhar a atribuição de responsável, sem recarregar a listagem', async () => {
+  it('shows a specific message per error code when the assignee assignment fails, without reloading the listing', async () => {
     dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
     await TestBed.inject(ApplicationRef).whenStable();
     dataService.getAll.calls.reset();
@@ -349,7 +349,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
-  it('limpa os filtros, voltando ao estado padrão', async () => {
+  it('clears the filters, going back to the default state', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     store.setStatus(TicketStatus.Open);
     store.setSearch('impressora');
@@ -360,7 +360,7 @@ describe('TicketMonitorStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith({ activeOnly: true, sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
   });
 
-  it('marca a hora em que a lista chegou ("Atualizado às"), e nenhuma antes da primeira carga', async () => {
+  it('records the time the list arrived ("Atualizado às"), and none before the first load', async () => {
     expect(store.listLoadedAtMs()).toBeNull();
     const before = Date.now();
 
@@ -369,7 +369,7 @@ describe('TicketMonitorStore', () => {
     expect(store.listLoadedAtMs()).toBeGreaterThanOrEqual(before);
   });
 
-  it('ao limpar os filtros, mantém o setor (escopo da tela) e o "Por página"', async () => {
+  it('when clearing the filters, keeps the sector (screen scope) and the "Por página"', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     store.setSectorIds(['s1']);
     store.setPageSize(50);

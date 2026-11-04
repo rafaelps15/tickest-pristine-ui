@@ -17,7 +17,7 @@ describe('ActivateAccountStore', () => {
     store = TestBed.inject(ActivateAccountStore);
   });
 
-  it('ativa a conta com o token e a senha escolhida', async () => {
+  it('activates the account with the token and the chosen password', async () => {
     authDataService.activateAccount.and.returnValue(of(undefined));
 
     store.activate('tok-123', 'Senha@123');
@@ -28,7 +28,7 @@ describe('ActivateAccountStore', () => {
     expect(store.loading()).toBeFalse();
   });
 
-  it('troca o formulário pela orientação de novo convite quando o link é inválido ou expirou', async () => {
+  it('swaps the form for new-invitation guidance when the link is invalid or expired', async () => {
     authDataService.activateAccount.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 400, error: { title: 'Users.InvalidActivationToken' }
     })));
@@ -41,7 +41,7 @@ describe('ActivateAccountStore', () => {
     expect(store.error()).toBeNull();
   });
 
-  it('mantém o formulário com uma mensagem quando é limite de tentativas', async () => {
+  it('keeps the form with a message when it is a rate limit', async () => {
     authDataService.activateAccount.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
 
     store.activate('tok-123', 'Senha@123');
@@ -51,7 +51,7 @@ describe('ActivateAccountStore', () => {
     expect(store.error()).toBe('Muitas tentativas seguidas. Espere um minuto e tente de novo.');
   });
 
-  it('mantém o formulário com uma mensagem quando não há conexão', async () => {
+  it('keeps the form with a message when there is no connection', async () => {
     authDataService.activateAccount.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
 
     store.activate('tok-123', 'Senha@123');
@@ -60,7 +60,7 @@ describe('ActivateAccountStore', () => {
     expect(store.error()).toBe('Sem conexão com o servidor. Tente de novo em instantes.');
   });
 
-  it('marca o link como inválido sem chamar a API', () => {
+  it('marks the link as invalid without calling the API', () => {
     store.markInvalidLink();
 
     expect(store.invalidLink()).toBeTrue();

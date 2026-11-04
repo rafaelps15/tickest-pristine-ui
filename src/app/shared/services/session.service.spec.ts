@@ -31,7 +31,7 @@ describe('SessionService', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('deve adotar os tokens renovados por outra aba', () => {
+  it('should adopt the tokens renewed by another tab', () => {
     service.saveSession({ accessToken: 'a.b.c', refreshToken: 'antigo' });
 
     window.dispatchEvent(new StorageEvent('storage', { key: 'refresh_token', newValue: 'novo', storageArea: localStorage }));
@@ -41,7 +41,7 @@ describe('SessionService', () => {
     expect(service.token()).toBe('d.e.f');
   });
 
-  it('deve encerrar a sessão quando outra aba remove o token de acesso', () => {
+  it('should end the session when another tab removes the access token', () => {
     service.saveSession({ accessToken: 'a.b.c', refreshToken: 'r' });
     service.setCurrentUser(user);
 
@@ -51,7 +51,7 @@ describe('SessionService', () => {
     expect(service.currentUser()).toBeNull();
   });
 
-  it('deve recarregar a aplicação quando outra aba entra com outra conta', () => {
+  it('should reload the application when another tab signs in with another account', () => {
     const reload = spyOn<any>(service, 'reloadForAccountSwitch');
     service.saveSession({ accessToken: jwtFor('user-1'), refreshToken: 'r' });
     service.setCurrentUser(user);
@@ -63,7 +63,7 @@ describe('SessionService', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('não deve recarregar quando outra aba só renova o token da mesma conta', () => {
+  it('should not reload when another tab only renews the token of the same account', () => {
     const reload = spyOn<any>(service, 'reloadForAccountSwitch');
     service.saveSession({ accessToken: jwtFor('user-1'), refreshToken: 'r' });
     service.setCurrentUser(user);
@@ -74,7 +74,7 @@ describe('SessionService', () => {
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it('deve ignorar eventos de storage de outras chaves', () => {
+  it('should ignore storage events for other keys', () => {
     service.saveSession({ accessToken: 'a.b.c', refreshToken: 'r' });
 
     window.dispatchEvent(new StorageEvent('storage', { key: 'tickest.outra', newValue: 'x', storageArea: localStorage }));
@@ -83,12 +83,12 @@ describe('SessionService', () => {
     expect(service.refreshToken()).toBe('r');
   });
 
-  it('não deve ter permissões antes de setCurrentUser ser chamado', () => {
+  it('should not have permissions before setCurrentUser is called', () => {
     expect(service.hasPermission('users:read')).toBeFalse();
     expect(service.currentUser()).toBeNull();
   });
 
-  it('deve expor as permissões recebidas via setCurrentUser (GET /users/me), não via claim do JWT', () => {
+  it('should expose the permissions received via setCurrentUser (GET /users/me), not via a JWT claim', () => {
     service.setCurrentUser(user);
 
     expect(service.currentUser()).toEqual(user);
@@ -96,7 +96,7 @@ describe('SessionService', () => {
     expect(service.hasPermission('users:delete')).toBeFalse();
   });
 
-  it('deve limpar o usuário logado e as permissões ao limpar a sessão', () => {
+  it('should clear the logged-in user and the permissions when the session is cleared', () => {
     service.setCurrentUser(user);
     service.clearSession();
 
@@ -106,7 +106,7 @@ describe('SessionService', () => {
     expect(service.isAuthenticated()).toBeFalse();
   });
 
-  it('deve salvar e limpar os tokens no local storage', () => {
+  it('should save and clear the tokens in local storage', () => {
     service.saveSession({ accessToken: 'header.eyJzdWIiOiJ1c2VyLTEifQ.sig', refreshToken: 'refresh-token' });
 
     expect(service.token()).toBe('header.eyJzdWIiOiJ1c2VyLTEifQ.sig');

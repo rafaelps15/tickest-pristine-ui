@@ -3,15 +3,15 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { PaginationComponent, pageWindow } from './pagination.component';
 
 describe('pageWindow', () => {
-  it('lista todas as páginas quando são até 7', () => {
+  it('lists all pages when there are up to 7', () => {
     expect(pageWindow(3, 5)).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it('usa reticências nos saltos quando há muitas páginas', () => {
+  it('uses an ellipsis at the jumps when there are many pages', () => {
     expect(pageWindow(25, 50)).toEqual([1, '…', 24, 25, 26, '…', 50]);
   });
 
-  it('não repete reticências nas pontas', () => {
+  it('does not repeat the ellipsis at the ends', () => {
     expect(pageWindow(1, 50)).toEqual([1, 2, '…', 50]);
     expect(pageWindow(50, 50)).toEqual([1, '…', 49, 50]);
   });
@@ -43,29 +43,29 @@ describe('PaginationComponent', () => {
     return Array.from(fixture.nativeElement.querySelectorAll('button')).find(b => b.textContent?.trim() === text);
   }
 
-  it('mostra o intervalo exibido com o nome dos itens', async () => {
+  it('shows the displayed range with the item name', async () => {
     const fixture = await create({ page: 2 });
     expect(fixture.nativeElement.textContent).toContain('Exibindo 21–40 de 45 chamados');
   });
 
-  it('mostra 0–0 quando não há itens', async () => {
+  it('shows 0–0 when there are no items', async () => {
     const fixture = await create({ total: 0, totalPages: 0 });
     expect(fixture.nativeElement.textContent).toContain('Exibindo 0–0 de 0 chamados');
   });
 
-  it('esconde os controles de página quando há só uma página, mas mantém o "Por página"', async () => {
+  it('hides the page controls when there is only one page, but keeps "Por página"', async () => {
     const fixture = await create({ totalPages: 1 });
     expect(fixture.nativeElement.querySelector('nav')).toBeNull();
     expect(fixture.nativeElement.querySelector('select')).not.toBeNull();
   });
 
-  it('marca a página atual com aria-current', async () => {
+  it('marks the current page with aria-current', async () => {
     const fixture = await create();
     expect(button(fixture, '1')?.getAttribute('aria-current')).toBe('page');
     expect(button(fixture, '2')?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('pede a página clicada, a anterior e a próxima', async () => {
+  it('requests the clicked page, the previous and the next', async () => {
     const fixture = await create({ page: 2 });
     const emitted: number[] = [];
     fixture.componentInstance.pageChange.subscribe(page => emitted.push(page));
@@ -77,7 +77,7 @@ describe('PaginationComponent', () => {
     expect(emitted).toEqual([3, 1, 3]);
   });
 
-  it('desabilita Anterior na primeira página, Próxima na última, e ambos enquanto carrega', async () => {
+  it('disables Anterior on the first page, Próxima on the last, and both while loading', async () => {
     const first = await create({ page: 1 });
     expect(button(first, 'Anterior')?.disabled).toBeTrue();
     expect(button(first, 'Próxima')?.disabled).toBeFalse();
@@ -90,7 +90,7 @@ describe('PaginationComponent', () => {
     expect(button(loading, 'Próxima')?.disabled).toBeTrue();
   });
 
-  it('pede a troca da quantidade por página, ligando o rótulo ao seletor', async () => {
+  it('requests the change of items per page, linking the label to the selector', async () => {
     const fixture = await create();
     const emitted: number[] = [];
     fixture.componentInstance.pageSizeChange.subscribe(size => emitted.push(size));

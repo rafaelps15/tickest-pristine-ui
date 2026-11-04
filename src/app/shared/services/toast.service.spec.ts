@@ -13,7 +13,7 @@ describe('ToastService', () => {
 
   afterEach(() => jasmine.clock().uninstall());
 
-  it('mostra um toast e o fecha sozinho depois de 4s', () => {
+  it('shows a toast and closes it by itself after 4s', () => {
     service.show('Salvo.');
     expect(service.toasts().length).toBe(1);
 
@@ -21,7 +21,7 @@ describe('ToastService', () => {
     expect(service.toasts().length).toBe(0);
   });
 
-  it('dá o dobro do tempo a um toast com ação, pra dar tempo de alcançar o botão', () => {
+  it('gives double the time to a toast with an action, so there is time to reach the button', () => {
     service.show('Desativado.', 'success', { label: 'Desfazer', run: () => undefined });
 
     jasmine.clock().tick(4001);
@@ -31,7 +31,7 @@ describe('ToastService', () => {
     expect(service.toasts().length).toBe(0);
   });
 
-  it('roda a ação e fecha o toast', () => {
+  it('runs the action and closes the toast', () => {
     const run = jasmine.createSpy('run');
     service.show('Desativado.', 'success', { label: 'Desfazer', run });
     const id = service.toasts()[0].id;
@@ -42,7 +42,7 @@ describe('ToastService', () => {
     expect(service.toasts().length).toBe(0);
   });
 
-  it('fecha o toast antes do tempo ao dispensar', () => {
+  it('closes the toast early when dismissed', () => {
     service.show('Salvo.');
 
     service.dismiss(service.toasts()[0].id);

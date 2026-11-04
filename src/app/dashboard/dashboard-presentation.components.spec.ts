@@ -7,7 +7,7 @@ import { DashboardKpi, DashboardKpiStripComponent } from './dashboard-kpi-strip.
 import { DashboardHeroChartComponent, edgeColor } from './dashboard-hero-chart.component';
 import { statusComposition } from './dashboard-overview';
 
-describe('componentes de apresentação do Início', () => {
+describe('presentation components of Início', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DashboardStatusCompositionComponent, DashboardNoticeComponent, DashboardHeroChartComponent, DashboardKpiStripComponent],
@@ -16,7 +16,7 @@ describe('componentes de apresentação do Início', () => {
   });
 
   describe('DashboardStatusCompositionComponent', () => {
-    it('não desenha fatia pra status sem chamado (a largura mínima mentiria), mas mantém o zero na descrição', async () => {
+    it('does not draw a slice for a status with no tickets (the minimum width would lie), but keeps the zero in the description', async () => {
       const fixture = TestBed.createComponent(DashboardStatusCompositionComponent);
       fixture.componentRef.setInput('composition', statusComposition({ totalCount: 5, openCount: 5, inProgressCount: 0, resolvedCount: 0, closedCount: 0, canceledCount: 0 }));
       await fixture.whenStable();
@@ -26,7 +26,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.textContent).not.toContain('cancelado');
     });
 
-    it('sem chamado na barra (só cancelados), diz isso em texto em vez de uma barra vazia', async () => {
+    it('with no tickets in the bar (only cancelled), says so in text instead of an empty bar', async () => {
       const fixture = TestBed.createComponent(DashboardStatusCompositionComponent);
       fixture.componentRef.setInput('composition', statusComposition({ totalCount: 3, openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, canceledCount: 3 }));
       await fixture.whenStable();
@@ -36,7 +36,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.textContent).toContain('+ 3 cancelados');
     });
 
-    it('sem destino, a fatia é texto com nome acessível, não link', async () => {
+    it('with no destination, the slice is text with an accessible name, not a link', async () => {
       const fixture = TestBed.createComponent(DashboardStatusCompositionComponent);
       fixture.componentRef.setInput('composition', statusComposition({ totalCount: 2, openCount: 1, inProgressCount: 1, resolvedCount: 0, closedCount: 0, canceledCount: 0 }));
       await fixture.whenStable();
@@ -45,7 +45,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.querySelector('.composition-segment [role="img"]').getAttribute('aria-label')).toBe('Abertos: 1 chamados, 50%');
     });
 
-    it('com destino e aviso de visibilidade, o nome acessível diz quantos a pessoa vê', async () => {
+    it('with a destination and a visibility notice, the accessible name says how many the person sees', async () => {
       const fixture = TestBed.createComponent(DashboardStatusCompositionComponent);
       fixture.componentRef.setInput('composition', statusComposition({ totalCount: 340, openCount: 340, inProgressCount: 0, resolvedCount: 0, closedCount: 0, canceledCount: 0 }));
       const link = { route: '/tickets', queryParams: {}, note: 'Você tem acesso a 12 dos 340 chamados' };
@@ -57,7 +57,7 @@ describe('componentes de apresentação do Início', () => {
   });
 
   describe('DashboardNoticeComponent', () => {
-    it('"em breve": texto neutro, sem botão nem papel de alerta', async () => {
+    it('"em breve": neutral text, with no button or alert role', async () => {
       const fixture = TestBed.createComponent(DashboardNoticeComponent);
       fixture.componentRef.setInput('text', 'Disponível em breve.');
       await fixture.whenStable();
@@ -67,7 +67,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.querySelector('.text-danger, .alert-danger')).toBeNull();
     });
 
-    it('erro: anuncia e o "Tentar novamente" avisa quem usa', async () => {
+    it('error: announces it and the "Tentar novamente" warns whoever uses it', async () => {
       const fixture = TestBed.createComponent(DashboardNoticeComponent);
       fixture.componentRef.setInput('kind', 'error');
       fixture.componentRef.setInput('text', 'Falhou.');
@@ -81,13 +81,13 @@ describe('componentes de apresentação do Início', () => {
   });
 
   describe('DashboardHeroChartComponent', () => {
-    it('contorno das barras: o mesmo matiz escurecido (≥3:1 contra o branco), sem trocar a cor', () => {
+    it('bar outline: the same darkened hue (≥3:1 against white), without changing the color', () => {
       expect(edgeColor('#ffab00')).toBe('rgb(140, 94, 0)');
       expect(edgeColor('#03c3ec')).toBe('rgb(2, 107, 130)');
       expect(edgeColor('rgb(1, 2, 3)')).toBe('rgb(1, 2, 3)');
     });
 
-    it('um agrupamento que não cabe no período fica indisponível, diz o motivo e não troca', async () => {
+    it('a grouping that does not fit the period becomes unavailable, says the reason and does not switch', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('groupBy', 'Week');
       fixture.componentRef.setInput('unavailableGroupings', ['Day']);
@@ -103,7 +103,7 @@ describe('componentes de apresentação do Início', () => {
       expect(chosen).toEqual(['Month']);
     });
 
-    it('cada parte indisponível vira "em breve", sem esqueleto e sem repetir o "em breve" dos resolvidos no rodapé', async () => {
+    it('each unavailable part becomes "em breve", with no skeleton and without repeating the "em breve" of the resolved ones in the footer', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('compositionState', 'unavailable');
       fixture.componentRef.setInput('flowState', 'unavailable');
@@ -116,7 +116,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('Resolvidos por período');
     });
 
-    it('carregando: esqueletos com a altura final, anunciados ao leitor de tela', async () => {
+    it('loading: skeletons with the final height, announced to the screen reader', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       await fixture.whenStable();
 
@@ -124,7 +124,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.querySelector('.flow-chart .skeleton-block')).not.toBeNull();
     });
 
-    it('com os resolvidos (spec 028), a tabela ganha a coluna e a nota de "em breve" some', async () => {
+    it('with the resolved ones (spec 028), the table gains the column and the "em breve" note goes away', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('flowState', 'ready');
       fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]);
@@ -137,7 +137,7 @@ describe('componentes de apresentação do Início', () => {
       expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('Resolvidos por período');
     });
 
-    it('com a série de resolvidos desligada, mostra só os criados mesmo que a resposta traga resolvedCount', async () => {
+    it('with the resolved series turned off, shows only the created ones even if the response brings resolvedCount', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('flowState', 'ready');
       fixture.componentRef.setInput('resolvedEnabled', false);
@@ -163,7 +163,7 @@ describe('componentes de apresentação do Início', () => {
     }
     const link = { route: '/tickets/monitorar', queryParams: { status: 2 } };
 
-    it('card com destino mostra a pista de clique; sem destino, não', async () => {
+    it('a card with a destination shows the click hint; without a destination, it does not', async () => {
       const fixture = await strip([
         { key: 'a', label: 'Em andamento', value: 3, link },
         { key: 'b', label: 'Total', value: 9, link: null }
@@ -174,12 +174,12 @@ describe('componentes de apresentação do Início', () => {
       expect(cards[0].querySelector('a').getAttribute('aria-label')).toBe('Em andamento: 3. Ver a lista');
     });
 
-    it('o apoio entra no nome acessível (no toque e no leitor de tela não existe title)', async () => {
+    it('the support text goes into the accessible name (on touch and screen readers there is no title)', async () => {
       const fixture = await strip([{ key: 'a', label: 'Na fila', value: 5, hint: 'abertos e em andamento', link }]);
       expect(fixture.nativeElement.querySelector('.kpi-card a').getAttribute('aria-label')).toBe('Na fila: 5 (abertos e em andamento). Ver a lista');
     });
 
-    it('risco em vermelho só acima de zero', async () => {
+    it('risk in red only above zero', async () => {
       const fixture = await strip([
         { key: 'a', label: 'Atrasados', value: 4, risk: 'danger', link },
         { key: 'b', label: 'Atrasados', value: 0, risk: 'danger', link }
@@ -189,7 +189,7 @@ describe('componentes de apresentação do Início', () => {
       expect(values[1].classList).not.toContain('kpi-risk');
     });
 
-    it('um indicador de outra fonte carrega sozinho, sem link nem número inventado', async () => {
+    it('an indicator from another source loads on its own, with no link and no made-up number', async () => {
       const fixture = await strip([{ key: 'a', label: 'Atrasados', value: null, loading: true, link }]);
       const card = fixture.nativeElement.querySelector('.kpi-card');
       expect(card.querySelector('.kpi-skeleton')).not.toBeNull();
@@ -197,7 +197,7 @@ describe('componentes de apresentação do Início', () => {
       expect(card.classList).not.toContain('kpi-linked');
     });
 
-    it('erro da fonte: um aviso neutro só, com "Tentar novamente"', async () => {
+    it('source error: a single neutral notice, with "Tentar novamente"', async () => {
       const fixture = await strip([{ key: 'a', label: 'Total', value: null, link: null }], 'error');
       let retried = false;
       fixture.componentInstance.retry.subscribe(() => (retried = true));
@@ -207,8 +207,8 @@ describe('componentes de apresentação do Início', () => {
     });
   });
 
-  describe('DashboardHeroChartComponent — erro dos totais já avisado nos indicadores', () => {
-    it('a composição diz que está indisponível, sem um segundo alerta', async () => {
+  describe('DashboardHeroChartComponent — totals error already announced in the indicators', () => {
+    it('the composition says it is unavailable, without a second alert', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('compositionState', 'error');
       fixture.componentRef.setInput('flowState', 'unavailable');
@@ -219,7 +219,7 @@ describe('componentes de apresentação do Início', () => {
       expect(composition.querySelector('[role="alert"]')).toBeNull();
     });
 
-    it('a tabela ajusta o colspan das linhas de estado às colunas que existem', async () => {
+    it('the table adjusts the colspan of the state rows to the columns that exist', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('flowState', 'empty');
       await fixture.whenStable();
@@ -229,7 +229,7 @@ describe('componentes de apresentação do Início', () => {
     });
   });
 
-  describe('DashboardHeroChartComponent — teclado e referências do gráfico', () => {
+  describe('DashboardHeroChartComponent — keyboard and chart references', () => {
     /** Três dias (sexta, sábado e domingo) com o drill-down ligado. */
     async function heroWithPoints() {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
@@ -255,14 +255,14 @@ describe('componentes de apresentação do Início', () => {
     const announced = (fixture: { nativeElement: HTMLElement }) =>
       Array.from(fixture.nativeElement.querySelectorAll('[aria-live="polite"]') as NodeListOf<HTMLElement>).map(el => el.textContent?.trim()).join(' | ');
 
-    it('a área do gráfico entra na ordem do Tab e diz como navegar', async () => {
+    it('the chart area enters the Tab order and says how to navigate', async () => {
       const fixture = await heroWithPoints();
       const area = fixture.nativeElement.querySelector('.chart-focus') as HTMLElement;
       expect(area.getAttribute('tabindex')).toBe('0');
       expect(area.getAttribute('aria-label')).toBe('Gráfico de chamados criados por período. Use as setas pra percorrer os períodos e Enter pra abrir a lista do período.');
     });
 
-    it('setas, Home e End andam pelos períodos e anunciam cada um; Esc tira o destaque', async () => {
+    it('arrows, Home and End walk through the periods and announce each one; Esc removes the highlight', async () => {
       const fixture = await heroWithPoints();
 
       expect(press(fixture, 'ArrowRight').defaultPrevented).toBeTrue();
@@ -286,7 +286,7 @@ describe('componentes de apresentação do Início', () => {
       expect(announced(fixture)).not.toContain('sexta, 23/10/2026');
     });
 
-    it('Enter abre a lista do período destacado', async () => {
+    it('Enter opens the list of the highlighted period', async () => {
       const fixture = await heroWithPoints();
       const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
 
@@ -298,18 +298,18 @@ describe('componentes de apresentação do Início', () => {
       expect(navigate).toHaveBeenCalledWith(['/tickets/monitorar'], { queryParams: { createdFrom: '2026-10-25', createdTo: '2026-10-25' } });
     });
 
-    it('outras teclas não são capturadas (Tab continua saindo do gráfico)', async () => {
+    it('other keys are not captured (Tab still leaves the chart)', async () => {
       const fixture = await heroWithPoints();
       expect(press(fixture, 'Tab').defaultPrevented).toBeFalse();
     });
 
-    it('o rodapé explica o tracejado da média e as faixas de fim de semana', async () => {
+    it('the footer explains the dashed average line and the weekend bands', async () => {
       const fixture = await heroWithPoints();
       const footnote = fixture.nativeElement.querySelector('.hero-footnote').textContent;
       expect(footnote).toContain('Tracejado: média dos períodos completos; faixas claras: sábados e domingos');
     });
 
-    it('sem base pra média (menos de dois períodos completos), o rodapé não fala dela', async () => {
+    it('with no basis for the average (fewer than two complete periods), the footer does not mention it', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('flowState', 'ready');
       fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3 }, { periodStart: '2026-10-28', count: 1 }]);
@@ -318,7 +318,7 @@ describe('componentes de apresentação do Início', () => {
     });
   });
 
-  describe('DashboardHeroChartComponent — série de resolvidos desligada, com o gráfico desenhado de verdade', () => {
+  describe('DashboardHeroChartComponent — resolved series turned off, with the chart actually drawn', () => {
     /** Três dias com poucos criados e muitos resolvidos (a escala denunciaria a série escondida). */
     const points = [
       { periodStart: '2026-10-26', count: 2, resolvedCount: 40 },
@@ -345,21 +345,21 @@ describe('componentes de apresentação do Início', () => {
 
     afterEach(() => document.querySelectorAll('app-dashboard-hero-chart').forEach(element => element.remove()));
 
-    it('desligada: uma série só, sem legenda, e a escala segue só os criados', async () => {
+    it('off: a single series, no legend, and the scale follows only the created ones', async () => {
       const { chart } = await drawn(false);
       expect(chart.data.datasets.map(dataset => dataset.label)).toEqual(['Criados']);
       expect(chart.options.plugins?.legend?.display).toBeFalse();
       expect(chart.scales['y'].max).toBeLessThan(10);
     });
 
-    it('ligada: as duas séries, com legenda, e a escala cobre os resolvidos (comportamento de antes)', async () => {
+    it('on: both series, with legend, and the scale covers the resolved ones (previous behavior)', async () => {
       const { chart } = await drawn(true);
       expect(chart.data.datasets.map(dataset => dataset.label)).toEqual(['Criados', 'Resolvidos']);
       expect(chart.options.plugins?.legend?.display).toBeTrue();
       expect(chart.scales['y'].max).toBeGreaterThanOrEqual(50);
     });
 
-    it('desligada: Tab chega na área do gráfico, as setas destacam só a barra de criados e o anúncio não cita resolvidos; Enter abre a lista', async () => {
+    it('off: Tab reaches the chart area, the arrows highlight only the created bar and the announcement does not mention resolved ones; Enter opens the list', async () => {
       const { fixture, chart } = await drawn(false);
       const area = fixture.nativeElement.querySelector('.chart-focus') as HTMLElement;
       expect(area.tabIndex).toBe(0);

@@ -16,7 +16,7 @@ describe('DepartmentGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explica o que a tela não diz sozinha: filtros do Resumo, busca, regra de exclusão e responsável', async () => {
+  it('explains what the screen does not say on its own: Resumo filters, search, deletion rule and assignee', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 
@@ -32,7 +32,7 @@ describe('DepartmentGuideComponent', () => {
     expect(text).not.toContain('Departamento e setor');
   });
 
-  it('começa fechado até na primeira visita (exceção do DESIGN.md) e lembra quando o usuário abre', async () => {
+  it('starts closed even on the first visit (DESIGN.md exception) and remembers when the user opens it', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 

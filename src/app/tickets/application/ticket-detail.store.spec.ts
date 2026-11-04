@@ -66,11 +66,11 @@ describe('TicketDetailStore', () => {
     store = TestBed.inject(TicketDetailStore);
   });
 
-  it('não chama a API antes de um chamado ser definido', () => {
+  it('does not call the API before a ticket is set', () => {
     expect(dataService.getById).not.toHaveBeenCalled();
   });
 
-  it('carrega o detalhe do chamado informado', async () => {
+  it('loads the detail of the given ticket', async () => {
     store.loadTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -78,7 +78,7 @@ describe('TicketDetailStore', () => {
     expect(store.ticket()).toEqual(ticket);
   });
 
-  it('expõe mensagem própria quando o chamado não existe (404)', async () => {
+  it('exposes a specific message when the ticket does not exist (404)', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
     store.loadTicket('t1');
@@ -87,7 +87,7 @@ describe('TicketDetailStore', () => {
     expect(store.state().error).toBe('Não encontramos esse chamado — ele pode ter sido removido.');
   });
 
-  it('expõe mensagem própria quando o usuário não tem acesso (403)', async () => {
+  it('exposes a specific message when the user has no access (403)', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.loadTicket('t1');
@@ -102,7 +102,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('remove o responsável, recarrega o detalhe e chama onSuccess', async () => {
+    it('removes the assignee, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
       store.removeAssignee('t1', onSuccess);
@@ -114,7 +114,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando o chamado não está ativo (400 Chamados.NotActive)', async () => {
+    it('exposes a specific message when the ticket is not active (400 Chamados.NotActive)', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({
         status: 400, error: { title: 'Tickets.NotActive', detail: 'O chamado não está ativo.' }
       })));
@@ -125,7 +125,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('O chamado não está ativo.');
     });
 
-    it('expõe mensagem própria quando falta permissão (403)', async () => {
+    it('exposes a specific message when permission is missing (403)', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.removeAssignee('t1');
@@ -134,7 +134,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Você não tem permissão para remover o responsável deste chamado.');
     });
 
-    it('expõe mensagem própria quando o chamado não é encontrado (404)', async () => {
+    it('exposes a specific message when the ticket is not found (404)', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
       store.removeAssignee('t1');
@@ -143,7 +143,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Chamado não encontrado — ele pode ter sido removido.');
     });
 
-    it('expõe mensagem própria em conflito (409)', async () => {
+    it('exposes a specific message on conflict (409)', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
 
       store.removeAssignee('t1');
@@ -152,7 +152,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Não foi possível remover o responsável — tente novamente.');
     });
 
-    it('volta removingAssignee pra false depois do erro', async () => {
+    it('sets removingAssignee back to false after the error', async () => {
       dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.removeAssignee('t1');
@@ -168,7 +168,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('atribui o responsável, recarrega o detalhe e chama onSuccess', async () => {
+    it('assigns the assignee, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
       store.assignTicket('t1', 'u2', onSuccess);
@@ -180,7 +180,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando o chamado não está ativo (400 Chamados.NotActive)', async () => {
+    it('exposes a specific message when the ticket is not active (400 Chamados.NotActive)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({
         status: 400, error: { title: 'Tickets.NotActive', detail: 'O chamado não está ativo.' }
       })));
@@ -191,7 +191,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('O chamado não está ativo.');
     });
 
-    it('expõe a mensagem do back-end com uma dica de ação quando o candidato não pode gerenciar chamados (400 Chamados.AssigneeCannotManageTickets)', async () => {
+    it('exposes the back-end message with an action hint when the candidate cannot manage tickets (400 Chamados.AssigneeCannotManageTickets)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({
         status: 400, error: { title: 'Tickets.AssigneeCannotManageTickets', detail: 'O usuário não atende chamados e não pode ser o responsável.' }
       })));
@@ -202,7 +202,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('O usuário não atende chamados e não pode ser o responsável. Escolha outro usuário na lista.');
     });
 
-    it('expõe mensagem própria quando falta permissão (403)', async () => {
+    it('exposes a specific message when permission is missing (403)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.assignTicket('t1', 'u2');
@@ -211,7 +211,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Você não tem permissão para atribuir o responsável deste chamado.');
     });
 
-    it('expõe mensagem própria quando o chamado ou o usuário não é encontrado (404)', async () => {
+    it('exposes a specific message when the ticket or the user is not found (404)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
       store.assignTicket('t1', 'u2');
@@ -220,7 +220,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Chamado ou usuário não encontrado.');
     });
 
-    it('volta assigningTicket pra false depois do erro', async () => {
+    it('sets assigningTicket back to false after the error', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.assignTicket('t1', 'u2');
@@ -236,7 +236,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('muda o status, recarrega o detalhe e chama onSuccess', async () => {
+    it('changes the status, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
       store.updateStatus('t1', TicketStatus.InProgress, 'Não imprime.', onSuccess);
@@ -248,7 +248,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando falta permissão (403)', async () => {
+    it('exposes a specific message when permission is missing (403)', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.updateStatus('t1', TicketStatus.Resolved, 'Não imprime.');
@@ -257,7 +257,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Você não tem permissão para mudar o status deste chamado.');
     });
 
-    it('volta updatingStatus pra false depois do erro', async () => {
+    it('sets updatingStatus back to false after the error', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.updateStatus('t1', TicketStatus.Resolved, 'Não imprime.');
@@ -273,7 +273,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('atualiza a descrição mantendo o status, recarrega o detalhe e chama onSuccess', async () => {
+    it('updates the description keeping the status, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
       store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open, onSuccess);
@@ -285,7 +285,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando falta permissão (403)', async () => {
+    it('exposes a specific message when permission is missing (403)', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open);
@@ -294,7 +294,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Você não tem permissão para editar este chamado.');
     });
 
-    it('volta updatingDescription pra false depois do erro', async () => {
+    it('sets updatingDescription back to false after the error', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open);
@@ -310,7 +310,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('reabre o chamado, recarrega o detalhe e chama onSuccess', async () => {
+    it('reopens the ticket, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
       store.reopen('t1', null, onSuccess);
@@ -322,7 +322,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBeNull();
     });
 
-    it('expõe mensagem própria quando falta permissão (403)', async () => {
+    it('exposes a specific message when permission is missing (403)', async () => {
       dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.reopen('t1', null);
@@ -331,7 +331,7 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('Você não tem permissão para reabrir este chamado.');
     });
 
-    it('volta reopening pra false depois do erro', async () => {
+    it('sets reopening back to false after the error', async () => {
       dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.reopen('t1', null);
@@ -349,11 +349,11 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('expõe o sla que já vem no detalhe do chamado', () => {
+    it('exposes the sla that already comes in the ticket detail', () => {
       expect(store.sla()).toEqual(sla);
     });
 
-    it('atualiza o sla ao chamar refreshSla() — ex.: avisada por outra store depois de publicar uma mensagem', async () => {
+    it('updates the sla when calling refreshSla() — e.g. notified by another store after publishing a message', async () => {
       dataService.getSla.and.returnValue(of(refreshedSla));
 
       store.refreshSla();
@@ -363,7 +363,7 @@ describe('TicketDetailStore', () => {
       expect(store.sla()).toEqual(refreshedSla);
     });
 
-    it('expõe mensagem de erro quando a atualização do sla falhar, sem derrubar o sla já exibido', async () => {
+    it('exposes an error message when the sla update fails, without dropping the sla already displayed', async () => {
       dataService.getSla.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.refreshSla();
@@ -374,7 +374,7 @@ describe('TicketDetailStore', () => {
       expect(store.sla()).toEqual(sla);
     });
 
-    it('atualiza o sla depois de mudar o status, descartando um override de refreshSla() anterior', async () => {
+    it('updates the sla after changing the status, discarding an earlier refreshSla() override', async () => {
       dataService.getSla.and.returnValue(of(refreshedSla));
       store.refreshSla();
       await TestBed.inject(ApplicationRef).whenStable();
@@ -386,7 +386,7 @@ describe('TicketDetailStore', () => {
       expect(store.sla()).toEqual(sla);
     });
 
-    it('atualiza o sla depois de reabrir, descartando um override de refreshSla() anterior', async () => {
+    it('updates the sla after reopening, discarding an earlier refreshSla() override', async () => {
       dataService.getSla.and.returnValue(of(refreshedSla));
       store.refreshSla();
       await TestBed.inject(ApplicationRef).whenStable();
@@ -400,7 +400,7 @@ describe('TicketDetailStore', () => {
   });
 
   describe('searchAssignees', () => {
-    it('busca só os responsáveis elegíveis (GET /tickets/assignees) pelo termo informado', async () => {
+    it('searches only the eligible assignees (GET /tickets/assignees) by the given term', async () => {
       store.searchAssignees('joão');
       await TestBed.inject(ApplicationRef).whenStable();
 
@@ -409,14 +409,14 @@ describe('TicketDetailStore', () => {
       expect(store.searchingAssignees()).toBeFalse();
     });
 
-    it('não busca e limpa os candidatos quando o termo é vazio (só espaços)', () => {
+    it('does not search and clears the candidates when the term is empty (only spaces)', () => {
       store.searchAssignees('   ');
 
       expect(dataService.getAssignees).not.toHaveBeenCalled();
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
-    it('expõe mensagem própria quando a busca é negada (403)', async () => {
+    it('exposes a specific message when the search is denied (403)', async () => {
       dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.searchAssignees('joão');
@@ -426,7 +426,7 @@ describe('TicketDetailStore', () => {
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
-    it('clearAssigneeSearch() limpa os candidatos e o erro de busca', async () => {
+    it('clearAssigneeSearch() clears the candidates and the search error', async () => {
       store.searchAssignees('joão');
       await TestBed.inject(ApplicationRef).whenStable();
 
@@ -437,7 +437,7 @@ describe('TicketDetailStore', () => {
     });
   });
 
-  it('clearMutationError() limpa o erro de uma mutação anterior', async () => {
+  it('clearMutationError() clears the error from a previous mutation', async () => {
     dataService.removeAssignee.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     store.loadTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();

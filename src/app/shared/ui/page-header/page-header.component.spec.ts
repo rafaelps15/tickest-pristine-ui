@@ -34,7 +34,7 @@ describe('PageHeaderComponent', () => {
     }).compileComponents();
   });
 
-  it('renderiza o título como o único h1 da tela, com a trilha fora dele', async () => {
+  it('renders the title as the only h1 of the screen, with the breadcrumb outside it', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -47,7 +47,7 @@ describe('PageHeaderComponent', () => {
     expect(headings[0].textContent).not.toContain('Administração');
   });
 
-  it('transforma em link só os níveis da trilha que têm rota', async () => {
+  it('turns into links only the breadcrumb levels that have a route', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -57,7 +57,7 @@ describe('PageHeaderComponent', () => {
     expect(links[0].getAttribute('href')).toBe('/usuarios');
   });
 
-  it('não renderiza trilha nem subtítulo quando não foram passados', async () => {
+  it('renders neither breadcrumb nor subtitle when they were not passed', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.crumbs.set([]);
     fixture.componentInstance.subtitle.set(null);
@@ -67,7 +67,7 @@ describe('PageHeaderComponent', () => {
     expect(fixture.nativeElement.querySelector('.page-subtitle')).toBeNull();
   });
 
-  it('mostra o subtítulo e as ações projetadas', async () => {
+  it('shows the subtitle and the projected actions', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -75,7 +75,7 @@ describe('PageHeaderComponent', () => {
     expect(fixture.nativeElement.querySelector('.page-actions button').textContent).toContain('Novo');
   });
 
-  it('acrescenta ao h1 o conteúdo marcado com [pageTitle]', async () => {
+  it('appends to the h1 the content marked with [pageTitle]', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.title.set('');
     fixture.componentInstance.extra.set('Bom dia, Ana!');
@@ -84,7 +84,7 @@ describe('PageHeaderComponent', () => {
     expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe('Bom dia, Ana!');
   });
 
-  it('move o foco pro título com focus()', async () => {
+  it('moves focus to the title with focus()', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     document.body.appendChild(fixture.nativeElement);

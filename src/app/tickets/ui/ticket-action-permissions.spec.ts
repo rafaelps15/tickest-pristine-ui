@@ -8,41 +8,41 @@ function having(...codes: string[]): (code: string) => boolean {
 
 describe('ticket-action-permissions', () => {
   describe('canEditTicketDescription', () => {
-    it('libera o dono com tickets:update-own num chamado ativo', () => {
+    it('allows the owner with tickets:update-own on an active ticket', () => {
       expect(canEditTicketDescription(TicketStatus.Open, true, having('tickets:update-own'))).toBeTrue();
     });
 
-    it('libera quem tem tickets:manage mesmo sem ser o dono', () => {
+    it('allows whoever has tickets:manage even without being the owner', () => {
       expect(canEditTicketDescription(TicketStatus.InProgress, false, having('tickets:manage'))).toBeTrue();
     });
 
-    it('recusa o dono sem tickets:update-own e quem não é dono só com tickets:update-own', () => {
+    it('rejects the owner without tickets:update-own and a non-owner with only tickets:update-own', () => {
       expect(canEditTicketDescription(TicketStatus.Open, true, having())).toBeFalse();
       expect(canEditTicketDescription(TicketStatus.Open, false, having('tickets:update-own'))).toBeFalse();
     });
 
-    it('recusa qualquer um num chamado inativo', () => {
+    it('rejects anyone on an inactive ticket', () => {
       expect(canEditTicketDescription(TicketStatus.Resolved, true, having('tickets:update-own', 'tickets:manage'))).toBeFalse();
     });
   });
 
   describe('canReopenTicket', () => {
-    it('libera o dono com tickets:reopen-own e quem tem tickets:manage, num chamado inativo', () => {
+    it('allows the owner with tickets:reopen-own and whoever has tickets:manage, on an inactive ticket', () => {
       expect(canReopenTicket(TicketStatus.Closed, true, having('tickets:reopen-own'))).toBeTrue();
       expect(canReopenTicket(TicketStatus.Canceled, false, having('tickets:manage'))).toBeTrue();
     });
 
-    it('recusa quem não é dono só com tickets:reopen-own', () => {
+    it('rejects a non-owner with only tickets:reopen-own', () => {
       expect(canReopenTicket(TicketStatus.Resolved, false, having('tickets:reopen-own'))).toBeFalse();
     });
 
-    it('recusa reabrir um chamado ainda ativo', () => {
+    it('rejects reopening a ticket that is still active', () => {
       expect(canReopenTicket(TicketStatus.Open, true, having('tickets:reopen-own', 'tickets:manage'))).toBeFalse();
     });
   });
 
   describe('canAssignTicketToOthers', () => {
-    it('exige tickets:manage e tickets:assign, com o chamado ativo', () => {
+    it('requires tickets:manage and tickets:assign, with the ticket active', () => {
       expect(canAssignTicketToOthers(TicketStatus.Open, having('tickets:manage', 'tickets:assign'))).toBeTrue();
       expect(canAssignTicketToOthers(TicketStatus.Open, having('tickets:manage'))).toBeFalse();
       expect(canAssignTicketToOthers(TicketStatus.Open, having('tickets:assign'))).toBeFalse();

@@ -29,7 +29,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('deve redirecionar para o login quando não houver sessão', () => {
+  it('should redirect to the login when there is no session', () => {
     session.isAuthenticated.and.returnValue(false);
 
     const result = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
@@ -39,7 +39,7 @@ describe('authGuard', () => {
     expect(currentUserService.ensureLoaded).not.toHaveBeenCalled();
   });
 
-  it('deve liberar a rota quando o usuário logado for carregado com sucesso', (done) => {
+  it('should allow the route when the logged-in user is loaded successfully', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
@@ -51,7 +51,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('deve apagar a sessão e redirecionar para o login quando a API recusar a sessão', (done) => {
+  it('should erase the session and redirect to the login when the API refuses the session', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const }));
 
@@ -65,7 +65,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('numa falha passageira leva à tela de sessão indisponível com o motivo e a rota pedida, não ao login', (done) => {
+  it('on a transient failure leads to the unavailable-session screen with the reason and the requested route, not to the login', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unavailable' as const, reason: 'rate-limited' as const }));
     const state = { url: '/tickets?status=1' } as RouterStateSnapshot;

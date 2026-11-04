@@ -44,7 +44,7 @@ describe('ProfileEditComponent', () => {
       .compileComponents();
   });
 
-  it('deve carregar o perfil do usuário logado e preencher o formulário', async () => {
+  it('should load the logged-in user profile and fill in the form', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -56,7 +56,7 @@ describe('ProfileEditComponent', () => {
     expect(email.disabled).toBeTrue();
   });
 
-  it('alterna os três campos de senha entre oculto e texto claro juntos', async () => {
+  it('toggles the three password fields between hidden and plain text together', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -71,7 +71,7 @@ describe('ProfileEditComponent', () => {
     expect(getTypes()).toEqual(['text', 'text', 'text']);
   });
 
-  it('deve salvar com os valores sem espaços nas pontas', async () => {
+  it('should save with the values trimmed of surrounding whitespace', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -81,7 +81,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.save).toHaveBeenCalledWith({ firstName: 'Ana', lastName: 'Costa' });
   });
 
-  it('aceita nome com até 100 caracteres, o limite do back-end, e recusa acima disso', async () => {
+  it('accepts a name up to 100 characters, the back-end limit, and rejects anything above it', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -95,7 +95,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.save).not.toHaveBeenCalled();
   });
 
-  it('não deve salvar quando o nome estiver vazio', async () => {
+  it('should not save when the name is empty', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -106,7 +106,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.componentInstance.isFieldInvalid('firstName')).toBeTrue();
   });
 
-  it('deve exibir a mensagem de erro do salvamento', async () => {
+  it('should display the save error message', async () => {
     storeFake.mutationError.set('Você não tem permissão para editar este perfil.');
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
@@ -114,7 +114,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para editar este perfil.');
   });
 
-  it('deve alterar a senha quando o formulário for válido', async () => {
+  it('should change the password when the form is valid', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -131,7 +131,7 @@ describe('ProfileEditComponent', () => {
     });
   });
 
-  it('não deve alterar a senha quando a confirmação não coincidir', async () => {
+  it('should not change the password when the confirmation does not match', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -145,7 +145,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.changePassword).not.toHaveBeenCalled();
   });
 
-  it('não deve alterar a senha quando a nova senha for igual à atual', async () => {
+  it('should not change the password when the new password is the same as the current one', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -159,7 +159,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.changePassword).not.toHaveBeenCalled();
   });
 
-  it('não deve alterar a senha quando a nova senha for fraca', async () => {
+  it('should not change the password when the new password is weak', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -173,7 +173,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.changePassword).not.toHaveBeenCalled();
   });
 
-  it('mostra "mínimo de 2 caracteres" quando o nome é preenchido mas curto demais', async () => {
+  it('shows "mínimo de 2 caracteres" when the name is filled in but too short', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
     const firstName = fixture.componentInstance.form.controls.firstName;
@@ -186,7 +186,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('O nome deve ter no mínimo 2 caracteres.');
   });
 
-  it('liga o campo de nome inválido à mensagem de erro via aria-describedby', async () => {
+  it('links the invalid name field to the error message via aria-describedby', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
     const firstName = fixture.componentInstance.form.controls.firstName;
@@ -200,14 +200,14 @@ describe('ProfileEditComponent', () => {
     expect(input.getAttribute('aria-describedby')).toBe('firstName-error');
   });
 
-  it('mostra os requisitos de senha antes de qualquer erro', async () => {
+  it('shows the password requirements before any error', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Mínimo de 6 caracteres, com 1 letra maiúscula e 1 caractere especial.');
   });
 
-  it('avisa por toast quando o perfil é salvo, e limpa o estado de sucesso', async () => {
+  it('notifies by toast when the profile is saved, and clears the success state', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -219,7 +219,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.nativeElement.querySelector('.alert-success')).toBeNull();
   });
 
-  it('avisa por toast quando a senha é alterada, limpa o formulário de senha e o estado de sucesso', async () => {
+  it('notifies by toast when the password is changed, clears the password form and the success state', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
     fixture.componentInstance.passwordForm.controls.currentPassword.setValue('Antiga123!');
@@ -232,7 +232,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.componentInstance.passwordForm.controls.currentPassword.value).toBe('');
   });
 
-  it('oferece "Tentar novamente" quando o perfil falha ao carregar', async () => {
+  it('offers "Tentar novamente" when the profile fails to load', async () => {
     storeFake.loadError.set('Erro ao carregar o perfil.');
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();

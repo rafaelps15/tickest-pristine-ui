@@ -26,7 +26,7 @@ describe('DashboardNoticeComponent', () => {
   /** Espera o atraso do aviso de nova falha (limpa e escreve de novo). */
   const afterAnnounceDelay = () => new Promise(resolve => setTimeout(resolve, 150));
 
-  it('sem tentativa em curso, "Tentar novamente" pede a nova carga', async () => {
+  it('with no attempt in progress, "Tentar novamente" requests the new load', async () => {
     const { retry, button } = await renderError();
 
     expect(button().textContent).toContain('Tentar novamente');
@@ -35,7 +35,7 @@ describe('DashboardNoticeComponent', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('com a tentativa em curso, o botão gira, fica aria-disabled (não disabled, o foco fica nele) e não aceita outro clique', async () => {
+  it('with the attempt in progress, the button spins, becomes aria-disabled (not disabled, so focus stays on it) and does not accept another click', async () => {
     const { fixture, retry, button } = await renderError();
     fixture.componentRef.setInput('busy', true);
     await fixture.whenStable();
@@ -48,7 +48,7 @@ describe('DashboardNoticeComponent', () => {
     expect(retry).not.toHaveBeenCalled();
   });
 
-  it('se a tentativa pedida no botão falha de novo, o leitor de tela ouve isso uma vez, com a frase do erro', async () => {
+  it('if the attempt requested from the button fails again, the screen reader hears it once, with the error sentence', async () => {
     const { fixture, button, live } = await renderError('Falha simulada');
     button().click();
     fixture.componentRef.setInput('busy', true);
@@ -61,7 +61,7 @@ describe('DashboardNoticeComponent', () => {
     expect(button().textContent).toContain('Tentar novamente');
   });
 
-  it('uma nova tentativa que não veio do botão (a atualização automática) não anuncia nada', async () => {
+  it('a new attempt that did not come from the button (the automatic refresh) announces nothing', async () => {
     const { fixture, live } = await renderError();
     fixture.componentRef.setInput('busy', true);
     await fixture.whenStable();
@@ -72,7 +72,7 @@ describe('DashboardNoticeComponent', () => {
     expect(live()).toBe('');
   });
 
-  it('o aviso "em breve" não tem botão nem estado de tentativa', async () => {
+  it('the "em breve" notice has no button and no attempt state', async () => {
     const fixture = TestBed.createComponent(DashboardNoticeComponent);
     fixture.componentRef.setInput('text', 'Tempos de atendimento: disponível em breve.');
     fixture.componentRef.setInput('busy', true);

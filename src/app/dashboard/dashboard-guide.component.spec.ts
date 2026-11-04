@@ -26,7 +26,7 @@ describe('DashboardGuideComponent', () => {
 
   afterEach(() => document.querySelectorAll('app-dashboard-guide').forEach(element => element.remove()));
 
-  it('começa fechado: só o botão "Guia da tela" no cabeçalho, sem ocupar o corpo da tela', async () => {
+  it('starts closed: only the "Guia da tela" button in the header, taking no space in the screen body', async () => {
     const { trigger } = await setup();
 
     expect(trigger.textContent).toContain('Guia da tela');
@@ -34,7 +34,7 @@ describe('DashboardGuideComponent', () => {
     expect(dialog()).toBeNull();
   });
 
-  it('abre um diálogo centralizado com título acessível', async () => {
+  it('opens a centered dialog with an accessible title', async () => {
     const { fixture, trigger } = await setup();
     trigger.click();
     await fixture.whenStable();
@@ -46,7 +46,7 @@ describe('DashboardGuideComponent', () => {
     expect(document.getElementById(titleId)?.textContent).toContain('Guia da tela');
   });
 
-  it('fecha com Esc e devolve o foco ao botão que abriu', async () => {
+  it('closes with Esc and returns focus to the button that opened it', async () => {
     const { fixture, trigger } = await setup();
     trigger.focus();
     trigger.click();
@@ -59,7 +59,7 @@ describe('DashboardGuideComponent', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('fecha pelo botão visível de fechar', async () => {
+  it('closes via the visible close button', async () => {
     const { fixture, trigger } = await setup();
     trigger.click();
     await fixture.whenStable();
@@ -70,7 +70,7 @@ describe('DashboardGuideComponent', () => {
     expect(dialog()).toBeNull();
   });
 
-  it('organiza o conteúdo por bloco: indicadores e gráfico pra todos', async () => {
+  it('organizes the content by block: indicators and chart for everyone', async () => {
     const { fixture, trigger } = await setup();
     trigger.click();
     await fixture.whenStable();
@@ -79,7 +79,7 @@ describe('DashboardGuideComponent', () => {
     expect(titles).toEqual(['Indicadores', 'Gráfico da operação', 'Atualização']);
   });
 
-  it('pra quem atende a fila, explica também filtros, Central de atenção e Alertas de SLA', async () => {
+  it('for those who handle the queue, also explains filters, Central de atenção and Alertas de SLA', async () => {
     const { fixture, trigger } = await setup({ showOperation: true });
     trigger.click();
     await fixture.whenStable();
@@ -89,7 +89,7 @@ describe('DashboardGuideComponent', () => {
     expect(document.querySelector('[role="dialog"]')!.textContent).toContain('75% do prazo');
   });
 
-  it('pra quem abre chamados, explica "Seus chamados" e que a lista mostra só os próprios', async () => {
+  it('for those who open tickets, explains "Seus chamados" and that the list shows only their own', async () => {
     const { fixture, trigger } = await setup({ showMine: true });
     trigger.click();
     await fixture.whenStable();

@@ -38,7 +38,7 @@ describe('DashboardFilterBarComponent', () => {
     select.dispatchEvent(new Event('change'));
   }
 
-  it('lista os setores agrupados por departamento, e só os departamentos com setores', async () => {
+  it('lists the sectors grouped by department, and only the departments that have sectors', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -48,7 +48,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(departments.map(o => o.textContent?.trim())).toEqual(['Todos os departamentos', 'TI', 'RH']);
   });
 
-  it('com o filtro aplicado e a lista chegando depois, os seletores mostram a opção certa (não "Todos")', async () => {
+  it('with the filter applied and the list arriving later, the selectors show the right option (not "Todos")', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     const host = fixture.componentInstance;
     const departments = host.departments();
@@ -69,7 +69,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(selected('#dashboardAssignee')).toBe('Ana Souza');
   });
 
-  it('com um departamento escolhido, o seletor de setor mostra só os setores dele', async () => {
+  it('with a department chosen, the sector selector shows only its sectors', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ departmentId: 'd2' });
     await fixture.whenStable();
@@ -78,7 +78,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(options.map(o => o.textContent?.trim())).toEqual(['Todos do departamento', 'Folha']);
   });
 
-  it('trocar de departamento tira o setor que não é dele', async () => {
+  it('switching department removes the sector that does not belong to it', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ sectorId: 's1' });
     await fixture.whenStable();
@@ -89,7 +89,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.componentInstance.changes).toEqual([{ departmentId: 'd2', sectorId: undefined }, { departmentId: 'd1', sectorId: 's1' }]);
   });
 
-  it('avisa a troca de prioridade e de responsável (pessoa, "meus" ou nenhum)', async () => {
+  it('notifies the priority and assignee change (person, "meus" or none)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -106,7 +106,7 @@ describe('DashboardFilterBarComponent', () => {
     ]);
   });
 
-  it('o período pronto limpa o personalizado, e o personalizado começa nos últimos 30 dias', async () => {
+  it('the preset period clears the custom one, and the custom one starts at the last 30 days', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -119,7 +119,7 @@ describe('DashboardFilterBarComponent', () => {
     ]);
   });
 
-  it('no personalizado, mostra as datas e recusa um início depois do fim', async () => {
+  it('in the custom period, shows the dates and rejects a start after the end', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ from: '2026-10-01', to: '2026-10-10' });
     await fixture.whenStable();
@@ -140,7 +140,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.nativeElement.querySelector('#dashboardDateError')).toBeNull();
   });
 
-  it('apagar uma data deixa aquela ponta do período em aberto', async () => {
+  it('clearing a date leaves that end of the period open', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ from: '2026-10-01', to: '2026-10-10' });
     await fixture.whenStable();
@@ -152,7 +152,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.componentInstance.changes).toEqual([{ to: undefined }]);
   });
 
-  it('um departamento fora da lista vira o chip "não encontrado (ignorado)", não um recorte que não vale', async () => {
+  it('a department outside the list becomes the chip "não encontrado (ignorado)", not a slice that is not valid', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ departmentId: 'sumiu' });
     await fixture.whenStable();
@@ -160,7 +160,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.nativeElement.querySelector('.filter-chip').textContent).toContain('Departamento não encontrado (ignorado)');
   });
 
-  it('diz quando a lista de pessoas não traz todo mundo', async () => {
+  it('says when the list of people does not include everyone', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.assigneesTotal = 140;
     await fixture.whenStable();
@@ -169,7 +169,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(group.label).toBe('Pessoas da equipe (1 de 140, em ordem de nome)');
   });
 
-  it('mostra os filtros ativos como chips, e cada chip remove só o seu filtro', async () => {
+  it('shows the active filters as chips, and each chip removes only its own filter', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ from: '2026-10-01', to: '2026-10-28', departmentId: 'd1', sectorId: 's1', priority: 4, assignedToUserId: 'u-ana' });
     await fixture.whenStable();
@@ -185,7 +185,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.componentInstance.changes).toEqual([{ from: undefined, to: undefined }, { priority: undefined }]);
   });
 
-  it('recolhe prioridade e responsável em "Mais filtros", com a contagem dos aplicados', async () => {
+  it('collapses priority and assignee into "Mais filtros", with the count of those applied', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.filters.set({ priority: 4, assignee: 'me' });
     await fixture.whenStable();
@@ -203,7 +203,7 @@ describe('DashboardFilterBarComponent', () => {
     expect(fixture.nativeElement.querySelector('#dashboardPeriod').closest('#dashboardMoreFilters')).toBeNull();
   });
 
-  it('só oferece "Limpar filtros" com algum filtro ativo', async () => {
+  it('offers "Limpar filtros" only when some filter is active', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.btn-clear-filters')).toBeNull();

@@ -19,7 +19,7 @@ describe('RoleDataService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('codifica o nome da role na URL ao atribuir permissões, evitando que caracteres especiais quebrem a rota', () => {
+  it('encodes the role name in the URL when assigning permissions, preventing special characters from breaking the route', () => {
     service.assignPermissions('TI/Suporte', ['tickets:manage']).subscribe();
 
     const req = httpMock.expectOne(`${environment.apiUrl}/roles/TI%2FSuporte/permissions`);

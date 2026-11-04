@@ -10,7 +10,7 @@ describe('TicketCreateGuideComponent', () => {
     }).compileComponents();
   });
 
-  it('explica pra onde o chamado vai, o que a prioridade quer dizer e onde ele aparece depois', async () => {
+  it('explains where the ticket goes, what the priority means and where it shows up afterwards', async () => {
     const fixture = TestBed.createComponent(TicketCreateGuideComponent);
     await fixture.whenStable();
 

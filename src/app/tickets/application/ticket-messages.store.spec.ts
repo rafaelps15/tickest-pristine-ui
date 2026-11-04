@@ -36,11 +36,11 @@ describe('TicketMessagesStore', () => {
     store = TestBed.inject(TicketMessagesStore);
   });
 
-  it('não chama a API antes de um chamado ser definido', () => {
+  it('does not call the API before a ticket is set', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
-  it('carrega as mensagens do chamado informado', async () => {
+  it('loads the messages of the given ticket', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -48,7 +48,7 @@ describe('TicketMessagesStore', () => {
     expect(store.messages()).toEqual([message]);
   });
 
-  it('carrega a próxima página pelo cursor e acrescenta as mensagens já exibidas', async () => {
+  it('loads the next page by cursor and appends to the messages already shown', async () => {
     const older: TicketMessage = { ...message, id: 'm0', content: 'Mensagem antiga.', createdAtUtc: '2025-12-01T12:00:00Z' };
     dataService.getAll.and.returnValues(of(pageOf([message], true)), of(pageOf([older])));
 
@@ -64,7 +64,7 @@ describe('TicketMessagesStore', () => {
     expect(store.hasMore()).toBeFalse();
   });
 
-  it('não chama a API ao carregar mais quando não há próxima página', async () => {
+  it('does not call the API when loading more if there is no next page', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -79,7 +79,7 @@ describe('TicketMessagesStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('publica a mensagem, recarrega a listagem e chama onSuccess', async () => {
+    it('posts the message, reloads the listing and calls onSuccess', async () => {
       dataService.post.and.returnValue(of('m2'));
       const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -93,7 +93,7 @@ describe('TicketMessagesStore', () => {
       expect(store.postError()).toBeNull();
     });
 
-    it('expõe mensagem de erro quando a publicação falhar com 403', async () => {
+    it('exposes an error message when posting fails with 403', async () => {
       dataService.post.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.post('t1', 'Resolvido, pode confirmar.');
@@ -103,7 +103,7 @@ describe('TicketMessagesStore', () => {
       expect(store.posting()).toBeFalse();
     });
 
-    it('clearPostError() limpa o erro de uma tentativa anterior', async () => {
+    it('clearPostError() clears the error from a previous attempt', async () => {
       dataService.post.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
       store.post('t1', 'Resolvido, pode confirmar.');
       await TestBed.inject(ApplicationRef).whenStable();
@@ -120,7 +120,7 @@ describe('TicketMessagesStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('edita a mensagem, recarrega a listagem e chama onSuccess', async () => {
+    it('edits the message, reloads the listing and calls onSuccess', async () => {
       dataService.edit.and.returnValue(of(undefined));
       const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -133,7 +133,7 @@ describe('TicketMessagesStore', () => {
       expect(store.savingEdit()).toBeFalse();
     });
 
-    it('expõe mensagem própria quando falta permissão (403, não é o autor)', async () => {
+    it('exposes a specific message when permission is missing (403, not the author)', async () => {
       dataService.edit.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.editMessage('m1', 'Texto corrigido.');
@@ -149,7 +149,7 @@ describe('TicketMessagesStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('marca a mensagem como pendente durante a exclusão, e libera ao terminar', async () => {
+    it('marks the message as pending during deletion, and releases it when done', async () => {
       const subject = new Subject<void>();
       dataService.delete.and.returnValue(subject);
 
@@ -163,7 +163,7 @@ describe('TicketMessagesStore', () => {
       expect(store.deletingMessageId()).toBeNull();
     });
 
-    it('exclui a mensagem, recarrega a listagem e chama onSuccess', async () => {
+    it('deletes the message, reloads the listing and calls onSuccess', async () => {
       dataService.delete.and.returnValue(of(undefined));
       const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -175,7 +175,7 @@ describe('TicketMessagesStore', () => {
       expect(onSuccess).toHaveBeenCalled();
     });
 
-    it('expõe mensagem própria quando falta permissão (403)', async () => {
+    it('exposes a specific message when permission is missing (403)', async () => {
       dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.deleteMessage('m1');
@@ -184,7 +184,7 @@ describe('TicketMessagesStore', () => {
       expect(store.mutationError()).toBe('Você não tem permissão para excluir esta mensagem.');
     });
 
-    it('clearMutationError() limpa o erro de uma tentativa anterior', async () => {
+    it('clearMutationError() clears the error from a previous attempt', async () => {
       dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
       store.deleteMessage('m1');
       await TestBed.inject(ApplicationRef).whenStable();

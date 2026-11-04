@@ -47,7 +47,7 @@ describe('TicketsStore', () => {
     store = TestBed.inject(TicketsStore);
   });
 
-  it('carrega a primeira página dos chamados do usuário logado', async () => {
+  it('loads the first page of the tickets of the logged-in user', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getMine).toHaveBeenCalledWith(1, 20, TicketStatusGroup.Active, '');
@@ -55,7 +55,7 @@ describe('TicketsStore', () => {
     expect(store.total()).toBe(1);
   });
 
-  it('busca a página pedida ao trocar de página', async () => {
+  it('fetches the requested page when changing page', async () => {
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 45)));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -65,7 +65,7 @@ describe('TicketsStore', () => {
     expect(dataService.getMine).toHaveBeenCalledWith(2, 20, TicketStatusGroup.Active, '');
   });
 
-  it('ignora páginas fora do intervalo', async () => {
+  it('ignores out-of-range pages', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     store.goToPage(5);
@@ -75,7 +75,7 @@ describe('TicketsStore', () => {
     expect(dataService.getMine).toHaveBeenCalledTimes(1);
   });
 
-  it('volta para a primeira página ao trocar o tamanho da página', async () => {
+  it('goes back to the first page when changing the page size', async () => {
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 45)));
     await TestBed.inject(ApplicationRef).whenStable();
     store.goToPage(2);
@@ -87,7 +87,7 @@ describe('TicketsStore', () => {
     expect(dataService.getMine).toHaveBeenCalledWith(1, 50, TicketStatusGroup.Active, '');
   });
 
-  it('cria um chamado, volta para a primeira página e recarrega a listagem', async () => {
+  it('creates a ticket, goes back to the first page and reloads the listing', async () => {
     dataService.create.and.returnValue(of('t2'));
     const onSuccess = jasmine.createSpy('onSuccess');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -101,7 +101,7 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBeNull();
   });
 
-  it('marca creating durante a criação, e libera ao terminar', async () => {
+  it('sets creating during the creation, and releases it when done', async () => {
     const subject = new Subject<string>();
     dataService.create.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -116,7 +116,7 @@ describe('TicketsStore', () => {
     expect(store.creating()).toBeFalse();
   });
 
-  it('libera creating mesmo quando a criação falha', async () => {
+  it('releases creating even when the creation fails', async () => {
     const subject = new Subject<string>();
     dataService.create.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -130,7 +130,7 @@ describe('TicketsStore', () => {
     expect(store.creating()).toBeFalse();
   });
 
-  it('expõe mensagem de erro quando a criação falhar', async () => {
+  it('exposes an error message when the creation fails', async () => {
     dataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -140,7 +140,7 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBe('Erro ao abrir o chamado');
   });
 
-  it('atualiza um chamado e recarrega a listagem', async () => {
+  it('updates a ticket and reloads the listing', async () => {
     dataService.update.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -152,7 +152,7 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBeNull();
   });
 
-  it('expõe mensagem de erro quando a atualização falhar', async () => {
+  it('exposes an error message when the update fails', async () => {
     dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -162,7 +162,7 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBe('Erro ao atualizar o chamado');
   });
 
-  it('chama onSuccess ao atualizar um chamado com sucesso', async () => {
+  it('calls onSuccess when a ticket is updated successfully', async () => {
     dataService.update.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -173,7 +173,7 @@ describe('TicketsStore', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('marca o chamado como pendente durante a atualização, e libera ao terminar', async () => {
+  it('marks the ticket as pending during the update, and releases it when done', async () => {
     const subject = new Subject<void>();
     dataService.update.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -188,7 +188,7 @@ describe('TicketsStore', () => {
     expect(store.pendingTicketIds()).toEqual([]);
   });
 
-  it('reabre um chamado e recarrega a listagem', async () => {
+  it('reopens a ticket and reloads the listing', async () => {
     dataService.reopen.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -200,7 +200,7 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBeNull();
   });
 
-  it('expõe mensagem de erro quando a reabertura falhar', async () => {
+  it('exposes an error message when the reopening fails', async () => {
     dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -210,7 +210,7 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBe('Erro ao reabrir o chamado');
   });
 
-  it('marca o chamado como pendente durante a reabertura, e libera ao terminar', async () => {
+  it('marks the ticket as pending during the reopening, and releases it when done', async () => {
     const subject = new Subject<void>();
     dataService.reopen.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -225,7 +225,7 @@ describe('TicketsStore', () => {
     expect(store.pendingTicketIds()).toEqual([]);
   });
 
-  it('separa o erro de mutação do erro de leitura, e descarta o de mutação sob pedido', async () => {
+  it('separates the mutation error from the read error, and discards the mutation one on request', async () => {
     dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -239,7 +239,7 @@ describe('TicketsStore', () => {
     expect(store.mutationError()).toBeNull();
   });
 
-  it('começa em "Em aberto" e sem busca, e volta para a primeira página ao trocar o grupo ou a busca', async () => {
+  it('starts on "Em aberto" and with no search, and goes back to the first page when the group or the search changes', async () => {
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 45)));
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.statusGroup()).toBe(TicketStatusGroup.Active);
@@ -257,7 +257,7 @@ describe('TicketsStore', () => {
     expect(store.isFiltered()).toBeTrue();
   });
 
-  it('não refaz a busca quando o grupo ou o termo não mudam', async () => {
+  it('does not search again when the group or the term do not change', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
     const calls = dataService.getMine.calls.count();
 
@@ -268,7 +268,7 @@ describe('TicketsStore', () => {
     expect(dataService.getMine.calls.count()).toBe(calls);
   });
 
-  it('com a lista filtrada vazia, sonda sem filtro se a pessoa tem algum chamado', async () => {
+  it('with the filtered list empty, probes without a filter whether the person has any ticket', async () => {
     dataService.getMine.and.callFake((page: number, pageSize: number, statusGroup?: TicketStatusGroup | null) =>
       of(statusGroup === undefined ? pageOf([ticket], 1, 3, 1) : pageOf([], 1, 0)));
     await TestBed.inject(ApplicationRef).whenStable();
@@ -279,7 +279,7 @@ describe('TicketsStore', () => {
     expect(store.hasAnyTicket()).toBeTrue();
   });
 
-  it('sabe que é o primeiro uso quando nem a sondagem acha chamado', async () => {
+  it('knows it is the first use when not even the probe finds a ticket', async () => {
     dataService.getMine.and.returnValue(of(pageOf([], 1, 0)));
     await TestBed.inject(ApplicationRef).whenStable();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -287,7 +287,7 @@ describe('TicketsStore', () => {
     expect(store.hasAnyTicket()).toBeFalse();
   });
 
-  it('com a sondagem em erro, assume que há chamados em vez de carregar pra sempre', async () => {
+  it('with the probe in error, assumes there are tickets instead of loading forever', async () => {
     dataService.getMine.and.callFake((page: number, pageSize: number, statusGroup?: TicketStatusGroup | null) =>
       statusGroup === undefined ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(pageOf([], 1, 0)));
     await TestBed.inject(ApplicationRef).whenStable();
@@ -296,14 +296,14 @@ describe('TicketsStore', () => {
     expect(store.hasAnyTicket()).toBeTrue();
   });
 
-  it('não sonda quando a lista filtrada tem chamados', async () => {
+  it('does not probe when the filtered list has tickets', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getMine).not.toHaveBeenCalledWith(1, 1);
     expect(store.hasAnyTicket()).toBeTrue();
   });
 
-  it('com a leitura em erro, expõe a lista vazia e o erro, sem lançar exceção', async () => {
+  it('with the read in error, exposes the empty list and the error, without throwing an exception', async () => {
     dataService.getMine.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -313,7 +313,7 @@ describe('TicketsStore', () => {
     expect(store.loadError()).toBe('Erro ao carregar chamados');
   });
 
-  it('reabre mandando o motivo no próprio reopen (uma chamada só), e chama onSuccess', async () => {
+  it('reopens sending the reason in the reopen call itself (a single call), and calls onSuccess', async () => {
     dataService.reopen.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
     const onSuccess = jasmine.createSpy('onSuccess');
@@ -325,7 +325,7 @@ describe('TicketsStore', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('mostra a mensagem do back-end quando a reabertura é recusada', async () => {
+  it('shows the back-end message when the reopening is refused', async () => {
     dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 403, error: { detail: 'Você não tem permissão para reabrir este chamado.' }
     })));

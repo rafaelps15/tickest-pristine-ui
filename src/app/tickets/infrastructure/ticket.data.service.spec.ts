@@ -22,8 +22,8 @@ describe('TicketDataService', () => {
 
   afterEach(() => http.verify());
 
-  describe('estatísticas do recorte', () => {
-    it('getOverview manda setores repetidos, prioridade, responsável e o período de abertura', () => {
+  describe('selection statistics', () => {
+    it('getOverview sends repeated sectors, priority, assignee and the opening period', () => {
       service.getOverview({ sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, assignedToUserId: 'u1', createdFrom: '2026-10-01', createdTo: '2026-10-28' }).subscribe();
 
       const request = http.expectOne(req => req.url.endsWith('/tickets/stats/overview'));
@@ -35,7 +35,7 @@ describe('TicketDataService', () => {
       request.flush({});
     });
 
-    it('"sem responsável" ignora o responsável', () => {
+    it('"sem responsável" ignores the assignee', () => {
       service.getTimes({ unassignedOnly: true, assignedToUserId: 'u1', resolvedFrom: '2026-10-01' }).subscribe();
 
       const request = http.expectOne(req => req.url.endsWith('/tickets/stats/times'));
@@ -45,7 +45,7 @@ describe('TicketDataService', () => {
       request.flush({});
     });
 
-    it('getVolume manda o agrupamento e o recorte; sem recorte, só o agrupamento', () => {
+    it('getVolume sends the grouping and the selection; without a selection, only the grouping', () => {
       service.getVolume('Week', { sectorIds: ['s1'], createdFrom: '2026-09-01' }).subscribe();
       service.getVolume('Day').subscribe();
 
@@ -58,7 +58,7 @@ describe('TicketDataService', () => {
       plain.flush([]);
     });
 
-    it('getAssignees pede a lista paginada com busca e setor', () => {
+    it('getAssignees requests the paginated list with search and sector', () => {
       service.getAssignees(' ana ', 's1').subscribe();
 
       const request = http.expectOne(req => req.url.endsWith('/tickets/assignees'));
@@ -71,7 +71,7 @@ describe('TicketDataService', () => {
   });
 
   describe('getAll', () => {
-    it('com "Ativos" e sem status escolhido, manda Aberto e Em Andamento', () => {
+    it('with "Ativos" and no status chosen, sends Aberto and Em Andamento', () => {
       service.getAll({ activeOnly: true, sort: TicketSortOrder.Newest, page: 1, pageSize: 20 }).subscribe();
 
       const request = http.expectOne(req => req.url.endsWith('/tickets'));
@@ -79,7 +79,7 @@ describe('TicketDataService', () => {
       request.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
     });
 
-    it('um status escolhido vence o grupo "Ativos"', () => {
+    it('a chosen status wins over the "Ativos" group', () => {
       service.getAll({ status: TicketStatus.Resolved, activeOnly: true, sort: TicketSortOrder.Newest, page: 1, pageSize: 20 }).subscribe();
 
       const request = http.expectOne(req => req.url.endsWith('/tickets'));
@@ -87,7 +87,7 @@ describe('TicketDataService', () => {
       request.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false });
     });
 
-    it('manda vários setores, o período de abertura e o filtro "aguardando"', () => {
+    it('sends several sectors, the opening period and the "aguardando" filter', () => {
       service.getAll({ sectorIds: ['s1', 's2'], createdFrom: '2026-10-01', createdTo: '2026-10-28', awaiting: TicketAwaiting.Agent, sort: TicketSortOrder.Newest, page: 1, pageSize: 20 }).subscribe();
 
       const request = http.expectOne(req => req.url.endsWith('/tickets'));

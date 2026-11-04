@@ -19,7 +19,7 @@ describe('DepartmentInsightsComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra o total de departamentos e setores', async () => {
+  it('shows the total of departments and sectors', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', [
       makeDepartment(),
@@ -34,7 +34,7 @@ describe('DepartmentInsightsComponent', () => {
     expect(text).toContain('setores');
   });
 
-  it('não mostra os alertas quando todos os departamentos têm setor e responsável', async () => {
+  it('does not show the alerts when all departments have a sector and an assignee', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', [makeDepartment()]);
     await fixture.whenStable();
@@ -44,7 +44,7 @@ describe('DepartmentInsightsComponent', () => {
     expect(text).not.toContain('sem responsável definido');
   });
 
-  it('avisa quantos departamentos estão sem nenhum setor', async () => {
+  it('warns how many departments have no sector at all', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', [makeDepartment({ sectors: [] })]);
     await fixture.whenStable();
@@ -54,7 +54,7 @@ describe('DepartmentInsightsComponent', () => {
     expect(chip.textContent).toContain('não aparece na abertura de chamados');
   });
 
-  it('avisa quantos departamentos estão sem responsável definido', async () => {
+  it('warns how many departments have no assignee defined', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', [makeDepartment({ responsibleUserName: null })]);
     await fixture.whenStable();
@@ -62,7 +62,7 @@ describe('DepartmentInsightsComponent', () => {
     expect(fixture.nativeElement.textContent.replace(/\s+/g, ' ')).toContain('1 sem responsável');
   });
 
-  it('o aviso é um filtro: emite o problema ao clicar e desliga ao clicar de novo', async () => {
+  it('the notice is a filter: emits the problem on click and turns off on a second click', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', [makeDepartment({ sectors: [] })]);
     const emitted: (string | null)[] = [];
@@ -81,7 +81,7 @@ describe('DepartmentInsightsComponent', () => {
     expect(emitted).toEqual(['withoutSectors', null]);
   });
 
-  it('mostra "—" e o motivo, em vez de "0 departamentos", quando a lista falhou ao carregar', async () => {
+  it('shows "—" and the reason, instead of "0 departamentos", when the list failed to load', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', []);
     fixture.componentRef.setInput('failed', true);

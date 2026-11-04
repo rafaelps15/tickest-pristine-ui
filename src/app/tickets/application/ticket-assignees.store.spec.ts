@@ -31,7 +31,7 @@ describe('TicketAssigneesStore', () => {
     permissions = new Set(['tickets:manage']);
   });
 
-  it('expõe os responsáveis elegíveis devolvidos pela API', async () => {
+  it('exposes the eligible assignees returned by the API', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -40,7 +40,7 @@ describe('TicketAssigneesStore', () => {
     expect(store.error()).toBeNull();
   });
 
-  it('sem tickets:manage não pergunta à API', async () => {
+  it('without tickets:manage it does not ask the API', async () => {
     permissions = new Set();
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -49,7 +49,7 @@ describe('TicketAssigneesStore', () => {
     expect(store.assignees()).toEqual([]);
   });
 
-  it('mostra o erro e recupera no "Tentar novamente"', async () => {
+  it('shows the error and recovers on "Tentar novamente"', async () => {
     dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();

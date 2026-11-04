@@ -30,7 +30,7 @@ describe('UserMenuComponent', () => {
     }).compileComponents();
   });
 
-  it('dá ao avatar que abre o menu um papel de botão e um nome que diz a ação', async () => {
+  it('gives the avatar that opens the menu a button role and a name that states the action', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
 
@@ -39,7 +39,7 @@ describe('UserMenuComponent', () => {
     expect(toggle.getAttribute('aria-label')).toBe('Menu do usuário');
   });
 
-  it('mostra as iniciais do usuário no avatar, sem imagem externa', async () => {
+  it('shows the user initials in the avatar, with no external image', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
 
@@ -47,7 +47,7 @@ describe('UserMenuComponent', () => {
     expect(fixture.nativeElement.querySelector('img')).toBeNull();
   });
 
-  it('tem um único link pro perfil e "Sair" como botão, sem href="javascript:"', async () => {
+  it('has a single link to the profile and "Sair" as a button, without href="javascript:"', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
 
@@ -59,21 +59,21 @@ describe('UserMenuComponent', () => {
     expect(loginStoreFake.logout).toHaveBeenCalled();
   });
 
-  it('mostra o e-mail do usuário logado no dropdown', async () => {
+  it('shows the logged-in user email in the dropdown', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('maria@empresa.com');
   });
 
-  it('mostra o nome e sobrenome do usuário logado no dropdown', async () => {
+  it('shows the logged-in user first and last name in the dropdown', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Maria Silva');
   });
 
-  it('mostra um rótulo genérico quando o perfil ainda não carregou', async () => {
+  it('shows a generic label when the profile has not loaded yet', async () => {
     sessionServiceFake.currentUser.set(null);
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
@@ -81,7 +81,7 @@ describe('UserMenuComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Usuário');
   });
 
-  it('delega o logout ao LoginStore, dono do ciclo de vida da sessão', async () => {
+  it('delegates the logout to the LoginStore, owner of the session lifecycle', async () => {
     const fixture = TestBed.createComponent(UserMenuComponent);
     await fixture.whenStable();
 

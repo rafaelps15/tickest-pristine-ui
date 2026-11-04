@@ -37,11 +37,11 @@ describe('TicketHistoryStore', () => {
     store = TestBed.inject(TicketHistoryStore);
   });
 
-  it('não chama a API antes de um chamado ser definido', () => {
+  it('does not call the API before a ticket is set', () => {
     expect(dataService.getHistory).not.toHaveBeenCalled();
   });
 
-  it('carrega o histórico do chamado informado', async () => {
+  it('loads the history of the given ticket', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -49,7 +49,7 @@ describe('TicketHistoryStore', () => {
     expect(store.entries()).toEqual([entry]);
   });
 
-  it('carrega a próxima página pelo cursor e acrescenta os eventos aos já exibidos', async () => {
+  it('loads the next page by cursor and appends the events to those already displayed', async () => {
     const older: TicketHistoryEntry = { ...entry, id: 'h0', description: 'Responsável removido', occurredAtUtc: '2025-12-01T12:00:00Z' };
     dataService.getHistory.and.returnValues(of(pageOf([entry], true)), of(pageOf([older])));
 
@@ -66,7 +66,7 @@ describe('TicketHistoryStore', () => {
     expect(store.loadingMore()).toBeFalse();
   });
 
-  it('não chama a API ao carregar mais quando não há próxima página', async () => {
+  it('does not call the API when loading more if there is no next page', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -75,7 +75,7 @@ describe('TicketHistoryStore', () => {
     expect(dataService.getHistory).toHaveBeenCalledTimes(1);
   });
 
-  it('expõe mensagem de erro ao carregar mais quando a chamada falhar', async () => {
+  it('exposes an error message when loading more fails', async () => {
     dataService.getHistory.and.returnValues(of(pageOf([entry], true)), throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.loadForTicket('t1');
@@ -88,7 +88,7 @@ describe('TicketHistoryStore', () => {
     expect(store.loadingMore()).toBeFalse();
   });
 
-  it('reload() descarta as páginas acumuladas e recarrega a primeira', async () => {
+  it('reload() discards the accumulated pages and reloads the first one', async () => {
     const older: TicketHistoryEntry = { ...entry, id: 'h0', occurredAtUtc: '2025-12-01T12:00:00Z' };
     dataService.getHistory.and.returnValues(of(pageOf([entry], true)), of(pageOf([older])), of(pageOf([entry], true)));
 
@@ -105,7 +105,7 @@ describe('TicketHistoryStore', () => {
     expect(store.hasMore()).toBeTrue();
   });
 
-  it('expõe mensagem de erro quando o carregamento inicial falhar', async () => {
+  it('exposes an error message when the initial load fails', async () => {
     dataService.getHistory.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.loadForTicket('t1');

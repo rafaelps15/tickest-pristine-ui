@@ -36,7 +36,7 @@ describe('CurrentUserService', () => {
     service = TestBed.inject(CurrentUserService);
   });
 
-  it('deve carregar uma vez só quando há chamadas simultâneas', () => {
+  it('should load only once when there are simultaneous calls', () => {
     const subject = new Subject<CurrentUser>();
     authDataService.getCurrentUser.and.returnValue(subject.asObservable());
 
@@ -53,7 +53,7 @@ describe('CurrentUserService', () => {
     expect(session.setCurrentUser).toHaveBeenCalledOnceWith(user);
   });
 
-  it('não deve chamar a API novamente quando já há um usuário carregado (ensureLoaded)', () => {
+  it('should not call the API again when a user is already loaded (ensureLoaded)', () => {
     session.currentUser.and.returnValue(user);
 
     const result = service.ensureLoaded();
@@ -62,7 +62,7 @@ describe('CurrentUserService', () => {
     expect(authDataService.getCurrentUser).not.toHaveBeenCalled();
   });
 
-  it('deve carregar via ensureLoaded quando ainda não há usuário na sessão', () => {
+  it('should load via ensureLoaded when there is no user in the session yet', () => {
     session.currentUser.and.returnValue(null);
     authDataService.getCurrentUser.and.returnValue(of(user));
 
@@ -72,7 +72,7 @@ describe('CurrentUserService', () => {
     expect(session.setCurrentUser).toHaveBeenCalledOnceWith(user);
   });
 
-  describe('falha passageira (rede, 429, 5xx)', () => {
+  describe('transient failure (network, 429, 5xx)', () => {
     beforeEach(() => jasmine.clock().install());
     afterEach(() => jasmine.clock().uninstall());
 
@@ -88,7 +88,7 @@ describe('CurrentUserService', () => {
       }));
     }
 
-    it('tenta de novo depois de um 429 e carrega o usuário, sem mandar pro login', () => {
+    it('retries after a 429 and loads the user, without sending to the login', () => {
       failThenSucceed(429, 503);
       const results: CurrentUserLoadResult[] = [];
 
@@ -102,7 +102,7 @@ describe('CurrentUserService', () => {
       expect(session.setCurrentUser).toHaveBeenCalledOnceWith(user);
     });
 
-    it('depois de cerca de 15s sem rede devolve "indisponível" (offline), não "sessão recusada"', () => {
+    it('after about 15s without network returns "indisponível" (offline), not "sessão recusada"', () => {
       failThenSucceed(0, 0, 0, 0, 0);
       const results: CurrentUserLoadResult[] = [];
 
@@ -114,7 +114,7 @@ describe('CurrentUserService', () => {
       expect(session.setCurrentUser).not.toHaveBeenCalled();
     });
 
-    it('com 429 persistente devolve "indisponível" por limite de requisições', () => {
+    it('with a persistent 429 returns "indisponível" due to rate limit', () => {
       failThenSucceed(429, 429, 429, 429, 429);
       const results: CurrentUserLoadResult[] = [];
 
@@ -124,7 +124,7 @@ describe('CurrentUserService', () => {
       expect(results).toEqual([{ status: 'unavailable', reason: 'rate-limited' }]);
     });
 
-    it('com 5xx persistente devolve "indisponível" por erro do servidor', () => {
+    it('with a persistent 5xx returns "indisponível" due to server error', () => {
       failThenSucceed(500, 502, 503, 504, 500);
       const results: CurrentUserLoadResult[] = [];
 
@@ -134,7 +134,7 @@ describe('CurrentUserService', () => {
       expect(results).toEqual([{ status: 'unavailable', reason: 'server-error' }]);
     });
 
-    it('não tenta de novo num 401: a sessão foi recusada', () => {
+    it('does not retry on a 401: the session was refused', () => {
       failThenSucceed(401);
       const results: CurrentUserLoadResult[] = [];
 
@@ -145,7 +145,7 @@ describe('CurrentUserService', () => {
       expect(service.retrying()).toBeFalse();
     });
 
-    it('marca "tentando de novo" depois da primeira falha passageira e desmarca quando termina', () => {
+    it('marks "tentando de novo" after the first transient failure and unmarks it when it ends', () => {
       failThenSucceed(503);
       expect(service.retrying()).toBeFalse();
 
@@ -156,7 +156,7 @@ describe('CurrentUserService', () => {
       expect(service.retrying()).toBeFalse();
     });
 
-    it('desmarca "tentando de novo" quando desiste e devolve "indisponível"', () => {
+    it('unmarks "tentando de novo" when it gives up and returns "indisponível"', () => {
       failThenSucceed(0, 0, 0, 0, 0);
 
       service.load().subscribe();
@@ -168,7 +168,7 @@ describe('CurrentUserService', () => {
     });
   });
 
-  it('trata um erro que não é HTTP como sessão recusada, sem gravar usuário na sessão', () => {
+  it('treats a non-HTTP error as a refused session, without storing a user in the session', () => {
     authDataService.getCurrentUser.and.returnValue(throwError(() => new Error('falha inesperada')));
 
     service.load().subscribe(value => expect(value).toEqual({ status: 'unauthenticated' }));

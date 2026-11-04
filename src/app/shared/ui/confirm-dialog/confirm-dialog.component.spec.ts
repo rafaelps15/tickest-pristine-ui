@@ -23,7 +23,7 @@ describe('ConfirmDialogComponent', () => {
 
   afterEach(() => document.body.classList.remove('modal-open'));
 
-  it('cancela o pedido aberto quando a navegação troca de tela, sem executar a ação', async () => {
+  it('cancels the open request when navigation changes screen, without running the action', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
     let result: boolean | undefined;
     service.confirm({ title: 'Desativar?', message: '...' }).subscribe(value => result = value);
@@ -37,14 +37,14 @@ describe('ConfirmDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('não renderiza nada sem pedido de confirmação', async () => {
+  it('renders nothing without a confirmation request', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('abre como diálogo modal com o título (h2) e a mensagem do pedido', async () => {
+  it('opens as a modal dialog with the title (h2) and the message of the request', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
     await fixture.whenStable();
 
@@ -57,7 +57,7 @@ describe('ConfirmDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Essa ação não pode ser desfeita.');
   });
 
-  it('resolve o pedido com true ao clicar no botão de confirmação, e fecha', async () => {
+  it('resolves the request with true when clicking the confirm button, and closes', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
     await fixture.whenStable();
     const result = jasmine.createSpy('result');
@@ -74,7 +74,7 @@ describe('ConfirmDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('resolve o pedido com false pelo X e pelo Esc', async () => {
+  it('resolves the request with false via the X and via Esc', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
     await fixture.whenStable();
     const results: boolean[] = [];
@@ -92,7 +92,7 @@ describe('ConfirmDialogComponent', () => {
     expect(results).toEqual([false, false]);
   });
 
-  it('foca "Cancelar" ao abrir, o lado seguro de uma ação destrutiva', async () => {
+  it('focuses "Cancelar" on open, the safe side of a destructive action', async () => {
     const fixture = TestBed.createComponent(ConfirmDialogComponent);
     document.body.appendChild(fixture.nativeElement);
     await fixture.whenStable();
@@ -124,7 +124,7 @@ class StackHostComponent {
   screenClosed = 0;
 }
 
-describe('ConfirmDialogComponent sobre outro diálogo', () => {
+describe('ConfirmDialogComponent over another dialog', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [StackHostComponent],
@@ -134,7 +134,7 @@ describe('ConfirmDialogComponent sobre outro diálogo', () => {
 
   afterEach(() => document.body.classList.remove('modal-open'));
 
-  it('o Esc fecha só a confirmação (a do topo), não o diálogo da tela por baixo', async () => {
+  it('Esc closes only the confirmation (the topmost), not the screen dialog underneath', async () => {
     const fixture = TestBed.createComponent(StackHostComponent);
     await fixture.whenStable();
     const service = TestBed.inject(ConfirmDialogService);

@@ -41,11 +41,11 @@ describe('TicketQuickInfoStore', () => {
     store = TestBed.inject(TicketQuickInfoStore);
   });
 
-  it('não chama a API antes de um chamado ser selecionado', () => {
+  it('does not call the API before a ticket is selected', () => {
     expect(dataService.getById).not.toHaveBeenCalled();
   });
 
-  it('busca o detalhe completo do chamado selecionado', async () => {
+  it('fetches the full detail of the selected ticket', async () => {
     store.select('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -53,7 +53,7 @@ describe('TicketQuickInfoStore', () => {
     expect(store.ticket()).toEqual(ticket);
   });
 
-  it('limpa a seleção sem disparar uma nova busca', async () => {
+  it('clears the selection without triggering a new fetch', async () => {
     store.select('t1');
     await TestBed.inject(ApplicationRef).whenStable();
     dataService.getById.calls.reset();
@@ -65,7 +65,7 @@ describe('TicketQuickInfoStore', () => {
     expect(store.ticket()).toBeUndefined();
   });
 
-  it('expõe mensagem própria quando o chamado não existe (404)', async () => {
+  it('exposes a specific message when the ticket does not exist (404)', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
     store.select('t1');
@@ -74,7 +74,7 @@ describe('TicketQuickInfoStore', () => {
     expect(store.state().error).toBe('Não encontramos esse chamado — ele pode ter sido removido.');
   });
 
-  it('expõe mensagem própria quando falta permissão (403)', async () => {
+  it('exposes a specific message when permission is missing (403)', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.select('t1');
@@ -83,7 +83,7 @@ describe('TicketQuickInfoStore', () => {
     expect(store.state().error).toBe('Você não tem acesso a este chamado.');
   });
 
-  it('busca de novo a descrição do chamado selecionado depois de uma falha', async () => {
+  it('fetches the description of the selected ticket again after a failure', async () => {
     dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.select('t1');
     await TestBed.inject(ApplicationRef).whenStable();

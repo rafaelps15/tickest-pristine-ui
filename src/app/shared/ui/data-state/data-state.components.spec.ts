@@ -14,7 +14,7 @@ import { EmptyStateComponent, LoadingStateComponent } from './data-state.compone
 })
 class HostComponent {}
 
-describe('EmptyStateComponent e LoadingStateComponent', () => {
+describe('EmptyStateComponent and LoadingStateComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [HostComponent],
@@ -22,7 +22,7 @@ describe('EmptyStateComponent e LoadingStateComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra ícone decorativo, frase, dica e a próxima ação projetada', async () => {
+  it('shows a decorative icon, a phrase, a hint and the projected next action', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -33,7 +33,7 @@ describe('EmptyStateComponent e LoadingStateComponent', () => {
     expect(empty.querySelector('button')?.textContent).toContain('Novo Usuário');
   });
 
-  it('anuncia o carregamento como status, com o texto visível', async () => {
+  it('announces loading as a status, with the visible text', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 

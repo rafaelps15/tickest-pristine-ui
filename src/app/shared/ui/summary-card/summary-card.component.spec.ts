@@ -26,7 +26,7 @@ describe('SummaryCardComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra os números projetados sob o título "Resumo" (h2)', async () => {
+  it('shows the projected numbers under the "Resumo" heading (h2)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -34,7 +34,7 @@ describe('SummaryCardComponent', () => {
     expect(fixture.nativeElement.querySelector('.insights-stat').textContent).toBe('7');
   });
 
-  it('mostra "—" e "Carregando" no lugar dos números enquanto a lista carrega', async () => {
+  it('shows "—" and "Carregando" in place of the numbers while the list loads', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.loading.set(true);
     await fixture.whenStable();
@@ -44,7 +44,7 @@ describe('SummaryCardComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('funções');
   });
 
-  it('mostra "—" e "indisponível" quando a lista falhou, nunca um 0', async () => {
+  it('shows "—" and "indisponível" when the list failed, never a 0', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.failed.set(true);
     await fixture.whenStable();

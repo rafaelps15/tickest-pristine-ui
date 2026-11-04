@@ -197,7 +197,7 @@ describe('TicketDetailComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega o chamado pelo id da rota, o histórico e os anexos ao inicializar', async () => {
+  it('loads the ticket by the route id, the history and the attachments on init', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -207,7 +207,7 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Impressora não funciona');
   });
 
-  it('mostra "Meus Chamados" no trilho e volta pra /chamados por padrão, sem ?from na URL', async () => {
+  it('shows "Meus Chamados" in the breadcrumb and goes back to /chamados by default, without ?from in the URL', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -218,7 +218,7 @@ describe('TicketDetailComponent', () => {
     expect(backLink.getAttribute('href')).toBe('/tickets');
   });
 
-  it('mostra "Administração / Monitorar Chamados" no trilho e volta pra /chamados/monitorar quando chega com ?from=monitor', async () => {
+  it('shows "Administração / Monitorar Chamados" in the breadcrumb and goes back to /chamados/monitorar when arriving with ?from=monitor', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: {
         snapshot: { paramMap: convertToParamMap({ id: 't1' }), queryParamMap: convertToParamMap({ from: 'monitor' }) }
@@ -234,7 +234,7 @@ describe('TicketDetailComponent', () => {
     expect(backLink.getAttribute('href')).toBe('/tickets/monitorar');
   });
 
-  it('mostra a situação do SLA com texto, e não só com a cor', async () => {
+  it('shows the SLA status with text, not only with color', async () => {
     detailStoreFake.ticket.set({ ...ticket, slaStatus: TicketSlaStatus.Breached });
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -245,7 +245,7 @@ describe('TicketDetailComponent', () => {
     expect(badge?.classList).toContain('bg-label-danger');
   });
 
-  it('mostra a urgência relativa do prazo e destaca em vermelho quando o SLA está violado', async () => {
+  it('shows the relative urgency of the due date and highlights in red when the SLA is breached', async () => {
     const overdueBy3Hours = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
     detailStoreFake.ticket.set({ ...ticket, dueAtUtc: overdueBy3Hours, slaStatus: TicketSlaStatus.Breached, resolvedAtUtc: null });
     detailStoreFake.sla.set(null); // linha "Prazo" do resumo só aparece sem o painel de SLA
@@ -257,7 +257,7 @@ describe('TicketDetailComponent', () => {
     expect(prazoDd).withContext('a linha de Prazo deve ficar vermelha quando o SLA está violado').toBeTruthy();
   });
 
-  it('mostra "vence em" e destaca em amarelo quando o SLA está em risco, sem destaque quando está no prazo', async () => {
+  it('shows "vence em" and highlights in yellow when the SLA is at risk, with no highlight when it is on time', async () => {
     const dueIn40Minutes = new Date(Date.now() + 40 * 60 * 1000).toISOString();
     detailStoreFake.ticket.set({ ...ticket, dueAtUtc: dueIn40Minutes, slaStatus: TicketSlaStatus.AtRisk, resolvedAtUtc: null });
     detailStoreFake.sla.set(null);
@@ -269,7 +269,7 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('dd.text-danger')).toBeFalsy();
   });
 
-  it('não mostra urgência de prazo pra um chamado já resolvido', async () => {
+  it('does not show due date urgency for an already resolved ticket', async () => {
     detailStoreFake.ticket.set({ ...ticket, resolvedAtUtc: '2026-01-02T10:00:00Z', slaStatus: TicketSlaStatus.Met });
     detailStoreFake.sla.set(null);
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -282,7 +282,7 @@ describe('TicketDetailComponent', () => {
     expect(prazoText).not.toContain('Atrasado há');
   });
 
-  it('mostra "Resolvido em" quando o chamado tem data de resolução', async () => {
+  it('shows "Resolvido em" when the ticket has a resolution date', async () => {
     detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved, resolvedAtUtc: '2026-01-02T10:00:00Z' });
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -290,14 +290,14 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Resolvido em');
   });
 
-  it('não mostra "Resolvido em" quando o chamado ainda não foi resolvido', async () => {
+  it('does not show "Resolvido em" when the ticket has not been resolved yet', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).not.toContain('Resolvido em');
   });
 
-  it('mostra quem abriu, o setor e o responsável (ou que ainda não foi atribuído)', async () => {
+  it('shows who opened it, the sector and the assignee (or that it has not been assigned yet)', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -307,7 +307,7 @@ describe('TicketDetailComponent', () => {
     expect(text).toContain('Ainda não atribuído');
   });
 
-  it('mostra o botão de carregar mais anexos só quando há mais páginas, e carrega ao clicar', async () => {
+  it('shows the load-more-attachments button only when there are more pages, and loads on click', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Carregar mais anexos');
@@ -322,7 +322,7 @@ describe('TicketDetailComponent', () => {
     expect(attachmentsStoreFake.loadMore).toHaveBeenCalled();
   });
 
-  it('renderiza os anexos carregados', async () => {
+  it('renders the loaded attachments', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -330,7 +330,7 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1 KB');
   });
 
-  it('o botão "Anexar arquivo" é um <button> real (alcançável por teclado) que abre o seletor de arquivo oculto', async () => {
+  it('the "Anexar arquivo" button is a real <button> (keyboard reachable) that opens the hidden file picker', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -345,7 +345,7 @@ describe('TicketDetailComponent', () => {
     expect(clickSpy).toHaveBeenCalled();
   });
 
-  it('os botões de baixar/excluir anexo têm aria-label (são ícone-apenas)', async () => {
+  it('the download/delete attachment buttons have an aria-label (they are icon-only)', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -355,7 +355,7 @@ describe('TicketDetailComponent', () => {
     expect(deleteButton).toBeTruthy();
   });
 
-  it('entrega o arquivo escolhido ao store, que confere a política antes de enviar', async () => {
+  it('hands the chosen file to the store, which checks the policy before uploading', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -369,7 +369,7 @@ describe('TicketDetailComponent', () => {
     expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
   });
 
-  it('não chama o store quando nenhum arquivo foi escolhido', async () => {
+  it('does not call the store when no file was chosen', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -380,7 +380,7 @@ describe('TicketDetailComponent', () => {
     expect(attachmentsStoreFake.uploadIfValid).not.toHaveBeenCalled();
   });
 
-  it('mostra o motivo da recusa pela política num alerta', async () => {
+  it('shows the policy rejection reason in an alert', async () => {
     attachmentsStoreFake.validationError.set('O arquivo excede o tamanho máximo permitido de 2.0 MB.');
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -389,7 +389,7 @@ describe('TicketDetailComponent', () => {
     expect(alerts.some(alert => alert.textContent?.includes('tamanho máximo permitido de 2.0 MB'))).toBeTrue();
   });
 
-  it('prefere o motivo da recusa ao erro do envio anterior, num alerta só', async () => {
+  it('prefers the rejection reason over the previous upload error, in a single alert', async () => {
     attachmentsStoreFake.validationError.set('O tipo de arquivo "application/x-msdownload" não é suportado.');
     attachmentsStoreFake.uploadError.set('Erro ao enviar o anexo.');
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -400,7 +400,7 @@ describe('TicketDetailComponent', () => {
     expect(text).not.toContain('Erro ao enviar o anexo.');
   });
 
-  it('mostra um toast de sucesso ao enviar o anexo', async () => {
+  it('shows a success toast when the attachment is uploaded', async () => {
     attachmentsStoreFake.uploadIfValid.and.callFake((_file: File, onSuccess?: () => void) => onSuccess?.());
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -413,7 +413,7 @@ describe('TicketDetailComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Anexo enviado.');
   });
 
-  it('exclui o anexo quando confirmado', async () => {
+  it('deletes the attachment when confirmed', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -423,7 +423,7 @@ describe('TicketDetailComponent', () => {
     expect(attachmentsStoreFake.delete).toHaveBeenCalledWith('a1', jasmine.any(Function));
   });
 
-  it('mostra um toast de sucesso ao excluir o anexo', async () => {
+  it('shows a success toast when the attachment is deleted', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     attachmentsStoreFake.delete.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -434,7 +434,7 @@ describe('TicketDetailComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Anexo excluído.');
   });
 
-  it('não exclui o anexo quando a confirmação for cancelada', async () => {
+  it('does not delete the attachment when the confirmation is cancelled', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -444,7 +444,7 @@ describe('TicketDetailComponent', () => {
     expect(attachmentsStoreFake.delete).not.toHaveBeenCalled();
   });
 
-  it('mostra a mensagem de erro do store quando o chamado não pode ser carregado (ex.: 403)', async () => {
+  it('shows the store error message when the ticket cannot be loaded (e.g. 403)', async () => {
     detailStoreFake.ticket.set(undefined);
     detailStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este chamado.' });
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -453,7 +453,7 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este chamado.');
   });
 
-  it('mostra um aviso de não encontrado quando não há chamado nem erro', async () => {
+  it('shows a not-found notice when there is neither a ticket nor an error', async () => {
     detailStoreFake.ticket.set(undefined);
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -461,7 +461,7 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Não encontramos esse chamado');
   });
 
-  it('não mostra SLA, mensagens, anexos nem histórico quando o chamado não existe — só o aviso e o caminho de volta', async () => {
+  it('does not show SLA, messages, attachments or history when the ticket does not exist, only the notice and the way back', async () => {
     detailStoreFake.ticket.set(undefined);
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
@@ -474,7 +474,7 @@ describe('TicketDetailComponent', () => {
     expect(back.getAttribute('href')).toBe('/tickets');
   });
 
-  it('recarrega o chamado ao clicar em "Tentar novamente" quando falhar, mas não mostra o botão quando é só "não encontrado"', async () => {
+  it('reloads the ticket when clicking "Tentar novamente" on failure, but does not show the button when it is only "não encontrado"', async () => {
     detailStoreFake.ticket.set(undefined);
     detailStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este chamado.' });
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -491,7 +491,7 @@ describe('TicketDetailComponent', () => {
       .some(b => b.textContent?.includes('Tentar novamente'))).toBeFalse();
   });
 
-  it('recarrega os anexos e o histórico ao clicar em "Tentar novamente" nos respectivos erros', async () => {
+  it('reloads the attachments and the history when clicking "Tentar novamente" on the respective errors', async () => {
     attachmentsStoreFake.listState.set({ loading: false, error: 'Erro ao carregar anexos' });
     historyStoreFake.state.set({ loading: false, error: 'Erro ao carregar histórico' });
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -506,7 +506,7 @@ describe('TicketDetailComponent', () => {
     expect(historyStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
   });
 
-  it('mostra um spinner — não o aviso de não encontrado — enquanto o chamado ainda está carregando', async () => {
+  it('shows a spinner, not the not-found notice, while the ticket is still loading', async () => {
     detailStoreFake.ticket.set(undefined);
     detailStoreFake.state.set({ loading: true, error: null });
     const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -516,13 +516,13 @@ describe('TicketDetailComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Não encontramos esse chamado');
   });
 
-  describe('remover responsável', () => {
+  describe('remove assignee', () => {
     function findRemoveButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
       return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
         .find(b => b.textContent?.includes('Remover responsável'));
     }
 
-    it('mostra o botão quando o usuário tem permissão, o chamado está ativo e tem responsável', async () => {
+    it('shows the button when the user has permission, the ticket is active and has an assignee', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToName: 'João Pedro' });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -530,7 +530,7 @@ describe('TicketDetailComponent', () => {
       expect(findRemoveButton(fixture)).not.toBeUndefined();
     });
 
-    it('não mostra o botão sem a permissão tickets:manage', async () => {
+    it('does not show the button without the tickets:manage permission', async () => {
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToName: 'João Pedro' });
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -539,7 +539,7 @@ describe('TicketDetailComponent', () => {
       expect(findRemoveButton(fixture)).toBeUndefined();
     });
 
-    it('não mostra o botão quando o chamado não está ativo (Resolvido)', async () => {
+    it('does not show the button when the ticket is not active (Resolvido)', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved, assignedToName: 'João Pedro' });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -547,7 +547,7 @@ describe('TicketDetailComponent', () => {
       expect(findRemoveButton(fixture)).toBeUndefined();
     });
 
-    it('não mostra o botão quando não há responsável atribuído', async () => {
+    it('does not show the button when there is no assigned assignee', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -555,7 +555,7 @@ describe('TicketDetailComponent', () => {
       expect(findRemoveButton(fixture)).toBeUndefined();
     });
 
-    it('pede confirmação e remove o responsável, recarregando o histórico em caso de sucesso', async () => {
+    it('asks for confirmation and removes the assignee, reloading the history on success', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'João Pedro' });
       confirmDialogServiceFake.confirm.and.returnValue(of(true));
       detailStoreFake.removeAssignee.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
@@ -570,7 +570,7 @@ describe('TicketDetailComponent', () => {
       expect(toastServiceFake.show).toHaveBeenCalledWith('Responsável removido.');
     });
 
-    it('não remove o responsável quando a confirmação for cancelada', async () => {
+    it('does not remove the assignee when the confirmation is cancelled', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'João Pedro' });
       confirmDialogServiceFake.confirm.and.returnValue(of(false));
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -581,7 +581,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.removeAssignee).not.toHaveBeenCalled();
     });
 
-    it('mostra a mensagem de erro da mutação quando a remoção falhar', async () => {
+    it('shows the mutation error message when the removal fails', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'João Pedro' });
       detailStoreFake.mutationError.set('O chamado não está ativo.');
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -591,13 +591,13 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('atribuir responsável', () => {
+  describe('assign assignee', () => {
     function findAssignButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
       return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
         .find(b => b.textContent?.includes('Atribuir responsável') || b.textContent?.includes('Alterar responsável'));
     }
 
-    it('não mostra "Atribuir responsável" pra quem tem tickets:manage sem tickets:assign', async () => {
+    it('does not show "Atribuir responsável" to someone with tickets:manage but without tickets:assign', async () => {
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -606,7 +606,7 @@ describe('TicketDetailComponent', () => {
       expect(findAssignButton(fixture)).toBeFalsy();
     });
 
-    it('mostra "Atribuir responsável" quando o chamado está ativo e sem responsável', async () => {
+    it('shows "Atribuir responsável" when the ticket is active and has no assignee', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -614,7 +614,7 @@ describe('TicketDetailComponent', () => {
       expect(findAssignButton(fixture)?.textContent).toContain('Atribuir responsável');
     });
 
-    it('mostra "Alterar responsável" quando o chamado já tem responsável', async () => {
+    it('shows "Alterar responsável" when the ticket already has an assignee', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToName: 'Maria Souza' });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -622,7 +622,7 @@ describe('TicketDetailComponent', () => {
       expect(findAssignButton(fixture)?.textContent).toContain('Alterar responsável');
     });
 
-    it('não mostra o botão sem a permissão tickets:manage', async () => {
+    it('does not show the button without the tickets:manage permission', async () => {
       sessionServiceFake.hasPermission.and.returnValue(false);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -630,7 +630,7 @@ describe('TicketDetailComponent', () => {
       expect(findAssignButton(fixture)).toBeUndefined();
     });
 
-    it('não mostra o botão quando o chamado não está ativo (Resolvido)', async () => {
+    it('does not show the button when the ticket is not active (Resolvido)', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -643,7 +643,7 @@ describe('TicketDetailComponent', () => {
       return fixture.debugElement.query(By.directive(TicketAssignDialogComponent))?.componentInstance;
     }
 
-    it('abre o diálogo pelo botão, sem herdar a busca nem o erro de uma abertura anterior', async () => {
+    it('opens the dialog from the button, without inheriting the search or the error from a previous opening', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       expect(assignDialog(fixture)).toBeUndefined();
@@ -656,7 +656,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.clearAssigneeSearch).toHaveBeenCalled();
     });
 
-    it('passa ao diálogo o responsável atual, os candidatos e o erro da mutação, e liga a busca ao store', async () => {
+    it('passes the dialog the current assignee, the candidates and the mutation error, and wires the search to the store', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: 'Maria Souza' });
       detailStoreFake.assigneeCandidates.set([candidate]);
       detailStoreFake.mutationError.set('O usuário não atende chamados e não pode ser o responsável.');
@@ -673,7 +673,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.searchAssignees).toHaveBeenCalledWith('joão');
     });
 
-    it('atribui o candidato confirmado, recarrega o histórico, avisa e fecha o diálogo', async () => {
+    it('assigns the confirmed candidate, reloads the history, notifies and closes the dialog', async () => {
       detailStoreFake.assignTicket.and.callFake((_id: string, _userId: string, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
       fixture.componentInstance.onOpenAssignModal();
@@ -689,13 +689,13 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('mudar status', () => {
+  describe('change status', () => {
     function findButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>, text: string): HTMLButtonElement | undefined {
       return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
         .find(b => b.textContent?.includes(text));
     }
 
-    it('com o chamado Resolvido, só "Fechar chamado" é primário — "Reabrir" fica secundário', async () => {
+    it('with a Resolvido ticket, only "Fechar chamado" is primary and "Reabrir" stays secondary', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -706,7 +706,7 @@ describe('TicketDetailComponent', () => {
       expect(buttons.find(b => b.textContent?.includes('Reabrir'))?.classList).toContain('btn-outline-primary');
     });
 
-    it('mostra os próximos status válidos pra um chamado Aberto', async () => {
+    it('shows the valid next statuses for an Aberto ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -716,7 +716,7 @@ describe('TicketDetailComponent', () => {
       expect(findButton(fixture, 'Marcar como resolvido')).toBeFalsy();
     });
 
-    it('mostra o spinner só no botão do status clicado, e desabilita os demais', async () => {
+    it('shows the spinner only on the clicked status button, and disables the others', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -732,7 +732,7 @@ describe('TicketDetailComponent', () => {
       expect(cancelButton.disabled).toBeTrue();
     });
 
-    it('mostra só "Fechar chamado" pra um chamado Resolvido', async () => {
+    it('shows only "Fechar chamado" for a Resolvido ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -741,7 +741,7 @@ describe('TicketDetailComponent', () => {
       expect(findButton(fixture, 'Cancelar chamado')).toBeFalsy();
     });
 
-    it('não mostra nenhum botão de transição sem a permissão tickets:manage', async () => {
+    it('does not show any transition button without the tickets:manage permission', async () => {
       sessionServiceFake.hasPermission.and.returnValue(false);
       // Quem não é dono nem tem tickets:cancel recebe canCancel = false do back-end.
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
@@ -752,7 +752,7 @@ describe('TicketDetailComponent', () => {
       expect(findButton(fixture, 'Cancelar chamado')).toBeFalsy();
     });
 
-    it('não mostra nenhum botão de transição pra um chamado Fechado (terminal)', async () => {
+    it('does not show any transition button for a Fechado (terminal) ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Closed });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -762,7 +762,7 @@ describe('TicketDetailComponent', () => {
       expect(findButton(fixture, 'Fechar chamado')).toBeFalsy();
     });
 
-    it('muda o status sem confirmação para uma transição de rotina (Iniciar atendimento)', async () => {
+    it('changes the status without confirmation for a routine transition (Iniciar atendimento)', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -773,7 +773,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.InProgress, ticket.description, jasmine.any(Function));
     });
 
-    it('pede confirmação antes de cancelar, e cancela quando confirmado', async () => {
+    it('asks for confirmation before cancelling, and cancels when confirmed', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       confirmDialogServiceFake.confirm.and.returnValue(of(true));
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -785,7 +785,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, ticket.description, jasmine.any(Function));
     });
 
-    it('não cancela quando a confirmação é negada', async () => {
+    it('does not cancel when the confirmation is denied', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       confirmDialogServiceFake.confirm.and.returnValue(of(false));
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -796,7 +796,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.updateStatus).not.toHaveBeenCalled();
     });
 
-    it('mostra um toast e recarrega o histórico ao mudar o status com sucesso', async () => {
+    it('shows a toast and reloads the history when the status change succeeds', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress });
       detailStoreFake.updateStatus.and.callFake((_id: string, _status: TicketStatus, _desc: string, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -809,13 +809,13 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('reabrir', () => {
+  describe('reopen', () => {
     function findReopenButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
       return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
         .find(b => b.textContent?.includes('Reabrir chamado'));
     }
 
-    it('mostra o botão "Reabrir chamado" pra um chamado Resolvido/Fechado/Cancelado', async () => {
+    it('shows the "Reabrir chamado" button for a Resolvido/Fechado/Cancelado ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Canceled });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -823,7 +823,7 @@ describe('TicketDetailComponent', () => {
       expect(findReopenButton(fixture)).toBeTruthy();
     });
 
-    it('mostra "Reabrir chamado" pro dono com tickets:reopen-own, sem tickets:manage', async () => {
+    it('shows "Reabrir chamado" to the owner with tickets:reopen-own, without tickets:manage', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:reopen-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
@@ -833,7 +833,7 @@ describe('TicketDetailComponent', () => {
       expect(findReopenButton(fixture)).toBeTruthy();
     });
 
-    it('não mostra "Reabrir chamado" pra quem não é dono nem tem tickets:manage (a API responderia 403)', async () => {
+    it('does not show "Reabrir chamado" to someone who is neither the owner nor has tickets:manage (the API would respond 403)', async () => {
       sessionServiceFake.userId.set('outro-usuario');
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:reopen-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
@@ -843,7 +843,7 @@ describe('TicketDetailComponent', () => {
       expect(findReopenButton(fixture)).toBeFalsy();
     });
 
-    it('não mostra o botão "Reabrir chamado" pra um chamado ativo', async () => {
+    it('does not show the "Reabrir chamado" button for an active ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -851,7 +851,7 @@ describe('TicketDetailComponent', () => {
       expect(findReopenButton(fixture)).toBeFalsy();
     });
 
-    it('reabre o chamado, mostra um toast e recarrega o histórico em caso de sucesso', async () => {
+    it('reopens the ticket, shows a toast and reloads the history on success', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
       detailStoreFake.reopen.and.callFake((_id: string, _reason: string | null, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -869,7 +869,7 @@ describe('TicketDetailComponent', () => {
       expect(messagesStoreFake.post).not.toHaveBeenCalled();
     });
 
-    it('manda o motivo no próprio reopen e recarrega a conversa, sem publicar a mensagem à parte', async () => {
+    it('sends the reason in the reopen call itself and reloads the conversation, without posting the message separately', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
       detailStoreFake.reopen.and.callFake((_id: string, _reason: string | null, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -886,12 +886,12 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('editar descrição', () => {
+  describe('edit description', () => {
     function findEditButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
       return fixture.nativeElement.querySelector(`[aria-label="Editar a descrição do chamado ${ticket.title}"]`) ?? undefined;
     }
 
-    it('mostra "Editar" pra quem administra chamados mesmo não sendo o dono, com o chamado ativo', async () => {
+    it('shows "Editar" to those who manage tickets even when not the owner, with the ticket active', async () => {
       sessionServiceFake.userId.set('outro-usuario');
       sessionServiceFake.hasPermission.and.returnValue(true);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
@@ -901,7 +901,7 @@ describe('TicketDetailComponent', () => {
       expect(findEditButton(fixture)).toBeTruthy();
     });
 
-    it('mostra "Editar" pro dono com tickets:update-own mesmo sem tickets:manage, com o chamado ativo', async () => {
+    it('shows "Editar" to the owner with tickets:update-own even without tickets:manage, with the ticket active', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:update-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
@@ -911,7 +911,7 @@ describe('TicketDetailComponent', () => {
       expect(findEditButton(fixture)).toBeTruthy();
     });
 
-    it('não mostra "Editar" pro dono sem tickets:update-own (a API responderia 403)', async () => {
+    it('does not show "Editar" to the owner without tickets:update-own (the API would respond 403)', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
@@ -921,7 +921,7 @@ describe('TicketDetailComponent', () => {
       expect(findEditButton(fixture)).toBeFalsy();
     });
 
-    it('não mostra "Editar" pra quem não é dono nem administra chamados', async () => {
+    it('does not show "Editar" to someone who is neither the owner nor manages tickets', async () => {
       sessionServiceFake.userId.set('outro-usuario');
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
@@ -931,7 +931,7 @@ describe('TicketDetailComponent', () => {
       expect(findEditButton(fixture)).toBeFalsy();
     });
 
-    it('não mostra "Editar" pro dono quando o chamado não está ativo', async () => {
+    it('does not show "Editar" to the owner when the ticket is not active', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
@@ -941,7 +941,7 @@ describe('TicketDetailComponent', () => {
       expect(findEditButton(fixture)).toBeFalsy();
     });
 
-    it('abre o modal limpando o erro de uma mutação anterior, e salva a descrição recarregando o histórico', async () => {
+    it('opens the modal clearing the error from a previous mutation, and saves the description reloading the history', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:update-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
@@ -963,8 +963,8 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('cancelar como dono', () => {
-    it('mostra o botão dedicado "Cancelar chamado" pro dono sem chamados:manage', async () => {
+  describe('cancel as owner', () => {
+    it('shows the dedicated "Cancelar chamado" button to the owner without chamados:manage', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
@@ -980,7 +980,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, ticket.description, jasmine.any(Function));
     });
 
-    it('não duplica o botão "Cancelar chamado" pra quem já administra chamados (já vem das transições de status)', async () => {
+    it('does not duplicate the "Cancelar chamado" button for those who already manage tickets (it already comes from the status transitions)', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.returnValue(true);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
@@ -992,7 +992,7 @@ describe('TicketDetailComponent', () => {
       expect(cancelButtons.length).toBe(1);
     });
 
-    it('não mostra "Cancelar chamado" pra quem não é dono nem administra chamados', async () => {
+    it('does not show "Cancelar chamado" to someone who is neither the owner nor manages tickets', async () => {
       sessionServiceFake.userId.set('outro-usuario');
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
@@ -1005,7 +1005,7 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('janela de cancelamento (spec 016)', () => {
+  describe('cancellation window (spec 016)', () => {
     /** Data UTC a N minutos de agora. */
     function minutesFromNow(minutes: number): string {
       return new Date(Date.now() + minutes * 60_000).toISOString();
@@ -1017,7 +1017,7 @@ describe('TicketDetailComponent', () => {
         .find(b => b.textContent?.includes(text));
     }
 
-    it('mostra ao dono quanto tempo ainda dá pra cancelar', async () => {
+    it('shows the owner how much time is left to cancel', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, ownerCancelDeadlineUtc: minutesFromNow(8) });
@@ -1027,7 +1027,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelector('.cancel-window')?.textContent?.trim()).toBe('Dá pra cancelar por mais 8 min.');
     });
 
-    it('esconde o Cancelar do dono quando a janela já venceu', async () => {
+    it('hides the owner\'s Cancelar when the window has expired', async () => {
       sessionServiceFake.userId.set(ticket.openedByUserId);
       sessionServiceFake.hasPermission.and.returnValue(false);
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, ownerCancelDeadlineUtc: minutesFromNow(-1) });
@@ -1040,7 +1040,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelector('.cancel-window')).toBeNull();
     });
 
-    it('com tickets:manage mas sem tickets:cancel, as transições não trazem Cancelar', async () => {
+    it('with tickets:manage but without tickets:cancel, the transitions do not include Cancelar', async () => {
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, canCancel: false });
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -1050,7 +1050,7 @@ describe('TicketDetailComponent', () => {
       expect(findButton(fixture, 'Cancelar chamado')).toBeFalsy();
     });
 
-    it('com tickets:cancel, cancela sem prazo e sem contagem', async () => {
+    it('with tickets:cancel, cancels with no deadline and no countdown', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, ownerCancelDeadlineUtc: minutesFromNow(-60) });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1060,8 +1060,8 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('painel de SLA', () => {
-    it('mostra o tempo útil em horas e minutos, não em minutos crus', async () => {
+  describe('SLA panel', () => {
+    it('shows business time in hours and minutes, not in raw minutes', async () => {
       detailStoreFake.sla.set({
         ...sla,
         objectives: [
@@ -1078,7 +1078,7 @@ describe('TicketDetailComponent', () => {
       expect(text).not.toContain('555');
     });
 
-    it('não repete a linha "Prazo" no resumo quando o painel de SLA está presente', async () => {
+    it('does not repeat the "Prazo" row in the summary when the SLA panel is present', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -1088,7 +1088,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Prazo:');
     });
 
-    it('destaca o prazo do objetivo em vermelho quando estourou e em âmbar quando está em risco', async () => {
+    it('highlights the objective deadline in red when it was exceeded and in amber when it is at risk', async () => {
       detailStoreFake.sla.set({
         ...sla,
         objectives: [
@@ -1106,7 +1106,7 @@ describe('TicketDetailComponent', () => {
       expect(prazoLines[1].classList).toContain('text-warning');
     });
 
-    it('mostra os dois cartões (Primeira resposta e Resolução) de um chamado novo', async () => {
+    it('shows both cards (Primeira resposta and Resolução) for a new ticket', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -1118,7 +1118,7 @@ describe('TicketDetailComponent', () => {
       expect(text).toContain('7h 30min úteis restantes · 30 min consumidos');
     });
 
-    it('mostra o selo "Legado (horas corridas)" e "Sem meta de primeira resposta" num chamado legado', async () => {
+    it('shows the "Legado (horas corridas)" badge and "Sem meta de primeira resposta" on a legacy ticket', async () => {
       detailStoreFake.sla.set({
         serverNowUtc: '2026-01-01T13:00:00Z',
         plan: { policyId: null, policyName: 'Legado', policyVersion: 0, calendarId: 'c0', calendarName: 'Corrido', isLegacy: true },
@@ -1138,7 +1138,7 @@ describe('TicketDetailComponent', () => {
       expect(text).toContain('Sem meta de primeira resposta.');
     });
 
-    it('mostra o ciclo vigente e a área "Ciclos anteriores" num chamado reaberto', async () => {
+    it('shows the current cycle and the "Ciclos anteriores" area on a reopened ticket', async () => {
       detailStoreFake.sla.set({
         ...sla,
         objectives: [
@@ -1164,7 +1164,7 @@ describe('TicketDetailComponent', () => {
       expect(text).toContain('Parado em');
     });
 
-    it('mostra os 7 estados de objetivo com o rótulo e o badge certos', async () => {
+    it('shows the 7 objective states with the right label and badge', async () => {
       const statesAndBadges: [TicketSlaObjectiveState, string, string][] = [
         [TicketSlaObjectiveState.Running, 'Em andamento', 'bg-label-success'],
         [TicketSlaObjectiveState.AtRisk, 'Em risco', 'bg-label-warning'],
@@ -1190,7 +1190,7 @@ describe('TicketDetailComponent', () => {
       }
     });
 
-    it('usa serverNowUtc (hora do servidor), não o relógio local, pro prazo relativo do objetivo', async () => {
+    it('uses serverNowUtc (server time), not the local clock, for the relative objective deadline', async () => {
       // serverNowUtc fica bem no passado — se o cálculo usasse Date.now(), o resultado seria outro.
       detailStoreFake.sla.set({
         ...sla,
@@ -1203,7 +1203,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Vence em 40 minutos');
     });
 
-    it('não mostra o painel quando não há sla (ainda carregando, por exemplo)', async () => {
+    it('does not show the panel when there is no sla (still loading, for example)', async () => {
       detailStoreFake.sla.set(null);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1212,15 +1212,15 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('mensagens', () => {
-    it('carrega as mensagens do chamado ao inicializar', async () => {
+  describe('messages', () => {
+    it('loads the ticket messages on init', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
       expect(messagesStoreFake.loadForTicket).toHaveBeenCalledWith('t1');
     });
 
-    it('mostra as mensagens carregadas, com autor e data', async () => {
+    it('shows the loaded messages, with author and date', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -1229,7 +1229,7 @@ describe('TicketDetailComponent', () => {
       expect(text).toContain('Maria Souza'); // authorUserId 'u1' == ticket.openedByUserId
     });
 
-    it('resolve o nome do autor: "Você" quando é o usuário logado', async () => {
+    it('resolves the author name: "Você" when it is the logged-in user', async () => {
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'viewer-1' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1237,7 +1237,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Você');
     });
 
-    it('resolve o nome do autor pelo responsável atual do chamado', async () => {
+    it('resolves the author name from the current assignee of the ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, assignedToUserId: 'u2', assignedToName: 'João Pedro' });
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'u2' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -1246,7 +1246,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('João Pedro');
     });
 
-    it('usa "Equipe" como rótulo genérico quando o autor não é o solicitante, o responsável, nem o usuário logado', async () => {
+    it('uses "Equipe" as a generic label when the author is not the requester, the assignee or the logged-in user', async () => {
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1254,7 +1254,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Equipe');
     });
 
-    it('mostra "(editada)" quando a mensagem tem editedAtUtc', async () => {
+    it('shows "(editada)" when the message has editedAtUtc', async () => {
       messagesStoreFake.messages.set([{ ...message, editedAtUtc: '2026-01-01T13:00:00Z' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1262,7 +1262,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('(editada)');
     });
 
-    it('mostra uma mensagem quando não há nenhuma ainda', async () => {
+    it('shows a message when there are none yet', async () => {
       messagesStoreFake.messages.set([]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1270,7 +1270,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Nenhuma mensagem ainda.');
     });
 
-    it('envia a nova mensagem, limpa a caixa e recarrega o histórico em caso de sucesso', async () => {
+    it('sends the new message, clears the box and reloads the history on success', async () => {
       messagesStoreFake.post.and.callFake((_id: string, _content: string, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1285,7 +1285,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.refreshSla).toHaveBeenCalled();
     });
 
-    it('não atualiza o SLA quando a publicação falhar (post sem chamar onSuccess)', async () => {
+    it('does not update the SLA when posting fails (post without calling onSuccess)', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       fixture.componentInstance.newMessageContent.set('Resolvido, pode confirmar.');
@@ -1296,7 +1296,7 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.refreshSla).not.toHaveBeenCalled();
     });
 
-    it('não envia uma mensagem vazia (só espaços)', async () => {
+    it('does not send an empty message (only spaces)', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       fixture.componentInstance.newMessageContent.set('   ');
@@ -1306,7 +1306,7 @@ describe('TicketDetailComponent', () => {
       expect(messagesStoreFake.post).not.toHaveBeenCalled();
     });
 
-    it('mostra o botão "Editar" só pra quem escreveu a mensagem', async () => {
+    it('shows the "Editar" button only to the one who wrote the message', async () => {
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'viewer-1' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1314,7 +1314,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelector('button[aria-label="Editar mensagem"]')).toBeTruthy();
     });
 
-    it('não mostra o botão "Editar" pra quem não escreveu a mensagem', async () => {
+    it('does not show the "Editar" button to those who did not write the message', async () => {
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1322,7 +1322,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelector('button[aria-label="Editar mensagem"]')).toBeFalsy();
     });
 
-    it('mostra o botão "Excluir" pra quem tem chamados:manage, mesmo não sendo o autor', async () => {
+    it('shows the "Excluir" button to those with chamados:manage, even when not the author', async () => {
       sessionServiceFake.hasPermission.and.returnValue(true);
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -1331,7 +1331,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelector('button[aria-label="Excluir mensagem"]')).toBeTruthy();
     });
 
-    it('não mostra o botão "Excluir" sem ser o autor nem ter chamados:manage', async () => {
+    it('does not show the "Excluir" button without being the author or having chamados:manage', async () => {
       sessionServiceFake.hasPermission.and.returnValue(false);
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'outro-admin' }]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -1340,7 +1340,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelector('button[aria-label="Excluir mensagem"]')).toBeFalsy();
     });
 
-    it('edita a mensagem inline e salva, recarregando o histórico em caso de sucesso', async () => {
+    it('edits the message inline and saves, reloading the history on success', async () => {
       messagesStoreFake.messages.set([{ ...message, authorUserId: 'viewer-1' }]);
       messagesStoreFake.editMessage.and.callFake((_id: string, _content: string, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -1359,7 +1359,7 @@ describe('TicketDetailComponent', () => {
       expect(historyStoreFake.reload).toHaveBeenCalled();
     });
 
-    it('cancela a edição inline sem salvar', async () => {
+    it('cancels the inline edit without saving', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       fixture.componentInstance.onStartEdit(message);
@@ -1370,7 +1370,7 @@ describe('TicketDetailComponent', () => {
       expect(messagesStoreFake.editMessage).not.toHaveBeenCalled();
     });
 
-    it('pede confirmação e exclui a mensagem, recarregando o histórico em caso de sucesso', async () => {
+    it('asks for confirmation and deletes the message, reloading the history on success', async () => {
       confirmDialogServiceFake.confirm.and.returnValue(of(true));
       messagesStoreFake.deleteMessage.and.callFake((_id: string, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
@@ -1384,7 +1384,7 @@ describe('TicketDetailComponent', () => {
       expect(historyStoreFake.reload).toHaveBeenCalled();
     });
 
-    it('não exclui a mensagem quando a confirmação for cancelada', async () => {
+    it('does not delete the message when the confirmation is cancelled', async () => {
       confirmDialogServiceFake.confirm.and.returnValue(of(false));
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1394,7 +1394,7 @@ describe('TicketDetailComponent', () => {
       expect(messagesStoreFake.deleteMessage).not.toHaveBeenCalled();
     });
 
-    it('mostra o botão de carregar mais mensagens só quando há mais páginas, e carrega ao clicar', async () => {
+    it('shows the load-more-messages button only when there are more pages, and loads on click', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       expect(fixture.nativeElement.textContent).not.toContain('Carregar mais mensagens');
@@ -1409,7 +1409,7 @@ describe('TicketDetailComponent', () => {
       expect(messagesStoreFake.loadMore).toHaveBeenCalled();
     });
 
-    it('mostra a mensagem de erro de publicação do store', async () => {
+    it('shows the store posting error message', async () => {
       messagesStoreFake.postError.set('Você não tem permissão para enviar mensagens neste chamado.');
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1418,15 +1418,15 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  describe('histórico', () => {
-    it('mostra os eventos carregados', async () => {
+  describe('history', () => {
+    it('shows the loaded events', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
       expect(fixture.nativeElement.textContent).toContain('Chamado criado');
     });
 
-    it('mostra uma mensagem quando não há eventos', async () => {
+    it('shows a message when there are no events', async () => {
       historyStoreFake.entries.set([]);
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1434,7 +1434,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Nenhum evento registrado ainda.');
     });
 
-    it('mostra um spinner enquanto o histórico carrega', async () => {
+    it('shows a spinner while the history loads', async () => {
       historyStoreFake.state.set({ loading: true, error: null });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1442,7 +1442,7 @@ describe('TicketDetailComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('.spinner-border').length).toBeGreaterThan(0);
     });
 
-    it('mostra o botão de carregar mais eventos só quando há mais páginas, e carrega ao clicar', async () => {
+    it('shows the load-more-events button only when there are more pages, and loads on click', async () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
       expect(fixture.nativeElement.textContent).not.toContain('Carregar mais eventos');
@@ -1457,7 +1457,7 @@ describe('TicketDetailComponent', () => {
       expect(historyStoreFake.loadMore).toHaveBeenCalled();
     });
 
-    it('mostra a mensagem de erro do histórico quando o carregamento falhar', async () => {
+    it('shows the history error message when loading fails', async () => {
       historyStoreFake.state.set({ loading: false, error: 'Erro ao carregar o histórico' });
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
@@ -1466,7 +1466,7 @@ describe('TicketDetailComponent', () => {
     });
   });
 
-  it('só mostra "Excluir" do anexo pra quem enviou o arquivo ou administra chamados (mesma regra do back)', async () => {
+  it('shows "Excluir" for the attachment only to the one who uploaded the file or manages tickets (same rule as the back end)', async () => {
     sessionServiceFake.hasPermission.and.returnValue(false);
     sessionServiceFake.userId.set('outra-pessoa');
     const fixture = TestBed.createComponent(TicketDetailComponent);

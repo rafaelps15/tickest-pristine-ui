@@ -43,14 +43,14 @@ describe('TicketAttachmentsStore', () => {
     store = TestBed.inject(TicketAttachmentsStore);
   });
 
-  it('expõe a política de anexos lida do back-end', async () => {
+  it('exposes the attachment policy read from the back end', async () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getPolicy).toHaveBeenCalledTimes(1);
     expect(store.policy()).toEqual(policy);
   });
 
-  it('deixa a política nula quando a leitura falha, sem afetar a lista de anexos', async () => {
+  it('leaves the policy null when the read fails, without affecting the attachment list', async () => {
     dataService.getPolicy.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -65,7 +65,7 @@ describe('TicketAttachmentsStore', () => {
     expect(failing.listState().error).toBeNull();
   });
 
-  it('carrega os anexos do chamado informado', async () => {
+  it('loads the attachments of the given ticket', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -73,11 +73,11 @@ describe('TicketAttachmentsStore', () => {
     expect(store.attachments()).toEqual([attachment]);
   });
 
-  it('não chama a API antes de um chamado ser definido', () => {
+  it('does not call the API before a ticket is set', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
-  it('carrega a próxima página pelo cursor e acrescenta os anexos aos já exibidos', async () => {
+  it('loads the next page by cursor and appends the attachments to those already shown', async () => {
     const older: TicketAttachment = { ...attachment, id: 'a0', fileName: 'antigo.pdf', uploadedAtUtc: '2025-12-01T12:00:00Z' };
     dataService.getAll.and.returnValues(of(pageOf([attachment], true)), of(pageOf([older])));
 
@@ -94,7 +94,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.loadingMore()).toBeFalse();
   });
 
-  it('não chama a API ao carregar mais quando não há próxima página', async () => {
+  it('does not call the API when loading more if there is no next page', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -103,7 +103,7 @@ describe('TicketAttachmentsStore', () => {
     expect(dataService.getAll).toHaveBeenCalledTimes(1);
   });
 
-  it('volta para a primeira página depois de enviar um anexo, descartando as páginas acumuladas', async () => {
+  it('goes back to the first page after uploading an attachment, discarding the accumulated pages', async () => {
     const older: TicketAttachment = { ...attachment, id: 'a0', fileName: 'antigo.pdf' };
     dataService.getAll.and.returnValues(of(pageOf([attachment], true)), of(pageOf([older])), of(pageOf([attachment], true)));
     dataService.upload.and.returnValue(of('new-attachment-id'));
@@ -120,7 +120,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.hasMore()).toBeTrue();
   });
 
-  it('envia um novo anexo e recarrega a listagem em caso de sucesso', async () => {
+  it('uploads a new attachment and reloads the listing on success', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -137,7 +137,7 @@ describe('TicketAttachmentsStore', () => {
     expect(dataService.getAll).toHaveBeenCalledTimes(2);
   });
 
-  it('expõe a mensagem de erro quando o upload falhar com 403', async () => {
+  it('exposes the error message when the upload fails with 403', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -151,14 +151,14 @@ describe('TicketAttachmentsStore', () => {
     expect(store.uploading()).toBeFalse();
   });
 
-  it('não envia o upload sem um chamado definido', () => {
+  it('does not send the upload without a ticket set', () => {
     const file = new File(['x'], 'arquivo.pdf', { type: 'application/pdf' });
     store.upload(file);
 
     expect(dataService.upload).not.toHaveBeenCalled();
   });
 
-  describe('uploadIfValid (política do back-end)', () => {
+  describe('uploadIfValid (back end policy)', () => {
     /** Arquivo com o tamanho e o tipo pedidos (o conteúdo não importa). */
     function fileOf(sizeBytes: number, type = 'application/pdf', name = 'arquivo.pdf'): File {
       return new File([new Uint8Array(sizeBytes)], name, { type });
@@ -170,7 +170,7 @@ describe('TicketAttachmentsStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
     });
 
-    it('envia o arquivo que passa na política', () => {
+    it('uploads the file that passes the policy', () => {
       const file = fileOf(1024);
       store.uploadIfValid(file);
 
@@ -178,21 +178,21 @@ describe('TicketAttachmentsStore', () => {
       expect(store.validationError()).toBeNull();
     });
 
-    it('recusa um arquivo maior que o limite, sem enviar, com o limite na mensagem', () => {
+    it('refuses a file larger than the limit, without uploading, with the limit in the message', () => {
       store.uploadIfValid(fileOf(policy.maxFileSizeBytes + 1));
 
       expect(dataService.upload).not.toHaveBeenCalled();
       expect(store.validationError()).toBe('O arquivo excede o tamanho máximo permitido de 10.0 MB.');
     });
 
-    it('recusa um tipo de arquivo que a política não aceita', () => {
+    it('refuses a file type that the policy does not accept', () => {
       store.uploadIfValid(fileOf(10, 'application/x-msdownload', 'script.exe'));
 
       expect(dataService.upload).not.toHaveBeenCalled();
       expect(store.validationError()).toBe('O tipo de arquivo "application/x-msdownload" não é suportado.');
     });
 
-    it('recusa quando o chamado já tem o máximo de anexos', async () => {
+    it('refuses when the ticket already has the maximum number of attachments', async () => {
       const full = Array.from({ length: policy.maxAttachmentsPerTicket }, (_, index) => ({ ...attachment, id: `a${index}` }));
       dataService.getAll.and.returnValue(of(pageOf(full)));
       store.loadForTicket('t2');
@@ -204,7 +204,7 @@ describe('TicketAttachmentsStore', () => {
       expect(store.validationError()).toContain('máximo de 20 anexos');
     });
 
-    it('recusa quando a soma dos anexos passaria do limite do chamado', async () => {
+    it('refuses when the sum of the attachments would exceed the ticket limit', async () => {
       dataService.getAll.and.returnValue(of(pageOf([{ ...attachment, fileSizeBytes: policy.maxTotalBytesPerTicket - 100 }])));
       store.loadForTicket('t2');
       await TestBed.inject(ApplicationRef).whenStable();
@@ -215,7 +215,7 @@ describe('TicketAttachmentsStore', () => {
       expect(store.validationError()).toBe('Com este arquivo, os anexos do chamado passariam do limite de 100.0 MB.');
     });
 
-    it('com páginas por carregar, não confere quantidade nem soma e deixa para o back-end', async () => {
+    it('with pages still to load, checks neither count nor sum and leaves it to the back end', async () => {
       const full = Array.from({ length: policy.maxAttachmentsPerTicket }, (_, index) => ({ ...attachment, id: `a${index}` }));
       dataService.getAll.and.returnValue(of(pageOf(full, true)));
       store.loadForTicket('t2');
@@ -227,7 +227,7 @@ describe('TicketAttachmentsStore', () => {
       expect(store.validationError()).toBeNull();
     });
 
-    it('limpa a recusa anterior quando o próximo arquivo passa', () => {
+    it('clears the previous refusal when the next file passes', () => {
       store.uploadIfValid(fileOf(policy.maxFileSizeBytes + 1));
       store.uploadIfValid(fileOf(10));
 
@@ -236,7 +236,7 @@ describe('TicketAttachmentsStore', () => {
     });
   });
 
-  it('sem a política (leitura falhou), envia direto e deixa a validação para o back-end', async () => {
+  it('without the policy (read failed), uploads directly and leaves the validation to the back end', async () => {
     dataService.getPolicy.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     dataService.upload.and.returnValue(of('new-attachment-id'));
     TestBed.resetTestingModule();
@@ -254,7 +254,7 @@ describe('TicketAttachmentsStore', () => {
     expect(withoutPolicy.validationError()).toBeNull();
   });
 
-  it('baixa o anexo e dispara o download no navegador', async () => {
+  it('downloads the attachment and triggers the download in the browser', async () => {
     const blob = new Blob(['conteúdo'], { type: 'application/pdf' });
     dataService.download.and.returnValue(of(blob));
     spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
@@ -273,7 +273,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.downloading()).toBeFalse();
   });
 
-  it('expõe mensagem de "não encontrado ou sem acesso" quando o download falhar com 404', async () => {
+  it('exposes a "não encontrado ou sem acesso" message when the download fails with 404', async () => {
     dataService.download.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
 
     store.download(attachment);
@@ -282,7 +282,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.downloadError()).toBe('Anexo não encontrado ou sem acesso.');
   });
 
-  it('expõe mensagem genérica quando o download falhar por outro motivo', async () => {
+  it('exposes a generic message when the download fails for another reason', async () => {
     dataService.download.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.download(attachment);
@@ -291,7 +291,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.downloadError()).toBe('Erro ao baixar o anexo.');
   });
 
-  it('exclui um anexo e recarrega a listagem em caso de sucesso', async () => {
+  it('deletes an attachment and reloads the listing on success', async () => {
     store.loadForTicket('t1');
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -306,7 +306,7 @@ describe('TicketAttachmentsStore', () => {
     expect(store.deleting()).toBeFalse();
   });
 
-  it('expõe a mensagem de erro quando a exclusão falhar com 403', async () => {
+  it('exposes the error message when the deletion fails with 403', async () => {
     dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.delete('a1');

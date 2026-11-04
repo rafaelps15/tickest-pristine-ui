@@ -33,7 +33,7 @@ describe('ProfileEditStore', () => {
     store = TestBed.inject(ProfileEditStore);
   });
 
-  it('deve carregar o perfil do usuário logado', async () => {
+  it('should load the logged-in user profile', async () => {
     store.loadCurrentUser();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -41,7 +41,7 @@ describe('ProfileEditStore', () => {
     expect(store.profile()).toEqual(profile);
   });
 
-  it('deve salvar o perfil, marcar como salvo e recarregar os dados', async () => {
+  it('should save the profile, mark it as saved and reload the data', async () => {
     dataService.updateProfile.and.returnValue(of(undefined));
     store.loadCurrentUser();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -57,7 +57,7 @@ describe('ProfileEditStore', () => {
     expect(currentUserService.load).toHaveBeenCalled();
   });
 
-  it('deve expor a mensagem de erro quando o salvamento falhar com 403', async () => {
+  it('should expose the error message when the save fails with 403', async () => {
     dataService.updateProfile.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     store.loadCurrentUser();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -70,7 +70,7 @@ describe('ProfileEditStore', () => {
     expect(currentUserService.load).not.toHaveBeenCalled();
   });
 
-  it('deve alterar a senha e marcar como alterada', async () => {
+  it('should change the password and mark it as changed', async () => {
     dataService.changePassword.and.returnValue(of(undefined));
 
     store.changePassword({ currentPassword: 'Password123!', newPassword: 'NewPassword456#' });
@@ -82,7 +82,7 @@ describe('ProfileEditStore', () => {
     expect(store.passwordError()).toBeNull();
   });
 
-  it('deve expor a mensagem de erro quando a senha atual estiver incorreta', async () => {
+  it('should expose the error message when the current password is incorrect', async () => {
     dataService.changePassword.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 400,
       error: { title: 'Users.InvalidCurrentPassword', detail: 'A senha atual informada está incorreta' }
@@ -95,7 +95,7 @@ describe('ProfileEditStore', () => {
     expect(store.passwordError()).toBe('A senha atual informada está incorreta');
   });
 
-  it('deve expor mensagem própria quando o rate limiter bloquear a troca de senha (429, sem corpo)', async () => {
+  it('should expose its own message when the rate limiter blocks the password change (429, no body)', async () => {
     dataService.changePassword.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
 
     store.changePassword({ currentPassword: 'Password123!', newPassword: 'NewPassword456#' });
@@ -104,13 +104,13 @@ describe('ProfileEditStore', () => {
     expect(store.passwordError()).toBe('Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.');
   });
 
-  it('clearSaved() esconde a confirmação de perfil atualizado', () => {
+  it('clearSaved() hides the profile-updated confirmation', () => {
     store.clearSaved();
 
     expect(store.saved()).toBeFalse();
   });
 
-  it('clearPasswordChanged() esconde a confirmação de senha alterada', () => {
+  it('clearPasswordChanged() hides the password-changed confirmation', () => {
     store.clearPasswordChanged();
 
     expect(store.passwordChanged()).toBeFalse();

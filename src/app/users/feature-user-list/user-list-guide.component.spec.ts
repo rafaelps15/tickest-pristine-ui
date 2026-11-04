@@ -24,14 +24,14 @@ describe('UserListGuideComponent', () => {
     return fixture;
   }
 
-  it('começa fechado até na primeira visita, pra não empurrar a lista pra baixo da dobra', async () => {
+  it('starts closed even on the first visit, so it does not push the list below the fold', async () => {
     const fixture = TestBed.createComponent(UserListGuideComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.guide-toggle').getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('mostra a legenda dos três status fixos da tela, com o badge compartilhado', async () => {
+  it('shows the legend of the three fixed statuses of the screen, with the shared badge', async () => {
     const fixture = await createOpen();
 
     const text = fixture.nativeElement.textContent;
@@ -41,7 +41,7 @@ describe('UserListGuideComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('app-user-status-badge').length).toBe(3);
   });
 
-  it('explica o que o nome e o checkbox fazem, e quem fica fora do lote', async () => {
+  it('explains what the name and the checkbox do, and who is left out of the batch', async () => {
     const fixture = await createOpen();
 
     const text = fixture.nativeElement.textContent;
@@ -49,13 +49,13 @@ describe('UserListGuideComponent', () => {
     expect(text).toContain('a sua conta e quem já está inativo ficam de fora do lote');
   });
 
-  it('explica que o termo buscado não vai pro link, por privacidade', async () => {
+  it('explains that the searched term does not go into the link, for privacy', async () => {
     const fixture = await createOpen();
 
     expect(fixture.nativeElement.textContent).toContain('não vai pro link');
   });
 
-  it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
+  it('remembers the open/closed preference under the screen own key', async () => {
     const fixture = TestBed.createComponent(UserListGuideComponent);
     await fixture.whenStable();
 

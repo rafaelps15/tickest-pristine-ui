@@ -53,7 +53,7 @@ describe('UsersStore', () => {
     store = TestBed.inject(UsersStore);
   });
 
-  it('expõe os usuários da página carregada e os dados de paginação', async () => {
+  it('exposes the users of the loaded page and the pagination data', async () => {
     userDataService.getAll.and.returnValue(of(buildPage([user], 1, 20, 1)));
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -67,14 +67,14 @@ describe('UsersStore', () => {
     expect(store.hasNextPage()).toBeFalse();
   });
 
-  it('carrega com os filtros padrão (todos os status, página 1, 20 por página)', async () => {
+  it('loads with the default filters (all statuses, page 1, 20 per page)', async () => {
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', page: 1, pageSize: 20 });
   });
 
-  it('ordena as funções de cada usuário alfabeticamente, independente da ordem recebida da API', async () => {
+  it('sorts each user\'s roles alphabetically, regardless of the order received from the API', async () => {
     userDataService.getAll.and.returnValue(of(buildPage([
       {
         ...user,
@@ -88,7 +88,7 @@ describe('UsersStore', () => {
     expect(store.users()[0].roles.map(role => role.name)).toEqual(['Agent', 'Requester']);
   });
 
-  it('muda a busca e volta pra página 1', async () => {
+  it('changes the search and goes back to page 1', async () => {
     store.goToPage(3);
     store.setSearch('maria');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -96,7 +96,7 @@ describe('UsersStore', () => {
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', search: 'maria', page: 1, pageSize: 20 });
   });
 
-  it('ignora a mesma busca (vazia ou com espaços), sem voltar a página nem buscar de novo', async () => {
+  it('ignores the same search (empty or with spaces), without going back a page or fetching again', async () => {
     store.goToPage(3);
     await TestBed.inject(ApplicationRef).whenStable();
     const callsBefore = listCalls();
@@ -109,14 +109,14 @@ describe('UsersStore', () => {
     expect(listCalls()).toBe(callsBefore);
   });
 
-  it('apara os espaços do termo de busca', async () => {
+  it('trims the spaces of the search term', async () => {
     store.setSearch('  maria ');
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.filters().search).toBe('maria');
   });
 
-  it('muda o status e volta pra página 1', async () => {
+  it('changes the status and goes back to page 1', async () => {
     store.goToPage(2);
     store.setStatus('Inactive');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -124,7 +124,7 @@ describe('UsersStore', () => {
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Inactive', page: 1, pageSize: 20 });
   });
 
-  it('muda o período de cadastro e volta pra página 1', async () => {
+  it('changes the registration period and goes back to page 1', async () => {
     store.goToPage(2);
     store.setPeriod('2026-01-01', '2026-01-31');
     await TestBed.inject(ApplicationRef).whenStable();
@@ -134,21 +134,21 @@ describe('UsersStore', () => {
     });
   });
 
-  it('navega para a página informada', async () => {
+  it('navigates to the given page', async () => {
     store.goToPage(2);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', page: 2, pageSize: 20 });
   });
 
-  it('muda o tamanho da página', async () => {
+  it('changes the page size', async () => {
     store.setPageSize(50);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', page: 1, pageSize: 50 });
   });
 
-  it('volta pra página 1 ao mudar o tamanho da página, pra não ficar numa página que deixou de existir', async () => {
+  it('goes back to page 1 when changing the page size, so as not to stay on a page that no longer exists', async () => {
     store.goToPage(5);
     store.setPageSize(100);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -156,7 +156,7 @@ describe('UsersStore', () => {
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', page: 1, pageSize: 100 });
   });
 
-  it('restaura os filtros de uma vez a partir da URL, sem voltar pra página 1', async () => {
+  it('restores the filters at once from the URL, without going back to page 1', async () => {
     store.hydrateFiltersFromUrl({ status: 'Inactive', createdFrom: '2026-01-01', createdTo: '2026-01-31', page: 3, pageSize: 50 });
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -165,7 +165,7 @@ describe('UsersStore', () => {
     });
   });
 
-  it('limpa os filtros, voltando ao estado padrão', async () => {
+  it('clears the filters, returning to the default state', async () => {
     store.setSearch('maria');
     store.setStatus('Inactive');
     store.goToPage(3);
@@ -175,7 +175,7 @@ describe('UsersStore', () => {
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'All', page: 1, pageSize: 20 });
   });
 
-  it('expõe a mensagem de erro do servidor quando o período for inválido (400)', async () => {
+  it('exposes the server error message when the period is invalid (400)', async () => {
     userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 400,
       error: { title: 'Users.InvalidCreatedPeriod', detail: 'A data inicial do período de cadastro não pode ser maior que a data final.' }
@@ -188,7 +188,7 @@ describe('UsersStore', () => {
     expect(store.listLoadFailed()).toBeTrue();
   });
 
-  it('não marca falha de carga quando o erro é de uma ação (desativar), que recarregar não resolve', async () => {
+  it('does not flag a load failure when the error comes from an action (deactivate), which reloading does not fix', async () => {
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
     userDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
@@ -200,7 +200,7 @@ describe('UsersStore', () => {
     expect(store.listLoadFailed()).toBeFalse();
   });
 
-  it('cria um usuário, marca sucesso e recarrega a listagem', async () => {
+  it('creates a user, flags success and reloads the listing', async () => {
     authDataService.register.and.returnValue(of('new-id'));
 
     store.loadAll();
@@ -214,7 +214,7 @@ describe('UsersStore', () => {
     expect(listCalls()).toBe(2);
   });
 
-  it('expõe a mensagem de erro quando a criação falhar com e-mail duplicado', async () => {
+  it('exposes the error message when creation fails with a duplicate email', async () => {
     authDataService.register.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
 
     store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
@@ -224,7 +224,7 @@ describe('UsersStore', () => {
     expect(store.error()).toBe('Este e-mail já está cadastrado.');
   });
 
-  it('expõe mensagem própria quando a criação falhar por falta de permissão (401/403)', async () => {
+  it('exposes its own message when creation fails due to lack of permission (401/403)', async () => {
     authDataService.register.and.returnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
 
     store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
@@ -233,7 +233,7 @@ describe('UsersStore', () => {
     expect(store.error()).toBe('Você não tem permissão para solicitar este cadastro.');
   });
 
-  it('reseta loading/success/error ao chamar resetState', () => {
+  it('resets loading/success/error when calling resetState', () => {
     store.resetState();
 
     expect(store.loading()).toBeFalse();
@@ -241,7 +241,7 @@ describe('UsersStore', () => {
     expect(store.error()).toBeNull();
   });
 
-  it('atualiza o cadastro de um usuário e recarrega a listagem em caso de sucesso', async () => {
+  it('updates a user\'s registration and reloads the listing on success', async () => {
     userDataService.updateProfile.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -253,7 +253,7 @@ describe('UsersStore', () => {
     expect(store.profileError()).toBeNull();
   });
 
-  it('cria o usuário e já atribui as funções escolhidas com o id devolvido pelo cadastro', async () => {
+  it('creates the user and already assigns the chosen roles with the id returned by the registration', async () => {
     authDataService.register.and.returnValue(of('new-id'));
     userDataService.assignRoles.and.returnValue(of(undefined));
 
@@ -266,7 +266,7 @@ describe('UsersStore', () => {
     expect(store.createRolesFailed()).toBeFalse();
   });
 
-  it('não chama a atribuição de funções quando nenhuma foi escolhida', async () => {
+  it('does not call the role assignment when none was chosen', async () => {
     authDataService.register.and.returnValue(of('new-id'));
 
     store.createUser({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
@@ -276,7 +276,7 @@ describe('UsersStore', () => {
     expect(store.success()).toBeTrue();
   });
 
-  it('trata como cadastro concluído, mas sinaliza, quando só a atribuição de funções falha', async () => {
+  it('treats the registration as completed, but signals it, when only the role assignment fails', async () => {
     authDataService.register.and.returnValue(of('new-id'));
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
@@ -290,7 +290,7 @@ describe('UsersStore', () => {
     expect(store.loading()).toBeFalse();
   });
 
-  it('devolve quantos chamados em aberto estão atribuídos ao usuário', () => {
+  it('returns how many open tickets are assigned to the user', () => {
     userDataService.countOpenAssignedTickets.and.returnValue(of(4));
     const onDone = jasmine.createSpy('onDone');
 
@@ -300,7 +300,7 @@ describe('UsersStore', () => {
     expect(onDone).toHaveBeenCalledWith(4);
   });
 
-  it('devolve null quando a contagem de chamados falha, pra não bloquear a desativação', () => {
+  it('returns null when the ticket count fails, so as not to block the deactivation', () => {
     userDataService.countOpenAssignedTickets.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const onDone = jasmine.createSpy('onDone');
 
@@ -309,7 +309,7 @@ describe('UsersStore', () => {
     expect(onDone).toHaveBeenCalledWith(null);
   });
 
-  it('reenvia o convite, recarrega a listagem e libera o indicador de andamento', async () => {
+  it('resends the invitation, reloads the listing and releases the progress indicator', async () => {
     userDataService.resendInvitation.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -321,7 +321,7 @@ describe('UsersStore', () => {
     expect(store.resendingInvitationIds()).toEqual([]);
   });
 
-  it('mostra o motivo do back-end quando o reenvio é recusado (ex.: limite de convites em 24h)', async () => {
+  it('shows the back end reason when the resend is refused (e.g. invitation limit within 24h)', async () => {
     userDataService.resendInvitation.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 409,
       error: { title: 'Users.InvitationLimitReached', detail: 'Este usuário já recebeu 5 convites nas últimas 24 horas. Tente de novo mais tarde.' }
@@ -334,7 +334,7 @@ describe('UsersStore', () => {
     expect(store.resendingInvitationIds()).toEqual([]);
   });
 
-  it('expõe a falha de atualização de cadastro no erro do modal, sem poluir o erro da listagem', async () => {
+  it('exposes the registration update failure in the modal error, without polluting the listing error', async () => {
     userDataService.updateProfile.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.updateProfile('u1', { firstName: 'Ana', lastName: 'Costa' });
@@ -344,7 +344,7 @@ describe('UsersStore', () => {
     expect(store.listState().error).toBeNull();
   });
 
-  it('expõe a falha de atribuição de funções no erro do modal, sem poluir o erro da listagem', async () => {
+  it('exposes the role assignment failure in the modal error, without polluting the listing error', async () => {
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.assignRoles('u1', ['Agent']);
@@ -354,7 +354,7 @@ describe('UsersStore', () => {
     expect(store.listState().error).toBeNull();
   });
 
-  it('não deixa um erro de atribuição de funções aparecer no modal de edição de cadastro', async () => {
+  it('does not let a role assignment error appear in the registration edit modal', async () => {
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.assignRoles('u1', ['Agent']);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -362,7 +362,7 @@ describe('UsersStore', () => {
     expect(store.profileError()).toBeNull();
   });
 
-  it('limpa os erros dos dois modais de uma vez', async () => {
+  it('clears the errors of both modals at once', async () => {
     userDataService.updateProfile.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     userDataService.assignRoles.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.updateProfile('u1', { firstName: 'Ana', lastName: 'Costa' });
@@ -375,7 +375,7 @@ describe('UsersStore', () => {
     expect(store.rolesError()).toBeNull();
   });
 
-  it('atribui funções a um usuário e recarrega a listagem em caso de sucesso', async () => {
+  it('assigns roles to a user and reloads the listing on success', async () => {
     userDataService.assignRoles.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -386,7 +386,7 @@ describe('UsersStore', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('desativa um usuário e recarrega a listagem em caso de sucesso', async () => {
+  it('deactivates a user and reloads the listing on success', async () => {
     userDataService.deactivate.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -398,7 +398,7 @@ describe('UsersStore', () => {
     expect(store.deactivatingIds()).toEqual([]);
   });
 
-  it('expõe a mensagem de erro quando o usuário já estiver desativado', async () => {
+  it('exposes the error message when the user is already deactivated', async () => {
     userDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
 
     store.deactivate('u1');
@@ -408,7 +408,7 @@ describe('UsersStore', () => {
     expect(store.deactivatingIds()).toEqual([]);
   });
 
-  it('reativa um usuário e recarrega a listagem em caso de sucesso', async () => {
+  it('reactivates a user and reloads the listing on success', async () => {
     userDataService.activate.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -420,7 +420,7 @@ describe('UsersStore', () => {
     expect(store.activatingIds()).toEqual([]);
   });
 
-  it('expõe a mensagem de erro quando o usuário já estiver ativo', async () => {
+  it('exposes the error message when the user is already active', async () => {
     userDataService.activate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
 
     store.activate('u1');
@@ -430,7 +430,7 @@ describe('UsersStore', () => {
     expect(store.activatingIds()).toEqual([]);
   });
 
-  it('desativa vários usuários em lote, em paralelo, e recarrega a listagem quando todos têm sucesso', async () => {
+  it('deactivates several users in bulk, in parallel, and reloads the listing when all succeed', async () => {
     userDataService.getAll.and.returnValue(of(buildPage([user, user2])));
     userDataService.deactivate.and.returnValue(of(undefined));
     const onDone = jasmine.createSpy('onDone');
@@ -449,7 +449,7 @@ describe('UsersStore', () => {
     expect(listCalls()).toBe(2);
   });
 
-  it('reporta falha parcial com o nome de quem falhou, sem desfazer quem teve sucesso', async () => {
+  it('reports a partial failure with the name of whoever failed, without undoing whoever succeeded', async () => {
     userDataService.getAll.and.returnValue(of(buildPage([user, user2])));
     userDataService.deactivate.and.callFake((userId: string) =>
       userId === 'u1' ? of(undefined) : throwError(() => new HttpErrorResponse({ status: 500 }))
@@ -466,7 +466,7 @@ describe('UsersStore', () => {
     expect(store.listState().error).toBe('Não foi possível desativar: João Santos.');
   });
 
-  it('limita a 10 desativações em voo ao mesmo tempo, mesmo selecionando mais usuários que isso', async () => {
+  it('limits to 10 deactivations in flight at the same time, even when selecting more users than that', async () => {
     const ids = Array.from({ length: 15 }, (_, i) => `u${i + 1}`);
     const subjects = new Map(ids.map(id => [id, new Subject<void>()]));
     userDataService.deactivate.and.callFake((userId: string) => subjects.get(userId)!.asObservable());
@@ -493,13 +493,13 @@ describe('UsersStore', () => {
     expect(onDone).toHaveBeenCalledWith(jasmine.arrayWithExactContents(ids), 0);
   });
 
-  it('não chama a API quando a lista de ids selecionados estiver vazia', () => {
+  it('does not call the API when the list of selected ids is empty', () => {
     store.deactivateMany([]);
 
     expect(userDataService.deactivate).not.toHaveBeenCalled();
   });
 
-  it('mantém o id em activatingIds enquanto a chamada está em andamento, e remove ao concluir', async () => {
+  it('keeps the id in activatingIds while the call is in progress, and removes it on completion', async () => {
     const subject = new Subject<void>();
     userDataService.activate.and.returnValue(subject);
 
@@ -513,7 +513,7 @@ describe('UsersStore', () => {
     expect(store.activatingIds()).toEqual([]);
   });
 
-  it('marca só o id afetado em deactivatingIds, sem travar outros usuários em andamento ao mesmo tempo', async () => {
+  it('marks only the affected id in deactivatingIds, without blocking other users in progress at the same time', async () => {
     const subject = new Subject<void>();
     userDataService.deactivate.and.callFake((userId: string) => userId === 'u1' ? subject : of(undefined));
 
@@ -532,7 +532,7 @@ describe('UsersStore', () => {
     expect(store.deactivatingIds()).toEqual([]);
   });
 
-  it('expõe os totais da empresa por situação (GET de contagem, não a página) e recarrega ao desativar', async () => {
+  it('exposes the company totals by status (count GET, not the page) and reloads on deactivation', async () => {
     const counts = { totalCount: 50, activeCount: 42, pendingActivationCount: 5, inactiveCount: 3 };
     userDataService.getStatusCounts.and.returnValue(of(counts));
     store.loadAll();
@@ -547,7 +547,7 @@ describe('UsersStore', () => {
     expect(userDataService.getStatusCounts.calls.count()).toBeGreaterThan(summaryCallsBefore);
   });
 
-  it('marca o Resumo como falho, sem inventar 0, quando os totais não carregam', async () => {
+  it('marks the Resumo as failed, without inventing 0, when the totals do not load', async () => {
     userDataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -556,7 +556,7 @@ describe('UsersStore', () => {
     expect(store.statusCounts()).toBeNull();
   });
 
-  it('não abre uma segunda contagem de chamados pro mesmo usuário enquanto a primeira está em andamento', () => {
+  it('does not open a second ticket count for the same user while the first is in progress', () => {
     const subject = new Subject<number>();
     userDataService.countOpenAssignedTickets.and.returnValue(subject);
     const onDone = jasmine.createSpy('onDone');
@@ -573,7 +573,7 @@ describe('UsersStore', () => {
     expect(store.countingTicketsIds()).toEqual([]);
   });
 
-  it('soma os chamados em aberto dos selecionados e conta quantas pessoas atendem algum', () => {
+  it('sums the open tickets of the selected users and counts how many people are assigned to any', () => {
     userDataService.countOpenAssignedTickets.and.callFake((userId: string) => of(userId === 'u1' ? 3 : userId === 'u2' ? 0 : 1));
     const onDone = jasmine.createSpy('onDone');
 
@@ -583,7 +583,7 @@ describe('UsersStore', () => {
     expect(store.countingTicketsIds()).toEqual([]);
   });
 
-  it('devolve null na contagem em lote se alguma consulta falhar, sem bloquear a desativação', () => {
+  it('returns null in the bulk count if any query fails, without blocking the deactivation', () => {
     userDataService.countOpenAssignedTickets.and.callFake((userId: string) =>
       userId === 'u2' ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(1));
     const onDone = jasmine.createSpy('onDone');
@@ -594,7 +594,7 @@ describe('UsersStore', () => {
     expect(store.countingTicketsIds()).toEqual([]);
   });
 
-  it('reativa vários usuários de uma vez (o "Desfazer" do lote) e recarrega a listagem', async () => {
+  it('reactivates several users at once (the bulk "Desfazer") and reloads the listing', async () => {
     userDataService.activate.and.returnValue(of(undefined));
     const onDone = jasmine.createSpy('onDone');
     store.loadAll();
@@ -611,7 +611,7 @@ describe('UsersStore', () => {
     expect(listCalls()).toBeGreaterThan(callsBefore);
   });
 
-  it('avisa acima da lista quando a reativação em lote falha para alguém', () => {
+  it('warns above the list when the bulk reactivation fails for someone', () => {
     userDataService.activate.and.callFake((userId: string) =>
       userId === 'u1' ? of(undefined) : throwError(() => new HttpErrorResponse({ status: 500 })));
     const onDone = jasmine.createSpy('onDone');
@@ -622,7 +622,7 @@ describe('UsersStore', () => {
     expect(store.listMutationError()).toContain('Não foi possível reativar');
   });
 
-  it('limpa o erro de ação mostrado acima da lista', () => {
+  it('clears the action error shown above the list', () => {
     userDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
     store.deactivate('u1');
     expect(store.listMutationError()).not.toBeNull();

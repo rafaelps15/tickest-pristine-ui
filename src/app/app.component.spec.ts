@@ -34,7 +34,7 @@ describe('AppComponent', () => {
     });
   });
 
-  it('mostra o aviso de nova tentativa enquanto a navegação espera o carregamento do usuário', async () => {
+  it('shows the retry notice while the navigation waits for the user to load', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     TestBed.inject(Router).navigateByUrl('/espera');
     retrying.set(true);
@@ -46,7 +46,7 @@ describe('AppComponent', () => {
     expect(notice.textContent).toContain('Conectando ao servidor');
   });
 
-  it('esconde o aviso quando a navegação termina', async () => {
+  it('hides the notice when the navigation ends', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const navigation = TestBed.inject(Router).navigateByUrl('/espera');
     retrying.set(true);
@@ -61,7 +61,7 @@ describe('AppComponent', () => {
     expect(fixture.nativeElement.querySelector('app-session-retry-notice')).toBeNull();
   });
 
-  it('não mostra o aviso numa nova tentativa em segundo plano, sem navegação pendente', async () => {
+  it('does not show the notice on a background retry, with no pending navigation', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     retrying.set(true);
     await fixture.whenStable();

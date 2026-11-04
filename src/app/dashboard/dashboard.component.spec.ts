@@ -180,19 +180,19 @@ describe('DashboardComponent', () => {
   const kpiLink = (root: HTMLElement, label: string) => Array.from(root.querySelectorAll('.kpi-card a') as NodeListOf<HTMLAnchorElement>)
     .find(a => a.getAttribute('aria-label')?.startsWith(label + ':'))!;
 
-  describe('saudação', () => {
-    it('cumprimenta pelo primeiro nome conforme a hora do dia', async () => {
+  describe('greeting', () => {
+    it('greets by first name according to the time of day', async () => {
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('h1').textContent).toContain(`${greetingForHour(new Date().getHours())}, Maria!`);
     });
 
-    it('cumprimenta sem nome quando o usuário logado ainda não foi carregado', async () => {
+    it('greets without a name when the logged-in user has not been loaded yet', async () => {
       currentUser.set(null);
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe(`${greetingForHour(new Date().getHours())}!`);
     });
 
-    it('escolhe "Bom dia", "Boa tarde" ou "Boa noite" pela hora (madrugada é noite)', () => {
+    it('picks "Bom dia", "Boa tarde" or "Boa noite" by the hour (early morning counts as night)', () => {
       expect(greetingForHour(8)).toBe('Bom dia');
       expect(greetingForHour(13)).toBe('Boa tarde');
       expect(greetingForHour(20)).toBe('Boa noite');
@@ -200,13 +200,13 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('cabeçalho', () => {
-    it('carrega os números ao abrir a tela', async () => {
+  describe('header', () => {
+    it('loads the numbers when the screen opens', async () => {
       await render();
       expect(ticketsStoreFake.load).toHaveBeenCalled();
     });
 
-    it('ao abrir (ou voltar à tela), recarrega todas as fontes, não só os totais — os stores guardam a visita anterior', async () => {
+    it('when opening (or returning to) the screen, reloads all sources, not just the totals, since the stores keep the previous visit', async () => {
       asRequester();
       await render();
       expect(ticketsStoreFake.load).toHaveBeenCalledTimes(1);
@@ -214,7 +214,7 @@ describe('DashboardComponent', () => {
       expect(myTicketsFake.reload).toHaveBeenCalledTimes(1);
     });
 
-    it('voltando à tela com os números da visita anterior, diz "Atualizando…" (nunca "Atualizado agora") até a recarga terminar', async () => {
+    it('when returning to the screen with the numbers from the previous visit, says "Atualizando…" (never "Atualizado agora") until the reload finishes', async () => {
       asRequester();
       features.companyStatsForAll = true;
       ticketsStoreFake.statusCountsLoading.set(true);
@@ -228,7 +228,7 @@ describe('DashboardComponent', () => {
       expect(label()).toContain('Atualizado agora');
     });
 
-    it('se a recarga ao voltar falha, diz que os números são de uma visita anterior', async () => {
+    it('if the reload on return fails, says the numbers are from a previous visit', async () => {
       asRequester();
       features.companyStatsForAll = true;
       ticketsStoreFake.statusCountsFailed.set(true);
@@ -236,7 +236,7 @@ describe('DashboardComponent', () => {
       expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Falha ao atualizar · números de uma visita anterior');
     });
 
-    it('o botão de atualizar fica aria-disabled (não disabled) enquanto atualiza, pra não tirar o foco', async () => {
+    it('the refresh button is aria-disabled (not disabled) while refreshing, so focus is not lost', async () => {
       asRequester();
       const fixture = await render();
       const button = fixture.nativeElement.querySelector('button[aria-label="Atualizar os números agora"]') as HTMLButtonElement;
@@ -250,7 +250,7 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.load).not.toHaveBeenCalled();
     });
 
-    it('com um bloco em erro sem números (os Alertas), nunca diz "Atualizado agora": diz que nem todos os números carregaram', async () => {
+    it('with a block in error and no numbers (the Alertas), never says "Atualizado agora": says that not all numbers loaded', async () => {
       asAgent();
       ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
       const fixture = await render();
@@ -261,7 +261,7 @@ describe('DashboardComponent', () => {
       expect(label.classList).toContain('freshness-failed');
     });
 
-    it('quando o bloco volta, o cabeçalho volta a dizer "Atualizado agora"', async () => {
+    it('when the block comes back, the header goes back to saying "Atualizado agora"', async () => {
       asAgent();
       ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
       const fixture = await render();
@@ -277,7 +277,7 @@ describe('DashboardComponent', () => {
       expect(label.classList).not.toContain('freshness-failed');
     });
 
-    it('uma atualização que termina com um bloco em erro (sem números) anuncia a falha, não "Atualizado agora"', async () => {
+    it('a refresh that ends with a block in error (without numbers) announces the failure, not "Atualizado agora"', async () => {
       asAgent();
       const fixture = await render();
       const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
@@ -294,7 +294,7 @@ describe('DashboardComponent', () => {
       expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
     });
 
-    it('"Seus chamados" em erro sem números também impede o "Atualizado agora"', async () => {
+    it('"Seus chamados" in error without numbers also prevents "Atualizado agora"', async () => {
       asRequester();
       myTicketsFake.failed.set(true);
       myTicketsFake.totalCount.set(null);
@@ -319,7 +319,7 @@ describe('DashboardComponent', () => {
       operationFake.times.set(null);
     };
 
-    it('com algum bloco com números e outro em erro, a falha é parcial: "Nem todos os números carregaram", com a marca de falha', async () => {
+    it('with some blocks having numbers and another in error, the failure is partial: "Nem todos os números carregaram", with the failure mark', async () => {
       asAgent();
       ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
       const fixture = await render();
@@ -330,7 +330,7 @@ describe('DashboardComponent', () => {
       expect(label.querySelector('.bx-error-circle')).not.toBeNull();
     });
 
-    it('sem nenhum bloco com números e nada carregando, a falha é total: "Não foi possível carregar os números", nunca "Nem todos"', async () => {
+    it('with no block having numbers and nothing loading, the failure is total: "Não foi possível carregar os números", never "Nem todos"', async () => {
       failEverything();
       const fixture = await render();
       const label = fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
@@ -342,7 +342,7 @@ describe('DashboardComponent', () => {
       expect(label.querySelector('.bx-error-circle')).not.toBeNull();
     });
 
-    it('depois de uma falha total, quando os números voltam, o cabeçalho volta a "Atualizado agora", sem a marca de falha', async () => {
+    it('after a total failure, when the numbers come back, the header goes back to "Atualizado agora", without the failure mark', async () => {
       failEverything();
       const fixture = await render();
 
@@ -361,7 +361,7 @@ describe('DashboardComponent', () => {
       expect(label.classList).not.toContain('freshness-failed');
     });
 
-    it('na falha total, o "Atualizar" pedido termina com um anúncio ao leitor de tela (antes, silêncio)', async () => {
+    it('on total failure, the requested "Atualizar" ends with an announcement to the screen reader (before, silence)', async () => {
       failEverything();
       const fixture = await render();
       const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
@@ -376,7 +376,7 @@ describe('DashboardComponent', () => {
       expect(live()).toBe('Não foi possível carregar os números');
     });
 
-    it('falha total → nova tentativa → falha de novo → nova tentativa → volta: "Atualizando…" na carga, nunca "Nem todos" de passagem', async () => {
+    it('total failure, retry, failure again, retry, recovery: "Atualizando…" while loading, never "Nem todos" in passing', async () => {
       failEverything();
       const fixture = await render();
       const label = () => fixture.nativeElement.querySelector('.freshness-label') as HTMLElement;
@@ -422,7 +422,7 @@ describe('DashboardComponent', () => {
       expect(live()).toBe('Atualizado agora');
     });
 
-    it('com números na tela e um bloco em erro, a atualização em curso continua dizendo "Nem todos os números carregaram" (com o indicador e a marca)', async () => {
+    it('with numbers on screen and a block in error, the refresh in progress keeps saying "Nem todos os números carregaram" (with the indicator and the mark)', async () => {
       asAgent();
       ticketsStoreFake.criticalTicketsError.set('Erro ao carregar os alertas de SLA');
       const fixture = await render();
@@ -437,7 +437,7 @@ describe('DashboardComponent', () => {
       expect(label().classList).toContain('freshness-failed');
     });
 
-    it('uma primeira carga que falha toda não anuncia nada sozinha (os avisos de erro dos blocos já falam)', async () => {
+    it('a first load that fails entirely announces nothing on its own (the error notices of the blocks already speak)', async () => {
       failEverything();
       const fixture = await render();
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -445,14 +445,14 @@ describe('DashboardComponent', () => {
       expect((fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim()).toBe('');
     });
 
-    it('tem o botão "Guia da tela" no cabeçalho, e o guia não ocupa mais o corpo da tela', async () => {
+    it('has the "Guia da tela" button in the header, and the guide no longer takes up the body of the screen', async () => {
       const fixture = await render();
       const header = fixture.nativeElement.querySelector('app-page-header') as HTMLElement;
       expect(header.querySelector('.guide-trigger')?.textContent).toContain('Guia da tela');
       expect(fixture.nativeElement.querySelector('app-screen-guide')).toBeNull();
     });
 
-    it('diz a idade dos números e atualiza tudo na hora pelo botão, mantendo os números na tela', async () => {
+    it('says the age of the numbers and refreshes everything immediately via the button, keeping the numbers on screen', async () => {
       asRequester();
       const fixture = await render();
       expect(fixture.nativeElement.textContent).toContain('Atualizado agora');
@@ -467,7 +467,7 @@ describe('DashboardComponent', () => {
       expect(myTicketsFake.reload).toHaveBeenCalledTimes(1);
     });
 
-    it('anuncia ao leitor de tela só "Atualizado agora" quando uma atualização termina, nunca os números', async () => {
+    it('announces only "Atualizado agora" to the screen reader when a refresh finishes, never the numbers', async () => {
       const fixture = await render();
       const live = () => (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
       expect(live()).toBe('');
@@ -496,8 +496,8 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('indicadores do topo (empresa toda)', () => {
-    it('pra quem atende a fila, sem o agregado: atrasados primeiro (dos Alertas), depois a fila e o total', async () => {
+  describe('top indicators (whole company)', () => {
+    it('for those who work the queue, without the aggregate: overdue first (from the Alertas), then the queue and the total', async () => {
       asAgent();
       ticketsStoreFake.criticalTicketsLoadedAtMs.set(Date.now());
       ticketsStoreFake.breachedCount.set(86);
@@ -513,7 +513,7 @@ describe('DashboardComponent', () => {
       expect(kpiLink(fixture.nativeElement, 'Atrasados').getAttribute('href')).toContain('slaStatus=3');
     });
 
-    it('com o agregado: atrasados e sem responsável primeiro, com fundo de alerta, e a divisão por status só na barra', async () => {
+    it('with the aggregate: overdue and unassigned first, with an alert background, and the split by status only in the bar', async () => {
       asAgent();
       features.operationOverview = true;
       const fixture = await render();
@@ -531,7 +531,7 @@ describe('DashboardComponent', () => {
       expect(texts.some(text => text.includes('Fechados'))).toBeFalse();
     });
 
-    it('zero atrasados fica neutro, e o card carrega sozinho enquanto os alertas não chegam', async () => {
+    it('zero overdue stays neutral, and the card loads on its own while the alerts have not arrived', async () => {
       asAgent();
       const fixture = await render();
       expect(fixture.nativeElement.querySelectorAll('.kpi-card')[0].querySelector('.kpi-skeleton')).not.toBeNull();
@@ -543,14 +543,14 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('.kpi-card')[0].classList).not.toContain('kpi-alert-danger');
     });
 
-    it('pra quem não atende a fila, a taxa de SLA diz "em breve" (neutro, sem erro)', async () => {
+    it('for those who do not work the queue, the SLA rate says "em breve" (neutral, no error)', async () => {
       asRequester();
       features.companyStatsForAll = true;
       const fixture = await render();
       expect(kpiTexts(fixture.nativeElement)[5]).toContain('SLA cumprido Disponível em breve');
     });
 
-    it('cada número leva à fila com o status dele e os filtros da URL', async () => {
+    it('each number leads to the queue with its status and the URL filters', async () => {
       asAgent();
       await TestBed.inject(Router).navigateByUrl('/?sectorId=s1&priority=4');
       const fixture = await render();
@@ -563,7 +563,7 @@ describe('DashboardComponent', () => {
       expect(kpiLink(fixture.nativeElement, 'Total').getAttribute('href')).toContain('status=all');
     });
 
-    it('carregando: esqueleto do mesmo tamanho, sem número inventado', async () => {
+    it('loading: skeleton of the same size, with no made-up number', async () => {
       ticketsStoreFake.statusCounts.set(null);
       ticketsStoreFake.statusCountsLoading.set(true);
       const fixture = await render();
@@ -572,7 +572,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('.kpi-skeleton').length).toBe(5);
     });
 
-    it('erro de verdade: um aviso neutro com "Tentar novamente", sem vermelho', async () => {
+    it('real error: a neutral notice with "Tentar novamente", without red', async () => {
       ticketsStoreFake.statusCounts.set(null);
       ticketsStoreFake.statusCountsFailed.set(true);
       const fixture = await render();
@@ -585,7 +585,7 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.load).toHaveBeenCalled();
     });
 
-    it('mensagem do servidor no erro (ex.: sem permissão), não a genérica', async () => {
+    it('server message in the error (e.g. no permission), not the generic one', async () => {
       ticketsStoreFake.statusCounts.set(null);
       ticketsStoreFake.statusCountsFailed.set(true);
       ticketsStoreFake.summaryError.set('Você não tem permissão para ver os números da empresa.');
@@ -593,7 +593,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('app-dashboard-kpi-strip').textContent).toContain('Você não tem permissão para ver os números da empresa.');
     });
 
-    it('numa atualização que falha, os números anteriores ficam e o cabeçalho diz de quando são', async () => {
+    it('on a failed refresh, the previous numbers stay and the header says how old they are', async () => {
       const fixture = await render();
       expect(kpiTexts(fixture.nativeElement)[0]).toContain('Total 12');
 
@@ -614,7 +614,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.freshness [aria-live="polite"]').textContent.trim()).toBe('Não foi possível atualizar os números');
     });
 
-    it('números grandes em pt-BR compacto, com o número completo à mão', async () => {
+    it('large numbers in compact pt-BR, with the full number at hand', async () => {
       ticketsStoreFake.statusCounts.set({ totalCount: 12345, openCount: 1200, inProgressCount: 0, resolvedCount: 11145, closedCount: 0, canceledCount: 0 });
       const fixture = await render();
 
@@ -624,8 +624,8 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('gráfico principal', () => {
-    it('mostra a composição atual com números e percentuais, e os cancelados fora da barra pra a soma fechar', async () => {
+  describe('main chart', () => {
+    it('shows the current composition with numbers and percentages, and the canceled ones left out of the bar so the sum adds up', async () => {
       asAgent();
       const fixture = await render();
       // A legenda mora dentro da barra: cada fatia diz status, número e percentual.
@@ -636,7 +636,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.composition-canceled').textContent.trim()).toBe('+ 2 cancelados');
     });
 
-    it('cada fatia leva à lista do status (teclado), e a barra tem descrição pro leitor de tela', async () => {
+    it('each slice leads to the status list (keyboard), and the bar has a description for the screen reader', async () => {
       asAgent();
       const fixture = await render();
 
@@ -648,7 +648,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.composition-bar').getAttribute('aria-label')).toContain('mais 2 cancelados');
     });
 
-    it('mostra a frase de destaque quando há amostra, e nenhuma frase quando não há', async () => {
+    it('shows the highlight sentence when there is a sample, and no sentence when there is not', async () => {
       // 7 dias até ontem com 20 por dia (índices 22–28) contra 10 por dia antes: +100%.
       ticketsStoreFake.volume.set(thirtyDays().map((p, i) => ({ ...p, count: i >= 22 && i <= 28 ? 20 : 10 })));
       const fixture = await render();
@@ -659,7 +659,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.hero-insight')).toBeNull();
     });
 
-    it('com volumeResolved desligado, o rodapé não promete os resolvidos, nem quando a resposta os traz', async () => {
+    it('with volumeResolved off, the footer does not promise the resolved ones, even when the response includes them', async () => {
       features.volumeResolved = false;
       ticketsStoreFake.volume.set(thirtyDays().map(point => ({ ...point, resolvedCount: 2 })));
       const fixture = await render();
@@ -668,20 +668,20 @@ describe('DashboardComponent', () => {
       expect(footnote).not.toContain('Resolvidos por período');
     });
 
-    it('com volumeResolved ligado e o back-end ainda sem os resolvidos, diz uma vez que eles chegam em breve, sem série fantasma', async () => {
+    it('with volumeResolved on and the back end still without the resolved ones, says once that they are coming soon, with no ghost series', async () => {
       features.volumeResolved = true;
       const fixture = await render();
       const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
       expect(footnote).toContain('Resolvidos por período e fila ao longo do tempo: disponível em breve.');
     });
 
-    it('vazio: nenhum chamado no período', async () => {
+    it('empty: no tickets in the period', async () => {
       ticketsStoreFake.volume.set(thirtyDays(0));
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Nenhum chamado no período.');
     });
 
-    it('erro do fluxo: aviso neutro e "Tentar novamente" na fonte certa, não o vazio', async () => {
+    it('flow error: a neutral notice and "Tentar novamente" on the right source, not the empty state', async () => {
       ticketsStoreFake.volume.set([]);
       ticketsStoreFake.volumeHasValue.set(false);
       ticketsStoreFake.volumeFailed.set(true);
@@ -695,33 +695,33 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.load).toHaveBeenCalled();
     });
 
-    describe('primeiro uso (empresa sem nenhum chamado)', () => {
+    describe('first use (company with no tickets)', () => {
       beforeEach(() => {
         ticketsStoreFake.statusCounts.set({ totalCount: 0, openCount: 0, inProgressCount: 0, resolvedCount: 0, closedCount: 0, canceledCount: 0 });
         ticketsStoreFake.volume.set(thirtyDays(0));
       });
 
-      it('convida quem pode abrir chamados a abrir o primeiro', async () => {
+      it('invites those who can open tickets to open the first one', async () => {
         const fixture = await render();
         expect(fixture.nativeElement.textContent).toContain('A empresa ainda não tem nenhum chamado.');
         expect(fixture.nativeElement.querySelector('.flow-area a[href="/tickets/novo"]')).not.toBeNull();
       });
 
-      it('leva quem administra a estrutura a cadastrar departamentos e setores primeiro', async () => {
+      it('leads those who manage the structure to register departments and sectors first', async () => {
         hasPermission.and.callFake((code: string) => code === 'departments:manage');
         const fixture = await render();
         expect(fixture.nativeElement.querySelector('.flow-area a[href="/departamentos"]')).not.toBeNull();
       });
     });
 
-    it('muda o agrupamento ao clicar em Semana', async () => {
+    it('changes the grouping when clicking Semana', async () => {
       const fixture = await render();
       const week = Array.from(fixture.nativeElement.querySelectorAll('.hero-controls button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.trim() === 'Semana')!;
       week.click();
       expect(ticketsStoreFake.setGroupBy).toHaveBeenCalledWith('Week');
     });
 
-    it('a tabela acessível mostra os mesmos números, leva o foco e oferece o drill-down por período', async () => {
+    it('the accessible table shows the same numbers, receives focus and offers the drill-down by period', async () => {
       asAgent();
       const fixture = TestBed.createComponent(DashboardComponent);
       document.body.appendChild(fixture.nativeElement);
@@ -740,7 +740,7 @@ describe('DashboardComponent', () => {
       fixture.nativeElement.remove();
     });
 
-    describe('série "Resolvidos" pela flag volumeResolved (spec 028)', () => {
+    describe('"Resolvidos" series via the volumeResolved flag (spec 028)', () => {
       /** Abre a tela como atendente, com a resposta da empresa trazendo resolvedCount, e mostra a tabela. */
       async function tableHeaders(): Promise<(string | undefined)[]> {
         asAgent();
@@ -751,24 +751,24 @@ describe('DashboardComponent', () => {
         return Array.from(fixture.nativeElement.querySelectorAll('table th[scope="col"]') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
       }
 
-      it('flag desligada: não mostra a série, mesmo com resolvedCount na resposta', async () => {
+      it('flag off: does not show the series, even with resolvedCount in the response', async () => {
         features.volumeResolved = false;
         expect(await tableHeaders()).not.toContain('Resolvidos');
       });
 
-      it('flag ligada: mostra a série, como antes', async () => {
+      it('flag on: shows the series, as before', async () => {
         features.volumeResolved = true;
         expect(await tableHeaders()).toContain('Resolvidos');
       });
 
-      it('flag desligada: períodos sem criados ficam "vazio", mesmo com resolvidos na resposta', async () => {
+      it('flag off: periods with no created tickets stay "vazio", even with resolved ones in the response', async () => {
         features.volumeResolved = false;
         ticketsStoreFake.volume.set(thirtyDays(0).map(point => ({ ...point, resolvedCount: 3 })));
         const fixture = await render();
         expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Nenhum chamado no período.');
       });
 
-      it('flag ligada: resolvidos no período não deixam o gráfico "vazio"', async () => {
+      it('flag on: resolved tickets in the period do not make the chart "vazio"', async () => {
         features.volumeResolved = true;
         ticketsStoreFake.volume.set(thirtyDays(0).map(point => ({ ...point, resolvedCount: 3 })));
         const fixture = await render();
@@ -776,14 +776,14 @@ describe('DashboardComponent', () => {
       });
     });
 
-    it('sem o agregado no back-end, não há escolha de escopo (nem no gráfico, nem acima dos números)', async () => {
+    it('without the aggregate in the back end, there is no scope choice (neither in the chart nor above the numbers)', async () => {
       asAgent();
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('.scope-row')).toBeNull();
       expect(fixture.nativeElement.querySelector('.scope-soon')).toBeNull();
     });
 
-    it('com o agregado, Empresa e Com filtros ficam acima dos números (fora do gráfico) e trocam o escopo', async () => {
+    it('with the aggregate, Empresa and Com filtros appear above the numbers (outside the chart) and switch the scope', async () => {
       asAgent();
       features.operationOverview = true;
       const fixture = await render();
@@ -797,7 +797,7 @@ describe('DashboardComponent', () => {
       expect(operationFake.setChartScope).toHaveBeenCalledWith('filtered');
     });
 
-    it('quem não atende a fila não vê o alternador de escopo', async () => {
+    it('those who do not work the queue do not see the scope toggle', async () => {
       asRequester();
       features.companyStatsForAll = true;
       const fixture = await render();
@@ -806,8 +806,8 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('filtros', () => {
-    it('no escopo da empresa, a barra fica escondida, mas os filtros da URL ficam à vista com "Limpar"', async () => {
+  describe('filters', () => {
+    it('in the company scope, the bar is hidden, but the URL filters stay visible with "Limpar"', async () => {
       asAgent();
       await TestBed.inject(Router).navigateByUrl('/?sectorId=s1&priority=4');
       const fixture = await render();
@@ -821,13 +821,13 @@ describe('DashboardComponent', () => {
       expect(TestBed.inject(Router).url).toBe('/');
     });
 
-    it('sem filtros, nenhuma linha de filtros', async () => {
+    it('without filters, no filter row', async () => {
       asAgent();
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('.applied-filters')).toBeNull();
     });
 
-    it('sem filtros na URL, o Início abre na empresa toda, mesmo que a visita anterior tenha ficado em "Com filtros"', async () => {
+    it('without filters in the URL, the Início opens on the whole company, even if the previous visit was left on "Com filtros"', async () => {
       asAgent();
       features.operationOverview = true;
       operationFake.chartScope.set('filtered');
@@ -835,7 +835,7 @@ describe('DashboardComponent', () => {
       expect(operationFake.setChartScope).toHaveBeenCalledWith('company');
     });
 
-    it('com um departamento na URL esperando a lista, as buscas ficam seguras (nada sai com o recorte vazio)', async () => {
+    it('with a department in the URL waiting for the list, the searches stay safe (nothing goes out with the empty selection)', async () => {
       asAgent();
       features.operationOverview = true;
       operationFake.chartScope.set('filtered');
@@ -855,7 +855,7 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.setCriticalScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
     });
 
-    describe('anúncio ao leitor de tela', () => {
+    describe('screen reader announcement', () => {
       /** Texto da região aria-live do cabeçalho, depois do atraso do "limpa e escreve de novo". */
       async function liveAfter(fixture: { whenStable(): Promise<unknown>; nativeElement: HTMLElement }): Promise<string | undefined> {
         await fixture.whenStable();
@@ -863,7 +863,7 @@ describe('DashboardComponent', () => {
         return (fixture.nativeElement.querySelector('.freshness [aria-live="polite"]') as HTMLElement).textContent?.trim();
       }
 
-      describe('atualização automática x manual', () => {
+      describe('automatic vs manual refresh', () => {
         type Fixture = Awaited<ReturnType<typeof render>>;
 
         /** Cada frase escrita na região aria-live do cabeçalho, na ordem: o que o leitor de tela ouviria. */
@@ -901,7 +901,7 @@ describe('DashboardComponent', () => {
           operationFake.times.set(null);
         };
 
-        it('com sucesso contínuo, o relógio não anuncia nada', async () => {
+        it('with continuous success, the clock announces nothing', async () => {
           asAgent();
           const fixture = await render();
           const said = recordAnnouncements(fixture);
@@ -913,7 +913,7 @@ describe('DashboardComponent', () => {
           expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Atualizado agora');
         });
 
-        it('uma falha nova no relógio é anunciada uma vez; a mesma falha nos ciclos seguintes, não', async () => {
+        it('a new failure on the clock is announced once; the same failure in the following cycles is not', async () => {
           asAgent();
           const fixture = await render();
           const said = recordAnnouncements(fixture);
@@ -926,7 +926,7 @@ describe('DashboardComponent', () => {
           expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
         });
 
-        it('a volta pelo relógio é anunciada uma vez ("Números de volta"), e o ciclo seguinte sem mudança fica em silêncio', async () => {
+        it('the recovery via the clock is announced once ("Números de volta"), and the next cycle with no change stays silent', async () => {
           asAgent();
           alertsFail();
           const fixture = await render();
@@ -941,7 +941,7 @@ describe('DashboardComponent', () => {
 
         // Parcial → total não acontece numa atualização: o fluxo guarda os últimos pontos bons do mesmo
         // recorte, então há números (velhos) na tela e a falha continua parcial. A troca possível é total → parcial.
-        it('a troca de falha total pra parcial no relógio (um bloco volta, outro segue em erro) é anunciada uma vez', async () => {
+        it('the switch from total to partial failure on the clock (one block comes back, another stays in error) is announced once', async () => {
           asAgent();
           everythingFails();
           const fixture = await render();
@@ -957,7 +957,7 @@ describe('DashboardComponent', () => {
           expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Nem todos os números carregaram');
         });
 
-        it('com tudo fora desde a primeira carga, o relógio não repete a falha total; quando tudo volta, anuncia a volta uma vez', async () => {
+        it('with everything down since the first load, the clock does not repeat the total failure; when everything comes back, it announces the recovery once', async () => {
           asAgent();
           everythingFails();
           const fixture = await render();
@@ -976,7 +976,7 @@ describe('DashboardComponent', () => {
           expect(said).toEqual(['Números de volta: atualizado agora']);
         });
 
-        it('o botão anuncia toda vez, inclusive o sucesso repetido e a falha que já estava valendo', async () => {
+        it('the button announces every time, including repeated success and the failure that was already in effect', async () => {
           asAgent();
           const fixture = await render();
           const said = recordAnnouncements(fixture);
@@ -989,7 +989,7 @@ describe('DashboardComponent', () => {
           expect(said).toEqual(['Atualizado agora', 'Atualizado agora', 'Não foi possível atualizar os números', 'Não foi possível atualizar os números']);
         });
 
-        it('o clique no botão "Atualizar" conta como pedido manual (anuncia mesmo sem mudança)', async () => {
+        it('clicking the "Atualizar" button counts as a manual request (announces even with no change)', async () => {
           asAgent();
           const fixture = await render();
           const said = recordAnnouncements(fixture);
@@ -1004,7 +1004,7 @@ describe('DashboardComponent', () => {
           expect(said).toEqual(['Atualizado agora']);
         });
 
-        it('um pedido manual durante uma atualização automática em curso vale como manual: quem pediu ouve o resultado', async () => {
+        it('a manual request during an automatic refresh in progress counts as manual: whoever asked hears the result', async () => {
           asAgent();
           const fixture = await render();
           const said = recordAnnouncements(fixture);
@@ -1020,7 +1020,7 @@ describe('DashboardComponent', () => {
           expect(said).toEqual(['Atualizado agora']);
         });
 
-        it('o relógio chegando durante um pedido manual em curso não tira o anúncio de quem pediu', async () => {
+        it('the clock firing during a manual request in progress does not take away the announcement from whoever asked', async () => {
           asAgent();
           const fixture = await render();
           const said = recordAnnouncements(fixture);
@@ -1036,7 +1036,7 @@ describe('DashboardComponent', () => {
           expect(said).toEqual(['Atualizado agora']);
         });
 
-        it('trocar o escopo durante uma atualização automática diz só o resumo do recorte', async () => {
+        it('switching the scope during an automatic refresh says only the summary of the selection', async () => {
           asAgent();
           features = { operationOverview: true, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
           const fixture = await render();
@@ -1055,7 +1055,7 @@ describe('DashboardComponent', () => {
           expect(said).toEqual(['Números com os filtros: 2 atrasados, 5 na fila.']);
         });
 
-        it('o relógio de 2 minutos pede a atualização como automática; o botão, como manual', () => {
+        it('the 2-minute clock requests the refresh as automatic; the button, as manual', () => {
           asAgent();
           // A aba do Karma pode estar em segundo plano: a visibilidade fica fixa, como no spec dos Alertas.
           spyOnProperty(document, 'visibilityState', 'get').and.returnValue('visible');
@@ -1078,7 +1078,7 @@ describe('DashboardComponent', () => {
           }
         });
 
-        it('a primeira carga com falha, seguida do relógio com a mesma falha, não anuncia nada', async () => {
+        it('the first load with a failure, followed by the clock with the same failure, announces nothing', async () => {
           asAgent();
           alertsFail();
           const fixture = await render();
@@ -1090,14 +1090,14 @@ describe('DashboardComponent', () => {
         });
       });
 
-      it('a primeira carga não anuncia nada', async () => {
+      it('the first load announces nothing', async () => {
         asAgent();
         features.operationOverview = true;
         const fixture = await render();
         expect(await liveAfter(fixture)).toBe('');
       });
 
-      it('trocar o escopo pelos botões anuncia o resumo na hora, mesmo sem nenhuma busca (Com filtros sem filtro, sem o volume do recorte)', async () => {
+      it('switching the scope via the buttons announces the summary immediately, even with no search (Com filtros without filters, without the selection volume)', async () => {
         asAgent();
         features = { operationOverview: true, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
         const fixture = await render();
@@ -1116,7 +1116,7 @@ describe('DashboardComponent', () => {
         expect(await liveAfter(fixture)).toBe('Números da empresa: 2 atrasados, 5 na fila.');
       });
 
-      it('depois do resumo de uma troca de filtro, a atualização seguinte diz só "Atualizado agora"', async () => {
+      it('after the summary of a filter change, the next refresh says only "Atualizado agora"', async () => {
         asAgent();
         features.operationOverview = true;
         operationFake.chartScope.set('filtered');
@@ -1137,7 +1137,7 @@ describe('DashboardComponent', () => {
       });
     });
 
-    it('trocar um filtro diz ao leitor de tela um resumo curto dos números novos', async () => {
+    it('changing a filter tells the screen reader a short summary of the new numbers', async () => {
       asAgent();
       features.operationOverview = true;
       operationFake.chartScope.set('filtered');
@@ -1155,7 +1155,7 @@ describe('DashboardComponent', () => {
       expect(live()).toBe('Números com os filtros: 2 atrasados, 5 na fila.');
     });
 
-    it('os widgets operacionais seguem a empresa toda no escopo da empresa (os filtros valem só pras listas)', async () => {
+    it('the operational widgets follow the whole company in the company scope (the filters apply only to the lists)', async () => {
       asAgent();
       await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
       await render();
@@ -1163,7 +1163,7 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.setCriticalScope).toHaveBeenCalledWith({});
     });
 
-    it('com o back-end pronto e filtros na URL, abre no escopo "Com filtros", com a barra e os números do recorte', async () => {
+    it('with the back end ready and filters in the URL, opens in the "Com filtros" scope, with the bar and the numbers of the selection', async () => {
       asAgent();
       features = { operationOverview: true, averageTimes: true, volumeResolved: true, companyStatsForAll: false, listPeriodFilter: false };
       operationFake.chartScope.set('filtered');
@@ -1180,7 +1180,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('#heroTitle').textContent).toContain('Operação com os filtros');
     });
 
-    it('em "Com filtros" com período, os KPIs dizem que contam pela abertura e os grupos de baixo dizem que seguem os filtros', async () => {
+    it('in "Com filtros" with a period, the KPIs say they count by opening date and the groups below say they follow the filters', async () => {
       asAgent();
       features = { operationOverview: true, averageTimes: true, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
       operationFake.chartScope.set('filtered');
@@ -1195,7 +1195,7 @@ describe('DashboardComponent', () => {
       groups.forEach(group => expect(group.textContent).toContain('Com os filtros escolhidos acima.'));
     });
 
-    it('com o agregado mas sem o volume do recorte, a barra e os números seguem os filtros e o fluxo fica o da empresa', async () => {
+    it('with the aggregate but without the selection volume, the bar and the numbers follow the filters and the flow stays the company one', async () => {
       asAgent();
       features = { operationOverview: true, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true };
       operationFake.chartScope.set('filtered');
@@ -1209,8 +1209,8 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('o que pede ação (quem atende a fila)', () => {
-    it('Central de atenção "Disponível em breve" sem o agregado, ao lado dos Alertas de SLA', async () => {
+  describe('what needs action (those who work the queue)', () => {
+    it('Central de atenção "Disponível em breve" without the aggregate, next to the Alertas de SLA', async () => {
       asAgent();
       const fixture = await render();
 
@@ -1220,7 +1220,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('app-dashboard-insights')).not.toBeNull();
     });
 
-    it('com o agregado no ar, atrasados e sem responsável vão pro topo e a Central fica com os críticos', async () => {
+    it('with the aggregate live, overdue and unassigned go to the top and the Central keeps the critical ones', async () => {
       asAgent();
       features.operationOverview = true;
       const fixture = await render();
@@ -1233,14 +1233,14 @@ describe('DashboardComponent', () => {
       expect(central.textContent).not.toContain('Passaram do prazo');
     });
 
-    it('com o agregado no ar, os Alertas de SLA ficam só com a lista (os totais moram no topo e no SLA)', async () => {
+    it('with the aggregate live, the Alertas de SLA keep only the list (the totals live at the top and in the SLA)', async () => {
       asAgent();
       features.operationOverview = true;
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('app-dashboard-insights .sla-totals')).toBeNull();
     });
 
-    it('uma atualização do agregado que falha mantém os números, sem alerta, e o cabeçalho avisa', async () => {
+    it('a failed aggregate refresh keeps the numbers, with no alert, and the header warns', async () => {
       asAgent();
       features.operationOverview = true;
       const fixture = await render();
@@ -1251,7 +1251,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.freshness-label').textContent).toContain('Falha ao atualizar');
     });
 
-    it('sem números do agregado, o erro aparece uma vez só (na faixa do topo) e recarrega o agregado', async () => {
+    it('without aggregate numbers, the error appears only once (in the top strip) and reloads the aggregate', async () => {
       asAgent();
       features.operationOverview = true;
       operationFake.volume.set(null);
@@ -1271,7 +1271,7 @@ describe('DashboardComponent', () => {
       expect(operationFake.reloadOverview).toHaveBeenCalled();
     });
 
-    it('SLA detalhado e tempos esperando o back-end viram um aviso só pra linha', async () => {
+    it('detailed SLA and times waiting for the back end become a single notice for the row', async () => {
       asAgent();
       const fixture = await render();
       const notices = Array.from(fixture.nativeElement.querySelectorAll('app-dashboard-notice') as NodeListOf<HTMLElement>).map(n => n.textContent ?? '');
@@ -1279,14 +1279,14 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('app-dashboard-times')).toBeNull();
     });
 
-    it('com os tempos no ar, mostra o widget de tempos', async () => {
+    it('with the times live, shows the times widget', async () => {
       asAgent();
       features.averageTimes = true;
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('app-dashboard-times')).not.toBeNull();
     });
 
-    it('mostra os Alertas de SLA com os chamados do store e atualiza só eles pelo "Atualizar" do card', async () => {
+    it('shows the Alertas de SLA with the tickets from the store and refreshes only them via the card "Atualizar"', async () => {
       asAgent();
       ticketsStoreFake.criticalTickets.set([{ id: 't1', title: 'Chamado urgente' } as TicketMonitorItem]);
       const fixture = await render();
@@ -1298,7 +1298,7 @@ describe('DashboardComponent', () => {
       expect(ticketsStoreFake.load).not.toHaveBeenCalled();
     });
 
-    it('no DOM (ordem do celular e do Tab), os Alertas de SLA vêm antes da Central; o desktop reordena', async () => {
+    it('in the DOM (mobile and Tab order), the Alertas de SLA come before the Central; the desktop reorders', async () => {
       asAgent();
       const fixture = await render();
       const alerts = fixture.nativeElement.querySelector('app-dashboard-insights') as HTMLElement;
@@ -1308,7 +1308,7 @@ describe('DashboardComponent', () => {
       expect(central.parentElement!.classList).toContain('order-lg-1');
     });
 
-    it('quem administra sem a fila vê os atalhos de Administração (o Início não fica vazio), sem "Atualizado há"', async () => {
+    it('those who administer without the queue see the Administração shortcuts (the Início is not empty), without "Atualizado há"', async () => {
       hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'departments:manage');
       ticketsStoreFake.companyStatsAvailable.set(false);
       ticketsStoreFake.statusCounts.set(null);
@@ -1323,14 +1323,14 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.freshness')).toBeNull();
     });
 
-    it('sem papel nenhum na tela (nem fila, nem chamados próprios, nem administração), ela não ocupa espaço', async () => {
+    it('with no role at all on the screen (no queue, no own tickets, no administration), it takes up no space', async () => {
       hasPermission.and.returnValue(false);
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('#quickActionsTitle')).toBeNull();
       expect(fixture.nativeElement.querySelector('section[aria-labelledby="adminTitle"]')).toBeNull();
     });
 
-    it('não mostra Central nem Alertas de SLA pra quem não atende a fila', async () => {
+    it('does not show Central or Alertas de SLA to those who do not work the queue', async () => {
       asRequester();
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('app-dashboard-insights')).toBeNull();
@@ -1338,8 +1338,8 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('quem não atende a fila', () => {
-    it('sem os números da empresa liberados no back-end, "Seus chamados" vem primeiro, sem aviso de "em breve"', async () => {
+  describe('those who do not work the queue', () => {
+    it('without the company numbers released in the back end, "Seus chamados" comes first, with no "em breve" notice', async () => {
       asRequester();
       ticketsStoreFake.companyStatsAvailable.set(false);
       ticketsStoreFake.statusCounts.set(null);
@@ -1355,7 +1355,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('#quickActionsTitle')).toBeNull();
     });
 
-    it('no primeiro uso (nenhum chamado aberto), "Seus chamados" convida a abrir o primeiro', async () => {
+    it('on first use (no ticket opened), "Seus chamados" invites the user to open the first one', async () => {
       asRequester();
       myTicketsFake.totalCount.set(0);
       const fixture = await render();
@@ -1368,7 +1368,7 @@ describe('DashboardComponent', () => {
       expect(section.querySelector('app-stat-card')).toBeNull();
     });
 
-    it('com os números liberados, o drill-down abre Meus Chamados e diz quantos deles a pessoa vê', async () => {
+    it('with the numbers released, the drill-down opens Meus Chamados and says how many of them the person sees', async () => {
       asRequester();
       features.companyStatsForAll = true;
       const fixture = await render();
@@ -1380,8 +1380,8 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('seus chamados', () => {
-    it('mostra os próprios chamados nos grupos de Meus Chamados: cada card com o número da lista que abre', async () => {
+  describe('your tickets', () => {
+    it('shows the user\'s own tickets in the Meus Chamados groups: each card with the number of the list it opens', async () => {
       asRequester();
       const fixture = await render();
 
@@ -1399,20 +1399,20 @@ describe('DashboardComponent', () => {
       expect((section.querySelector('a.stretched-link') as HTMLAnchorElement).getAttribute('aria-label')).toBe('Em aberto: 3, 2 abertos, 1 em andamento. Ver em Meus Chamados');
     });
 
-    it('não mostra o bloco pra quem atende a fila, nem pede o resumo à API (o store nem é criado)', async () => {
+    it('does not show the block to those who work the queue, nor request the summary from the API (the store is not even created)', async () => {
       hasPermission.and.callFake((code: string) => code === 'tickets:view-own' || code === 'tickets:manage');
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('section[aria-labelledby="myTicketsTitle"]')).toBeNull();
       expect(myTicketsCreated).toBeFalse();
     });
 
-    it('pra quem abre chamados, o store é criado (busca o resumo)', async () => {
+    it('for those who open tickets, the store is created (fetches the summary)', async () => {
       asRequester();
       await render();
       expect(myTicketsCreated).toBeTrue();
     });
 
-    it('numa recarga, os números ficam como estão (sem spinner), e o cabeçalho gira o indicador', async () => {
+    it('on a reload, the numbers stay as they are (no spinner), and the header spins the indicator', async () => {
       asRequester();
       const fixture = await render();
       myTicketsFake.busy.set(true);
@@ -1425,7 +1425,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.freshness-spinner')).not.toBeNull();
     });
 
-    it('uma atualização que falha mantém os números e o cabeçalho diz "Falha ao atualizar", sem aviso no bloco', async () => {
+    it('a failed refresh keeps the numbers and the header says "Falha ao atualizar", with no notice in the block', async () => {
       asRequester();
       myTicketsFake.stale.set(true);
       const fixture = await render();
@@ -1436,7 +1436,7 @@ describe('DashboardComponent', () => {
       expect((fixture.nativeElement.querySelector('.freshness-label') as HTMLElement).textContent).toContain('Falha ao atualizar');
     });
 
-    it('falha: aviso neutro com "Tentar novamente"', async () => {
+    it('failure: neutral notice with "Tentar novamente"', async () => {
       asRequester();
       myTicketsFake.failed.set(true);
       const fixture = await render();
@@ -1448,7 +1448,7 @@ describe('DashboardComponent', () => {
   });
 
   describe('Ações rápidas', () => {
-    it('mostra Novo Chamado, Meus Chamados e Atribuídos a mim pra quem atende a fila sem ser administrativo', async () => {
+    it('shows Novo Chamado, Meus Chamados and Atribuídos a mim to those who work the queue without being administrative', async () => {
       asAgent();
       const fixture = await render();
       const links = Array.from(fixture.nativeElement.querySelectorAll('.quick-link') as NodeListOf<HTMLElement>).map(a => a.textContent ?? '');
@@ -1457,12 +1457,12 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Novo Chamado');
     });
 
-    it('não mostra "Atribuídos a mim" pra quem não atende a fila', async () => {
+    it('does not show "Atribuídos a mim" to those who do not work the queue', async () => {
       const fixture = await render();
       expect(fixture.nativeElement.textContent).not.toContain('Atribuídos a mim');
     });
 
-    it('administrativo que atende a fila vê "Atribuídos a mim", sem Novo Chamado nem Meus Chamados', async () => {
+    it('an administrative user who works the queue sees "Atribuídos a mim", without Novo Chamado or Meus Chamados', async () => {
       hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'tickets:manage');
       const fixture = await render();
       const text = fixture.nativeElement.textContent;
@@ -1471,21 +1471,21 @@ describe('DashboardComponent', () => {
       expect(text).not.toContain('Meus Chamados');
     });
 
-    it('administrativo sem tickets:manage não vê o card vazio nem atalho pro Monitorar', async () => {
+    it('an administrative user without tickets:manage sees neither the empty card nor the shortcut to Monitorar', async () => {
       hasPermission.and.callFake((code: string) => code === 'users:read');
       const fixture = await render();
       expect(fixture.nativeElement.querySelector('a[href^="/tickets/monitorar"]')).toBeNull();
       expect(fixture.nativeElement.textContent).not.toContain('Ações rápidas');
     });
 
-    it('Novo Chamado é um link de verdade (<a>), pra funcionar com Ctrl+clique/nova aba', async () => {
+    it('Novo Chamado is a real link (<a>), so it works with Ctrl+click/new tab', async () => {
       const fixture = await render();
       const link = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).find(a => a.textContent?.includes('Novo Chamado'));
       expect(link).toBeTruthy();
     });
   });
 
-  it('usa uma hierarquia de títulos sem saltos: h1 na saudação e h2 nos blocos', async () => {
+  it('uses a heading hierarchy without jumps: h1 on the greeting and h2 on the blocks', async () => {
     asAgent();
     const fixture = await render();
     const headings = Array.from(fixture.nativeElement.querySelectorAll('h1, h2, h3, h4') as NodeListOf<HTMLElement>).map(h => h.tagName);
@@ -1493,7 +1493,7 @@ describe('DashboardComponent', () => {
     expect(headings.slice(1).every(tag => tag === 'H2')).toBeTrue();
   });
 
-  describe('"Atribuir" nos Alertas de SLA', () => {
+  describe('"Atribuir" in the Alertas de SLA', () => {
     const unassigned = {
       id: 't7', title: 'VPN caindo', sectorName: 'Infra', assignedToUserId: null, assignedToName: null,
       dueAtUtc: new Date(Date.now() + 3_600_000).toISOString(), slaStatus: 2
@@ -1509,7 +1509,7 @@ describe('DashboardComponent', () => {
       return fixture;
     }
 
-    it('não mostra "Atribuir" pra quem atende a fila sem tickets:assign', async () => {
+    it('does not show "Atribuir" to those who work the queue without tickets:assign', async () => {
       asAgent();
       ticketsStoreFake.criticalTickets.set([unassigned]);
       const fixture = await render();
@@ -1517,13 +1517,13 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('button[aria-label="Atribuir responsável ao chamado VPN caindo"]')).toBeNull();
     });
 
-    it('abre o diálogo de atribuição com a busca limpa', async () => {
+    it('opens the assignment dialog with the search cleared', async () => {
       const fixture = await openAssignDialog();
       expect(ticketsStoreFake.resetAssignment).toHaveBeenCalled();
       expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).not.toBeNull();
     });
 
-    it('ao confirmar, atribui pelo store e, no sucesso, avisa e fecha o diálogo', async () => {
+    it('on confirm, assigns via the store and, on success, notifies and closes the dialog', async () => {
       const fixture = await openAssignDialog();
       const dialog = fixture.debugElement.query(debug => debug.name === 'app-ticket-assign-dialog');
 
@@ -1536,7 +1536,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).toBeNull();
     });
 
-    it('fechar sem atribuir limpa a busca e não chama o store', async () => {
+    it('closing without assigning clears the search and does not call the store', async () => {
       const fixture = await openAssignDialog();
       const dialog = fixture.debugElement.query(debug => debug.name === 'app-ticket-assign-dialog');
       ticketsStoreFake.resetAssignment.calls.reset();
@@ -1550,7 +1550,7 @@ describe('DashboardComponent', () => {
     });
   });
 
-  it('calcula a comparação e a taxa de SLA sem inventar número', () => {
+  it('computes the comparison and the SLA rate without making up a number', () => {
     expect(countTrend(12, 10)).toBe('2 a mais que no período anterior');
     expect(countTrend(8, 10)).toBe('2 a menos que no período anterior');
     expect(countTrend(10, 10)).toBe('igual ao período anterior');

@@ -34,7 +34,7 @@ describe('SessionRecoveryStore', () => {
     store = TestBed.inject(SessionRecoveryStore);
   });
 
-  it('começa com o motivo recebido e fica na tela quando há sessão salva', () => {
+  it('starts with the received reason and stays on the screen when there is a saved session', () => {
     store.start('rate-limited');
 
     expect(store.reason()).toBe('rate-limited');
@@ -42,7 +42,7 @@ describe('SessionRecoveryStore', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('vai para o login quando não há sessão nenhuma a recuperar', () => {
+  it('goes to the login when there is no session at all to recover', () => {
     session.isAuthenticated.and.returnValue(false);
 
     store.start('offline');
@@ -50,7 +50,7 @@ describe('SessionRecoveryStore', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('volta para a rota de origem quando a nova tentativa carrega o usuário', () => {
+  it('goes back to the origin route when the new attempt loads the user', () => {
     currentUserService.load.and.returnValue(of({ status: 'loaded' as const }));
 
     store.retry('/tickets');
@@ -60,7 +60,7 @@ describe('SessionRecoveryStore', () => {
     expect(session.clearSession).not.toHaveBeenCalled();
   });
 
-  it('continua na tela, sem limpar a sessão, quando a nova tentativa ainda falha por motivo passageiro', () => {
+  it('stays on the screen, without clearing the session, when the new attempt still fails for a transient reason', () => {
     store.start('rate-limited');
     currentUserService.load.and.returnValue(of({ status: 'unavailable' as const, reason: 'offline' as const }));
 
@@ -73,7 +73,7 @@ describe('SessionRecoveryStore', () => {
     expect(session.clearSession).not.toHaveBeenCalled();
   });
 
-  it('limpa a sessão e vai para o login quando a API recusa a sessão na nova tentativa', () => {
+  it('clears the session and goes to the login when the API refuses the session on the new attempt', () => {
     currentUserService.load.and.returnValue(of({ status: 'unauthenticated' as const }));
 
     store.retry('/tickets');
@@ -82,7 +82,7 @@ describe('SessionRecoveryStore', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('sai da conta pelo mesmo logout do menu do usuário', () => {
+  it('logs out through the same logout as the user menu', () => {
     store.signOut();
 
     expect(loginStore.logout).toHaveBeenCalled();

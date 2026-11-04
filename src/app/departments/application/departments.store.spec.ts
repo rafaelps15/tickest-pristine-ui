@@ -52,14 +52,14 @@ describe('DepartmentsStore', () => {
     store = TestBed.inject(DepartmentsStore);
   });
 
-  it('expõe os departamentos com os setores aninhados', async () => {
+  it('exposes the departments with their nested sectors', async () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.departments()).toEqual(departments);
   });
 
-  it('entrega o id do departamento criado pro onSuccess', () => {
+  it('passes the id of the created department to onSuccess', () => {
     departmentDataService.create.and.returnValue(of('dep-novo'));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -68,7 +68,7 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).toHaveBeenCalledWith('dep-novo');
   });
 
-  it('marca mutating durante a criação de departamento, e libera ao terminar', async () => {
+  it('sets mutating during department creation, and releases it when done', async () => {
     const subject = new Subject<string>();
     departmentDataService.create.and.returnValue(subject);
 
@@ -82,7 +82,7 @@ describe('DepartmentsStore', () => {
     expect(store.mutating()).toBeFalse();
   });
 
-  it('marca mutating durante a atualização de departamento, mesmo quando a API falha', async () => {
+  it('sets mutating during department update, even when the API fails', async () => {
     departmentDataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.update('dep-1', { name: 'TI', description: 'Tecnologia' });
@@ -91,7 +91,7 @@ describe('DepartmentsStore', () => {
     expect(store.mutationError()).toBe('Erro ao atualizar departamento');
   });
 
-  it('marca mutating durante a criação de setor, e libera ao terminar', async () => {
+  it('sets mutating during sector creation, and releases it when done', async () => {
     const subject = new Subject<string>();
     sectorDataService.create.and.returnValue(subject);
 
@@ -105,7 +105,7 @@ describe('DepartmentsStore', () => {
     expect(store.mutating()).toBeFalse();
   });
 
-  it('cria o setor no departamento informado e recarrega os departamentos', async () => {
+  it('creates the sector in the given department and reloads the departments', async () => {
     sectorDataService.create.and.returnValue(of('sec-2'));
     await TestBed.inject(ApplicationRef).whenStable();
     departmentDataService.getAll.calls.reset();
@@ -119,7 +119,7 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).toHaveBeenCalledWith('sec-2');
   });
 
-  it('expõe a mensagem da API quando o nome do setor já existe no departamento', () => {
+  it('exposes the API message when the sector name already exists in the department', () => {
     const conflict = new HttpErrorResponse({
       status: 409,
       error: { detail: "Já existe um setor ativo com o nome 'Sistemas' neste departamento." }
@@ -133,7 +133,7 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('atualiza e exclui setores pelo id', () => {
+  it('updates and deletes sectors by id', () => {
     sectorDataService.update.and.returnValue(of(undefined));
     sectorDataService.delete.and.returnValue(of(undefined));
 
@@ -144,7 +144,7 @@ describe('DepartmentsStore', () => {
     expect(sectorDataService.delete).toHaveBeenCalledWith('sec-1');
   });
 
-  it('expõe a mensagem da API quando a atualização do setor falha', () => {
+  it('exposes the API message when the sector update fails', () => {
     const conflict = new HttpErrorResponse({
       status: 409,
       error: { detail: "Já existe um setor ativo com o nome 'Suporte' neste departamento." }
@@ -158,7 +158,7 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('põe a falha da exclusão do setor no deleteError, com o id dele, sem sujar o erro da página', () => {
+  it('puts the sector deletion failure in deleteError, with its id, without polluting the page error', () => {
     const conflict = new HttpErrorResponse({
       status: 409,
       error: { detail: 'O setor tem chamados em aberto ou em andamento.' }
@@ -174,7 +174,7 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('usa a mensagem padrão quando a API não devolve detalhe', () => {
+  it('uses the default message when the API returns no detail', () => {
     sectorDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.deleteSector('sec-1');
@@ -182,7 +182,7 @@ describe('DepartmentsStore', () => {
     expect(store.deleteError()?.message).toBe('Não foi possível excluir o setor.');
   });
 
-  it('exclui o departamento, chama o onSuccess e libera o deletingId', () => {
+  it('deletes the department, calls onSuccess and releases deletingId', () => {
     const pending = new Subject<void>();
     departmentDataService.delete.and.returnValue(pending.asObservable());
     const onSuccess = jasmine.createSpy('onSuccess');
@@ -198,7 +198,7 @@ describe('DepartmentsStore', () => {
     expect(store.deletingId()).toBeNull();
   });
 
-  it('ignora uma segunda exclusão enquanto a primeira está em voo (clique duplo)', () => {
+  it('ignores a second deletion while the first is in flight (double click)', () => {
     departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
     sectorDataService.delete.and.returnValue(of(undefined));
 
@@ -210,7 +210,7 @@ describe('DepartmentsStore', () => {
     expect(sectorDataService.delete).not.toHaveBeenCalled();
   });
 
-  it('põe a falha da exclusão do departamento no deleteError e limpa ao tentar de novo ou fechar', () => {
+  it('puts the department deletion failure in deleteError and clears it on retry or close', () => {
     departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Tem chamados.' } })));
 
     store.delete('dep-1');
@@ -225,7 +225,7 @@ describe('DepartmentsStore', () => {
     expect(store.deleteError()).toBeNull();
   });
 
-  it('busca o detalhe de um departamento e devolve pro callback', async () => {
+  it('fetches the detail of a department and returns it to the callback', async () => {
     const detail: DepartmentDetail = { id: 'dep-1', name: 'TI', description: 'Equipamentos', responsibleUserId: 'u-1' };
     departmentDataService.getById.and.returnValue(of(detail));
     const onLoaded = jasmine.createSpy('onLoaded');
@@ -236,7 +236,7 @@ describe('DepartmentsStore', () => {
     expect(onLoaded).toHaveBeenCalledWith(detail);
   });
 
-  it('entrega a falha do detalhe pro onError, sem chamar o onLoaded nem sujar o erro da página', () => {
+  it('passes the detail failure to onError, without calling onLoaded or polluting the page error', () => {
     departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const onLoaded = jasmine.createSpy('onLoaded');
     const onError = jasmine.createSpy('onError');
@@ -249,7 +249,7 @@ describe('DepartmentsStore', () => {
     expect(store.listState().error).toBeNull();
   });
 
-  it('avisa no onError quando não há conexão com o servidor', () => {
+  it('reports in onError when there is no connection to the server', () => {
     departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     const onError = jasmine.createSpy('onError');
 
@@ -258,7 +258,7 @@ describe('DepartmentsStore', () => {
     expect(onError).toHaveBeenCalledWith('Não foi possível conectar ao servidor. Verifique sua conexão.');
   });
 
-  it('busca candidatos a responsável por nome/e-mail', async () => {
+  it('searches for assignee candidates by name/email', async () => {
     userDataService.getAll.and.returnValue(of(pageOf([candidate])));
 
     store.searchResponsibleCandidates('carlos');
@@ -267,7 +267,7 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleCandidates()).toEqual([candidate]);
   });
 
-  it('limpa os candidatos quando a busca de responsável fica vazia, sem chamar a API', () => {
+  it('clears the candidates when the assignee search becomes empty, without calling the API', () => {
     userDataService.getAll.and.returnValue(of(pageOf([candidate])));
     store.searchResponsibleCandidates('carlos');
     userDataService.getAll.calls.reset();
@@ -278,7 +278,7 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleCandidates()).toEqual([]);
   });
 
-  it('expõe a mensagem de erro quando a busca de responsável falhar', () => {
+  it('exposes the error message when the assignee search fails', () => {
     userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.searchResponsibleCandidates('carlos');
@@ -287,7 +287,7 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleCandidates()).toEqual([]);
   });
 
-  it('limpa a busca e os candidatos a responsável', () => {
+  it('clears the assignee search and candidates', () => {
     userDataService.getAll.and.returnValue(of(pageOf([candidate])));
     store.searchResponsibleCandidates('carlos');
 
@@ -297,7 +297,7 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleSearchError()).toBeNull();
   });
 
-  it('uma busca de responsável nova cancela a anterior: a resposta antiga e lenta não sobrescreve a atual', () => {
+  it('a new assignee search cancels the previous one: the old, slow response does not overwrite the current one', () => {
     const slow = new Subject<PagedResponse<UserSummary>>();
     const other: UserSummary = { ...candidate, id: 'u-2', firstName: 'Carla' };
     userDataService.getAll.and.returnValues(slow, of(pageOf([other])));
@@ -312,7 +312,7 @@ describe('DepartmentsStore', () => {
     expect(store.searchingResponsible()).toBeFalse();
   });
 
-  it('guarda o termo da última busca respondida, e o limpa quando a busca fica vazia', () => {
+  it('keeps the term of the last answered search, and clears it when the search becomes empty', () => {
     userDataService.getAll.and.returnValue(of(pageOf([])));
 
     store.searchResponsibleCandidates(' carlos ');
@@ -322,7 +322,7 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleSearchTerm()).toBeNull();
   });
 
-  it('falha ao salvar fica no mutationError (do diálogo), não no erro de carga da listagem', async () => {
+  it('a save failure goes to mutationError (of the dialog), not to the listing load error', async () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
     departmentDataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
@@ -334,7 +334,7 @@ describe('DepartmentsStore', () => {
     expect(store.departments()).toEqual(departments);
   });
 
-  it('limpa o erro de mutação', () => {
+  it('clears the mutation error', () => {
     sectorDataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Conflito' } })));
     store.updateSector('sec-1', { name: 'Suporte' });
     expect(store.mutationError()).toBe('Conflito');
@@ -344,7 +344,7 @@ describe('DepartmentsStore', () => {
     expect(store.mutationError()).toBeNull();
   });
 
-  it('não quebra a tela quando a listagem falha: departamentos vazio e erro exposto, em vez de lançar', async () => {
+  it('does not break the screen when the listing fails: departments empty and error exposed, instead of throwing', async () => {
     departmentDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();

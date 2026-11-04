@@ -31,7 +31,7 @@ describe('DashboardMetricGroupComponent', () => {
     }).compileComponents();
   });
 
-  it('carregando sem números: mostra o esqueleto, com aviso pro leitor de tela', async () => {
+  it('loading without numbers: shows the skeleton, with a notice for the screen reader', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(null, null));
     fixture.componentInstance.loading.set(true);
@@ -42,7 +42,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('section').getAttribute('aria-busy')).toBe('true');
   });
 
-  it('erro: mostra a mensagem e o "Tentar novamente" avisa a tela', async () => {
+  it('error: shows the message and "Tentar novamente" notifies the screen', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(null, null));
     fixture.componentInstance.error.set('Não foi possível carregar o SLA.');
@@ -55,7 +55,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.componentInstance.retried).toBeTrue();
   });
 
-  it('indisponível: só uma linha neutra, sem repetir o alerta nem o "Tentar novamente"', async () => {
+  it('unavailable: only a neutral line, without repeating the alert or "Tentar novamente"', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(null, null));
     fixture.componentInstance.unavailable.set(true);
@@ -66,7 +66,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('button')).toBeNull();
   });
 
-  it('o nome do link não monta plural: rótulo, número e legenda ("Críticos: 1, urgentes…")', async () => {
+  it('the link name does not build a plural: label, number and caption ("Críticos: 1, urgentes…")', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set([
       { key: 'critical', label: 'Críticos', icon: 'bx-error-alt', tone: 'danger', value: 1, hint: 'Urgentes, ainda ativos', queryParams: { priority: 4 } }
@@ -77,7 +77,7 @@ describe('DashboardMetricGroupComponent', () => {
       .toBe('Críticos: 1, urgentes, ainda ativos. Ver na fila de monitoramento');
   });
 
-  it('mostra o número de destaque com a comparação com o período anterior, e a legenda do card no nome do link', async () => {
+  it('shows the highlight number with the comparison to the previous period, and the card caption in the link name', async () => {
     TestBed.overrideComponent(HostComponent, { set: { template: `<app-dashboard-metric-group title="SLA" [metrics]="metrics()" [lead]="{ value: '87%', text: 'resolvidos no prazo (7 de 8)', trend: '5 pontos acima do período anterior' }" />` } });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set([
@@ -93,7 +93,7 @@ describe('DashboardMetricGroupComponent', () => {
       .toBe('Cumpridos: 7, resolvidos no prazo. Ver na fila de monitoramento');
   });
 
-  it('vazio (tudo zero): explica por quê, em vez de cards zerados', async () => {
+  it('empty (all zero): explains why, instead of zeroed cards', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(0, 0));
     await fixture.whenStable();
@@ -102,7 +102,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('app-stat-card')).toBeNull();
   });
 
-  it('sucesso: mostra os números e o link do drill-down, sem região de anúncio própria (a tela anuncia um resumo só)', async () => {
+  it('success: shows the numbers and the drill-down link, without its own announcement region (the screen announces a single summary)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(2, 7));
     await fixture.whenStable();
@@ -114,7 +114,7 @@ describe('DashboardMetricGroupComponent', () => {
     expect(fixture.nativeElement.querySelector('[aria-live]')).toBeNull();
   });
 
-  it('recarregando com números na tela: mantém os cards como estão, sem esqueleto nem esmaecer', async () => {
+  it('reloading with numbers on screen: keeps the cards as they are, without skeleton or fading', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.metrics.set(metrics(2, 7));
     fixture.componentInstance.loading.set(true);

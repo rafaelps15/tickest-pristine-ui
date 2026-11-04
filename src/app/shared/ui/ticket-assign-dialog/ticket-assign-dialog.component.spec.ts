@@ -65,7 +65,7 @@ describe('TicketAssignDialogComponent', () => {
     return fixture.nativeElement.querySelector('.modal-footer .btn-primary') as HTMLButtonElement;
   }
 
-  it('pede a busca só 300ms depois de parar de digitar', async () => {
+  it('requests the search only 300ms after typing stops', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -78,7 +78,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(fixture.componentInstance.searches).toEqual(['joão']);
   });
 
-  it('pede pra digitar quando a busca está vazia, e avisa quando não encontra ninguém', async () => {
+  it('asks the user to type when the search is empty, and warns when nobody is found', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Digite o nome de quem atende a fila.');
@@ -88,7 +88,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Ninguém que atenda a fila com esse nome.');
   });
 
-  it('mostra o erro de busca (ex.: sem permissão users:read) em vez da lista', async () => {
+  it('shows the search error (e.g. no users:read permission) instead of the list', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.searchError.set('Você não tem permissão para buscar usuários.');
     await fixture.whenStable();
@@ -96,7 +96,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para buscar usuários.');
   });
 
-  it('marca o candidato clicado e desmarca ao clicar de novo', async () => {
+  it('marks the clicked candidate and unmarks it when clicked again', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.candidates.set([candidate]);
     type(fixture, 'joão');
@@ -113,7 +113,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(row.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('navega entre os candidatos com as setas, com foco circulante', async () => {
+  it('navigates between candidates with the arrow keys, with circular focus', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     document.body.appendChild(fixture.nativeElement);
     fixture.componentInstance.candidates.set([candidate, other]);
@@ -132,7 +132,7 @@ describe('TicketAssignDialogComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('mostra o nome completo e o setor de cada responsável, e "Sem setor" quando não há', async () => {
+  it('shows the full name and the sector of each assignee, and "Sem setor" when there is none', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.candidates.set([candidate, other]);
     type(fixture, 'a');
@@ -146,7 +146,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
   });
 
-  it('só confirma com um candidato marcado, emitindo id e nome', async () => {
+  it('only confirms with a candidate marked, emitting id and name', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.candidates.set([candidate]);
     type(fixture, 'joão');
@@ -160,7 +160,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(fixture.componentInstance.confirmed).toEqual([{ userId: 'u2', name: 'João Pedro' }]);
   });
 
-  it('diz "Atribuir" na primeira atribuição e "Reatribuir", com aviso de substituição, ao trocar o responsável', async () => {
+  it('says "Atribuir" on the first assignment and "Reatribuir", with a replacement warning, when changing the assignee', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.candidates.set([candidate]);
     type(fixture, 'joão');
@@ -175,7 +175,7 @@ describe('TicketAssignDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Isso substitui Maria Souza por João Pedro como responsável.');
   });
 
-  it('mostra o erro da atribuição e trava confirmar/fechar enquanto atribui', async () => {
+  it('shows the assignment error and locks confirm/close while assigning', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.error.set('O usuário não atende chamados.');
     fixture.componentInstance.saving.set(true);

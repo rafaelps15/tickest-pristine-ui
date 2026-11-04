@@ -31,13 +31,13 @@ describe('dashboard-auto-refresh', () => {
   /** Avança o relógio falso. */
   const tick = (ms: number) => jasmine.clock().tick(ms);
 
-  it('refreshDelay: o que falta do intervalo, zero se os dados estão velhos, o intervalo inteiro sem carga', () => {
+  it('refreshDelay: what remains of the interval, zero if the data is stale, the whole interval with no load', () => {
     expect(refreshDelay(null, 1_000)).toBe(DASHBOARD_REFRESH_MS);
     expect(refreshDelay(0, 30_000)).toBe(DASHBOARD_REFRESH_MS - 30_000);
     expect(refreshDelay(0, 10 * 60_000)).toBe(0);
   });
 
-  it('atualiza a cada 2 minutos com a aba visível', () => {
+  it('refreshes every 2 minutes with the tab visible', () => {
     const doc = new FakeDocument();
     const refresh = jasmine.createSpy('refresh');
     const { ref, destroy } = fakeDestroyRef();
@@ -53,7 +53,7 @@ describe('dashboard-auto-refresh', () => {
     destroy();
   });
 
-  it('pausa com a aba oculta e, ao voltar com dados velhos, atualiza na hora', () => {
+  it('pauses with the tab hidden and, on returning with stale data, refreshes immediately', () => {
     const doc = new FakeDocument();
     const refresh = jasmine.createSpy('refresh');
     const { ref, destroy } = fakeDestroyRef();
@@ -71,7 +71,7 @@ describe('dashboard-auto-refresh', () => {
     destroy();
   });
 
-  it('ao voltar com dados ainda novos, espera só o que falta do intervalo', () => {
+  it('on returning with still fresh data, waits only what remains of the interval', () => {
     const doc = new FakeDocument();
     const refresh = jasmine.createSpy('refresh');
     const { ref, destroy } = fakeDestroyRef();
@@ -89,7 +89,7 @@ describe('dashboard-auto-refresh', () => {
     destroy();
   });
 
-  it('depois de uma atualização manual, recomeça a contagem (não repete logo em seguida)', () => {
+  it('after a manual refresh, restarts the count (does not repeat right after)', () => {
     const doc = new FakeDocument();
     const refresh = jasmine.createSpy('refresh');
     const { ref, destroy } = fakeDestroyRef();
@@ -105,7 +105,7 @@ describe('dashboard-auto-refresh', () => {
     destroy();
   });
 
-  it('refreshAnnouncement: a falha diz o que não veio; a volta pelo relógio diz que os números voltaram, pelo botão só "Atualizado agora"', () => {
+  it('refreshAnnouncement: a failure says what did not arrive; a return by the clock says the numbers are back, by the button only "Atualizado agora"', () => {
     expect(refreshAnnouncement('total', true)).toBe('Não foi possível carregar os números');
     expect(refreshAnnouncement('total', false)).toBe('Não foi possível carregar os números');
     expect(refreshAnnouncement('partial', true)).toBe('Não foi possível atualizar os números');
@@ -114,7 +114,7 @@ describe('dashboard-auto-refresh', () => {
     expect(refreshAnnouncement('ok', false)).toBe('Atualizado agora');
   });
 
-  it('para de atualizar quando a tela é destruída', () => {
+  it('stops refreshing when the screen is destroyed', () => {
     const doc = new FakeDocument();
     const refresh = jasmine.createSpy('refresh');
     const { ref, destroy } = fakeDestroyRef();

@@ -60,7 +60,7 @@ describe('RoleListComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega roles e permissões ao inicializar', async () => {
+  it('loads roles and permissions on init', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -68,14 +68,14 @@ describe('RoleListComponent', () => {
     expect(storeFake.loadPermissions).toHaveBeenCalled();
   });
 
-  it('não oferece criar função: o back-end não tem esse endpoint', async () => {
+  it('does not offer creating a role: the back end has no such endpoint', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).not.toContain('Nova Função');
   });
 
-  it('mostra a etiqueta de Administrador e oferece "Ver permissões" pra ele e "Editar permissões" pras demais', async () => {
+  it('shows the Administrador badge and offers "Ver permissões" for it and "Editar permissões" for the others', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -87,7 +87,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.querySelector('tbody .dropdown-item[disabled]')).toBeNull();
   });
 
-  it('abre as permissões do Administrador só pra consulta, sem salvar', async () => {
+  it('opens the Administrador permissions read-only, without saving', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(adminRole);
     await fixture.whenStable();
@@ -104,7 +104,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.assignPermissions).not.toHaveBeenCalled();
   });
 
-  it('mostra o nome amigável das permissões em vez do código', async () => {
+  it('shows the friendly name of the permissions instead of the code', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -112,7 +112,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('tickets:manage');
   });
 
-  it('pré-marca as permissões já atribuídas ao abrir o modal', async () => {
+  it('pre-checks the already assigned permissions when opening the modal', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -122,7 +122,7 @@ describe('RoleListComponent', () => {
     expect(fixture.componentInstance.isChecked('users:read')).toBeFalse();
   });
 
-  it('limpa o erro de atribuição ao abrir o modal de permissões de outra role', async () => {
+  it('clears the assignment error when opening the permissions modal of another role', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -131,7 +131,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.clearAssignPermissionsError).toHaveBeenCalled();
   });
 
-  it('mostra o erro de atribuição de permissões dentro do modal de permissões, não na página', async () => {
+  it('shows the permission assignment error inside the permissions modal, not on the page', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(agentRole);
     storeFake.assignPermissionsError.set('Você não tem permissão para fazer isso.');
@@ -141,7 +141,7 @@ describe('RoleListComponent', () => {
     expect(modalBody.textContent).toContain('Você não tem permissão para fazer isso.');
   });
 
-  it('mostra no máximo 2 badges de permissão e agrupa o restante em "+N"', async () => {
+  it('shows at most 2 permission badges and groups the rest into "+N"', async () => {
     const roleWithManyPermissions: Role = { ...supervisorRole, permissionCodes: ['tickets:manage', 'users:read', 'tickets:create'] };
     storeFake.roles.set([roleWithManyPermissions]);
     const fixture = TestBed.createComponent(RoleListComponent);
@@ -152,7 +152,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('+1');
   });
 
-  it('o "+N" esconde o número do leitor de tela e entrega os nomes ocultos em texto', async () => {
+  it('the "+N" hides the number from the screen reader and delivers the hidden names as text', async () => {
     storeFake.roles.set([{ ...supervisorRole, permissionCodes: ['tickets:manage', 'tickets:create', 'users:read'] }]);
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
@@ -162,7 +162,7 @@ describe('RoleListComponent', () => {
     expect(cell.querySelector('.visually-hidden')?.textContent).toContain('Ver usuários');
   });
 
-  it('na recarga com a lista na tela, mantém as linhas esmaecidas em vez do spinner', async () => {
+  it('on reload with the list on screen, keeps the rows faded instead of the spinner', async () => {
     storeFake.listState.set({ data: [adminRole, agentRole], loading: true, error: null });
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
@@ -172,7 +172,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.querySelector('app-loading-state')).toBeNull();
   });
 
-  it('falha de carga sem lista não vira o vazio "nenhuma função" e oferece tentar de novo, sem vermelho', async () => {
+  it('a load failure with no list does not become the "nenhuma função" empty state and offers retry, without red', async () => {
     storeFake.roles.set([]);
     storeFake.listState.set({ data: [], loading: false, error: 'Erro ao carregar funções' });
     const fixture = TestBed.createComponent(RoleListComponent);
@@ -187,7 +187,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.load).toHaveBeenCalledTimes(2);
   });
 
-  it('recarga que falhou com a lista na tela mantém as linhas e avisa acima delas', async () => {
+  it('a failed reload with the list on screen keeps the rows and warns above them', async () => {
     storeFake.listState.set({ data: [adminRole, agentRole], loading: false, error: 'Erro ao carregar funções' });
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
@@ -196,7 +196,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Agent');
   });
 
-  it('sem nenhuma função, explica de onde elas vêm sem prometer criar uma', async () => {
+  it('with no role at all, explains where they come from without promising to create one', async () => {
     storeFake.roles.set([]);
     storeFake.listState.set({ data: [], loading: false, error: null });
     const fixture = TestBed.createComponent(RoleListComponent);
@@ -206,7 +206,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.querySelector('app-empty-state button')).toBeNull();
   });
 
-  it('envia a atribuição de permissões marcadas', async () => {
+  it('submits the assignment of the checked permissions', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -218,7 +218,7 @@ describe('RoleListComponent', () => {
     expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
   });
 
-  it('pede confirmação extra ao zerar as permissões de uma role sem remover nenhuma administrativa', async () => {
+  it('asks for extra confirmation when clearing a role permissions without removing any administrative one', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -232,7 +232,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.assignPermissions).toHaveBeenCalledWith('Agent', [], jasmine.any(Function));
   });
 
-  it('não zera as permissões quando a confirmação de "sem permissões" é cancelada', async () => {
+  it('does not clear the permissions when the "sem permissões" confirmation is canceled', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
@@ -244,7 +244,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.assignPermissions).not.toHaveBeenCalled();
   });
 
-  it('pede confirmação extra ao remover uma permissão administrativa já atribuída', async () => {
+  it('asks for extra confirmation when removing an already assigned administrative permission', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 
@@ -259,7 +259,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.assignPermissions).toHaveBeenCalledWith('Supervisor', ['tickets:manage'], jasmine.any(Function));
   });
 
-  it('não envia a remoção de permissão administrativa quando a confirmação é cancelada', async () => {
+  it('does not submit the removal of an administrative permission when the confirmation is canceled', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
@@ -271,7 +271,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.assignPermissions).not.toHaveBeenCalled();
   });
 
-  it('o botão "Salvar" do modal de permissões fica desabilitado durante a atribuição, assim como o "Cancelar"', async () => {
+  it('the "Salvar" button of the permissions modal is disabled during the assignment, as is "Cancelar"', async () => {
     storeFake.assigningPermissions.set(true);
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(agentRole);
@@ -283,7 +283,7 @@ describe('RoleListComponent', () => {
     expect((footer.querySelector('.btn-outline-secondary') as HTMLButtonElement).disabled).toBeTrue();
   });
 
-  it('no diálogo de permissões, "Salvar" só habilita com mudança e o rodapé resume o que mudou', async () => {
+  it('in the permissions dialog, "Salvar" only enables with a change and the footer summarizes what changed', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(agentRole);
     await fixture.whenStable();
@@ -302,7 +302,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('#rolePermissionsModal .permission-option.is-changed').length).toBe(3);
   });
 
-  it('"Todas" marca o grupo inteiro e fica indeterminada com só parte dele marcada', async () => {
+  it('"Todas" checks the whole group and is indeterminate with only part of it checked', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(agentRole);
     await fixture.whenStable();
@@ -320,7 +320,7 @@ describe('RoleListComponent', () => {
     expect(fixture.componentInstance.groupSelection(ticketPermissions)).toBe('none');
   });
 
-  it('no diálogo de permissões sem catálogo, mostra o erro com "Tentar novamente" e trava o "Salvar"', async () => {
+  it('in the permissions dialog with no catalog, shows the error with "Tentar novamente" and locks "Salvar"', async () => {
     storeFake.permissions.set([]);
     storeFake.permissionGroups.set([]);
     storeFake.permissionsState.set({ data: [], loading: false, error: 'Erro ao carregar permissões' });
@@ -336,7 +336,7 @@ describe('RoleListComponent', () => {
     expect(storeFake.loadPermissions).toHaveBeenCalledTimes(2);
   });
 
-  it('pede confirmação antes de descartar marcações não salvas, e fecha direto sem mudanças', async () => {
+  it('asks for confirmation before discarding unsaved selections, and closes directly with no changes', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(RoleListComponent);
     fixture.componentInstance.openPermissionsModal(agentRole);
@@ -356,7 +356,7 @@ describe('RoleListComponent', () => {
     expect(fixture.nativeElement.querySelector('#rolePermissionsModal')).not.toBeNull();
   });
 
-  it('não oferece cor própria para a função: o back-end não guarda cor, e o navegador também não', async () => {
+  it('does not offer a color of its own for the role: the back end does not store color, and neither does the browser', async () => {
     const fixture = TestBed.createComponent(RoleListComponent);
     await fixture.whenStable();
 

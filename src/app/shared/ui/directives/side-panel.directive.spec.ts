@@ -34,7 +34,7 @@ describe('SidePanelDirective', () => {
     return fixture;
   }
 
-  it('é uma região fora do modo modal e um diálogo modal no modo overlay', async () => {
+  it('is a region outside modal mode and a modal dialog in overlay mode', async () => {
     const fixture = await createAttached();
     const panel = fixture.nativeElement.querySelector('[aria-labelledby]') as HTMLElement;
     expect(panel.getAttribute('role')).toBe('region');
@@ -48,7 +48,7 @@ describe('SidePanelDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('fora do modo modal, não puxa o foco pro painel (quem navega por teclado fica no lugar da tabela)', async () => {
+  it('outside modal mode, does not pull focus to the panel (keyboard users stay in the table position)', async () => {
     const opener = document.createElement('button');
     document.body.appendChild(opener);
     opener.focus();
@@ -60,7 +60,7 @@ describe('SidePanelDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('no modo modal, move o foco pro título ao abrir e ao trocar de item, mas não quando a chave continua a mesma', async () => {
+  it('in modal mode, moves focus to the title on open and when switching items, but not when the key stays the same', async () => {
     const fixture = await createAttached(true);
     const title = fixture.nativeElement.querySelector('#panelTitle') as HTMLElement;
     expect(document.activeElement).toBe(title);
@@ -80,7 +80,7 @@ describe('SidePanelDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('no modo modal, prende o Tab entre o primeiro e o último controle', async () => {
+  it('in modal mode, traps Tab between the first and the last control', async () => {
     const fixture = await createAttached();
     fixture.componentInstance.modal.set(true);
     await fixture.whenStable();
@@ -97,7 +97,7 @@ describe('SidePanelDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('fora do modo modal, não interfere no Tab', async () => {
+  it('outside modal mode, does not interfere with Tab', async () => {
     const fixture = await createAttached();
     const last = fixture.nativeElement.querySelector('#lastControl') as HTMLElement;
     last.focus();

@@ -10,14 +10,14 @@ describe('DashboardTimesComponent', () => {
     }).compileComponents();
   });
 
-  it('formata minutos úteis sem converter pra dias', () => {
+  it('formats business minutes without converting to days', () => {
     expect(formatBusinessMinutes(45)).toBe('45 min');
     expect(formatBusinessMinutes(75)).toBe('1 h 15 min');
     expect(formatBusinessMinutes(120)).toBe('2 h');
     expect(formatBusinessMinutes(7230)).toBe('120 h');
   });
 
-  it('mostra a mediana e a média quando há amostra, e "Dados insuficientes" abaixo do mínimo', async () => {
+  it('shows the median and the average when there is a sample, and "Dados insuficientes" below the minimum', async () => {
     const fixture = TestBed.createComponent(DashboardTimesComponent);
     fixture.componentRef.setInput('times', {
       firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
@@ -36,7 +36,7 @@ describe('DashboardTimesComponent', () => {
     expect(fixture.nativeElement.querySelector('[aria-live]')).toBeNull();
   });
 
-  it('recarregando com tempos na tela: mantém os cards como estão em vez de voltar ao carregamento', async () => {
+  it('when reloading with times on screen: keeps the cards as they are instead of going back to loading', async () => {
     const fixture = TestBed.createComponent(DashboardTimesComponent);
     fixture.componentRef.setInput('times', {
       firstResponse: { averageMinutes: 160, medianMinutes: 75, sampleSize: 6 },
@@ -49,7 +49,7 @@ describe('DashboardTimesComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('1 h 15 min');
   });
 
-  it('mostra o erro com "Tentar novamente"', async () => {
+  it('shows the error with "Tentar novamente"', async () => {
     const fixture = TestBed.createComponent(DashboardTimesComponent);
     fixture.componentRef.setInput('error', 'Não foi possível carregar os tempos de atendimento.');
     let retried = false;
@@ -63,7 +63,7 @@ describe('DashboardTimesComponent', () => {
     expect(retried).toBeTrue();
   });
 
-  it('mostra o carregamento enquanto não há resposta', async () => {
+  it('shows the loading state while there is no response', async () => {
     const fixture = TestBed.createComponent(DashboardTimesComponent);
     fixture.componentRef.setInput('loading', true);
     await fixture.whenStable();

@@ -23,7 +23,7 @@ describe('UserListInfoPanelComponent', () => {
     return fixture;
   }
 
-  it('é uma região rotulada pelo nome do usuário fora do modo modal', async () => {
+  it('is a region labeled by the user name outside modal mode', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -33,7 +33,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(document.getElementById(panel.getAttribute('aria-labelledby')!)?.textContent).toContain('Maria Silva');
   });
 
-  it('vira diálogo modal no modo overlay', async () => {
+  it('becomes a modal dialog in overlay mode', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('modal', true);
     await fixture.whenStable();
@@ -43,7 +43,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(panel.getAttribute('aria-modal')).toBe('true');
   });
 
-  it('no modo overlay, move o foco pro título ao abrir e de novo ao trocar de usuário', async () => {
+  it('in overlay mode, moves focus to the title on open and again when switching users', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('modal', true);
     document.body.appendChild(fixture.nativeElement);
@@ -60,7 +60,7 @@ describe('UserListInfoPanelComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('não rouba o foco quando a lista recarrega e entrega um objeto novo pro mesmo usuário', async () => {
+  it('does not steal focus when the list reloads and delivers a new object for the same user', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('modal', true);
     document.body.appendChild(fixture.nativeElement);
@@ -79,7 +79,7 @@ describe('UserListInfoPanelComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('no modo modal, Tab no último controle volta pro primeiro e Shift+Tab no primeiro vai pro último', async () => {
+  it('in modal mode, Tab on the last control goes back to the first and Shift+Tab on the first goes to the last', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('modal', true);
     document.body.appendChild(fixture.nativeElement);
@@ -99,7 +99,7 @@ describe('UserListInfoPanelComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('fora do modo modal, não prende o Tab dentro do painel', async () => {
+  it('outside modal mode, does not trap Tab inside the panel', async () => {
     const fixture = createFixture();
     document.body.appendChild(fixture.nativeElement);
     await fixture.whenStable();
@@ -116,7 +116,7 @@ describe('UserListInfoPanelComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('renderiza os campos instantâneos recebidos por @Input', async () => {
+  it('renders the instant fields received via @Input', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -128,7 +128,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(text).toContain('01/01/2026');
   });
 
-  it('mostra todas as funções do usuário, sem agrupar em "+N" (o painel é o detalhe)', async () => {
+  it('shows all of the user roles, without grouping into "+N" (the panel is the detail view)', async () => {
     const userWithManyRoles: UserSummary = {
       ...activeUser,
       roles: [{ name: 'Agent' }, { name: 'Supervisor' }, { name: 'Financeiro' }]
@@ -142,7 +142,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(text).not.toContain('+1');
   });
 
-  it('mostra "Convite pendente", a validade do convite e o botão "Reenviar convite" pra quem não ativou a conta', async () => {
+  it('shows "Convite pendente", the invite validity and the "Reenviar convite" button for those who have not activated the account', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: '2026-11-01T15:00:00Z' });
     await fixture.whenStable();
@@ -159,7 +159,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(emitted).toHaveBeenCalled();
   });
 
-  it('não oferece reenviar convite pra quem já ativou a conta', async () => {
+  it('does not offer resending the invite to those who already activated the account', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -167,7 +167,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Convite pendente');
   });
 
-  it('diz "Nenhuma função" quando o usuário não tem função', async () => {
+  it('says "Nenhuma função" when the user has no role', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('user', { ...activeUser, roles: [] });
     await fixture.whenStable();
@@ -175,7 +175,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Nenhuma função');
   });
 
-  it('diz "Convite expirado" em destaque quando o convite venceu', async () => {
+  it('says "Convite expirado" prominently when the invite has expired', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null });
     await fixture.whenStable();
@@ -184,7 +184,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(expired.textContent).toContain('Convite expirado');
   });
 
-  it('mostra cada função no badge índigo do sistema', async () => {
+  it('shows each role in the system indigo badge', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -193,7 +193,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(badge.textContent?.trim()).toBe('Agent');
   });
 
-  it('mostra a data de desativação só quando o usuário está desativado', async () => {
+  it('shows the deactivation date only when the user is deactivated', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Desativado em');
@@ -203,7 +203,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Desativado em');
   });
 
-  it('na própria conta logada, marca "Você" e troca o Ativar/Desativar por uma explicação', async () => {
+  it('on the logged-in account itself, marks "Você" and replaces Ativar/Desativar with an explanation', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('isCurrentUser', true);
     await fixture.whenStable();
@@ -214,7 +214,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Sua própria conta não pode ser desativada');
   });
 
-  it('mostra "Desativar" para um usuário ativo e "Reativar" para um inativo', async () => {
+  it('shows "Desativar" for an active user and "Reativar" for an inactive one', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('Desativar');
@@ -224,7 +224,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Reativar');
   });
 
-  it('mostra um spinner e desabilita o botão enquanto a mutação está em andamento', async () => {
+  it('shows a spinner and disables the button while the mutation is in progress', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('deactivating', true);
     await fixture.whenStable();
@@ -234,7 +234,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(button.querySelector('.spinner-border')).toBeTruthy();
   });
 
-  it('emite "close" ao clicar no botão de fechar', async () => {
+  it('emits "close" when clicking the close button', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     const closeSpy = jasmine.createSpy('close');
@@ -246,7 +246,7 @@ describe('UserListInfoPanelComponent', () => {
     expect(closeSpy).toHaveBeenCalled();
   });
 
-  it('emite editClick, assignRolesClick e toggleActiveClick ao clicar nos respectivos botões', async () => {
+  it('emits editClick, assignRolesClick and toggleActiveClick when clicking the respective buttons', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 

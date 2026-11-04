@@ -16,7 +16,7 @@ describe('RoleGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explica o que é uma função e como as permissões funcionam', async () => {
+  it('explains what a role is and how permissions work', async () => {
     const fixture = TestBed.createComponent(RoleGuideComponent);
     await fixture.whenStable();
 
@@ -26,7 +26,7 @@ describe('RoleGuideComponent', () => {
     expect(text).toContain('Administrador');
   });
 
-  it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
+  it('remembers the open/closed preference under the screen own key', async () => {
     const fixture = TestBed.createComponent(RoleGuideComponent);
     await fixture.whenStable();
 

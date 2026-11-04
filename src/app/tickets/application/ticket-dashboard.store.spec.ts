@@ -59,8 +59,8 @@ describe('TicketDashboardStore', () => {
     features = { operationOverview: true, averageTimes: true, volumeResolved: true, companyStatsForAll: false, listPeriodFilter: false };
   });
 
-  describe('flags do back-end (DASHBOARD_FEATURES)', () => {
-    it('com as flags desligadas, não faz nenhuma requisição e nada fica carregando', async () => {
+  describe('back-end flags (DASHBOARD_FEATURES)', () => {
+    it('with the flags off, makes no request and nothing stays loading', async () => {
       features = { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
       const store = createStore();
       store.setScope({ from: '2026-10-01', to: '2026-10-28' });
@@ -73,7 +73,7 @@ describe('TicketDashboardStore', () => {
       expect(store.overviewError()).toBeNull();
     });
 
-    it('cada flag libera só a sua leitura', async () => {
+    it('each flag enables only its own read', async () => {
       features = { operationOverview: false, averageTimes: true, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
       createStore();
       await settle();
@@ -83,7 +83,7 @@ describe('TicketDashboardStore', () => {
       expect(dataService.getVolume).not.toHaveBeenCalled();
     });
 
-    it('com a flag ligada, um 404 é erro de verdade (não "em breve")', async () => {
+    it('with the flag on, a 404 is a real error (not "em breve")', async () => {
       dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
       const store = createStore();
       await settle();
@@ -92,7 +92,7 @@ describe('TicketDashboardStore', () => {
     });
   });
 
-  it('o volume do recorte só é pedido no escopo "Com filtros"', async () => {
+  it('the volume of the slice is only requested in the "Com filtros" scope', async () => {
     const store = createStore('company');
     await settle();
     expect(dataService.getVolume).not.toHaveBeenCalled();
@@ -103,7 +103,7 @@ describe('TicketDashboardStore', () => {
     expect(store.trendHasValue()).toBeTrue();
   });
 
-  it('refresh recarrega as leituras ligadas mantendo os números na tela', async () => {
+  it('refresh reloads the enabled reads keeping the numbers on screen', async () => {
     const store = createStore();
     await settle();
     dataService.getOverview.calls.reset();
@@ -116,7 +116,7 @@ describe('TicketDashboardStore', () => {
     expect(store.volume()).toEqual(OVERVIEW.volume);
   });
 
-  it('expõe Volume, SLA e Central de atenção do agregado do servidor, numa chamada só', async () => {
+  it('exposes Volume, SLA and Central de atenção from the server aggregate, in a single call', async () => {
     const store = createStore();
     await settle();
 
@@ -126,7 +126,7 @@ describe('TicketDashboardStore', () => {
     expect(store.attention()).toEqual(OVERVIEW.attention);
   });
 
-  it('expõe os tempos médios e o gráfico do recorte', async () => {
+  it('exposes the average times and the chart of the slice', async () => {
     const store = createStore();
     await settle();
 
@@ -135,7 +135,7 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getVolume).toHaveBeenCalledWith('Day', jasmine.objectContaining({ sectorIds: undefined }));
   });
 
-  it('aplica o período à abertura no agregado e no gráfico, e à conclusão nos tempos', async () => {
+  it('applies the period to the opening in the aggregate and the chart, and to the completion in the times', async () => {
     const store = createStore();
     store.setScope({ sectorIds: ['s1', 's2'], priority: TicketPriority.High, from: '2026-10-01', to: '2026-10-28' });
     await settle();
@@ -147,7 +147,7 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getVolume).toHaveBeenCalledWith('Day', jasmine.objectContaining({ createdFrom: '2026-10-01', createdTo: '2026-10-28' }));
   });
 
-  it('com período fechado, busca também o período anterior de mesmo tamanho pra comparar', async () => {
+  it('with a closed period, also fetches the previous period of the same length for comparison', async () => {
     const store = createStore();
     store.setScope({ sectorIds: ['s1'], from: '2026-10-22', to: '2026-10-28' });
     await settle();
@@ -156,7 +156,7 @@ describe('TicketDashboardStore', () => {
     expect(store.previousOverview()).toEqual(OVERVIEW);
   });
 
-  it('sem período (ou com uma ponta só), não há período anterior', async () => {
+  it('without a period (or with only one end), there is no previous period', async () => {
     const store = createStore();
     store.setScope({ from: '2026-10-01' });
     await settle();
@@ -165,7 +165,7 @@ describe('TicketDashboardStore', () => {
     expect(store.previousOverview()).toBeNull();
   });
 
-  it('"meus" vira o id de quem está logado, "sem responsável" vira unassignedOnly, e uma pessoa vai pelo id', async () => {
+  it('"meus" becomes the logged-in user id, "sem responsável" becomes unassignedOnly, and a person goes by id', async () => {
     const store = createStore();
     store.setScope({ assignee: 'me' });
     await settle();
@@ -180,7 +180,7 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getOverview).toHaveBeenCalledWith(jasmine.objectContaining({ assignedToUserId: 'u-ana' }));
   });
 
-  it('com o recorte seguro (departamento esperando a lista), nada é pedido; o setScope solta já com o recorte certo', async () => {
+  it('with the slice not safe (department waiting for the list), nothing is requested; setScope releases it already with the right slice', async () => {
     const store = createStore();
     store.holdScope();
     await settle();
@@ -198,7 +198,7 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getTimes).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));
   });
 
-  it('recorte igual não refaz as requisições', async () => {
+  it('an identical slice does not redo the requests', async () => {
     const store = createStore();
     store.setScope({ sectorIds: ['s1'] });
     await settle();
@@ -210,7 +210,7 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getOverview.calls.count()).toBe(calls);
   });
 
-  it('trocar o agrupamento refaz só o gráfico', async () => {
+  it('changing the grouping redoes only the chart', async () => {
     const store = createStore();
     await settle();
     const overviewCalls = dataService.getOverview.calls.count();
@@ -222,7 +222,7 @@ describe('TicketDashboardStore', () => {
     expect(dataService.getOverview.calls.count()).toBe(overviewCalls);
   });
 
-  it('num período de mais de 366 dias, dia a dia não cabe: o gráfico pede por semana e "Dia" fica indisponível', async () => {
+  it('in a period of more than 366 days, day by day does not fit: the chart asks by week and "Dia" becomes unavailable', async () => {
     const store = createStore();
     store.setScope({ from: '2025-01-01', to: '2026-10-27' });
     await settle();
@@ -237,7 +237,7 @@ describe('TicketDashboardStore', () => {
     expect(store.unavailableGroupings()).toEqual([]);
   });
 
-  it('sem fim no período, conta até hoje em Brasília: às 23:30 de 31/10, 366 dias ainda cabem dia a dia', async () => {
+  it('without an end in the period, counts until today in Brasília time: at 23:30 on 31/10, 366 days still fit day by day', async () => {
     // 02:30 UTC de 01/11 é 23:30 de 31/10 em Brasília; com a data UTC, o período teria 367 dias e "Dia" sumiria.
     jasmine.clock().install();
     jasmine.clock().mockDate(new Date('2026-11-01T02:30:00Z'));
@@ -252,7 +252,7 @@ describe('TicketDashboardStore', () => {
     }
   });
 
-  it('sem tickets:manage não pergunta nada à API', async () => {
+  it('without tickets:manage it asks the API nothing', async () => {
     permissions = new Set();
     const store = createStore();
     await settle();
@@ -263,7 +263,7 @@ describe('TicketDashboardStore', () => {
     expect(store.volume()).toBeNull();
   });
 
-  it('um widget falhar não derruba os outros, e o "Tentar novamente" recupera', async () => {
+  it('one widget failing does not take down the others, and "Tentar novamente" recovers it', async () => {
     dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
     const store = createStore();
     await settle();
@@ -281,7 +281,7 @@ describe('TicketDashboardStore', () => {
     expect(store.volume()).toEqual(OVERVIEW.volume);
   });
 
-  it('uma atualização do agregado que falha mantém os números do recorte (velhos), e trocar o recorte os zera', async () => {
+  it('a failed aggregate refresh keeps the (old) numbers of the slice, and changing the slice zeroes them', async () => {
     const store = createStore();
     await settle();
     // A tela lê o agregado o tempo todo; é essa leitura que guarda os últimos números bons.
@@ -303,7 +303,7 @@ describe('TicketDashboardStore', () => {
     expect(store.overviewFailed()).toBeTrue();
   });
 
-  it('uma atualização dos tempos que falha mantém os tempos anteriores do recorte', async () => {
+  it('a failed refresh of the times keeps the previous times of the slice', async () => {
     const store = createStore();
     await settle();
     // A tela lê os tempos o tempo todo; é essa leitura que guarda os últimos bons.
@@ -319,7 +319,7 @@ describe('TicketDashboardStore', () => {
     expect(store.timesFailed()).toBeFalse();
   });
 
-  it('erro nos tempos e no gráfico aparece em cada um', async () => {
+  it('an error in the times and in the chart shows up in each one', async () => {
     dataService.getTimes.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     dataService.getVolume.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const store = createStore();

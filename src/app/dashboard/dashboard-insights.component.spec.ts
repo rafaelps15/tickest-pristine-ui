@@ -25,7 +25,7 @@ describe('DashboardInsightsComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra só os Alertas de SLA, sem card provisório "Em breve" sem dados', async () => {
+  it('shows only the SLA Alerts, with no provisional "Em breve" card without data', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     await fixture.whenStable();
 
@@ -35,7 +35,7 @@ describe('DashboardInsightsComponent', () => {
     expect(text).not.toContain('Em breve');
   });
 
-  it('mostra o spinner enquanto carrega os alertas de SLA', async () => {
+  it('shows the spinner while the SLA alerts load', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('loading', true);
     await fixture.whenStable();
@@ -43,7 +43,7 @@ describe('DashboardInsightsComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).toBeTruthy();
   });
 
-  it('mostra a mensagem de erro, em vez da lista, quando a busca falhar', async () => {
+  it('shows the error message, instead of the list, when the fetch fails', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
     await fixture.whenStable();
@@ -52,7 +52,7 @@ describe('DashboardInsightsComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado atrasado ou em risco agora.');
   });
 
-  it('mostra a mensagem de vazio quando não há chamados em risco de SLA', async () => {
+  it('shows the empty message when there are no tickets at SLA risk', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     await fixture.whenStable();
 
@@ -60,7 +60,7 @@ describe('DashboardInsightsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Fila em dia');
   });
 
-  it('lista os chamados em risco de SLA recebidos, com link pro detalhe', async () => {
+  it('lists the received tickets at SLA risk, with a link to the detail', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [ticket]);
     await fixture.whenStable();
@@ -72,7 +72,7 @@ describe('DashboardInsightsComponent', () => {
     expect(link.getAttribute('href')).toBe('/tickets/t1');
   });
 
-  it('diz quem atende cada alerta, e destaca quando não tem responsável', async () => {
+  it('says who handles each alert, and highlights when there is no assignee', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [ticket, { ...ticket, id: 't2', assignedToUserId: null, assignedToName: null }]);
     await fixture.whenStable();
@@ -82,7 +82,7 @@ describe('DashboardInsightsComponent', () => {
     expect(unassigned.querySelector('.critical-ticket-unassigned')?.textContent?.trim()).toBe('Sem responsável');
   });
 
-  it('não oferece "Atribuir" sem a permissão de atribuir a outra pessoa', async () => {
+  it('does not offer "Atribuir" without the permission to assign to another person', async () => {
     const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [orphan]);
@@ -93,7 +93,7 @@ describe('DashboardInsightsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Sem responsável');
   });
 
-  it('oferece "Atribuir" só nos alertas sem responsável, fora do link, e emite o chamado', async () => {
+  it('offers "Atribuir" only on alerts without an assignee, outside the link, and emits the ticket', async () => {
     const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [ticket, orphan]);
@@ -110,7 +110,7 @@ describe('DashboardInsightsComponent', () => {
     expect(assign).toHaveBeenCalledWith(orphan);
   });
 
-  it('marca cada chamado como "Atrasado" ou "Em risco" com texto, não só com cor', async () => {
+  it('marks each ticket as "Atrasado" or "Em risco" with text, not only with color', async () => {
     const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [
@@ -124,7 +124,7 @@ describe('DashboardInsightsComponent', () => {
     expect(badges).toEqual(['Atrasado', 'Em risco']);
   });
 
-  it('mostra os totais de atrasados e em risco da empresa, cada um levando à fila filtrada por esse SLA', async () => {
+  it('shows the company totals of overdue and at-risk tickets, each leading to the queue filtered by that SLA', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [{ ...ticket, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() }]);
     fixture.componentRef.setInput('breachedCount', 7);
@@ -139,7 +139,7 @@ describe('DashboardInsightsComponent', () => {
     expect(atRisk.getAttribute('href')).toBe(`/tickets/monitorar?slaStatus=${TicketSlaStatus.AtRisk}`);
   });
 
-  it('cor de alerta só quando há o que alertar: zero em risco fica neutro', async () => {
+  it('alert color only when there is something to alert: zero at risk stays neutral', async () => {
     const fixture = TestBed.createComponent(DashboardInsightsComponent);
     fixture.componentRef.setInput('criticalTickets', [{ ...ticket, slaStatus: TicketSlaStatus.Breached, dueAtUtc: new Date(Date.now() - 3_600_000).toISOString() }]);
     fixture.componentRef.setInput('breachedCount', 4);
@@ -151,8 +151,8 @@ describe('DashboardInsightsComponent', () => {
     expect(atRisk.classList).not.toContain('text-warning');
   });
 
-  describe('faixa', () => {
-    it('com a fila em dia, vira a forma compacta, sem coluna de lista', async () => {
+  describe('strip', () => {
+    it('with the queue up to date, it becomes the compact form, with no list column', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       await fixture.whenStable();
 
@@ -160,7 +160,7 @@ describe('DashboardInsightsComponent', () => {
       expect(fixture.nativeElement.querySelector('.sla-band-list')).toBeNull();
     });
 
-    it('com alertas, mostra a coluna da lista e define "em risco" junto dos totais', async () => {
+    it('with alerts, it shows the list column and defines "em risco" next to the totals', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [{ ...ticket, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() }]);
       await fixture.whenStable();
@@ -172,8 +172,8 @@ describe('DashboardInsightsComponent', () => {
     });
   });
 
-  describe('atualidade da lista', () => {
-    it('mostra a hora da última carga e pede atualização pelo botão', async () => {
+  describe('list freshness', () => {
+    it('shows the time of the last load and asks for a refresh through the button', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('loadedAtMs', new Date(2026, 9, 27, 14, 32).getTime());
       const refresh = jasmine.createSpy('refresh');
@@ -185,7 +185,7 @@ describe('DashboardInsightsComponent', () => {
       expect(refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('no escopo "Com filtros", diz que segue os filtros e leva a fila com eles', async () => {
+    it('in the "Com filtros" scope, says it follows the filters and takes the queue with them', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [ticket]);
       fixture.componentRef.setInput('showTotals', false);
@@ -199,7 +199,7 @@ describe('DashboardInsightsComponent', () => {
       expect(queue.getAttribute('href')).toContain('sectorId=s1');
     });
 
-    it('gira o botão e o marca indisponível enquanto atualiza (aria-disabled, sem tirar o foco), sem esconder a lista', async () => {
+    it('spins the button and marks it unavailable while refreshing (aria-disabled, without dropping focus), without hiding the list', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [ticket]);
       fixture.componentRef.setInput('refreshing', true);
@@ -216,7 +216,7 @@ describe('DashboardInsightsComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('.critical-ticket-link').length).toBe(1);
     });
 
-    it('com erro e uma nova tentativa carregando ao mesmo tempo, o aviso fica (sem o carregando do bloco) e não é recriado nem lido de novo; só o botão dele gira', async () => {
+    it('with an error and a new attempt loading at the same time, the notice stays (without the block loading state) and is neither recreated nor announced again; only its button spins', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
       await fixture.whenStable();
@@ -241,7 +241,7 @@ describe('DashboardInsightsComponent', () => {
       expect(retryButton.textContent).toContain('Tentar novamente');
     });
 
-    it('quando o "Tentar novamente" dá certo, o foco (que cairia no início da página) vai pro título do card', async () => {
+    it('when "Tentar novamente" succeeds, the focus (which would fall to the top of the page) goes to the card title', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
       document.body.appendChild(fixture.nativeElement);
@@ -261,7 +261,7 @@ describe('DashboardInsightsComponent', () => {
       fixture.nativeElement.remove();
     });
 
-    it('se o "Tentar novamente" falha de novo, o foco fica no botão; uma atualização automática que dá certo depois não mexe no foco', async () => {
+    it('if "Tentar novamente" fails again, the focus stays on the button; a later automatic refresh that succeeds does not touch the focus', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
       document.body.appendChild(fixture.nativeElement);
@@ -291,7 +291,7 @@ describe('DashboardInsightsComponent', () => {
       fixture.nativeElement.remove();
     });
 
-    it('oferece "Tentar novamente" no erro, que pede uma nova carga', async () => {
+    it('offers "Tentar novamente" on error, which requests a new load', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('error', 'Erro ao carregar os alertas de SLA');
       const refresh = jasmine.createSpy('refresh');
@@ -304,7 +304,7 @@ describe('DashboardInsightsComponent', () => {
       expect(refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('ao voltar pra aba não pede dados sozinho: quem recarrega é a atualização automática do Início', async () => {
+    it('when returning to the tab it does not request data by itself: the automatic refresh of Início does the reloading', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       const refresh = jasmine.createSpy('refresh');
       fixture.componentInstance.refresh.subscribe(refresh);
@@ -316,7 +316,7 @@ describe('DashboardInsightsComponent', () => {
     });
   });
 
-  describe('prazo vivo', () => {
+  describe('live deadline', () => {
     const base = new Date('2026-10-27T12:00:00Z');
 
     beforeEach(() => {
@@ -329,7 +329,7 @@ describe('DashboardInsightsComponent', () => {
     /** Item em risco que vence `ms` depois de `base`. */
     const dueIn = (ms: number): TicketMonitorItem => ({ ...ticket, dueAtUtc: new Date(base.getTime() + ms).toISOString() });
 
-    it('mostra o prazo relativo ("vence em" / "venceu há"), pela hora do servidor', async () => {
+    it('shows the relative deadline ("vence em" / "venceu há"), based on server time', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [dueIn(2 * 3_600_000 + 14 * 60_000), { ...dueIn(-35 * 60_000), id: 't2' }]);
       fixture.detectChanges();
@@ -343,7 +343,7 @@ describe('DashboardInsightsComponent', () => {
       expect(fixture.nativeElement.querySelector('time').textContent.trim()).toBe('vence em 1h 14min');
     });
 
-    it('vira "Atrasado" sozinho ao cruzar o prazo, e anuncia a virada ao leitor de tela', async () => {
+    it('becomes "Atrasado" by itself when crossing the deadline, and announces the change to the screen reader', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [dueIn(20_000)]);
       fixture.componentRef.setInput('breachedCount', 7);
@@ -374,7 +374,7 @@ describe('DashboardInsightsComponent', () => {
       expect(totals()).toEqual(['8', '1']);
     });
 
-    it('não anuncia nada na carga inicial, mesmo com chamados já vencidos', async () => {
+    it('announces nothing on the initial load, even with tickets already overdue', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [dueIn(-60_000)]);
       fixture.detectChanges();
@@ -384,7 +384,7 @@ describe('DashboardInsightsComponent', () => {
   });
 
   describe('formatSlaDuration', () => {
-    it('formata em pt-BR curto, de minutos a dias', () => {
+    it('formats in short pt-BR, from minutes to days', () => {
       expect(formatSlaDuration(20_000)).toBe('menos de 1 min');
       expect(formatSlaDuration(35 * 60_000)).toBe('35 min');
       expect(formatSlaDuration(2 * 3_600_000)).toBe('2h');

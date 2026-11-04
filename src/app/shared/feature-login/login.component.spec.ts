@@ -27,7 +27,7 @@ describe('LoginComponent', () => {
       .compileComponents();
   });
 
-  it('renderiza os campos de e-mail e senha', async () => {
+  it('renders the email and password fields', async () => {
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
 
@@ -35,7 +35,7 @@ describe('LoginComponent', () => {
     expect(fixture.nativeElement.querySelector('#password')).toBeTruthy();
   });
 
-  it('chama store.login() com o e-mail e a senha quando o formulário é válido', async () => {
+  it('calls store.login() with the email and password when the form is valid', async () => {
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -46,7 +46,7 @@ describe('LoginComponent', () => {
     expect(storeFake.login).toHaveBeenCalledWith({ email: 'admin@empresa.com', password: 'Senha@123' });
   });
 
-  it('não chama store.login() e marca os campos como tocados quando o formulário está vazio', async () => {
+  it('does not call store.login() and marks the fields as touched when the form is empty', async () => {
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -61,7 +61,7 @@ describe('LoginComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('A senha é necessária.');
   });
 
-  it('o botão de envio não fica desabilitado por formulário inválido, só durante o carregamento', async () => {
+  it('the submit button is not disabled because of an invalid form, only while loading', async () => {
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
 
@@ -69,7 +69,7 @@ describe('LoginComponent', () => {
     expect(button.disabled).toBeFalse();
   });
 
-  it('desabilita o botão de envio e mostra o spinner enquanto o store está carregando', async () => {
+  it('disables the submit button and shows the spinner while the store is loading', async () => {
     storeFake.loading.set(true);
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
@@ -79,7 +79,7 @@ describe('LoginComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).toBeTruthy();
   });
 
-  it('mostra a mensagem de erro do store quando presente', async () => {
+  it('shows the store error message when present', async () => {
     storeFake.error.set('E-mail ou senha incorretos.');
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
@@ -87,7 +87,7 @@ describe('LoginComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('E-mail ou senha incorretos.');
   });
 
-  it('alterna a visibilidade da senha ao clicar no botão de mostrar/ocultar', async () => {
+  it('toggles the password visibility when clicking the show/hide button', async () => {
     const fixture = TestBed.createComponent(LoginComponent);
     await fixture.whenStable();
 

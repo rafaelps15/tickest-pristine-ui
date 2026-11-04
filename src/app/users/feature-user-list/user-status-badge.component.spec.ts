@@ -10,7 +10,7 @@ describe('UserStatusBadgeComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra o rótulo e o tom de cada situação, com o ponto decorativo escondido do leitor de tela', async () => {
+  it('shows the label and tone of each status, with the decorative dot hidden from the screen reader', async () => {
     const fixture = TestBed.createComponent(UserStatusBadgeComponent);
     for (const [status, label, tone] of [
       ['active', 'Ativo', 'bg-label-success'],
@@ -27,7 +27,7 @@ describe('UserStatusBadgeComponent', () => {
     }
   });
 
-  it('deriva a situação dos campos da API: inativo vence, ativo sem senha é convite pendente', () => {
+  it('derives the status from the API fields: inactive wins, active without a password is a pending invite', () => {
     expect(userStatusKind({ isActive: false, pendingActivation: true })).toBe('inactive');
     expect(userStatusKind({ isActive: true, pendingActivation: true })).toBe('pending');
     expect(userStatusKind({ isActive: true, pendingActivation: false })).toBe('active');

@@ -44,14 +44,14 @@ describe('TicketEditDialogComponent', () => {
     return fixture.nativeElement.querySelector('#ticketEditDescription');
   }
 
-  it('pré-carrega a descrição atual do chamado', async () => {
+  it('preloads the current ticket description', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
     expect(textarea(fixture).value).toBe('A impressora do 3º andar não imprime.');
   });
 
-  it('não emite save com uma descrição inválida (menor que o mínimo)', async () => {
+  it('does not emit save with an invalid description (shorter than the minimum)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -63,7 +63,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.savedDescription).toBeNull();
   });
 
-  it('emite save com a descrição editada e sem espaços nas pontas', async () => {
+  it('emits save with the edited description and trimmed of surrounding spaces', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -75,7 +75,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.savedDescription).toBe('Descrição corrigida com mais detalhes.');
   });
 
-  it('fecha direto quando não há alteração', async () => {
+  it('closes directly when there is no change', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -86,7 +86,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.closedCalled).toBeTrue();
   });
 
-  it('pede confirmação antes de fechar com alteração não salva, e fecha se confirmado', async () => {
+  it('asks for confirmation before closing with an unsaved change, and closes if confirmed', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
@@ -101,7 +101,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.closedCalled).toBeTrue();
   });
 
-  it('não fecha quando a confirmação de descartar for cancelada', async () => {
+  it('does not close when the discard confirmation is cancelled', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
@@ -115,7 +115,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.closedCalled).toBeFalse();
   });
 
-  it('desabilita "Salvar" enquanto salva, e mostra o erro vindo da API', async () => {
+  it('disables "Salvar" while saving, and shows the error coming from the API', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -130,7 +130,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para editar este chamado.');
   });
 
-  it('ignora o Esc enquanto a confirmação de descarte está aberta', async () => {
+  it('ignores Esc while the discard confirmation is open', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     confirmDialogServiceFake.options.set({ title: 'Descartar as alterações?' });
@@ -141,7 +141,7 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.closedCalled).toBeFalse();
   });
 
-  it('prende o Tab dentro do diálogo e trava a rolagem da página enquanto está aberto', async () => {
+  it('traps Tab inside the dialog and locks page scrolling while it is open', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     expect(document.body.classList).toContain('modal-open');

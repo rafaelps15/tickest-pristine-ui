@@ -43,7 +43,7 @@ describe('SessionUnavailableComponent', () => {
     };
   });
 
-  it('mostra o motivo do limite de requisições e diz que a sessão continua ativa', async () => {
+  it('shows the reason for the request limit and says the session is still active', async () => {
     const fixture = await render({ motivo: 'rate-limited', retorno: '/tickets' });
     const text = fixture.nativeElement.textContent as string;
 
@@ -52,7 +52,7 @@ describe('SessionUnavailableComponent', () => {
     expect(text).toContain('Sua sessão continua ativa');
   });
 
-  it('tenta de novo voltando para a rota de origem informada', async () => {
+  it('retries returning to the given origin route', async () => {
     const fixture = await render({ motivo: 'offline', retorno: '/tickets?status=1' });
     const button = [...fixture.nativeElement.querySelectorAll('button')].find((b: HTMLButtonElement) => b.textContent?.includes('Tentar novamente')) as HTMLButtonElement;
 
@@ -61,7 +61,7 @@ describe('SessionUnavailableComponent', () => {
     expect(storeStub.retry).toHaveBeenCalledWith('/tickets?status=1');
   });
 
-  it('ignora um retorno para outro site e volta para o Início', async () => {
+  it('ignores a return to another site and goes back to Início', async () => {
     const fixture = await render({ motivo: 'offline', retorno: 'https://outro-site.com' });
     const button = [...fixture.nativeElement.querySelectorAll('button')].find((b: HTMLButtonElement) => b.textContent?.includes('Tentar novamente')) as HTMLButtonElement;
 
@@ -70,7 +70,7 @@ describe('SessionUnavailableComponent', () => {
     expect(storeStub.retry).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('desabilita os botões e anuncia enquanto tenta de novo', async () => {
+  it('disables the buttons and announces while retrying', async () => {
     const fixture = await render({ motivo: 'server-error' });
     retrying.set(true);
     await fixture.whenStable();
@@ -80,7 +80,7 @@ describe('SessionUnavailableComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="status"]').textContent).toContain('Tentando carregar seus dados');
   });
 
-  it('anuncia quando a nova tentativa ainda não deu certo', async () => {
+  it('announces when the new attempt has not worked yet', async () => {
     const fixture = await render({ motivo: 'server-error' });
     failedAttempts.set(1);
     reason.set('offline');
@@ -90,7 +90,7 @@ describe('SessionUnavailableComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Sem conexão com o servidor');
   });
 
-  it('sai da conta pelo botão "Sair da conta"', async () => {
+  it('signs out through the "Sair da conta" button', async () => {
     const fixture = await render({ motivo: 'server-error' });
     const button = [...fixture.nativeElement.querySelectorAll('button')].find((b: HTMLButtonElement) => b.textContent?.includes('Sair da conta')) as HTMLButtonElement;
 

@@ -14,30 +14,30 @@ describe('currentTicketDue', () => {
     canCancel: false, ownerCancelDeadlineUtc: '2026-01-02T12:15:00Z'
   };
 
-  it('usa o prazo e a situação do ciclo vigente quando o back-end manda', () => {
+  it('uses the due date and status of the current cycle when the back end sends them', () => {
     const reopened: Ticket = { ...ticket, status: TicketStatus.Open, currentDueAtUtc: '2026-01-05T18:30:00Z', currentSlaStatus: TicketSlaStatus.OnTime };
     expect(currentTicketDue(reopened)).toEqual({
       dueAtUtc: '2026-01-05T18:30:00Z', slaStatus: TicketSlaStatus.OnTime, display: TICKET_LIST_DUE_DISPLAY[TicketSlaStatus.OnTime]
     });
   });
 
-  it('sem os campos do ciclo vigente, cai no prazo e na situação do primeiro ciclo', () => {
+  it('without the current cycle fields, falls back to the due date and status of the first cycle', () => {
     expect(currentTicketDue(ticket)).toEqual({
       dueAtUtc: '2026-01-03T12:00:00Z', slaStatus: TicketSlaStatus.Met, display: TICKET_LIST_DUE_DISPLAY[TicketSlaStatus.Met]
     });
   });
 
-  it('num chamado ativo sem o ciclo vigente, não mostra o "Resolvido" do ciclo encerrado — diz que o prazo novo está no chamado', () => {
+  it('on an active ticket without the current cycle, does not show the "Resolvido" of the closed cycle; it says the new due date is on the ticket', () => {
     const reopenedWithoutCycle: Ticket = { ...ticket, status: TicketStatus.Open, slaStatus: TicketSlaStatus.Missed };
     expect(currentTicketDue(reopenedWithoutCycle).display).toBe(TICKET_LIST_REOPENED_DUE_DISPLAY);
   });
 
-  it('num chamado ativo sem o ciclo vigente mas ainda no primeiro ciclo, mostra a situação dele normalmente', () => {
+  it('on an active ticket without the current cycle but still in the first cycle, shows its status normally', () => {
     const open: Ticket = { ...ticket, status: TicketStatus.InProgress, slaStatus: TicketSlaStatus.Breached };
     expect(currentTicketDue(open).display).toBe(TICKET_LIST_DUE_DISPLAY[TicketSlaStatus.Breached]);
   });
 
-  it('diz o que a data é: "até" no prazo, "venceu em" atrasado e "prazo era" num resolvido', () => {
+  it('says what the date is: "até" when on time, "venceu em" when overdue and "prazo era" on a resolved one', () => {
     expect(TICKET_LIST_DUE_DISPLAY[TicketSlaStatus.OnTime].datePrefix).toBe('até');
     expect(TICKET_LIST_DUE_DISPLAY[TicketSlaStatus.Breached].datePrefix).toBe('venceu em');
     expect(TICKET_LIST_DUE_DISPLAY[TicketSlaStatus.Met].datePrefix).toBe('prazo era');

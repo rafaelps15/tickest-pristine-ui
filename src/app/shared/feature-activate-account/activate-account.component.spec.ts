@@ -33,7 +33,7 @@ describe('ActivateAccountComponent', () => {
       .compileComponents();
   }
 
-  it('lê o token do fragmento da URL e o tira da barra de endereço, sem empilhar histórico', async () => {
+  it('reads the token from the URL fragment and removes it from the address bar, without stacking history', async () => {
     await setup('token=abc123');
     const navigateSpy = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
@@ -43,7 +43,7 @@ describe('ActivateAccountComponent', () => {
     expect(navigateSpy).toHaveBeenCalledWith([], jasmine.objectContaining({ fragment: undefined, replaceUrl: true }));
   });
 
-  it('marca o link como inválido quando a página abre sem token', async () => {
+  it('flags the link as invalid when the page opens without a token', async () => {
     await setup(null);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
     await fixture.whenStable();
@@ -51,7 +51,7 @@ describe('ActivateAccountComponent', () => {
     expect(storeFake.markInvalidLink).toHaveBeenCalled();
   });
 
-  it('envia o token e a senha quando o formulário é válido', async () => {
+  it('submits the token and the password when the form is valid', async () => {
     await setup('token=abc123');
     spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
@@ -63,7 +63,7 @@ describe('ActivateAccountComponent', () => {
     expect(storeFake.activate).toHaveBeenCalledWith('abc123', 'Senha@123');
   });
 
-  it('não envia quando as senhas não coincidem, e avisa', async () => {
+  it('does not submit when the passwords do not match, and warns', async () => {
     await setup('token=abc123');
     spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
@@ -77,7 +77,7 @@ describe('ActivateAccountComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('As senhas não coincidem.');
   });
 
-  it('mostra as regras de senha antes de digitar', async () => {
+  it('shows the password rules before typing', async () => {
     await setup('token=abc123');
     spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
@@ -86,7 +86,7 @@ describe('ActivateAccountComponent', () => {
     expect(fixture.nativeElement.querySelector('#newPassword-requirements')?.textContent).toContain('Mínimo de 6 caracteres');
   });
 
-  it('mostra a confirmação com o atalho pro login depois de ativar', async () => {
+  it('shows the confirmation with the shortcut to login after activating', async () => {
     await setup('token=abc123');
     spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
@@ -98,7 +98,7 @@ describe('ActivateAccountComponent', () => {
     expect(fixture.nativeElement.querySelector('form')).toBeNull();
   });
 
-  it('troca o formulário pela orientação de pedir outro convite quando o link é inválido', async () => {
+  it('replaces the form with the guidance to request another invitation when the link is invalid', async () => {
     await setup(null);
     const fixture = TestBed.createComponent(ActivateAccountComponent);
     storeFake.invalidLink.set(true);

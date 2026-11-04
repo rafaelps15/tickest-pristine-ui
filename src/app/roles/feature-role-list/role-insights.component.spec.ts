@@ -15,7 +15,7 @@ describe('RoleInsightsComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra o total de funções numa linha de apoio, sem número grande quando nada pede ação', async () => {
+  it('shows the total of roles on a supporting line, with no big number when nothing requires action', async () => {
     const fixture = TestBed.createComponent(RoleInsightsComponent);
     fixture.componentRef.setInput('roles', [makeRole(), makeRole({ name: 'Administrador' })]);
     await fixture.whenStable();
@@ -24,7 +24,7 @@ describe('RoleInsightsComponent', () => {
     expect(fixture.nativeElement.querySelector('.insights-stat')).toBeNull();
   });
 
-  it('mostra a mensagem positiva quando nenhuma função está sem permissão', async () => {
+  it('shows the positive message when no role is without permissions', async () => {
     const fixture = TestBed.createComponent(RoleInsightsComponent);
     fixture.componentRef.setInput('roles', [makeRole()]);
     await fixture.whenStable();
@@ -32,7 +32,7 @@ describe('RoleInsightsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('todas com pelo menos uma permissão');
   });
 
-  it('mostra a quantidade de funções sem nenhuma permissão atribuída', async () => {
+  it('shows the number of roles with no permission assigned', async () => {
     const fixture = TestBed.createComponent(RoleInsightsComponent);
     fixture.componentRef.setInput('roles', [makeRole({ permissionCodes: [] }), makeRole({ name: 'Vazia', permissionCodes: [] })]);
     await fixture.whenStable();
@@ -43,7 +43,7 @@ describe('RoleInsightsComponent', () => {
     expect(text).not.toContain('todas com pelo menos uma permissão');
   });
 
-  it('não afirma que "todas têm permissão" sobre uma lista vazia ou que ainda não chegou', async () => {
+  it('does not claim that "todas têm permissão" for an empty list or one that has not arrived yet', async () => {
     const fixture = TestBed.createComponent(RoleInsightsComponent);
     fixture.componentRef.setInput('roles', []);
     await fixture.whenStable();

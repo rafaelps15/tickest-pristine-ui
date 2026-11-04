@@ -3,15 +3,15 @@ import { passwordChangeValidator, strongPasswordValidator } from './password.val
 
 describe('password.validators', () => {
   describe('strongPasswordValidator', () => {
-    it('deve aceitar senha com maiúscula e caractere especial', () => {
+    it('should accept a password with an uppercase letter and a special character', () => {
       expect(strongPasswordValidator(new FormControl('Senha#1'))).toBeNull();
     });
 
-    it('deve recusar senha sem letra maiúscula', () => {
+    it('should reject a password without an uppercase letter', () => {
       expect(strongPasswordValidator(new FormControl('senha#1'))).toEqual({ uppercase: true });
     });
 
-    it('deve recusar senha sem caractere especial', () => {
+    it('should reject a password without a special character', () => {
       expect(strongPasswordValidator(new FormControl('Senha1'))).toEqual({ specialChar: true });
     });
   });
@@ -25,15 +25,15 @@ describe('password.validators', () => {
       );
     }
 
-    it('deve aceitar nova senha diferente da atual e confirmada', () => {
+    it('should accept a new password different from the current one and confirmed', () => {
       expect(createGroup('Atual#1', 'Nova#123', 'Nova#123').errors).toBeNull();
     });
 
-    it('deve recusar nova senha igual à atual', () => {
+    it('should reject a new password equal to the current one', () => {
       expect(createGroup('Atual#1', 'Atual#1', 'Atual#1').errors).toEqual({ sameAsCurrent: true });
     });
 
-    it('deve recusar confirmação diferente da nova senha', () => {
+    it('should reject a confirmation different from the new password', () => {
       expect(createGroup('Atual#1', 'Nova#123', 'Outra#123').errors).toEqual({ mismatch: true });
     });
   });

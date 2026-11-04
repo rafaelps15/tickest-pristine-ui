@@ -27,7 +27,7 @@ describe('FilterBarComponent', () => {
     }).compileComponents();
   });
 
-  it('põe os campos na grade e os extras no rodapé, antes do "Limpar filtros"', async () => {
+  it('puts the fields in the grid and the extras in the footer, before "Limpar filtros"', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -37,7 +37,7 @@ describe('FilterBarComponent', () => {
     expect(footer.lastElementChild?.textContent).toContain('Limpar filtros');
   });
 
-  it('avisa a tela ao clicar em "Limpar filtros"', async () => {
+  it('notifies the screen when "Limpar filtros" is clicked', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -46,7 +46,7 @@ describe('FilterBarComponent', () => {
     expect(fixture.componentInstance.cleared).toBe(1);
   });
 
-  it('esconde o botão de limpar quando não há nada pra limpar', async () => {
+  it('hides the clear button when there is nothing to clear', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.clearable.set(false);
     await fixture.whenStable();

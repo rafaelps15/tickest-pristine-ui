@@ -7,13 +7,13 @@ describe('side-panel.util', () => {
     TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection()] });
   });
 
-  it('lê o estado inicial da media query de overlay (abaixo de "lg")', () => {
+  it('reads the initial state of the overlay media query (below "lg")', () => {
     const isOverlay = TestBed.runInInjectionContext(() => injectSidePanelOverlay());
 
     expect(isOverlay()).toBe(window.matchMedia('(max-width: 991.98px)').matches);
   });
 
-  it('identifica um Esc nascido dentro de um modal ou de um menu "⋮"', () => {
+  it('identifies an Esc originating inside a modal or a "⋮" menu', () => {
     const modal = document.createElement('div');
     modal.className = 'modal';
     const input = document.createElement('input');
@@ -28,7 +28,7 @@ describe('side-panel.util', () => {
     expect(isEscapeFromNestedLayer({ target: toggle } as unknown as Event)).toBeTrue();
   });
 
-  it('não confunde um Esc nascido no resto da tela com uma camada própria', () => {
+  it('does not confuse an Esc originating in the rest of the screen with a layer of its own', () => {
     expect(isEscapeFromNestedLayer({ target: document.body } as unknown as Event)).toBeFalse();
     expect(isEscapeFromNestedLayer({ target: null } as unknown as Event)).toBeFalse();
   });

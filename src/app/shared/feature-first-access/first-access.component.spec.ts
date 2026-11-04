@@ -32,14 +32,14 @@ describe('FirstAccessComponent', () => {
       .compileComponents();
   });
 
-  it('mostra o e-mail da conta com a troca pendente', async () => {
+  it('shows the email of the account with the pending change', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('admin@empresa.com');
   });
 
-  it('não envia e marca os campos tocados quando a senha é fraca', async () => {
+  it('does not submit and marks the fields as touched when the password is weak', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -52,7 +52,7 @@ describe('FirstAccessComponent', () => {
     expect(component.form.controls.newPassword.errors?.['specialChar']).toBeTrue();
   });
 
-  it('acusa senhas que não coincidem', async () => {
+  it('flags passwords that do not match', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -62,7 +62,7 @@ describe('FirstAccessComponent', () => {
     expect(component.form.errors?.['mismatch']).toBeTrue();
   });
 
-  it('acusa quando a nova senha é igual à provisória', async () => {
+  it('flags when the new password is the same as the temporary one', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -72,7 +72,7 @@ describe('FirstAccessComponent', () => {
     expect(component.form.errors?.['sameAsCurrent']).toBeTrue();
   });
 
-  it('envia a nova senha quando o formulário é válido', async () => {
+  it('submits the new password when the form is valid', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -83,7 +83,7 @@ describe('FirstAccessComponent', () => {
     expect(storeFake.changeRequiredPassword).toHaveBeenCalledWith('NovaSenha#2');
   });
 
-  it('desabilita o botão de salvar enquanto o store está carregando', async () => {
+  it('disables the save button while the store is loading', async () => {
     storeFake.loading.set(true);
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
@@ -92,7 +92,7 @@ describe('FirstAccessComponent', () => {
     expect(button.disabled).toBeTrue();
   });
 
-  it('o botão de salvar não fica desabilitado por formulário inválido, só durante o carregamento', async () => {
+  it('the save button is not disabled because of an invalid form, only during loading', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
 
@@ -100,7 +100,7 @@ describe('FirstAccessComponent', () => {
     expect(button.disabled).toBeFalse();
   });
 
-  it('clicar no botão com o formulário vazio marca os campos como tocados e mostra os erros', async () => {
+  it('clicking the button with an empty form marks the fields as touched and shows the errors', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -116,7 +116,7 @@ describe('FirstAccessComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('A nova senha é obrigatória.');
   });
 
-  it('mostra a mensagem de erro do store quando presente', async () => {
+  it('shows the store error message when present', async () => {
     storeFake.error.set('A nova senha precisa ser diferente da atual.');
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
@@ -124,7 +124,7 @@ describe('FirstAccessComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('A nova senha precisa ser diferente da atual.');
   });
 
-  it('alterna os dois campos de senha entre oculto e texto claro juntos', async () => {
+  it('toggles both password fields between hidden and plain text together', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
 
@@ -139,7 +139,7 @@ describe('FirstAccessComponent', () => {
     expect(getTypes()).toEqual(['text', 'text']);
   });
 
-  it('cancela a troca de senha e volta ao login ao clicar em "Voltar ao login"', async () => {
+  it('cancels the password change and goes back to the login when clicking "Voltar ao login"', async () => {
     const fixture = TestBed.createComponent(FirstAccessComponent);
     await fixture.whenStable();
 

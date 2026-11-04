@@ -27,14 +27,14 @@ describe('DashboardFiltersService', () => {
     harness = await RouterTestingHarness.create();
   });
 
-  it('lê os filtros da URL ao abrir a tela', async () => {
+  it('reads the filters from the URL when opening the screen', async () => {
     const service = await open('/dashboard?sectorId=s1&priority=2&assignee=none');
 
     expect(service.filters()).toEqual(jasmine.objectContaining({ sectorId: 's1', priority: 2, assignee: 'none', period: undefined }));
     expect(service.active()).toBeTrue();
   });
 
-  it('grava na URL ao trocar um filtro, mantendo os outros parâmetros da tela', async () => {
+  it('writes to the URL when a filter changes, keeping the screen other parameters', async () => {
     const service = await open('/dashboard?sectorId=s1&outro=x');
     const router = TestBed.inject(Router);
 
@@ -47,7 +47,7 @@ describe('DashboardFiltersService', () => {
     expect(service.filters()).toEqual(jasmine.objectContaining({ sectorId: 's1', priority: 4, assignee: undefined }));
   });
 
-  it('remover um filtro tira o parâmetro da URL, e "limpar" tira todos', async () => {
+  it('removing a filter removes the parameter from the URL, and "limpar" removes all', async () => {
     const service = await open('/dashboard?sectorId=s1&priority=3');
     const router = TestBed.inject(Router);
 
@@ -61,7 +61,7 @@ describe('DashboardFiltersService', () => {
     expect(service.active()).toBeFalse();
   });
 
-  it('segue a URL quando ela muda por fora (voltar do navegador, link)', async () => {
+  it('follows the URL when it changes externally (browser back, link)', async () => {
     const service = await open('/dashboard');
 
     await harness.navigateByUrl('/dashboard?assignee=me');
@@ -69,7 +69,7 @@ describe('DashboardFiltersService', () => {
     expect(service.filters().assignee).toBe('me');
   });
 
-  it('não navega quando nada mudou', async () => {
+  it('does not navigate when nothing changed', async () => {
     const service = await open('/dashboard?priority=2');
     const navigate = spyOn(TestBed.inject(Router), 'navigate');
 

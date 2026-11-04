@@ -116,8 +116,8 @@ describe('TicketMonitorComponent', () => {
     }).compileComponents();
   });
 
-  describe('período de abertura antes da spec 025 no back-end', () => {
-    it('avisa, em tom neutro, que o período vindo do Início ainda não filtra a lista', async () => {
+  describe('opening period before spec 025 on the back end', () => {
+    it('warns, in a neutral tone, that the period coming from Início does not filter the list yet', async () => {
       TestBed.overrideProvider(DASHBOARD_FEATURES, { useValue: { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false } });
       storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20', createdTo: '2026-10-26' });
       const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -128,13 +128,13 @@ describe('TicketMonitorComponent', () => {
       expect(notice.classList).not.toContain('text-danger');
     });
 
-    it('sem período, nenhum aviso', async () => {
+    it('without a period, shows no warning', async () => {
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
       expect(fixture.nativeElement.textContent).not.toContain('ainda não é aplicado nesta lista');
     });
 
-    it('com a spec 025 no ar (flag ligada), o aviso some', async () => {
+    it('with spec 025 live (flag on), the warning disappears', async () => {
       TestBed.overrideProvider(DASHBOARD_FEATURES, { useValue: { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true } });
       storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20' });
       const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -143,7 +143,7 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  it('carrega os chamados ao inicializar, sem recarregar os departamentos (o store já os carrega sozinho)', async () => {
+  it('loads the tickets on init, without reloading the departments (the store already loads them by itself)', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -151,7 +151,7 @@ describe('TicketMonitorComponent', () => {
     expect(departmentsStoreFake.load).not.toHaveBeenCalled();
   });
 
-  it('restaura os filtros, ordenação e página a partir da query string ao inicializar (RF-28)', async () => {
+  it('restores the filters, sorting and page from the query string on init (RF-28)', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: {
         snapshot: {
@@ -176,7 +176,7 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  it('volta ao padrão quando um parâmetro da URL é inválido (fora do enum, não numérico etc.), sem quebrar (EC-08)', async () => {
+  it('falls back to the default when a URL parameter is invalid (outside the enum, non-numeric etc.), without breaking (EC-08)', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: {
         snapshot: {
@@ -196,7 +196,7 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  it('sem status na URL abre na fila de trabalho (Ativos), e "?status=all" é "Todos os status"', async () => {
+  it('without a status in the URL opens on the work queue (Ativos), and "?status=all" is "Todos os status"', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ status: 'all' }) } }
     });
@@ -208,7 +208,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith(jasmine.objectContaining({ status: undefined, activeOnly: undefined }));
   });
 
-  it('grava "Todos os status" na URL como status=all (o padrão, Ativos, não vai pra URL)', async () => {
+  it('writes "Todos os status" to the URL as status=all (the default, Ativos, does not go in the URL)', async () => {
     const navigate = spyOn(TestBed.inject(Router), 'navigate');
     storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -217,7 +217,7 @@ describe('TicketMonitorComponent', () => {
     expect(navigate.calls.mostRecent().args[1]!.queryParams!['status']).toBe('all');
   });
 
-  it('lê do drill-down do Início vários setores, o período de abertura, "aguardando" e uma pessoa como responsável', async () => {
+  it('reads from the Início drill-down several sectors, the opening period, "aguardando" and a person as assignee', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({
         sectorId: ['s1', 's2'], createdFrom: '2026-10-01', createdTo: '2026-02-30', awaiting: '2', assignedToUserId: 'u-ana'
@@ -233,7 +233,7 @@ describe('TicketMonitorComponent', () => {
     }));
   });
 
-  it('grava vários setores repetidos e a pessoa responsável na URL; o próprio usuário vira "atribuídos a mim"', async () => {
+  it('writes several repeated sectors and the assignee person to the URL; the user themselves becomes "atribuídos a mim"', async () => {
     storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1', 's2'], assignedToUserId: 'u-ana', awaiting: TicketAwaiting.Requester });
     const navigate = spyOn(TestBed.inject(Router), 'navigate');
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -252,7 +252,7 @@ describe('TicketMonitorComponent', () => {
     expect(mine['assignedToUserId']).toBeNull();
   });
 
-  it('com vários setores vindos do Início, nomeia o conjunto e deixa voltar a ele', async () => {
+  it('with several sectors coming from Início, names the set and allows going back to it', async () => {
     departmentsStoreFake.departments.set([{ ...department, sectors: [{ id: 's1', name: 'Suporte', description: null }, { id: 's2', name: 'Infra', description: null }] }]);
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ sectorId: ['s1', 's2'] }) } }
@@ -278,7 +278,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setSectorIds).toHaveBeenCalledWith(['s1', 's2']);
   });
 
-  it('marca o setor da URL no seletor mesmo quando os departamentos chegam depois', async () => {
+  it('marks the sector from the URL in the selector even when the departments arrive later', async () => {
     departmentsStoreFake.departments.set([]);
     storeFake.filters.set({ ...storeFake.filters(), sectorIds: ['s1'] });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -290,7 +290,7 @@ describe('TicketMonitorComponent', () => {
     expect((fixture.nativeElement.querySelector('#monitorSector') as HTMLSelectElement).value).toBe('s1');
   });
 
-  it('oferece as pessoas da equipe no filtro de responsável e aplica a escolhida', async () => {
+  it('offers the team members in the assignee filter and applies the chosen one', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -302,7 +302,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setAssignedToUserId).toHaveBeenCalledWith('u-ana');
   });
 
-  it('aplica "aguardando" e o período de abertura em "Mais filtros", recusando início depois do fim', async () => {
+  it('applies "aguardando" and the opening period in "Mais filtros", rejecting a start after the end', async () => {
     storeFake.filters.set({ ...storeFake.filters(), createdTo: '2026-10-10' });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -321,7 +321,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setCreatedRange).toHaveBeenCalledWith('2026-10-01', '2026-10-10');
   });
 
-  it('mostra de quem o chamado espera ação, quando o back-end manda', async () => {
+  it('shows whose action the ticket is waiting for, when the back end sends it', async () => {
     storeFake.tickets.set([{ ...ticket, waitingOn: TicketAwaiting.Requester }]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -329,7 +329,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('td[data-label="Status"]').textContent).toContain('Aguardando o solicitante');
   });
 
-  it('"?status=active" (backlog e críticos do Início) vira o grupo Ativos: Aberto + Em Andamento', async () => {
+  it('"?status=active" (backlog and critical from Início) becomes the Ativos group: Aberto + Em Andamento', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ status: 'active', priority: '4' }) } }
     });
@@ -343,7 +343,7 @@ describe('TicketMonitorComponent', () => {
     }));
   });
 
-  it('"?assignedToMe=true" (atalho do Início) vira o filtro de quem está logado, sem o id na URL', async () => {
+  it('"?assignedToMe=true" (shortcut from Início) becomes the logged-in user filter, without the id in the URL', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ assignedToMe: 'true' }) } }
     });
@@ -355,7 +355,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.hydrateFiltersFromUrl).toHaveBeenCalledWith(jasmine.objectContaining({ assignedToUserId: 'u-current' }));
   });
 
-  it('restaura o chamado selecionado a partir do "ticketId" da query string ao inicializar', async () => {
+  it('restores the selected ticket from the "ticketId" in the query string on init', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ ticketId: 't1' }) } }
     });
@@ -367,7 +367,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.selectedTicketId()).toBe('t1');
   });
 
-  it('reflete o chamado selecionado na URL, sem navegar pra outra rota', async () => {
+  it('reflects the selected ticket in the URL, without navigating to another route', async () => {
     const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
 
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -384,7 +384,7 @@ describe('TicketMonitorComponent', () => {
     }));
   });
 
-  it('não inclui o termo de busca livre na URL (RNF-32 proíbe texto livre na query string)', async () => {
+  it('does not include the free search term in the URL (RNF-32 forbids free text in the query string)', async () => {
     const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
     storeFake.filters.set({ search: 'maria@empresa.com', status: TicketStatus.Open, sort: TicketSortOrder.Newest, page: 1, pageSize: 20 });
 
@@ -397,7 +397,7 @@ describe('TicketMonitorComponent', () => {
     expect(queryParams['status']).toBe(TicketStatus.Open);
   });
 
-  it('reflete filtro/ordenação/página não-padrão na URL, sem empilhar histórico', async () => {
+  it('reflects non-default filter/sorting/page in the URL, without stacking history', async () => {
     const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
     storeFake.filters.set({ status: TicketStatus.Open, sort: TicketSortOrder.Newest, page: 2, pageSize: 20 });
 
@@ -410,7 +410,7 @@ describe('TicketMonitorComponent', () => {
     }));
   });
 
-  it('não navega de novo quando os filtros já batem com a URL atual (evita loop)', async () => {
+  it('does not navigate again when the filters already match the current URL (avoids a loop)', async () => {
     const navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
 
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -419,7 +419,7 @@ describe('TicketMonitorComponent', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('lista os setores do departamento no filtro, a partir do que já está no DepartmentsStore', async () => {
+  it('lists the department sectors in the filter, from what is already in the DepartmentsStore', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -430,7 +430,7 @@ describe('TicketMonitorComponent', () => {
     expect(sectorOptions).toContain('Suporte');
   });
 
-  it('renderiza os chamados carregados, com solicitante, setor, prioridade, status e SLA', async () => {
+  it('renders the loaded tickets, with requester, sector, priority, status and SLA', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -443,7 +443,7 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('No prazo');
   });
 
-  it('o link "Ver detalhes" leva pro chamado com ?from=monitor, pra o detalhe saber de onde o usuário veio', async () => {
+  it('the "Ver detalhes" link leads to the ticket with ?from=monitor, so the detail knows where the user came from', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -451,7 +451,7 @@ describe('TicketMonitorComponent', () => {
     expect(detailLink.getAttribute('href')).toBe('/tickets/t1?from=monitor');
   });
 
-  it('seleciona um chamado ao clicar na linha, e desseleciona ao clicar de novo na mesma linha', async () => {
+  it('selects a ticket when the row is clicked, and deselects it when the same row is clicked again', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -470,7 +470,7 @@ describe('TicketMonitorComponent', () => {
     expect(row.classList).not.toContain('table-active');
   });
 
-  it('seleciona pelo botão do título (teclado/leitor de tela) sem alternar duas vezes pelo clique da linha', async () => {
+  it('selects through the title button (keyboard/screen reader) without toggling twice because of the row click', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -484,7 +484,7 @@ describe('TicketMonitorComponent', () => {
     expect(row.hasAttribute('tabindex')).toBeFalse();
   });
 
-  it('dá ao botão do título o texto visível como nome acessível, sem rótulo que repita o estado (WCAG 2.5.3)', async () => {
+  it('gives the title button its visible text as accessible name, with no label repeating the state (WCAG 2.5.3)', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -494,7 +494,7 @@ describe('TicketMonitorComponent', () => {
     expect(selectButton.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('não alterna a seleção da linha ao clicar no botão de ação "Atribuir a mim"', async () => {
+  it('does not toggle the row selection when the "Atribuir a mim" action button is clicked', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -506,7 +506,7 @@ describe('TicketMonitorComponent', () => {
     expect(row.querySelector('.ticket-select')!.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('mostra o painel "Informações do Chamado" ao selecionar um chamado, e repassa a seleção pro TicketQuickInfoStore', async () => {
+  it('shows the "Informações do Chamado" panel when a ticket is selected, and passes the selection on to the TicketQuickInfoStore', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeNull();
@@ -519,7 +519,7 @@ describe('TicketMonitorComponent', () => {
     expect(quickInfoStoreFake.select).toHaveBeenCalledWith('t1');
   });
 
-  it('não mostra o painel quando o chamado selecionado não está (mais) na página/filtro atual', async () => {
+  it('does not show the panel when the selected ticket is no longer in the current page/filter', async () => {
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ ticketId: 'inexistente' }) } }
     });
@@ -531,7 +531,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeNull();
   });
 
-  it('fecha o painel e limpa a seleção ao receber o evento "close"', async () => {
+  it('closes the panel and clears the selection on receiving the "close" event', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -547,7 +547,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.selectedTicketId()).toBeUndefined();
   });
 
-  it('fecha o painel com a tecla Esc, de qualquer lugar da tela, e devolve o foco a quem o abriu', async () => {
+  it('closes the panel with the Esc key, from anywhere on the screen, and returns focus to whoever opened it', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -563,14 +563,14 @@ describe('TicketMonitorComponent', () => {
     expect(document.activeElement).toBe(row.querySelector('.ticket-select'));
   });
 
-  it('não faz nada ao apertar Esc sem nenhum painel aberto', async () => {
+  it('does nothing when Esc is pressed with no panel open', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
     expect(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))).not.toThrow();
   });
 
-  it('fecha o painel ao clicar no backdrop (overlay de telas pequenas), e devolve o foco a quem o abriu', async () => {
+  it('closes the panel when the backdrop (overlay on small screens) is clicked, and returns focus to whoever opened it', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.info-panel-backdrop')).toBeNull();
@@ -589,7 +589,7 @@ describe('TicketMonitorComponent', () => {
     expect(document.activeElement).toBe(row.querySelector('.ticket-select'));
   });
 
-  it('mostra o Guia da Tela logo abaixo do cabeçalho, antes do resumo de SLA e da tabela, fora da coluna da tabela', async () => {
+  it('shows the Guia da Tela right below the header, before the SLA summary and the table, outside the table column', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -606,7 +606,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('.row app-ticket-monitor-guide')).toBeNull();
   });
 
-  it('mostra "Não atribuído" quando o chamado não tem atendente, e o nome quando tem', async () => {
+  it('shows "Não atribuído" when the ticket has no assignee, and the name when it has one', async () => {
     storeFake.tickets.set([
       { ...ticket, id: 't1', assignedToUserId: null, assignedToName: null },
       { ...ticket, id: 't2', assignedToUserId: 'u2', assignedToName: 'Carlos Souza' }
@@ -619,7 +619,7 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('Carlos Souza');
   });
 
-  it('mostra "Atribuir a mim" só pra chamado ativo sem responsável, e chama store.assignToMe com o usuário logado', async () => {
+  it('shows "Atribuir a mim" only for an active ticket without an assignee, and calls store.assignToMe with the logged-in user', async () => {
     storeFake.tickets.set([
       { ...ticket, id: 't1', assignedToUserId: null, status: TicketStatus.Open },
       { ...ticket, id: 't2', assignedToUserId: 'u2', assignedToName: 'Carlos Souza', status: TicketStatus.Open },
@@ -635,7 +635,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.assignToMe).toHaveBeenCalledWith('t1', 'u-current', jasmine.any(Function));
   });
 
-  it('mostra um toast de confirmação ao atribuir "a mim" com sucesso', async () => {
+  it('shows a confirmation toast when assigning "to me" succeeds', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -648,7 +648,7 @@ describe('TicketMonitorComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado atribuído a você.');
   });
 
-  it('não mostra "Atribuir a mim" sem a permissão tickets:manage', async () => {
+  it('does not show "Atribuir a mim" without the tickets:manage permission', async () => {
     hasPermission.and.returnValue(false);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -656,7 +656,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir a mim:"]')).toBeNull();
   });
 
-  it('desabilita e mostra um spinner só no botão do chamado que está sendo atribuído', async () => {
+  it('disables and shows a spinner only on the button of the ticket being assigned', async () => {
     storeFake.tickets.set([
       { ...ticket, id: 't1', assignedToUserId: null, status: TicketStatus.Open },
       { ...ticket, id: 't2', assignedToUserId: null, status: TicketStatus.Open }
@@ -672,7 +672,7 @@ describe('TicketMonitorComponent', () => {
     expect(assignButtons[1].querySelector('.spinner-border')).toBeFalsy();
   });
 
-  it('mostra a mensagem de erro de atribuição quando falhar', async () => {
+  it('shows the assignment error message when it fails', async () => {
     storeFake.mutationError.set('Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.');
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -680,7 +680,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('já ter outro responsável');
   });
 
-  it('renderiza os cards de resumo de SLA', async () => {
+  it('renders the SLA summary cards', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -691,7 +691,7 @@ describe('TicketMonitorComponent', () => {
     expect(text).toContain('1');
   });
 
-  it('com busca, Status, SLA ou Aguardando aplicados, diz que os números do topo não seguem esses filtros', async () => {
+  it('with search, Status, SLA or Aguardando applied, says the numbers at the top do not follow those filters', async () => {
     storeFake.filters.set({ ...storeFake.filters(), slaStatus: TicketSlaStatus.Breached });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -699,7 +699,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Os números seguem setor, prioridade, responsável e período — não a busca, o Status, o SLA nem o Aguardando.');
   });
 
-  it('põe o Setor nas ações do cabeçalho, acima dos números do topo, com uma linha só dizendo o escopo', async () => {
+  it('puts the Setor in the header actions, above the numbers at the top, with a single line stating the scope', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -711,7 +711,7 @@ describe('TicketMonitorComponent', () => {
     expect(sector.closest('app-filter-bar')).toBeNull();
   });
 
-  it('recolhe Prioridade em "Mais filtros", com a contagem e o resumo dos aplicados; Ordenar fica no topo da tabela', async () => {
+  it('collapses Prioridade into "Mais filtros", with the count and a summary of the applied ones; Ordenar stays at the top of the table', async () => {
     storeFake.filters.set({ ...storeFake.filters(), priority: 3, awaiting: TicketAwaiting.Agent });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -730,7 +730,7 @@ describe('TicketMonitorComponent', () => {
     expect(more.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('separa os estados de SLA "em monitoramento" dos "já resolvidos" no dropdown, em optgroups distintos', async () => {
+  it('separates the "em monitoramento" SLA states from the "já resolvidos" ones in the dropdown, in distinct optgroups', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -744,7 +744,7 @@ describe('TicketMonitorComponent', () => {
     expect(resolvedOptions).toEqual(['Cumprido', 'Resolvido com atraso', 'Sem SLA']);
   });
 
-  it('na fila de trabalho sem filtro, o vazio é "Fila em dia", com um atalho pra todos os status', async () => {
+  it('on the work queue with no filter, the empty state is "Fila em dia", with a shortcut to all statuses', async () => {
     storeFake.tickets.set([]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -754,7 +754,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setStatus).toHaveBeenCalledWith(undefined);
   });
 
-  it('com "Todos os status" e nada mais, o vazio diz que ainda não há chamados', async () => {
+  it('with "Todos os status" and nothing else, the empty state says there are no tickets yet', async () => {
     storeFake.tickets.set([]);
     storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -763,7 +763,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Ainda não há chamados.');
   });
 
-  it('com filtro, oferece "Limpar filtros" no estado vazio, e limpa ao clicar', async () => {
+  it('with a filter, offers "Limpar filtros" in the empty state, and clears on click', async () => {
     storeFake.tickets.set([]);
     storeFake.filters.set({ ...storeFake.filters(), priority: 4 });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -774,7 +774,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.clearFilters).toHaveBeenCalled();
   });
 
-  it('não fecha o painel quando o Esc nasce dentro de um modal (só fecha o modal)', async () => {
+  it('does not close the panel when Esc originates inside a modal (only closes the modal)', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.selectTicket(storeFake.tickets()[0].id);
@@ -788,7 +788,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.selectedTicketId()).toBe(storeFake.tickets()[0].id);
   });
 
-  it('passa o painel pro modo modal (overlay) só abaixo de "lg"', async () => {
+  it('switches the panel to modal mode (overlay) only below "lg"', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.selectTicket(storeFake.tickets()[0].id);
@@ -802,7 +802,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('.info-panel').hasAttribute('aria-modal')).toBeFalse();
   });
 
-  it('mostra a mensagem de erro do store, com botão para tentar novamente', async () => {
+  it('shows the store error message, with a button to try again', async () => {
     storeFake.listState.set({ loading: false, error: 'Você não tem permissão para monitorar os chamados do sistema.' });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -816,7 +816,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.load).toHaveBeenCalledTimes(2); // 1x no ngOnInit, 1x no clique
   });
 
-  it('filtra pelo SLA ao clicar num card de resumo, e marca o card ativo como pressionado', async () => {
+  it('filters by SLA when a summary card is clicked, and marks the active card as pressed', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -832,7 +832,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setSlaStatus).toHaveBeenCalledWith(undefined);
   });
 
-  it('com "Todos os status", o card "Ativos" não aparece pressionado (não descreve a tabela)', async () => {
+  it('with "Todos os status", the "Ativos" card does not appear pressed (it does not describe the table)', async () => {
     storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -841,7 +841,7 @@ describe('TicketMonitorComponent', () => {
     expect(cards[0].getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('ao clicar num card de resumo de SLA, também ordena por prazo mais próximo (urgência)', async () => {
+  it('when an SLA summary card is clicked, also sorts by nearest due date (urgency)', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -852,7 +852,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setSort).toHaveBeenCalledWith(TicketSortOrder.DueDate);
   });
 
-  it('muda o status selecionado', async () => {
+  it('changes the selected status', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -863,7 +863,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setStatus).toHaveBeenCalledWith(TicketStatus.Open);
   });
 
-  it('o filtro "Responsável" aplica "Atribuídos a mim" (com o id de quem está logado), "Sem responsável" e "Qualquer um"', async () => {
+  it('the "Responsável" filter applies "Atribuídos a mim" (with the logged-in user id), "Sem responsável" and "Qualquer um"', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     const select = fixture.nativeElement.querySelector('#monitorResponsible') as HTMLSelectElement;
@@ -883,7 +883,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setAssignedToUserId).toHaveBeenCalledWith(undefined);
   });
 
-  it('anuncia o carregamento da tabela por leitor de tela e tem uma legenda acessível', async () => {
+  it('announces the table loading to screen readers and has an accessible caption', async () => {
     storeFake.tickets.set([]);
     storeFake.listState.set({ loading: true, error: null });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -895,7 +895,7 @@ describe('TicketMonitorComponent', () => {
     expect(status.textContent).toContain('Carregando chamados');
   });
 
-  it('mantém a lista atual visível (só esmaecida) ao recarregar com filtro/página, em vez de sumir com tudo', async () => {
+  it('keeps the current list visible (only faded) when reloading with a filter/page, instead of removing everything', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -906,7 +906,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('table').classList).toContain('is-refreshing');
   });
 
-  it('limpa os filtros', async () => {
+  it('clears the filters', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -917,7 +917,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.clearFilters).toHaveBeenCalled();
   });
 
-  it('calcula o intervalo exibido no rodapé ("Exibindo X–Y de Z")', async () => {
+  it('computes the range shown in the footer ("Exibindo X–Y de Z")', async () => {
     storeFake.currentPage.set(2);
     storeFake.currentPageSize.set(20);
     storeFake.total.set(45);
@@ -927,7 +927,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('.card-footer').textContent).toContain('Exibindo 21–40 de');
   });
 
-  it('navega para a página clicada', async () => {
+  it('navigates to the clicked page', async () => {
     storeFake.totalPages.set(3);
     storeFake.hasNextPage.set(true);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -941,7 +941,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.goToPage).toHaveBeenCalledWith(2);
   });
 
-  it('muda o tamanho da página', async () => {
+  it('changes the page size', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -950,7 +950,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setPageSize).toHaveBeenCalledWith(50);
   });
 
-  it('indica um chamado atrasado quando o prazo já passou e não foi resolvido', async () => {
+  it('flags an overdue ticket when the due date has passed and it is not resolved', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -961,7 +961,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.isOverdue(resolvedTicket)).toBeFalse();
   });
 
-  it('mostra o prazo relativo na célula de SLA, pela hora do servidor, com o atraso dito em texto (não só cor)', async () => {
+  it('shows the relative due date in the SLA cell, by server time, with the delay stated in text (not only color)', async () => {
     const inTwoHours = new Date(Date.now() + 2 * 3_600_000 + 30_000).toISOString();
     storeFake.tickets.set([
       { ...ticket, id: 't1', dueAtUtc: '2020-01-01T00:00:00Z', resolvedAtUtc: null },
@@ -977,7 +977,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('th:nth-child(7)').textContent).toContain('SLA e prazo');
   });
 
-  it('o prazo relativo segue o relógio do servidor, não o do navegador', async () => {
+  it('the relative due date follows the server clock, not the browser clock', async () => {
     // Prazo daqui a 30 min no navegador, mas o servidor está 1h à frente: já venceu.
     storeFake.clockOffsetMs.set(3_600_000);
     storeFake.tickets.set([{ ...ticket, dueAtUtc: new Date(Date.now() + 30 * 60_000).toISOString(), resolvedAtUtc: null }]);
@@ -987,7 +987,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('td[data-label="SLA e prazo"]').textContent).toContain('venceu há');
   });
 
-  it('mostra "Atribuir responsável" pra chamado ativo, com ou sem responsável atual', async () => {
+  it('shows "Atribuir responsável" for an active ticket, with or without a current assignee', async () => {
     storeFake.tickets.set([
       { ...ticket, id: 't1', status: TicketStatus.Open, assignedToUserId: null },
       { ...ticket, id: 't2', status: TicketStatus.Open, assignedToUserId: 'u2', assignedToName: 'Carlos Souza' },
@@ -1000,7 +1000,7 @@ describe('TicketMonitorComponent', () => {
     expect(buttons.length).withContext('só os chamados ativos (t1, t2) devem ter o botão').toBe(2);
   });
 
-  it('não mostra "Atribuir responsável" pra quem tem tickets:manage sem tickets:assign, mas mantém "Atribuir a mim"', async () => {
+  it('does not show "Atribuir responsável" for someone with tickets:manage but without tickets:assign, but keeps "Atribuir a mim"', async () => {
     hasPermission.and.callFake((code: string) => code === 'tickets:manage');
     storeFake.tickets.set([{ ...ticket, id: 't1', status: TicketStatus.Open, assignedToUserId: null }]);
     const fixture = TestBed.createComponent(TicketMonitorComponent);
@@ -1010,7 +1010,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.componentInstance.canAssignToMe({ ...ticket, status: TicketStatus.Open, assignedToUserId: null })).toBeTrue();
   });
 
-  it('abre o diálogo "Atribuir responsável" pro chamado clicado, sem herdar a busca de uma abertura anterior', async () => {
+  it('opens the "Atribuir responsável" dialog for the clicked ticket, without inheriting the search from a previous opening', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -1024,7 +1024,7 @@ describe('TicketMonitorComponent', () => {
     expect(dialog.ticketTitle()).toBe(ticket.title);
   });
 
-  it('busca por título com debounce de 300ms após parar de digitar, sem buscar a cada letra', async () => {
+  it('searches by title with a 300ms debounce after typing stops, without searching on every letter', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -1039,7 +1039,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.setSearch).toHaveBeenCalledWith('impressora');
   });
 
-  it('ao limpar os filtros, também limpa o texto de busca ainda não aplicado', async () => {
+  it('when clearing the filters, also clears the search text not yet applied', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.searchInput.set('impressora');
@@ -1051,7 +1051,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.clearFilters).toHaveBeenCalled();
   });
 
-  it('mostra o erro do resumo de SLA com botão de tentar novamente', async () => {
+  it('shows the SLA summary error with a retry button', async () => {
     storeFake.slaSummaryState.set({ loading: false, error: 'Erro ao carregar o resumo de SLA' });
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -1069,7 +1069,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
   });
 
-  it('permite fechar o alerta de erro de atribuição', async () => {
+  it('allows closing the assignment error alert', async () => {
     storeFake.mutationError.set('Não foi possível atribuir.');
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
@@ -1080,7 +1080,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.clearMutationError).toHaveBeenCalled();
   });
 
-  it('com o diálogo "Atribuir responsável" aberto, o erro de atribuição aparece só dentro dele', async () => {
+  it('with the "Atribuir responsável" dialog open, the assignment error appears only inside it', async () => {
     storeFake.mutationError.set('Não foi possível atribuir.');
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     fixture.componentInstance.assigningResponsibleTicketId.set(ticket.id);
@@ -1089,7 +1089,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.nativeElement.querySelector('.alert .btn-close')).toBeNull();
   });
 
-  it('agrupa as ações da linha (atribuir/ver detalhes) num único menu "⋮", em vez de botões soltos', async () => {
+  it('groups the row actions (assign/view details) in a single "⋮" menu, instead of loose buttons', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -1098,7 +1098,7 @@ describe('TicketMonitorComponent', () => {
     expect(row.querySelectorAll('[data-bs-toggle="dropdown"]').length).toBe(1);
   });
 
-  it('liga a busca do diálogo ao store e atribui o candidato confirmado, com toast, fechando o diálogo', async () => {
+  it('wires the dialog search to the store and assigns the confirmed candidate, with a toast, closing the dialog', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.onOpenAssignResponsibleModal('t1');
@@ -1119,7 +1119,7 @@ describe('TicketMonitorComponent', () => {
     expect(fixture.debugElement.query(By.directive(TicketAssignDialogComponent))).toBeNull();
   });
 
-  it('não dispara a atribuição se nenhum chamado estiver com o diálogo aberto', async () => {
+  it('does not trigger the assignment if no ticket has the dialog open', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
 
@@ -1128,8 +1128,8 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.assignResponsible).not.toHaveBeenCalled();
   });
 
-  describe('selo de SLA que acompanha o relógio', () => {
-    it('mostra "Atrasado" na linha e no painel quando um ativo "No prazo" vence com a tela aberta', async () => {
+  describe('SLA badge that follows the clock', () => {
+    it('shows "Atrasado" in the row and in the panel when an active "No prazo" ticket expires while the screen is open', async () => {
       storeFake.tickets.set([{ ...ticket, slaStatus: TicketSlaStatus.OnTime, dueAtUtc: new Date(Date.now() - 60_000).toISOString() }]);
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
@@ -1142,7 +1142,7 @@ describe('TicketMonitorComponent', () => {
       expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel').textContent).toContain('Atrasado');
     });
 
-    it('mantém o selo da lista enquanto o prazo não passou, e nunca muda o de um chamado já resolvido', async () => {
+    it('keeps the list badge while the due date has not passed, and never changes the one of an already resolved ticket', async () => {
       storeFake.tickets.set([
         { ...ticket, id: 't1', slaStatus: TicketSlaStatus.AtRisk, dueAtUtc: new Date(Date.now() + 3_600_000).toISOString() },
         { ...ticket, id: 't2', status: TicketStatus.Resolved, slaStatus: TicketSlaStatus.Met, resolvedAtUtc: '2026-01-01T13:00:00Z' }
@@ -1155,8 +1155,8 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  describe('cards de SLA', () => {
-    it('dá ao botão de cada card o número junto do rótulo, pra quem tabula ouvir a contagem', async () => {
+  describe('SLA cards', () => {
+    it('gives each card button the number together with the label, so screen reader users hear the count', async () => {
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
 
@@ -1165,7 +1165,7 @@ describe('TicketMonitorComponent', () => {
       expect(labels).toContain('Ativos: 10. Filtrar a tabela');
     });
 
-    it('o segundo clique no card já pressionado desfaz o filtro de SLA, sem mexer no status nem na ordenação', async () => {
+    it('a second click on the already pressed card undoes the SLA filter, without touching the status or the sorting', async () => {
       storeFake.filters.set({ ...storeFake.filters(), activeOnly: true, slaStatus: TicketSlaStatus.Breached });
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
@@ -1178,8 +1178,8 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  describe('idade da lista e "Atualizar"', () => {
-    it('diz a hora da última carga e recarrega lista e números pelo botão "Atualizar"', async () => {
+  describe('list age and "Atualizar"', () => {
+    it('states the time of the last load and reloads the list and numbers via the "Atualizar" button', async () => {
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
 
@@ -1191,7 +1191,7 @@ describe('TicketMonitorComponent', () => {
       expect(storeFake.reloadSlaSummary).toHaveBeenCalled();
     });
 
-    it('ao voltar pra aba com a lista de mais de 5 minutos, recarrega sozinha; com a lista recente, não', async () => {
+    it('when returning to the tab with a list older than 5 minutes, reloads by itself; with a recent list, it does not', async () => {
       spyOnProperty(document, 'visibilityState').and.returnValue('visible');
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
@@ -1207,8 +1207,8 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  describe('erro da lista', () => {
-    it('sem lista na tela, a falha ocupa o lugar da tabela (nunca o vazio "Ainda não há chamados"), em tom neutro', async () => {
+  describe('list error', () => {
+    it('with no list on screen, the failure takes the place of the table (never the "Ainda não há chamados" empty state), in a neutral tone', async () => {
       storeFake.tickets.set([]);
       storeFake.filters.set({ sort: TicketSortOrder.DueDate, page: 1, pageSize: 20 });
       storeFake.listState.set({ loading: false, error: 'Erro ao carregar chamados' });
@@ -1223,7 +1223,7 @@ describe('TicketMonitorComponent', () => {
       expect(storeFake.load).toHaveBeenCalled();
     });
 
-    it('com a lista já na tela, mantém as linhas e avisa acima delas, sem vermelho', async () => {
+    it('with the list already on screen, keeps the rows and warns above them, without red', async () => {
       storeFake.listState.set({ loading: false, error: 'Erro ao carregar chamados' });
       const fixture = TestBed.createComponent(TicketMonitorComponent);
       await fixture.whenStable();
@@ -1235,7 +1235,7 @@ describe('TicketMonitorComponent', () => {
     });
   });
 
-  it('ao limpar os filtros, também tira o aviso de data recusada', async () => {
+  it('when clearing the filters, also removes the rejected date warning', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     fixture.componentInstance.dateError.set('from');
@@ -1246,7 +1246,7 @@ describe('TicketMonitorComponent', () => {
     expect(storeFake.clearFilters).toHaveBeenCalled();
   });
 
-  it('com o painel aberto, marca a tabela como compacta (Solicitante e Setor saem no desktop)', async () => {
+  it('with the panel open, marks the table as compact (Solicitante and Setor are hidden on desktop)', async () => {
     const fixture = TestBed.createComponent(TicketMonitorComponent);
     await fixture.whenStable();
     const table = fixture.nativeElement.querySelector('table') as HTMLElement;

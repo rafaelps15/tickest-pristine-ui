@@ -56,14 +56,14 @@ describe('TicketCreateComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega os departamentos ao inicializar', async () => {
+  it('loads the departments on initialization', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
     expect(departmentsStoreFake.load).toHaveBeenCalled();
   });
 
-  it('só oferece departamentos que têm setores', async () => {
+  it('only offers departments that have sectors', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
@@ -75,7 +75,7 @@ describe('TicketCreateComponent', () => {
     expect(options).not.toContain('Jurídico');
   });
 
-  it('libera e lista os setores do departamento escolhido', async () => {
+  it('enables and lists the sectors of the chosen department', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -87,7 +87,7 @@ describe('TicketCreateComponent', () => {
     expect(component.availableSectors()).toEqual(informationTechnology.sectors);
   });
 
-  it('mostra um spinner no campo Departamento enquanto a lista carrega', async () => {
+  it('shows a spinner in the Departamento field while the list loads', async () => {
     departmentsStoreFake.listState.set({ loading: true, error: null });
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
@@ -95,7 +95,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Carregando departamentos…');
   });
 
-  it('mostra o erro do store de departamentos quando a busca falhar', async () => {
+  it('shows the departments store error when the fetch fails', async () => {
     departmentsStoreFake.listState.set({ loading: false, error: 'Erro ao carregar departamentos' });
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
@@ -103,7 +103,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar departamentos');
   });
 
-  it('liga o campo Título ao seu texto de erro via aria-describedby', async () => {
+  it('links the Título field to its error text via aria-describedby', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -116,7 +116,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.querySelector('#ticketTitleError')).toBeTruthy();
   });
 
-  it('mostra erro de validação por campo depois de tocado e inválido', async () => {
+  it('shows a per-field validation error after it is touched and invalid', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -132,7 +132,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('O título é obrigatório.');
   });
 
-  it('exige pelo menos 10 caracteres na descrição', async () => {
+  it('requires at least 10 characters in the description', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -145,7 +145,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('A descrição deve ter pelo menos 10 caracteres.');
   });
 
-  it('marca todos os campos como tocados ao tentar enviar um formulário inválido', async () => {
+  it('marks all fields as touched when trying to submit an invalid form', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -157,7 +157,7 @@ describe('TicketCreateComponent', () => {
     expect(component.form.controls.departmentId.touched).toBeTrue();
   });
 
-  it('abre o chamado no setor escolhido', async () => {
+  it('opens the ticket in the chosen sector', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -176,7 +176,7 @@ describe('TicketCreateComponent', () => {
     }, jasmine.any(Function));
   });
 
-  it('mostra um toast de sucesso ao abrir o chamado', async () => {
+  it('shows a success toast when the ticket is opened', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -193,7 +193,7 @@ describe('TicketCreateComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado aberto com sucesso.');
   });
 
-  it('deixa o envio habilitado com o formulário vazio e, ao enviar, mostra os erros sem abrir o chamado', async () => {
+  it('leaves submit enabled with the empty form and, on submit, shows the errors without opening the ticket', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
@@ -209,7 +209,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Selecione o departamento.');
   });
 
-  it('mostra quantos dos 500 caracteres da descrição já foram usados', async () => {
+  it('shows how many of the 500 description characters have been used', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
@@ -224,7 +224,7 @@ describe('TicketCreateComponent', () => {
     expect(hint()).toBe('17/500');
   });
 
-  it('desabilita e mostra um spinner no botão de envio enquanto o chamado está sendo criado', async () => {
+  it('disables and shows a spinner on the submit button while the ticket is being created', async () => {
     ticketsStoreFake.creating.set(true);
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
@@ -234,7 +234,7 @@ describe('TicketCreateComponent', () => {
     expect(submitButton.querySelector('.spinner-border')).toBeTruthy();
   });
 
-  it('avisa que é preciso escolher um departamento primeiro, enquanto o setor está desabilitado', async () => {
+  it('warns that a department must be chosen first, while the sector is disabled', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
@@ -246,7 +246,7 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Escolha um departamento primeiro.');
   });
 
-  it('mostra o erro de envio logo acima do botão de enviar, como alerta', async () => {
+  it('shows the submit error right above the submit button, as an alert', async () => {
     ticketsStoreFake.state.set({ error: 'O setor escolhido não atende mais chamados.' });
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();

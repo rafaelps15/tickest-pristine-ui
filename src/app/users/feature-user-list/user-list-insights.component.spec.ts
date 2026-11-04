@@ -10,7 +10,7 @@ describe('UserListInsightsComponent', () => {
     }).compileComponents();
   });
 
-  it('mostra numa linha o total, os ativos, os convites pendentes e os inativos da empresa', async () => {
+  it('shows on one line the company total, active, pending invitations and inactive', async () => {
     const fixture = TestBed.createComponent(UserListInsightsComponent);
     fixture.componentRef.setInput('counts', { totalCount: 46, activeCount: 42, pendingActivationCount: 3, inactiveCount: 1 });
     await fixture.whenStable();
@@ -22,7 +22,7 @@ describe('UserListInsightsComponent', () => {
     expect(text).toContain('1 inativo (login bloqueado)');
   });
 
-  it('omite os convites pendentes quando não há nenhum', async () => {
+  it('omits pending invitations when there are none', async () => {
     const fixture = TestBed.createComponent(UserListInsightsComponent);
     fixture.componentRef.setInput('counts', { totalCount: 10, activeCount: 10, pendingActivationCount: 0, inactiveCount: 0 });
     await fixture.whenStable();
@@ -30,7 +30,7 @@ describe('UserListInsightsComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('convite pendente');
   });
 
-  it('mostra "—" em vez de 0 enquanto carrega ou quando falhou', async () => {
+  it('shows "—" instead of 0 while loading or when it failed', async () => {
     const fixture = TestBed.createComponent(UserListInsightsComponent);
     fixture.componentRef.setInput('failed', true);
     await fixture.whenStable();

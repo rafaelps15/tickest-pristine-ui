@@ -16,7 +16,7 @@ describe('TicketMonitorGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explica como ler a fila e mostra a legenda de SLA a partir das constantes compartilhadas', async () => {
+  it('explains how to read the queue and shows the SLA legend from the shared constants', async () => {
     const fixture = TestBed.createComponent(TicketMonitorGuideComponent);
     await fixture.whenStable();
 
@@ -28,7 +28,7 @@ describe('TicketMonitorGuideComponent', () => {
     expect(text).toContain('Dentro do prazo de atendimento definido pelo SLA.');
   });
 
-  it('lembra a preferência aberto/fechado na chave própria da tela', async () => {
+  it('remembers the open/closed preference under the screen own key', async () => {
     const fixture = TestBed.createComponent(TicketMonitorGuideComponent);
     await fixture.whenStable();
 

@@ -112,7 +112,7 @@ describe('TicketListComponent', () => {
     }).compileComponents();
   });
 
-  it('carrega os chamados do usuário logado ao inicializar', async () => {
+  it('loads the logged-in user\'s tickets on init', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -120,7 +120,7 @@ describe('TicketListComponent', () => {
     expect(summaryStoreFake.reload).toHaveBeenCalled();
   });
 
-  it('renderiza cada chamado com quem atende, setor, prazo em texto, status e última atividade — sem a prioridade', async () => {
+  it('renders each ticket with assignee, sector, due date as text, status and last activity, without the priority', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -140,7 +140,7 @@ describe('TicketListComponent', () => {
     expect(time.getAttribute('datetime')).toBe(openTicket.lastActivityAtUtc);
   });
 
-  it('num chamado reaberto, a coluna Prazo mostra o prazo e a situação do ciclo vigente, não os do primeiro ciclo', async () => {
+  it('in a reopened ticket, the Prazo column shows the due date and status of the current cycle, not those of the first cycle', async () => {
     // Resolvido no prazo, reaberto: o primeiro ciclo continua "Met", o ciclo novo já passou do prazo.
     storeFake.tickets.set([{
       ...resolvedTicket, status: TicketStatus.Open,
@@ -157,7 +157,7 @@ describe('TicketListComponent', () => {
     expect(due.querySelector('.due-date')?.textContent).toContain('venceu em');
   });
 
-  it('num chamado reaberto sem o prazo novo na lista, não mostra o "Resolvido" do ciclo encerrado', async () => {
+  it('in a reopened ticket without the new due date in the list, does not show the "Resolvido" of the closed cycle', async () => {
     storeFake.tickets.set([{ ...resolvedTicket, status: TicketStatus.Open, slaStatus: TicketSlaStatus.Missed }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -168,7 +168,7 @@ describe('TicketListComponent', () => {
     expect(due.querySelector('.due-date')).toBeNull();
   });
 
-  it('diz "Sem responsável" (e não "Aguardando atendimento") num chamado encerrado que ninguém assumiu', async () => {
+  it('says "Sem responsável" (and not "Aguardando atendimento") on a closed ticket that nobody took', async () => {
     storeFake.tickets.set([{ ...resolvedTicket, assignedToName: null }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -177,7 +177,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Aguardando atendimento');
   });
 
-  it('mostra o spinner enquanto carrega', async () => {
+  it('shows the spinner while loading', async () => {
     storeFake.state.set({ data: [], loading: true, error: null });
     storeFake.tickets.set([]);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -186,7 +186,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
   });
 
-  it('mostra o estado vazio de primeiro uso quando a pessoa não tem nenhum chamado', async () => {
+  it('shows the first-use empty state when the person has no tickets at all', async () => {
     storeFake.tickets.set([]);
     storeFake.hasAnyTicket.set(false);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -197,7 +197,7 @@ describe('TicketListComponent', () => {
     expect(cta.getAttribute('href')).toBe('/tickets/novo');
   });
 
-  it('lista no estado vazio só os departamentos que têm setor para atender', async () => {
+  it('lists in the empty state only the departments that have a sector to serve', async () => {
     storeFake.tickets.set([]);
     storeFake.hasAnyTicket.set(false);
     departmentsStoreFake.departments.set([
@@ -212,7 +212,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Atendem chamados: TI, RH e Financeiro.');
   });
 
-  it('mostra a mensagem de erro de carregamento do store', async () => {
+  it('shows the store loading error message', async () => {
     storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -220,7 +220,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Erro ao carregar chamados');
   });
 
-  it('recarrega os chamados ao clicar em "Tentar novamente" no alerta de erro', async () => {
+  it('reloads the tickets when clicking "Tentar novamente" in the error alert', async () => {
     storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -232,7 +232,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.loadForCurrentUser).toHaveBeenCalledTimes(2);
   });
 
-  it('esconde "Editar" e "Reabrir" de quem não tem tickets:update-own nem tickets:reopen-own (a API responderia 403)', async () => {
+  it('hides "Editar" and "Reabrir" from anyone without tickets:update-own or tickets:reopen-own (the API would respond 403)', async () => {
     sessionServiceFake.hasPermission.and.returnValue(false);
     storeFake.tickets.set([{ ...openTicket, canCancel: false }, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -241,7 +241,7 @@ describe('TicketListComponent', () => {
     expect(rowActionLabels(fixture.nativeElement)).toEqual([]);
   });
 
-  it('só mostra "Reabrir" para chamados inativos (Resolvido/Fechado/Cancelado)', async () => {
+  it('only shows "Reabrir" for inactive tickets (Resolvido/Fechado/Cancelado)', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -251,7 +251,7 @@ describe('TicketListComponent', () => {
     expect(rowActionLabels(fixture.nativeElement).filter(label => label === 'Reabrir').length).toBe(1);
   });
 
-  it('leva ao detalhe pelo título do chamado, sem um botão "Ver detalhes" separado', async () => {
+  it('goes to the detail through the ticket title, without a separate "Ver detalhes" button', async () => {
     storeFake.tickets.set([openTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -262,7 +262,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.bx-show')).toBeNull();
   });
 
-  it('reabre o chamado pelo modal, com o motivo informado, e fecha o modal em caso de sucesso', async () => {
+  it('reopens the ticket through the modal, with the given reason, and closes the modal on success', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -279,13 +279,13 @@ describe('TicketListComponent', () => {
     expect(fixture.componentInstance.reopeningTicket()).toBeNull();
   });
 
-  it('não oferece "Excluir" ao solicitante', async () => {
+  it('does not offer "Excluir" to the requester', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.bx-trash')).toBeNull();
   });
-  it('calcula o intervalo exibido no rodapé ("Exibindo X–Y de Z")', async () => {
+  it('calculates the range shown in the footer ("Exibindo X–Y de Z")', async () => {
     storeFake.currentPage.set(2);
     storeFake.currentPageSize.set(20);
     storeFake.total.set(45);
@@ -295,7 +295,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.card-footer').textContent).toContain('Exibindo 21–40 de');
   });
 
-  it('usa reticências em vez de um botão por página quando há muitas páginas', async () => {
+  it('uses ellipses instead of one button per page when there are many pages', async () => {
     storeFake.totalPages.set(50);
     storeFake.currentPage.set(25);
     storeFake.hasPreviousPage.set(true);
@@ -309,7 +309,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.card-footer button').length).toBeLessThan(10);
   });
 
-  it('não mostra os controles de paginação quando há só uma página', async () => {
+  it('does not show the pagination controls when there is only one page', async () => {
     storeFake.totalPages.set(1);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -318,7 +318,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Próxima');
   });
 
-  it('navega para a página clicada', async () => {
+  it('navigates to the clicked page', async () => {
     storeFake.totalPages.set(3);
     storeFake.hasNextPage.set(true);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -332,7 +332,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.goToPage).toHaveBeenCalledWith(2);
   });
 
-  it('marca a página atual com aria-current', async () => {
+  it('marks the current page with aria-current', async () => {
     storeFake.totalPages.set(3);
     storeFake.currentPage.set(1);
     storeFake.hasNextPage.set(true);
@@ -347,7 +347,7 @@ describe('TicketListComponent', () => {
     expect(pageTwoButton?.getAttribute('aria-current')).toBeNull();
   });
 
-  it('desabilita as ações e mostra um spinner só na linha do chamado pendente', async () => {
+  it('disables the actions and shows a spinner only on the row of the pending ticket', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     storeFake.pendingTicketIds.set(['t2']);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -363,7 +363,7 @@ describe('TicketListComponent', () => {
     expect(groups[0].querySelector('.spinner-border')).toBeNull();
   });
 
-  it('mostra as ações na própria linha, sem "⋮": Editar e Cancelar nos ativos, Reabrir nos encerrados', async () => {
+  it('shows the actions on the row itself, without "⋮": Editar and Cancelar on active tickets, Reabrir on closed ones', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -375,7 +375,7 @@ describe('TicketListComponent', () => {
     expect(rowAction(fixture.nativeElement, 'Editar')!.getAttribute('aria-label')).toBe('Editar a descrição do chamado ' + openTicket.title);
   });
 
-  it('abre o modal de edição pré-carregando o chamado, e fecha sem salvar', async () => {
+  it('opens the edit modal preloading the ticket, and closes without saving', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -386,7 +386,7 @@ describe('TicketListComponent', () => {
     expect(fixture.componentInstance.editingTicket()).toBeNull();
   });
 
-  it('salva a descrição editada no modal mantendo o status atual, e fecha a edição em caso de sucesso', async () => {
+  it('saves the description edited in the modal keeping the current status, and closes the edit on success', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -400,7 +400,7 @@ describe('TicketListComponent', () => {
     expect(toastServiceFake.show).toHaveBeenCalledWith('Descrição atualizada.');
   });
 
-  it('renderiza o modal de edição ao clicar em "Editar"', async () => {
+  it('renders the edit modal when clicking "Editar"', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -410,7 +410,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('app-ticket-edit-dialog')).not.toBeNull();
   });
 
-  it('cancela o chamado quando confirmado, preservando a descrição atual, e diz pra onde ele foi', async () => {
+  it('cancels the ticket when confirmed, preserving the current description, and says where it went', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -427,7 +427,7 @@ describe('TicketListComponent', () => {
     expect(summaryStoreFake.reload).toHaveBeenCalled();
   });
 
-  it('não cancela o chamado quando a confirmação for cancelada', async () => {
+  it('does not cancel the ticket when the confirmation is canceled', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(false));
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -437,7 +437,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.update).not.toHaveBeenCalled();
   });
 
-  it('muda o tamanho da página', async () => {
+  it('changes the page size', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -446,7 +446,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.setPageSize).toHaveBeenCalledWith(50);
   });
 
-  it('mantém as linhas visíveis (só esmaecidas) ao recarregar com a lista já carregada', async () => {
+  it('keeps the rows visible (only faded) when reloading with the list already loaded', async () => {
     storeFake.state.set({ data: [openTicket], loading: true, error: null });
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -457,7 +457,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('table').getAttribute('aria-busy')).toBe('true');
   });
 
-  it('mostra o erro de uma ação sem "Tentar novamente", e o dispensa pelo botão de fechar', async () => {
+  it('shows an action error without "Tentar novamente", and dismisses it with the close button', async () => {
     storeFake.mutationError.set('Erro ao excluir o chamado');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -469,7 +469,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.clearMutationError).toHaveBeenCalled();
   });
 
-  it('descarta o erro de uma ação anterior ao abrir o modal de edição', async () => {
+  it('discards the error from a previous action when opening the edit modal', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -478,7 +478,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.clearMutationError).toHaveBeenCalled();
   });
 
-  it('mostra o status Cancelado em badge neutro, não no vermelho de alerta', async () => {
+  it('shows the Cancelado status in a neutral badge, not in the alert red', async () => {
     storeFake.tickets.set([{ ...openTicket, status: TicketStatus.Canceled }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -488,7 +488,7 @@ describe('TicketListComponent', () => {
     expect(badge?.classList).toContain('bg-label-secondary');
   });
 
-  it('mostra "Nada pendente" com atalho pros encerrados quando só "Em aberto" está vazio', async () => {
+  it('shows "Nada pendente" with a shortcut to the closed tickets when only "Em aberto" is empty', async () => {
     storeFake.tickets.set([]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -501,7 +501,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.setStatusGroup).toHaveBeenCalledWith(TicketStatusGroup.Finished);
   });
 
-  it('mostra a busca sem resultado com "Limpar busca", que limpa só a busca', async () => {
+  it('shows the no-results search with "Limpar busca", which clears only the search', async () => {
     storeFake.tickets.set([]);
     // A busca vem da URL (a tela a aplica ao abrir), como quando a pessoa volta pelo navegador.
     await TestBed.inject(Router).navigateByUrl('/?q=impressora');
@@ -517,7 +517,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.setStatusGroup).not.toHaveBeenCalled();
   });
 
-  it('mostra "Carregando…" enquanto a sondagem decide entre primeiro uso e nada pendente', async () => {
+  it('shows "Carregando…" while the probe decides between first use and nothing pending', async () => {
     storeFake.tickets.set([]);
     storeFake.hasAnyTicket.set(null);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -527,7 +527,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Nada pendente');
   });
 
-  it('troca o grupo pelo seletor e só mostra "Limpar filtros" fora do padrão', async () => {
+  it('switches the group through the selector and only shows "Limpar filtros" when away from the default', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.btn-clear-filters')).toBeNull();
@@ -540,7 +540,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.btn-clear-filters')).not.toBeNull();
   });
 
-  it('aplica o grupo e a busca vindos da URL ao abrir a tela', async () => {
+  it('applies the group and the search coming from the URL when opening the screen', async () => {
     await TestBed.inject(Router).navigateByUrl('/?status=finished&q=monitor');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -550,7 +550,7 @@ describe('TicketListComponent', () => {
     expect((fixture.nativeElement.querySelector('#ticketSearch') as HTMLInputElement).value).toBe('monitor');
   });
 
-  it('leva o filtro aplicado pra URL, sem o padrão (Em aberto, sem busca)', async () => {
+  it('carries the applied filter to the URL, without the default (Em aberto, no search)', async () => {
     const router = TestBed.inject(Router);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -563,7 +563,7 @@ describe('TicketListComponent', () => {
     expect(router.url).toBe('/?status=all&q=monitor');
   });
 
-  it('busca pelo título só depois de a pessoa parar de digitar', async () => {
+  it('searches by title only after the person stops typing', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
     storeFake.setSearch.calls.reset();
@@ -577,7 +577,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.setSearch).toHaveBeenCalledWith('impr');
   });
 
-  it('formata a última atividade em tempo relativo curto, e em data depois de uma semana', () => {
+  it('formats the last activity as a short relative time, and as a date after one week', () => {
     const now = new Date('2026-01-10T12:00:00Z').getTime();
 
     expect(formatLastActivity('2026-01-10T11:59:40Z', now)).toBe('agora há pouco');
@@ -589,7 +589,7 @@ describe('TicketListComponent', () => {
     expect(formatLastActivity('2026-01-01T12:00:00Z', now)).toBe(new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date('2026-01-01T12:00:00Z')));
   });
 
-  it('mostra "Cancelar" com o tempo que falta pro dono, dentro da janela de 15 min', async () => {
+  it('shows "Cancelar" with the remaining time for the owner, within the 15 min window', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -599,7 +599,7 @@ describe('TicketListComponent', () => {
     expect(cancel.getAttribute('aria-label')).toContain('disponível por mais 8 min');
   });
 
-  it('esconde "Cancelar" quando o back-end diz que não dá (canCancel = false)', async () => {
+  it('hides "Cancelar" when the back end says it is not possible (canCancel = false)', async () => {
     storeFake.tickets.set([{ ...openTicket, canCancel: false }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -608,7 +608,7 @@ describe('TicketListComponent', () => {
     expect(rowAction(fixture.nativeElement, 'Editar')).toBeTruthy();
   });
 
-  it('esconde "Cancelar" do dono quando a janela já venceu, mesmo com canCancel desatualizado', async () => {
+  it('hides "Cancelar" from the owner when the window has already expired, even with a stale canCancel', async () => {
     storeFake.tickets.set([{ ...openTicket, ownerCancelDeadlineUtc: minutesFromNow(-1) }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -616,7 +616,7 @@ describe('TicketListComponent', () => {
     expect(rowAction(fixture.nativeElement, 'Cancelar')).toBeUndefined();
   });
 
-  it('com tickets:cancel, mostra "Cancelar" sem prazo e sem contagem', async () => {
+  it('with tickets:cancel, shows "Cancelar" without a deadline and without a countdown', async () => {
     sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:cancel' || OWNER_PERMISSIONS(code));
     storeFake.tickets.set([{ ...openTicket, ownerCancelDeadlineUtc: minutesFromNow(-60) }]);
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -626,7 +626,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('.cancel-hint')).toBeNull();
   });
 
-  it('com erro de leitura e lista vazia, não mostra "Nada pendente" nem o primeiro uso — o erro não vira dado', async () => {
+  it('with a read error and an empty list, shows neither "Nada pendente" nor the first use, since the error does not become data', async () => {
     storeFake.tickets.set([]);
     storeFake.hasAnyTicket.set(null);
     storeFake.loadError.set('Erro ao carregar chamados');
@@ -641,7 +641,7 @@ describe('TicketListComponent', () => {
     expect(text).not.toContain('Carregando chamados…');
   });
 
-  it('com erro de leitura e lista vazia, diz o erro uma vez só — no estado vazio, com "Tentar novamente" dentro dele', async () => {
+  it('with a read error and an empty list, states the error only once, in the empty state, with "Tentar novamente" inside it', async () => {
     storeFake.tickets.set([]);
     storeFake.hasAnyTicket.set(null);
     storeFake.loadError.set('Erro ao carregar chamados');
@@ -656,7 +656,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.loadForCurrentUser).toHaveBeenCalledTimes(2);
   });
 
-  it('com erro de leitura sobre linhas antigas, mantém as linhas e mostra o aviso acima da tabela', async () => {
+  it('with a read error over old rows, keeps the rows and shows the warning above the table', async () => {
     storeFake.tickets.set([openTicket]);
     storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -667,7 +667,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Não deu pra carregar seus chamados agora');
   });
 
-  it('na busca vazia dentro de um grupo, oferece "Buscar em todos os chamados" e explica o escopo', async () => {
+  it('in an empty search within a group, offers "Buscar em todos os chamados" and explains the scope', async () => {
     storeFake.tickets.set([]);
     await TestBed.inject(Router).navigateByUrl('/?q=monitor');
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -680,7 +680,7 @@ describe('TicketListComponent', () => {
     expect(storeFake.setStatusGroup).toHaveBeenCalledWith(null);
   });
 
-  it('não oferece "Buscar em todos" quando a busca já é em todos', async () => {
+  it('does not offer "Buscar em todos" when the search is already across all', async () => {
     storeFake.tickets.set([]);
     await TestBed.inject(Router).navigateByUrl('/?status=all&q=monitor');
     const fixture = TestBed.createComponent(TicketListComponent);
@@ -690,7 +690,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Confira o termo digitado.');
   });
 
-  it('mostra a contagem de cada grupo no seletor, e nenhuma enquanto o resumo não chega', async () => {
+  it('shows the count of each group in the selector, and none while the summary has not arrived', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -706,7 +706,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.status-group-count').length).toBe(0);
   });
 
-  it('mostra o prazo "Perto de vencer" e "Atrasado" com tom de atenção, e "Sem prazo" sem data', async () => {
+  it('shows the due date "Perto de vencer" and "Atrasado" with an attention tone, and "Sem prazo" without a date', async () => {
     storeFake.tickets.set([
       { ...openTicket, id: 'a', slaStatus: TicketSlaStatus.AtRisk },
       { ...openTicket, id: 'b', slaStatus: TicketSlaStatus.Breached },
@@ -724,7 +724,7 @@ describe('TicketListComponent', () => {
     expect(dues[2].querySelector('.due-date')).toBeNull();
   });
 
-  it('no atrasado, oferece "Cobrar no chamado" levando ao próprio chamado — e só no atrasado', async () => {
+  it('on an overdue ticket, offers "Cobrar no chamado" leading to the ticket itself, and only on the overdue one', async () => {
     storeFake.tickets.set([
       { ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached },
       { ...openTicket, id: 'em-risco', slaStatus: TicketSlaStatus.AtRisk },
@@ -740,7 +740,7 @@ describe('TicketListComponent', () => {
     expect(links[0].getAttribute('aria-label')).toBe('Cobrar no chamado ' + openTicket.title);
   });
 
-  it('clicar em "Cobrar no chamado" navega pro detalhe do chamado', async () => {
+  it('clicking "Cobrar no chamado" navigates to the ticket detail', async () => {
     storeFake.tickets.set([{ ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -753,7 +753,7 @@ describe('TicketListComponent', () => {
     expect(router.serializeUrl(navigate.calls.mostRecent().args[0] as UrlTree)).toBe('/tickets/atrasado');
   });
 
-  it('reabrindo dentro de "Encerrados", o toast diz que o chamado foi pra "Em aberto"', async () => {
+  it('when reopening within "Encerrados", the toast says the ticket went to "Em aberto"', async () => {
     await TestBed.inject(Router).navigateByUrl('/?status=finished');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();

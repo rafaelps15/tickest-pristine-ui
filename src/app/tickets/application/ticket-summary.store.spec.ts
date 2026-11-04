@@ -80,7 +80,7 @@ describe('TicketSummaryStore', () => {
     });
   }
 
-  it('quem atende a fila pede os números da empresa toda (indicadores e gráfico do Início)', () => {
+  it('whoever serves the queue requests the whole company numbers (Início indicators and chart)', () => {
     expect(dataService.getStatusCounts).toHaveBeenCalledTimes(1);
     expect(dataService.getVolume).toHaveBeenCalledWith('Day');
     expect(store.companyStatsAvailable()).toBeTrue();
@@ -88,7 +88,7 @@ describe('TicketSummaryStore', () => {
     expect(store.volumeHasValue()).toBeTrue();
   });
 
-  it('com o agregado da operação no ar, quem atende a fila não pede os totais por status de novo (vêm no agregado)', async () => {
+  it('with the operation aggregate live, whoever serves the queue does not request the totals by status again (they come in the aggregate)', async () => {
     TestBed.resetTestingModule();
     features = { ...features, operationOverview: true };
     dataService.getStatusCounts.calls.reset();
@@ -100,7 +100,7 @@ describe('TicketSummaryStore', () => {
     expect(dataService.getVolume).toHaveBeenCalledWith('Day');
   });
 
-  it('um erro dos totais continua valendo enquanto a nova tentativa carrega (o resource do Angular mantém o erro no reload)', async () => {
+  it('a totals error remains in effect while the retry loads (the Angular resource keeps the error on reload)', async () => {
     TestBed.resetTestingModule();
     dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     configure();
@@ -115,7 +115,7 @@ describe('TicketSummaryStore', () => {
     expect(store.statusCountsFailed()).toBeTrue();
   });
 
-  it('quem não atende a fila não pede os números da empresa enquanto o back-end exige tickets:manage (evita o 403 certo)', async () => {
+  it('whoever does not serve the queue does not request the company numbers while the back end requires tickets:manage (avoids the expected 403)', async () => {
     TestBed.resetTestingModule();
     sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
     dataService.getStatusCounts.calls.reset();
@@ -130,7 +130,7 @@ describe('TicketSummaryStore', () => {
     expect(store.summaryError()).toBeNull();
   });
 
-  describe('visão da empresa pra quem não atende a fila, com o back-end liberado (companyStatsForAll)', () => {
+  describe('company view for whoever does not serve the queue, with the back end released (companyStatsForAll)', () => {
     beforeEach(async () => {
       TestBed.resetTestingModule();
       sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
@@ -140,30 +140,30 @@ describe('TicketSummaryStore', () => {
     });
 
 
-    it('busca os totais por status e o volume (agrupado por dia, por padrão) de toda a empresa', () => {
+    it('fetches the totals by status and the volume (grouped by day, by default) of the whole company', () => {
       expect(dataService.getStatusCounts).toHaveBeenCalled();
       expect(dataService.getVolume).toHaveBeenCalledWith('Day');
     });
 
-    it('expõe os totais por status da empresa', () => {
+    it('exposes the company totals by status', () => {
       expect(store.statusCounts()).toEqual(statusCounts);
     });
 
-    it('expõe os pontos de volume retornados pela API', () => {
+    it('exposes the volume points returned by the API', () => {
       expect(store.volume()).toEqual([
         { periodStart: '2026-01-05', count: 2 },
         { periodStart: '2026-01-06', count: 5 }
       ]);
     });
 
-    it('refaz a busca do volume com o novo agrupamento ao mudar o período', async () => {
+    it('redoes the volume fetch with the new grouping when the period changes', async () => {
       store.setGroupBy('Month');
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(dataService.getVolume).toHaveBeenCalledWith('Month');
     });
 
-    it('expõe mensagem de erro quando a busca dos totais por status falhar', async () => {
+    it('exposes an error message when the totals by status fetch fails', async () => {
       dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.load();
@@ -176,7 +176,7 @@ describe('TicketSummaryStore', () => {
       expect(store.statusCounts()).toBeNull();
     });
 
-    it('sem permissão (403), diz o motivo em vez da mensagem genérica', async () => {
+    it('without permission (403), states the reason instead of the generic message', async () => {
       dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.load();
@@ -185,12 +185,12 @@ describe('TicketSummaryStore', () => {
       expect(store.summaryError()).toBe('Você não tem permissão para ver os números da empresa.');
     });
 
-    it('não marca nenhuma busca como falha quando as duas respondem', () => {
+    it('does not flag any fetch as failed when both respond', () => {
       expect(store.statusCountsFailed()).toBeFalse();
       expect(store.volumeFailed()).toBeFalse();
     });
 
-    it('expõe mensagem de erro quando a busca do volume falhar', async () => {
+    it('exposes an error message when the volume fetch fails', async () => {
       dataService.getVolume.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
       store.load();
@@ -203,7 +203,7 @@ describe('TicketSummaryStore', () => {
     });
   });
 
-  it('no escopo "Com filtros", os alertas seguem o recorte (setores, prioridade, sem responsável e período); recorte igual não refaz a busca', async () => {
+  it('in the "Com filtros" scope, the alerts follow the cut (sectors, priority, no assignee and period); an identical cut does not refetch', async () => {
     dataService.getAll.calls.reset();
     store.setCriticalScope({ sectorIds: ['s1', 's2'], priority: TicketPriority.Urgent, assignee: 'none', from: '2026-10-01', to: '2026-10-28' });
     await TestBed.inject(ApplicationRef).whenStable();
@@ -218,7 +218,7 @@ describe('TicketSummaryStore', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
-  it('com o recorte dos Alertas seguro, a lista não é pedida; o setCriticalScope solta já com o recorte certo', async () => {
+  it('with the Alertas cut not yet safe, the list is not requested; setCriticalScope releases it already with the right cut', async () => {
     dataService.getAll.calls.reset();
     store.holdCriticalScope();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -230,7 +230,7 @@ describe('TicketSummaryStore', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s9'], slaStatus: TicketSlaStatus.AtRisk }));
   });
 
-  it('busca os chamados com SLA vencido e em risco, ordenados por prazo, para quem tem chamados:manage', () => {
+  it('fetches the tickets with overdue and at-risk SLA, sorted by due date, for whoever has chamados:manage', () => {
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({
       slaStatus: TicketSlaStatus.Breached, sort: TicketSortOrder.DueDate, page: 1, pageSize: 5, sectorIds: undefined
     }));
@@ -241,19 +241,19 @@ describe('TicketSummaryStore', () => {
     expect(store.criticalTickets()).toEqual([breachedTicket, criticalTicket]);
   });
 
-  it('mede a diferença entre o relógio do servidor e o do navegador, pra ancorar o prazo relativo', () => {
+  it('measures the difference between the server clock and the browser clock, to anchor the relative due date', () => {
     expect(dataService.getSlaSummary).toHaveBeenCalled();
     // ~120s, com folga pro tempo que o teste leva entre o fake e o recebimento.
     expect(store.clockOffsetMs()).toBeGreaterThan(115_000);
     expect(store.clockOffsetMs()).toBeLessThan(125_000);
   });
 
-  it('expõe o total de vencidos e de em risco da empresa, não só os listados', () => {
+  it('exposes the company total of overdue and at-risk tickets, not only the listed ones', () => {
     expect(store.breachedCount()).toBe(7);
     expect(store.atRiskCount()).toBe(1);
   });
 
-  describe('vagas da lista (5: até 3 vencidos + até 2 em risco)', () => {
+  describe('slots of the list (5: up to 3 overdue + up to 2 at risk)', () => {
     /** Faz a API devolver `breached` vencidos e `atRisk` em risco, ids b0.. / r0.., já ordenados por prazo. */
     async function respondWith(breached: number, atRisk: number): Promise<string[]> {
       const many = (prefix: string, count: number, status: TicketSlaStatus) => Array.from({ length: count }, (_, i) => ({
@@ -269,24 +269,24 @@ describe('TicketSummaryStore', () => {
       return store.criticalTickets().map(t => t.id);
     }
 
-    it('com muitos dos dois, reserva 3 vagas pros vencidos e 2 pros em risco (que ainda dão pra salvar)', async () => {
+    it('with many of both, reserves 3 slots for overdue and 2 for at risk (which can still be saved)', async () => {
       expect(await respondWith(5, 5)).toEqual(['b0', 'b1', 'b2', 'r0', 'r1']);
     });
 
-    it('sem em risco, os vencidos ocupam as 5 vagas', async () => {
+    it('with no at-risk tickets, the overdue ones take all 5 slots', async () => {
       expect(await respondWith(5, 0)).toEqual(['b0', 'b1', 'b2', 'b3', 'b4']);
     });
 
-    it('com poucos vencidos, os em risco ocupam a sobra', async () => {
+    it('with few overdue, the at-risk ones take the leftover', async () => {
       expect(await respondWith(1, 5)).toEqual(['b0', 'r0', 'r1', 'r2', 'r3']);
     });
 
-    it('com só 1 em risco, a vaga que sobra volta pros vencidos', async () => {
+    it('with only 1 at risk, the leftover slot goes back to the overdue', async () => {
       expect(await respondWith(5, 1)).toEqual(['b0', 'b1', 'b2', 'b3', 'r0']);
     });
   });
 
-  it('recarrega só os alertas de SLA com reloadCritical(), sem refazer totais nem volume', async () => {
+  it('reloads only the SLA alerts with reloadCritical(), without redoing totals or volume', async () => {
     dataService.getStatusCounts.calls.reset();
     dataService.getVolume.calls.reset();
     dataService.getAll.calls.reset();
@@ -302,13 +302,13 @@ describe('TicketSummaryStore', () => {
     expect(store.criticalTicketsRefreshing()).toBeFalse();
   });
 
-  it('expõe quando os alertas de SLA chegaram, pro "Atualizado às" do card', () => {
+  it('exposes when the SLA alerts arrived, for the card "Atualizado às"', () => {
     const loadedAt = store.criticalTicketsLoadedAtMs();
     expect(loadedAt).not.toBeNull();
     expect(Math.abs(Date.now() - loadedAt!)).toBeLessThan(5_000);
   });
 
-  it('refaz a busca dos chamados críticos de SLA ao chamar load()', async () => {
+  it('redoes the fetch of critical SLA tickets when calling load()', async () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -316,7 +316,7 @@ describe('TicketSummaryStore', () => {
     expect(dataService.getAll).toHaveBeenCalledTimes(4);
   });
 
-  it('expõe mensagem de erro quando a busca dos chamados em risco de SLA falhar', async () => {
+  it('exposes an error message when the fetch of at-risk SLA tickets fails', async () => {
     dataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.load();
@@ -330,10 +330,10 @@ describe('TicketSummaryStore', () => {
     expect(store.clockOffsetMs()).toBe(0);
   });
 
-  describe('atribuir responsável a um alerta de SLA', () => {
+  describe('assigning an assignee to an SLA alert', () => {
     const candidate: TicketAssignee = { id: 'u9', fullName: 'Ana Lima', sectorId: null, sectorName: null };
 
-    it('busca os responsáveis elegíveis pelo texto digitado e expõe a lista', async () => {
+    it('fetches the eligible assignees by the typed text and exposes the list', async () => {
       dataService.getAssignees.and.returnValue(of({ items: [candidate], page: 1, pageSize: 8, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false }));
 
       store.searchAssignees('  ana ');
@@ -344,14 +344,14 @@ describe('TicketSummaryStore', () => {
       expect(store.searchingAssignees()).toBeFalse();
     });
 
-    it('não busca com texto vazio e limpa a lista', () => {
+    it('does not fetch with empty text and clears the list', () => {
       store.searchAssignees('   ');
 
       expect(dataService.getAssignees).not.toHaveBeenCalled();
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
-    it('expõe mensagem de erro própria quando a busca é negada (403)', async () => {
+    it('exposes its own error message when the search is denied (403)', async () => {
       dataService.getAssignees.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
       store.searchAssignees('ana');
@@ -361,7 +361,7 @@ describe('TicketSummaryStore', () => {
       expect(store.assigneeCandidates()).toEqual([]);
     });
 
-    it('atribui, recarrega só os alertas e chama onSuccess', async () => {
+    it('assigns, reloads only the alerts and calls onSuccess', async () => {
       dataService.assignTicket.and.returnValue(of(undefined));
       dataService.getAll.calls.reset();
       dataService.getStatusCounts.calls.reset();
@@ -377,7 +377,7 @@ describe('TicketSummaryStore', () => {
       expect(store.assigning()).toBeFalse();
     });
 
-    it('mantém o erro de atribuição (409) pro diálogo, sem chamar onSuccess', async () => {
+    it('keeps the assignment error (409) for the dialog, without calling onSuccess', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
       const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -393,7 +393,7 @@ describe('TicketSummaryStore', () => {
     });
   });
 
-  describe('sem a permissão tickets:manage', () => {
+  describe('without the tickets:manage permission', () => {
     beforeEach(async () => {
       sessionService.hasPermission.and.returnValue(false);
       dataService.getAll.calls.reset();
@@ -411,7 +411,7 @@ describe('TicketSummaryStore', () => {
       store = await createStore();
     });
 
-    it('não busca os chamados em risco de SLA, e a lista fica vazia', () => {
+    it('does not fetch the at-risk SLA tickets, and the list stays empty', () => {
       expect(dataService.getAll).not.toHaveBeenCalled();
       expect(dataService.getSlaSummary).not.toHaveBeenCalled();
       expect(store.criticalTickets()).toEqual([]);

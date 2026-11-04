@@ -43,7 +43,7 @@ describe('FocusTrapDirective', () => {
     return event.defaultPrevented;
   }
 
-  it('do último controle visível, o Tab volta ao primeiro', async () => {
+  it('from the last visible control, Tab goes back to the first', async () => {
     const { fixture, get } = await render();
     get('last').focus();
 
@@ -52,7 +52,7 @@ describe('FocusTrapDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('do primeiro controle, o Shift+Tab vai ao último, pulando o oculto', async () => {
+  it('from the first control, Shift+Tab goes to the last, skipping the hidden one', async () => {
     const { fixture, get } = await render();
     get('first').focus();
 
@@ -61,7 +61,7 @@ describe('FocusTrapDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('com o foco no título (fora dos controles), o Shift+Tab vai ao último', async () => {
+  it('with focus on the title (outside the controls), Shift+Tab goes to the last', async () => {
     const { fixture, get } = await render();
     get('title').focus();
 
@@ -70,7 +70,7 @@ describe('FocusTrapDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('no meio, o Tab segue o caminho normal', async () => {
+  it('in the middle, Tab follows the normal path', async () => {
     const { fixture, get } = await render();
     get('middle').focus();
 
@@ -78,7 +78,7 @@ describe('FocusTrapDirective', () => {
     fixture.nativeElement.remove();
   });
 
-  it('desligada, não intercepta o Tab', async () => {
+  it('when turned off, does not intercept Tab', async () => {
     const { fixture, get } = await render();
     fixture.componentInstance.active.set(false);
     await fixture.whenStable();

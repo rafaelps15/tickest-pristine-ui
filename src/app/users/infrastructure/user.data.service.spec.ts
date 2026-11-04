@@ -19,7 +19,7 @@ describe('UserDataService', () => {
 
   afterEach(() => http.verify());
 
-  it('busca os totais por situação em GET /users/stats/status', () => {
+  it('fetches the totals by status at GET /users/stats/status', () => {
     const counts = { totalCount: 5, activeCount: 3, pendingActivationCount: 1, inactiveCount: 1 };
     let received: unknown;
 
@@ -31,7 +31,7 @@ describe('UserDataService', () => {
     expect(received).toEqual(counts);
   });
 
-  it('deixa a falha chegar a quem consome, sem engolir o erro', () => {
+  it('lets the failure reach the consumer, without swallowing the error', () => {
     let failed = false;
 
     service.getStatusCounts().subscribe({ error: () => failed = true });

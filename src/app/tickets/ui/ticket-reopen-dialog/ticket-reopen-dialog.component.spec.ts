@@ -39,7 +39,7 @@ describe('TicketReopenDialogComponent', () => {
     (fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).click();
   }
 
-  it('mostra o título do chamado e foca o campo do motivo ao abrir', async () => {
+  it('shows the ticket title and focuses the reason field on open', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -49,7 +49,7 @@ describe('TicketReopenDialogComponent', () => {
     expect(document.activeElement).toBe(reasonField(fixture));
   });
 
-  it('emite o motivo sem espaços nas pontas', async () => {
+  it('emits the reason trimmed of surrounding spaces', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -60,7 +60,7 @@ describe('TicketReopenDialogComponent', () => {
     expect(fixture.componentInstance.confirmedReason).toBe('A tela voltou a piscar.');
   });
 
-  it('emite null quando o motivo fica em branco (é opcional)', async () => {
+  it('emits null when the reason is left blank (it is optional)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -69,7 +69,7 @@ describe('TicketReopenDialogComponent', () => {
     expect(fixture.componentInstance.confirmedReason).toBeNull();
   });
 
-  it('não emite com um motivo acima do limite', async () => {
+  it('does not emit with a reason above the limit', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -82,7 +82,7 @@ describe('TicketReopenDialogComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('no máximo 500 caracteres');
   });
 
-  it('fecha pelo Esc e pelo clique fora, mas não enquanto reabre', async () => {
+  it('closes via Esc and click outside, but not while reopening', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.saving.set(true);
     await fixture.whenStable();
@@ -96,7 +96,7 @@ describe('TicketReopenDialogComponent', () => {
     expect(fixture.componentInstance.closedCalled).toBeTrue();
   });
 
-  it('trava a rolagem da página enquanto está aberto', async () => {
+  it('locks page scrolling while it is open', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
     expect(document.body.classList).toContain('modal-open');

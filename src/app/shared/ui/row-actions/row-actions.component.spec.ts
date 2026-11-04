@@ -25,7 +25,7 @@ describe('RowActionsComponent', () => {
     }).compileComponents();
   });
 
-  it('rotula o botão e expõe a chave da linha pra devolver o foco', async () => {
+  it('labels the button and exposes the row key to return focus', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -35,7 +35,7 @@ describe('RowActionsComponent', () => {
     expect(toggle.getAttribute('data-bs-toggle')).toBe('dropdown');
   });
 
-  it('projeta os itens dentro do menu', async () => {
+  it('projects the items inside the menu', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -43,7 +43,7 @@ describe('RowActionsComponent', () => {
     expect(items.length).toBe(2);
   });
 
-  it('troca o ícone por um spinner enquanto a linha está ocupada', async () => {
+  it('swaps the icon for a spinner while the row is busy', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.busy.set(true);
     await fixture.whenStable();

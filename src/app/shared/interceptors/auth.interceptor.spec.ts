@@ -36,7 +36,7 @@ describe('authInterceptor', () => {
 
   afterEach(() => httpTesting.verify());
 
-  it('não deve recarregar o usuário logado quando o login responder 403 (troca de senha pendente)', () => {
+  it('should not reload the logged-in user when the login responds 403 (pending password change)', () => {
     http.post('/users/login', {}).subscribe({ error: () => undefined });
 
     httpTesting.expectOne('/users/login').flush(
@@ -47,7 +47,7 @@ describe('authInterceptor', () => {
     expect(currentUserService.load).not.toHaveBeenCalled();
   });
 
-  it('deve recarregar o usuário logado quando outra rota responder 403 (permissão alterada)', () => {
+  it('should reload the logged-in user when another route responds 403 (permission changed)', () => {
     http.get('/tickets').subscribe({ error: () => undefined });
 
     httpTesting.expectOne('/tickets').flush(
@@ -59,7 +59,7 @@ describe('authInterceptor', () => {
   });
 });
 
-describe('authInterceptor — renovação do token', () => {
+describe('authInterceptor — token renewal', () => {
   let http: HttpClient;
   let httpTesting: HttpTestingController;
   let currentToken: string | null;
@@ -88,7 +88,7 @@ describe('authInterceptor — renovação do token', () => {
 
   afterEach(() => httpTesting.verify());
 
-  it('deve repetir com o token atual, sem nova renovação, quando a sessão foi renovada durante a requisição', () => {
+  it('should retry with the current token, without a new renewal, when the session was renewed during the request', () => {
     http.get('/tickets').subscribe();
 
     const first = httpTesting.expectOne('/tickets');
@@ -102,7 +102,7 @@ describe('authInterceptor — renovação do token', () => {
     expect(tokenRefresh.refresh).not.toHaveBeenCalled();
   });
 
-  it('deve renovar e repetir com o token novo quando o token enviado ainda é o atual', () => {
+  it('should renew and retry with the new token when the token sent is still the current one', () => {
     tokenRefresh.refresh.and.returnValue(of('token-renovado'));
     http.get('/tickets').subscribe();
 
@@ -126,7 +126,7 @@ describe('authInterceptor — renovação do token', () => {
     });
   }
 
-  it('deve encerrar a sessão quando o back-end recusa a renovação', () => {
+  it('should end the session when the back-end refuses the renewal', () => {
     tokenRefresh.refresh.and.returnValue(of(null));
     http.get('/tickets').subscribe({ error: () => undefined });
 
@@ -136,7 +136,7 @@ describe('authInterceptor — renovação do token', () => {
   });
 });
 
-describe('authInterceptor + CurrentUserService — falha na renovação ao carregar o usuário logado', () => {
+describe('authInterceptor + CurrentUserService — renewal failure when loading the logged-in user', () => {
   let httpTesting: HttpTestingController;
   let currentUserService: CurrentUserService;
   let session: { token: () => string | null; refreshToken: () => string | null; currentUser: () => null; setCurrentUser: jasmine.Spy; clearSession: jasmine.Spy };
@@ -180,7 +180,7 @@ describe('authInterceptor + CurrentUserService — falha na renovação ao carre
     }
   }
 
-  it('token vencido e renovação sem rede: resulta em "unavailable" (tela de sessão indisponível), sem apagar a sessão', () => {
+  it('expired token and renewal without network: results in "unavailable" (unavailable-session screen), without erasing the session', () => {
     tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     let result: unknown;
 
@@ -192,7 +192,7 @@ describe('authInterceptor + CurrentUserService — falha na renovação ao carre
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('token vencido e renovação com 429: resulta em "unavailable" por limite de requisições', () => {
+  it('expired token and renewal with 429: results in "unavailable" due to rate limit', () => {
     tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
     let result: unknown;
 
@@ -203,7 +203,7 @@ describe('authInterceptor + CurrentUserService — falha na renovação ao carre
     expect(session.clearSession).not.toHaveBeenCalled();
   });
 
-  it('renovação recusada pelo back-end: continua sendo sessão recusada ("unauthenticated"), sem novas tentativas', () => {
+  it('renewal refused by the back-end: remains a refused session ("unauthenticated"), with no new attempts', () => {
     tokenRefresh.refresh.and.returnValue(of(null));
     let result: unknown;
 

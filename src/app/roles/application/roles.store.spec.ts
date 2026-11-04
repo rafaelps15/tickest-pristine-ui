@@ -39,21 +39,21 @@ describe('RolesStore', () => {
     store = TestBed.inject(RolesStore);
   });
 
-  it('expõe as roles carregadas', async () => {
+  it('exposes the loaded roles', async () => {
     store.load();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.roles()).toEqual(roles);
   });
 
-  it('expõe o catálogo de permissões carregado', async () => {
+  it('exposes the loaded permissions catalog', async () => {
     store.loadPermissions();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.permissions()).toEqual(permissions);
   });
 
-  it('expõe o erro de carga das funções no listState, com a lista vazia', async () => {
+  it('exposes the roles load error in listState, with an empty list', async () => {
     roleDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.load();
@@ -63,7 +63,7 @@ describe('RolesStore', () => {
     expect(store.roles()).toEqual([]);
   });
 
-  it('expõe o erro de carga do catálogo de permissões no permissionsState', async () => {
+  it('exposes the permissions catalog load error in permissionsState', async () => {
     permissionDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.loadPermissions();
@@ -73,7 +73,7 @@ describe('RolesStore', () => {
     expect(store.permissions()).toEqual([]);
   });
 
-  it('agrupa as permissões por grupo, preservando a ordem de chegada', async () => {
+  it('groups the permissions by group, preserving arrival order', async () => {
     store.loadPermissions();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -84,21 +84,21 @@ describe('RolesStore', () => {
     expect(groups[1].permissions.map(p => p.code)).toEqual(['users:read']);
   });
 
-  it('resolve o nome amigável de um código de permissão conhecido', async () => {
+  it('resolves the friendly name of a known permission code', async () => {
     store.loadPermissions();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.permissionName('tickets:manage')).toBe('Gerenciar tickets');
   });
 
-  it('devolve o próprio código quando a permissão não é encontrada no catálogo', async () => {
+  it('returns the code itself when the permission is not found in the catalog', async () => {
     store.loadPermissions();
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.permissionName('codigo:inexistente')).toBe('codigo:inexistente');
   });
 
-  it('atribui permissões a uma role e recarrega a listagem em caso de sucesso', async () => {
+  it('assigns permissions to a role and reloads the list on success', async () => {
     roleDataService.assignPermissions.and.returnValue(of(undefined));
     const onSuccess = jasmine.createSpy('onSuccess');
 
@@ -109,7 +109,7 @@ describe('RolesStore', () => {
     expect(onSuccess).toHaveBeenCalled();
   });
 
-  it('marca assigningPermissions durante a atribuição, e libera ao terminar', async () => {
+  it('sets assigningPermissions during the assignment, and releases it when done', async () => {
     const subject = new Subject<void>();
     roleDataService.assignPermissions.and.returnValue(subject);
 
@@ -123,7 +123,7 @@ describe('RolesStore', () => {
     expect(store.assigningPermissions()).toBeFalse();
   });
 
-  it('expõe a mensagem de erro quando a atribuição de permissões falhar, sem vazar pra fora do modal', async () => {
+  it('exposes the error message when the permission assignment fails, without leaking outside the modal', async () => {
     roleDataService.assignPermissions.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.assignPermissions('Agent', ['tickets:manage']);
@@ -133,7 +133,7 @@ describe('RolesStore', () => {
     expect(store.listState().error).toBeNull();
   });
 
-  it('limpa o erro de atribuição de permissões ao chamar clearAssignPermissionsError', async () => {
+  it('clears the permission assignment error when calling clearAssignPermissionsError', async () => {
     roleDataService.assignPermissions.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
     store.assignPermissions('Agent', ['tickets:manage']);
     await TestBed.inject(ApplicationRef).whenStable();

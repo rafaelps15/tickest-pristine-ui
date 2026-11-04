@@ -19,7 +19,7 @@ describe('TicketAttachmentDataService', () => {
 
   afterEach(() => http.verify());
 
-  it('getPolicy lê a política de anexos do back-end', () => {
+  it('getPolicy reads the attachment policy from the back end', () => {
     const policy: TicketAttachmentPolicy = {
       maxFileSizeBytes: 10_485_760, maxAttachmentsPerTicket: 20, maxTotalBytesPerTicket: 104_857_600,
       allowedTypes: [{ contentType: 'application/pdf', extensions: ['.pdf'] }]

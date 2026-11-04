@@ -43,7 +43,7 @@ describe('ScreenGuideComponent', () => {
     return fixture.nativeElement.querySelector('.guide-toggle') as HTMLButtonElement;
   }
 
-  it('projeta as seções, cada uma com o título num h2', async () => {
+  it('projects the sections, each with the title in an h2', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -53,7 +53,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(fixture).textContent).toContain('Como a busca funciona');
   });
 
-  it('começa aberto quando não há preferência salva', async () => {
+  it('starts open when there is no saved preference', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -61,7 +61,7 @@ describe('ScreenGuideComponent', () => {
     expect(toggle(fixture).getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('abre só na primeira visita: a próxima começa fechada, sem o usuário precisar fechar', async () => {
+  it('opens only on the first visit: the next one starts closed, without the user having to close it', async () => {
     const first = TestBed.createComponent(HostComponent);
     await first.whenStable();
     expect(body(first).hidden).toBeFalse();
@@ -72,7 +72,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(second).hidden).toBeTrue();
   });
 
-  it('respeita a escolha de deixar aberto nas visitas seguintes', async () => {
+  it('respects the choice to keep it open on later visits', async () => {
     localStorage.setItem(STORAGE_KEY, 'true');
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
@@ -80,7 +80,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(fixture).hidden).toBeFalse();
   });
 
-  it('respeita defaultOpen=false quando não há preferência salva', async () => {
+  it('respects defaultOpen=false when there is no saved preference', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.defaultOpen.set(false);
     await fixture.whenStable();
@@ -88,7 +88,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(fixture).hidden).toBeTrue();
   });
 
-  it('mantém o corpo no DOM (só escondido), pro aria-controls do botão apontar pra algo que existe', async () => {
+  it('keeps the body in the DOM (only hidden), so the button aria-controls points to something that exists', async () => {
     localStorage.setItem(STORAGE_KEY, 'false');
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
@@ -98,7 +98,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(fixture).hidden).toBeTrue();
   });
 
-  it('fecha e abre ao clicar no cabeçalho, e persiste a preferência', async () => {
+  it('closes and opens when clicking the header, and persists the preference', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -114,7 +114,7 @@ describe('ScreenGuideComponent', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
   });
 
-  it('restaura o Guia fechado quando a preferência salva é "false"', async () => {
+  it('restores the Guia closed when the saved preference is "false"', async () => {
     localStorage.setItem(STORAGE_KEY, 'false');
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
@@ -122,7 +122,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(fixture).hidden).toBeTrue();
   });
 
-  it('começa no padrão mesmo que a leitura do localStorage falhe', async () => {
+  it('starts at the default even if reading localStorage fails', async () => {
     spyOn(Storage.prototype, 'getItem').and.throwError('bloqueado (ex.: modo privado)');
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
@@ -130,7 +130,7 @@ describe('ScreenGuideComponent', () => {
     expect(body(fixture).hidden).toBeFalse();
   });
 
-  it('não quebra ao alternar quando a escrita no localStorage falha', async () => {
+  it('does not break when toggling if writing to localStorage fails', async () => {
     spyOn(Storage.prototype, 'setItem').and.throwError('bloqueado (ex.: modo privado)');
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();

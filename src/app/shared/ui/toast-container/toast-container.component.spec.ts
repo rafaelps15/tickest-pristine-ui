@@ -14,7 +14,7 @@ describe('ToastContainerComponent', () => {
     toastService = TestBed.inject(ToastService);
   });
 
-  it('renderiza a mensagem do toast, sem botão de ação quando não há ação', async () => {
+  it('renders the toast message, with no action button when there is no action', async () => {
     const fixture = TestBed.createComponent(ToastContainerComponent);
     toastService.show('Cadastro concluído.');
     await fixture.whenStable();
@@ -23,7 +23,7 @@ describe('ToastContainerComponent', () => {
     expect(fixture.nativeElement.querySelector('.toast-action')).toBeNull();
   });
 
-  it('mostra o botão da ação e, ao clicar, roda a ação e fecha o toast', async () => {
+  it('shows the action button and, on click, runs the action and closes the toast', async () => {
     const run = jasmine.createSpy('run');
     const fixture = TestBed.createComponent(ToastContainerComponent);
     toastService.show('Acesso desativado.', 'success', { label: 'Desfazer', run });
@@ -38,7 +38,7 @@ describe('ToastContainerComponent', () => {
     expect(fixture.nativeElement.querySelector('.toast')).toBeNull();
   });
 
-  it('fecha o toast pelo X sem rodar a ação', async () => {
+  it('closes the toast via the X without running the action', async () => {
     const run = jasmine.createSpy('run');
     const fixture = TestBed.createComponent(ToastContainerComponent);
     toastService.show('Acesso desativado.', 'success', { label: 'Desfazer', run });

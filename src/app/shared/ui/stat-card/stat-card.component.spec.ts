@@ -38,7 +38,7 @@ describe('StatCardComponent', () => {
     return fixture.nativeElement.querySelector('#filter') as HTMLElement;
   }
 
-  it('mostra rótulo, número no tom do card (num div, não heading), legenda e ícone decorativo', async () => {
+  it('shows label, number in the card tone (in a div, not a heading), caption and decorative icon', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -52,7 +52,7 @@ describe('StatCardComponent', () => {
     expect(card.querySelector('h1, h2, h3, h4, h5, h6')).toBeNull();
   });
 
-  it('tamanho padrão do número continua o mesmo; o compacto desce um passo (apoio abaixo de números maiores)', async () => {
+  it('the default number size stays the same; the compact one steps down one level (support below larger numbers)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -63,7 +63,7 @@ describe('StatCardComponent', () => {
     expect(compact.classList).not.toContain('fs-3');
   });
 
-  it('mostra spinner enquanto carrega e "—"/indisponível quando falhou, nunca um 0', async () => {
+  it('shows a spinner while loading and "—"/unavailable when it failed, never a 0', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.loading.set(true);
     await fixture.whenStable();
@@ -76,7 +76,7 @@ describe('StatCardComponent', () => {
     expect(filterCard(fixture).textContent).toContain('indisponível');
   });
 
-  it('no modo filtro, vira um botão aria-pressed sobre o card inteiro que avisa ao ser clicado', async () => {
+  it('in filter mode, becomes an aria-pressed button over the whole card that announces when clicked', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -92,7 +92,7 @@ describe('StatCardComponent', () => {
     expect(filterCard(fixture).classList).toContain('card-stats-pressed');
   });
 
-  it('sem pressed, não tem botão nem realce de card clicável (sem afordância falsa)', async () => {
+  it('without pressed, it has no button nor clickable-card highlight (no false affordance)', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
@@ -100,7 +100,7 @@ describe('StatCardComponent', () => {
     expect(plain.querySelector('button')).toBeNull();
     expect(plain.classList).not.toContain('card-stats-clickable');
   });
-  it('zero fica neutro (sem a cor do tom) e o número tem separador de milhar', async () => {
+  it('zero stays neutral (without the tone color) and the number has a thousands separator', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.value.set(0);
     await fixture.whenStable();

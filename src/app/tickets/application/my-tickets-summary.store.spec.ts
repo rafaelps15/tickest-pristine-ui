@@ -44,7 +44,7 @@ describe('MyTicketsSummaryStore', () => {
     userId = signal<string | null>('u-ana');
   });
 
-  it('soma as contagens por status (resolvidos inclui os fechados; cancelados ficam de fora)', async () => {
+  it('sums the counts by status (resolved includes closed; canceled are left out)', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -54,7 +54,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.failed()).toBeFalse();
   });
 
-  it('soma os grupos do seletor de Meus Chamados: em aberto, encerrados (com os cancelados) e todos', async () => {
+  it('sums the Meus Chamados selector groups: open, closed (with the canceled) and all', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -63,7 +63,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.totalCount()).toBe(22);
   });
 
-  it('separa Resolvido e Fechado, pra comparar cada um com o mesmo número da empresa', async () => {
+  it('separates Resolvido and Fechado, to compare each with the same company number', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -71,7 +71,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.closedCount()).toBe(1);
   });
 
-  it('marca falha e não inventa 0 quando a API falha', async () => {
+  it('flags failure and does not invent 0 when the API fails', async () => {
     dataService.getMineSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -80,7 +80,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.openCount()).toBeNull();
   });
 
-  it('nem chama a API sem a permissão de ver os próprios chamados', async () => {
+  it('does not even call the API without the permission to see own tickets', async () => {
     permissions = new Set();
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -89,7 +89,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.openCount()).toBeNull();
   });
 
-  it('busca de novo ao recarregar', async () => {
+  it('fetches again on reload', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
 
@@ -98,7 +98,7 @@ describe('MyTicketsSummaryStore', () => {
 
     expect(dataService.getMineSummary).toHaveBeenCalledTimes(2);
   });
-  it('numa recarga, os números ficam (loading só na primeira carga; busy marca a recarga)', async () => {
+  it('on a reload, the numbers stay (loading only on the first load; busy marks the reload)', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.totalCount()).toBe(22);
@@ -112,7 +112,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.totalCount()).toBe(22);
   });
 
-  it('uma atualização que falha mantém os últimos números (stale) e não vira "falhou"', async () => {
+  it('a failed refresh keeps the last numbers (stale) and does not become "failed"', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
     // A tela lê os números o tempo todo; é essa leitura que guarda os últimos bons.
@@ -127,7 +127,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.failed()).toBeFalse();
   });
 
-  it('sem nenhum número ainda, a falha é "falhou" (não stale)', async () => {
+  it('with no number yet, the failure is "failed" (not stale)', async () => {
     dataService.getMineSummary.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
@@ -136,7 +136,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.stale()).toBeFalse();
     expect(store.totalCount()).toBeNull();
   });
-  it('outra pessoa entrando (sem recarregar a página) não vê os números da anterior: o resumo zera e é buscado de novo', async () => {
+  it('another person signing in (without reloading the page) does not see the previous one\'s numbers: the summary resets and is fetched again', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.totalCount()).toBe(22);
@@ -152,7 +152,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(dataService.getMineSummary).toHaveBeenCalledTimes(2);
   });
 
-  it('se a primeira busca da outra pessoa falha, ela vê a falha — nunca os números da anterior', async () => {
+  it('if the other person\'s first fetch fails, they see the failure, never the previous one\'s numbers', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.activeCount()).toBe(7);
@@ -166,7 +166,7 @@ describe('MyTicketsSummaryStore', () => {
     expect(store.stale()).toBeFalse();
   });
 
-  it('depois do logout, nenhum número da sessão fica no store', async () => {
+  it('after logout, no session number stays in the store', async () => {
     const store = createStore();
     await TestBed.inject(ApplicationRef).whenStable();
     expect(store.totalCount()).toBe(22);

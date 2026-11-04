@@ -16,7 +16,7 @@ describe('TicketListGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explica cada status do ponto de vista de quem abriu o chamado, com a mesma badge da lista', async () => {
+  it('explains each status from the point of view of whoever opened the ticket, with the same badge as the list', async () => {
     const fixture = TestBed.createComponent(TicketListGuideComponent);
     await fixture.whenStable();
 
@@ -30,7 +30,7 @@ describe('TicketListGuideComponent', () => {
     expect(text).toContain('dá pra reabrir se o problema voltar');
   });
 
-  it('diz o que dá pra fazer em cada fase (editar/cancelar enquanto ativo, reabrir depois)', async () => {
+  it('says what can be done in each phase (edit/cancel while active, reopen afterwards)', async () => {
     const fixture = TestBed.createComponent(TicketListGuideComponent);
     await fixture.whenStable();
 

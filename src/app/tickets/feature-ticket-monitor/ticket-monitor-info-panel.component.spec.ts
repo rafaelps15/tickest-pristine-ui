@@ -49,7 +49,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     return fixture;
   }
 
-  it('é uma região rotulada pelo título do chamado fora do modo modal, e vira diálogo modal no overlay', async () => {
+  it('is a region labeled by the ticket title outside modal mode, and becomes a modal dialog in the overlay', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -63,7 +63,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(panel.getAttribute('aria-modal')).toBe('true');
   });
 
-  it('no modo overlay, move o foco pro título ao abrir, mas não o rouba quando a lista recarrega o mesmo chamado', async () => {
+  it('in overlay mode, moves focus to the title on open, but does not steal it when the list reloads the same ticket', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('modal', true);
     document.body.appendChild(fixture.nativeElement);
@@ -83,7 +83,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('no modo modal, Tab no último controle volta pro primeiro e Shift+Tab no primeiro vai pro último', async () => {
+  it('in modal mode, Tab on the last control goes back to the first and Shift+Tab on the first goes to the last', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('modal', true);
     document.body.appendChild(fixture.nativeElement);
@@ -102,7 +102,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     fixture.nativeElement.remove();
   });
 
-  it('renderiza os campos instantâneos recebidos por @Input, sem esperar nenhuma busca', async () => {
+  it('renders the instant fields received via @Input, without waiting for any fetch', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -117,7 +117,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(text).toContain('No prazo');
   });
 
-  it('mostra o nome do atendente quando o chamado já tem um responsável', async () => {
+  it('shows the agent name when the ticket already has an assignee', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('ticket', { ...ticket, assignedToUserId: 'u2', assignedToName: 'Carlos Souza' });
     await fixture.whenStable();
@@ -125,7 +125,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Carlos Souza');
   });
 
-  it('mostra o prazo relativo recebido da tela, em vermelho e negrito quando atrasado, e de quem é a vez', async () => {
+  it('shows the relative due date received from the screen, in red and bold when overdue, and whose turn it is', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('ticket', { ...ticket, waitingOn: TicketAwaiting.Agent });
     fixture.componentRef.setInput('dueRelative', 'venceu há 35 min');
@@ -140,7 +140,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Aguardando a equipe');
   });
 
-  it('mostra a data de resolução só quando o chamado já foi resolvido', async () => {
+  it('shows the resolution date only when the ticket has already been resolved', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Resolvido em');
@@ -150,7 +150,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Resolvido em');
   });
 
-  it('mostra um indicador de carregamento enquanto busca a descrição completa', async () => {
+  it('shows a loading indicator while fetching the full description', async () => {
     quickInfoStoreFake.state.set({ loading: true, error: null });
     const fixture = createFixture();
     await fixture.whenStable();
@@ -158,7 +158,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).toBeTruthy();
   });
 
-  it('mostra a descrição completa quando a busca termina', async () => {
+  it('shows the full description when the fetch finishes', async () => {
     quickInfoStoreFake.ticket.set({
       id: 't1', title: ticket.title, description: 'Fumaça saindo da impressora.',
       priority: ticket.priority, status: ticket.status,
@@ -173,7 +173,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Fumaça saindo da impressora.');
   });
 
-  it('mostra a mensagem de erro quando a busca da descrição falha', async () => {
+  it('shows the error message when the description fetch fails', async () => {
     quickInfoStoreFake.state.set({ loading: false, error: 'Você não tem acesso a este chamado.' });
     const fixture = createFixture();
     await fixture.whenStable();
@@ -181,7 +181,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem acesso a este chamado.');
   });
 
-  it('emite "close" ao clicar no botão de fechar', async () => {
+  it('emits "close" when clicking the close button', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -194,7 +194,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(closeSpy).toHaveBeenCalled();
   });
 
-  it('o link "Ver detalhes" leva pro chamado com ?from=monitor', async () => {
+  it('the "Ver detalhes" link leads to the ticket with ?from=monitor', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
 
@@ -202,7 +202,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(link.getAttribute('href')).toBe('/tickets/t1?from=monitor');
   });
 
-  it('mostra os atalhos de atribuição só quando a tela permite, e avisa a tela ao clicar', async () => {
+  it('shows the assignment shortcuts only when the screen allows it, and notifies the screen on click', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).not.toContain('Atribuir a mim');
@@ -223,7 +223,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(assignResponsible).toHaveBeenCalled();
   });
 
-  it('mostra a situação de SLA que a linha mostra, quando a tela passa uma (o selo acompanha o relógio)', async () => {
+  it('shows the SLA status that the row shows, when the screen passes one (the badge follows the clock)', async () => {
     const fixture = createFixture();
     fixture.componentRef.setInput('slaStatus', TicketSlaStatus.Breached);
     await fixture.whenStable();
@@ -233,7 +233,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(badges).not.toContain('No prazo');
   });
 
-  it('não mostra data de prazo pra chamado sem SLA, como a tabela', async () => {
+  it('does not show a due date for a ticket without SLA, like the table', async () => {
     const fixture = TestBed.createComponent(TicketMonitorInfoPanelComponent);
     fixture.componentRef.setInput('ticket', { ...ticket, slaStatus: TicketSlaStatus.NotApplicable });
     await fixture.whenStable();
@@ -243,7 +243,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     expect(text).not.toContain('02/01/2026');
   });
 
-  it('com a descrição que falhou, mostra o erro em tom neutro e tenta de novo pelo store', async () => {
+  it('with the description that failed, shows the error in a neutral tone and retries through the store', async () => {
     quickInfoStoreFake.state.set({ loading: false, error: 'Erro ao carregar os detalhes do chamado' });
     const fixture = createFixture();
     await fixture.whenStable();

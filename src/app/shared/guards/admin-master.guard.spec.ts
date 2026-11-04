@@ -33,7 +33,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve redirecionar para o login quando não houver sessão', () => {
+  it('should redirect to login when there is no session', () => {
     session.isAuthenticated.and.returnValue(false);
 
     const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:read'), {} as never));
@@ -42,7 +42,7 @@ describe('adminMasterGuard', () => {
     expect(currentUserService.ensureLoaded).not.toHaveBeenCalled();
   });
 
-  it('deve liberar a rota quando o usuário logado tiver a permissão exigida', (done) => {
+  it('should allow the route when the logged-in user has the required permission', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -56,7 +56,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve redirecionar para o dashboard quando faltar a permissão exigida', (done) => {
+  it('should redirect to the dashboard when the required permission is missing', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.returnValue(false);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -70,7 +70,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve liberar a rota quando o usuário tiver qualquer uma das permissões da lista', (done) => {
+  it('should allow the route when the user has any of the permissions in the list', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.callFake(code => code === 'sectors:manage');
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -84,7 +84,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve redirecionar para o dashboard quando faltar todas as permissões da lista', (done) => {
+  it('should redirect to the dashboard when all the permissions in the list are missing', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.returnValue(false);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -98,7 +98,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve liberar a rota quando não houver permissão exigida na rota', (done) => {
+  it('should allow the route when the route requires no permission', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
@@ -111,7 +111,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('numa falha passageira leva à tela de sessão indisponível com a rota pedida, sem checar a permissão', (done) => {
+  it('on a transient failure, goes to the session unavailable screen with the requested route, without checking the permission', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unavailable' as const, reason: 'offline' as const }));
     const state = { url: '/usuarios' } as RouterStateSnapshot;
@@ -129,7 +129,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve apagar a sessão e redirecionar para o login quando a API recusar a sessão', (done) => {
+  it('should clear the session and redirect to login when the API rejects the session', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const }));
 
@@ -144,7 +144,7 @@ describe('adminMasterGuard', () => {
     });
   });
 
-  it('deve esperar o usuário logado carregar (ensureLoaded) antes de checar a permissão', () => {
+  it('should wait for the logged-in user to load (ensureLoaded) before checking the permission', () => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
