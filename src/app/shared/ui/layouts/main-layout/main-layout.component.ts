@@ -5,6 +5,7 @@ import { NavigationCancel, NavigationEnd, NavigationError, NavigationSkipped, Ro
 import { filter, map, take } from 'rxjs';
 import { SessionService } from '../../../services/session.service';
 import { UserMenuComponent } from '../../user-menu/user-menu.component';
+import { FocusTrapDirective } from '../../directives/focus-trap.directive';
 
 /**
  * Qual item de tickets do menu lateral fica ativo para a URL: "Meus Tickets" na lista, no Novo
@@ -24,7 +25,7 @@ export function activeTicketsMenu(url: string): 'mine' | 'monitor' | null {
 /** Layout da área autenticada (com navegação), usado pelas rotas protegidas. */
 @Component({
     selector: 'app-main-layout',
-    imports: [RouterModule, UserMenuComponent],
+    imports: [RouterModule, UserMenuComponent, FocusTrapDirective],
     templateUrl: './main-layout.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
     styleUrls: ['./main-layout.component.css'],
@@ -56,7 +57,10 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   /** Gaveta fechada abaixo do xl: fora da tela, não pode receber foco nem ser lida (vira `inert`). */
   protected readonly menuHidden = computed(() => this.offCanvas() && !this.menuOpen());
 
-  /** Gaveta aberta abaixo do xl: o resto da página fica `inert`, pra o Tab não sair da gaveta. */
+  /**
+   * Gaveta aberta abaixo do xl: o resto da página fica `inert` e o Tab dá a volta dentro da gaveta
+   * (`appFocusTrap`), porque os toasts e o diálogo global ficam fora do layout e o Tab chegaria neles.
+   */
   protected readonly pageBehindMenu = computed(() => this.offCanvas() && this.menuOpen());
 
   /** Injetor usado pelo `afterNextRender` ao mover o foco depois de abrir ou fechar a gaveta. */
@@ -67,9 +71,6 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
   /** Botão "Fechar menu" da gaveta: recebe o foco quando ela abre. */
   private readonly menuCloser = viewChild.required<ElementRef<HTMLButtonElement>>('menuCloser');
-
-  /** A gaveta (e a sidebar do desktop): onde o Tab fica preso enquanto ela está aberta. */
-  private readonly menu = viewChild.required<ElementRef<HTMLElement>>('menu');
 
   /** Área do conteúdo da tela: recebe o foco depois de navegar por um item da gaveta. */
   private readonly mainContent = viewChild.required<ElementRef<HTMLElement>>('mainContent');
@@ -155,26 +156,6 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
       afterNextRender(() => this.focusMainContent(), { injector: this.injector });
     } else {
       this.focusContentAfterNavigation();
-    }
-  }
-
-  /**
-   * Com a gaveta aberta, o Tab dá a volta dentro dela (do último item ao primeiro e vice-versa): a página
-   * atrás já está `inert`, mas os toasts e o diálogo global ficam fora do layout e o Tab chegaria neles.
-   */
-  onMenuKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Tab' || !this.pageBehindMenu()) return;
-    const focusables = Array.from(this.menu().nativeElement.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'))
-      .filter(el => el.getClientRects().length > 0);
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
     }
   }
 

@@ -21,3 +21,4 @@ export * from './utils/side-panel.util';
 export * from './utils/resource-value.util';
 export * from './utils/iso-date.util';
 export * from './utils/sla-duration.util';
+export * from './utils/focus-trap.util';

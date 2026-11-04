@@ -2,7 +2,7 @@
   <div class="layout-container">
     <!-- Menu (Sidebar) -->
     <aside #menu id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme" [attr.inert]="menuHidden() ? '' : null"
-           (keydown)="onMenuKeydown($event)" (click)="onMenuClick($event)">
+           [appFocusTrap]="pageBehindMenu()" (click)="onMenuClick($event)">
       <div class="app-brand demo d-flex justify-content-center" style="height: 120px; padding: 1rem 0;">
         <a routerLink="/dashboard" class="app-brand-link" style="text-decoration: none;">
           <span class="app-brand-logo demo d-flex align-items-center justify-content-center">

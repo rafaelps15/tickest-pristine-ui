@@ -1,7 +1,6 @@
 import { Directive, ElementRef, HostListener, afterRenderEffect, inject, input, untracked } from '@angular/core';
+import { trapTabWithin } from '../../utils/focus-trap.util';
 
-/** Controles que entram no ciclo de Tab do painel no modo modal. */
-const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Painel lateral "Informações do X" (Usuários, Monitorar Tickets): região rotulada ao lado da
@@ -46,24 +45,7 @@ export class SidePanelDirective {
   @HostListener('keydown.tab', ['$event'])
   @HostListener('keydown.shift.tab', ['$event'])
   onTab(event: Event): void {
-    if (!this.sidePanelModal()) return;
-
-    const panel = this.host.nativeElement;
-    const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-    if (focusables.length === 0) return;
-
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const backwards = (event as KeyboardEvent).shiftKey;
-    const active = document.activeElement;
-
-    if (backwards && (active === first || active === this.titleElement() || !panel.contains(active))) {
-      last.focus();
-      event.preventDefault();
-    } else if (!backwards && active === last) {
-      first.focus();
-      event.preventDefault();
-    }
+    if (this.sidePanelModal()) trapTabWithin(event as KeyboardEvent, this.host.nativeElement);
   }
 
   /** Título do painel, que recebe o foco programático. */

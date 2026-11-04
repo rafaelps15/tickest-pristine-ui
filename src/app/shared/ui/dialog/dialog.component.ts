@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, AfterViewInit, OnDestroy, ElementRef, HostListener, DOCUMENT, inject, input, output, viewChild } from '@angular/core';
+import { FocusTrapDirective } from '../directives/focus-trap.directive';
+import { FOCUSABLE_SELECTOR } from '../../utils/focus-trap.util';
 
-/** Controles que entram no ciclo de Tab do diálogo. */
-const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Contador pra gerar ids únicos do título (o `aria-labelledby` do diálogo aponta pra ele). */
 let nextDialogId = 0;
@@ -22,6 +22,7 @@ const openDialogs: DialogComponent[] = [];
  */
 @Component({
   selector: 'app-dialog',
+  imports: [FocusTrapDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="modal-backdrop fade show"></div>
@@ -29,7 +30,7 @@ const openDialogs: DialogComponent[] = [];
     <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" [attr.aria-labelledby]="titleId"
          (click)="onBackdropClick($event)">
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" [class.modal-lg]="size() === 'lg'">
-        <div #box class="modal-content" (keydown)="onKeydown($event)">
+        <div #box class="modal-content" appFocusTrap>
           <div class="modal-header">
             <div class="min-w-0">
               <h2 class="modal-title h5" [id]="titleId">{{ title() }}</h2>
@@ -117,24 +118,4 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
     if (event.target === event.currentTarget) this.requestClose();
   }
 
-  /** Prende o Tab/Shift+Tab dentro da caixa: do último controle volta ao primeiro, e vice-versa. */
-  onKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Tab') return;
-
-    const focusable = Array.from(this.box().nativeElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-    if (focusable.length === 0) return;
-
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = this.document.activeElement as HTMLElement | null;
-    const outside = !active || !focusable.includes(active);
-
-    if (event.shiftKey && (active === first || outside)) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && (active === last || outside)) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
 }
