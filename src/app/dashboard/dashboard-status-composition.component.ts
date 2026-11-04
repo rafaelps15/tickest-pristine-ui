@@ -166,6 +166,18 @@ export interface DashboardLink {
       .composition-legend { display: flex; }
       .composition-bar { height: 1rem; }
       .segment-body { font-size: 0; }
+
+      /* Barra de 16px, mas cada fatia-link segue com 24px de alvo (WCAG 2.5.8): 4px invisíveis acima e abaixo. */
+      a.segment-body {
+        position: relative;
+        overflow: visible;
+      }
+
+      a.segment-body::after {
+        content: "";
+        position: absolute;
+        inset: -0.25rem 0;
+      }
     }
 
     .composition-empty {

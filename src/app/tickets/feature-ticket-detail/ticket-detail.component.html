@@ -78,12 +78,12 @@
             <dd class="d-flex align-items-center gap-2 flex-wrap">
               {{ t.assignedToName ?? 'Ainda não atribuído' }}
               @if (canAssignTicket(t.status)) {
-                <button type="button" class="btn btn-link btn-sm p-0" (click)="onOpenAssignModal()">
+                <button type="button" class="btn btn-link btn-sm p-0 tap-target" (click)="onOpenAssignModal()">
                   {{ t.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
                 </button>
               }
               @if (canRemoveAssignee(t.status, t.assignedToName)) {
-                <button type="button" class="btn btn-link btn-sm p-0 link-danger" [disabled]="detailStore.removingAssignee()" (click)="onRemoveAssignee(t.assignedToName!)">
+                <button type="button" class="btn btn-link btn-sm p-0 link-danger tap-target" [disabled]="detailStore.removingAssignee()" (click)="onRemoveAssignee(t.assignedToName!)">
                   @if (detailStore.removingAssignee()) {
                     <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                   }

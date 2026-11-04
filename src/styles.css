@@ -309,11 +309,18 @@ body {
   font-weight: 500;
 }
 
-/* Link de texto pequeno com alvo de toque de 44px no celular (o texto não cresce). */
+/*
+ * Link ou botão de texto pequeno: alvo de pelo menos 24px de altura com qualquer ponteiro (WCAG 2.5.8;
+ * com `p-0`, o `btn-sm` media 23px e o link solto, 21px) e de 44px no toque. O texto não cresce.
+ */
+.tap-target {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+}
+
 @media (pointer: coarse) {
   .tap-target {
-    display: inline-flex;
-    align-items: center;
     min-height: 2.75rem;
   }
 }
