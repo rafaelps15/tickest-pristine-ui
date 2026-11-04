@@ -1348,3 +1348,20 @@ router-outlet + * {
     min-height: 2.75rem;
   }
 }
+
+/*
+ * Celular deitado (altura até 500px): o diálogo de 500px de largura empilhava os botões do rodapé em duas
+ * linhas e, com as margens de 1,75rem, sobravam ~200px pro formulário ("Novo usuário" mostrava só Nome e
+ * Sobrenome, R-05). Aqui ele usa a largura da tela, com margens e respiros menores; o corpo segue rolando.
+ */
+@media (max-height: 500px) and (min-width: 576px) {
+  .modal {
+    --bs-modal-margin: 0.5rem;
+    --bs-modal-padding: 0.75rem;
+    --bs-modal-header-padding: 0.625rem 1rem;
+  }
+
+  .modal-dialog {
+    max-width: max(var(--bs-modal-width), min(46rem, calc(100% - 1rem)));
+  }
+}
