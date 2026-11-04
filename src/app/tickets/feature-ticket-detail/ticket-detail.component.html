@@ -242,7 +242,7 @@
 
       <div class="card-body p-4">
         <!-- Um alerta só pros erros de arquivo (validação, envio, download), pra não empilhar três caixas vermelhas. -->
-        @let attachmentActionError = fileValidationError() ?? store.uploadError() ?? store.downloadError();
+        @let attachmentActionError = store.validationError() ?? store.uploadError() ?? store.downloadError();
         @if (attachmentActionError) {
           <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ attachmentActionError }}</div>
         }

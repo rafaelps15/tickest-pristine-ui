@@ -126,11 +126,13 @@ describe('TicketDetailComponent', () => {
       listState: signal({ loading: false, error: null as string | null }),
       uploading: signal(false),
       uploadError: signal<string | null>(null),
+      validationError: signal<string | null>(null),
       downloading: signal(false),
       downloadError: signal<string | null>(null),
       deleting: signal(false),
       loadForTicket: jasmine.createSpy('loadForTicket'),
       upload: jasmine.createSpy('upload'),
+      uploadIfValid: jasmine.createSpy('uploadIfValid'),
       download: jasmine.createSpy('download'),
       delete: jasmine.createSpy('delete')
     };
@@ -353,63 +355,7 @@ describe('TicketDetailComponent', () => {
     expect(deleteButton).toBeTruthy();
   });
 
-  it('rejeita um arquivo maior que o limite, sem chamar o store', async () => {
-    const fixture = TestBed.createComponent(TicketDetailComponent);
-    await fixture.whenStable();
-
-    const bigFile = new File([new Uint8Array(11 * 1024 * 1024)], 'grande.pdf', { type: 'application/pdf' });
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [bigFile] });
-
-    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
-
-    expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.fileValidationError()).toContain('tamanho máximo');
-  });
-
-  it('rejeita um tipo de arquivo não suportado, sem chamar o store', async () => {
-    const fixture = TestBed.createComponent(TicketDetailComponent);
-    await fixture.whenStable();
-
-    const file = new File(['x'], 'script.exe', { type: 'application/x-msdownload' });
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [file] });
-
-    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
-
-    expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.fileValidationError()).toContain('não é suportado');
-  });
-
-  it('sem a política carregada, envia direto e deixa a validação para o back-end', async () => {
-    attachmentsStoreFake.policy.set(null);
-    const fixture = TestBed.createComponent(TicketDetailComponent);
-    await fixture.whenStable();
-
-    const file = new File(['x'], 'script.exe', { type: 'application/x-msdownload' });
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [file] });
-    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
-
-    expect(attachmentsStoreFake.upload).toHaveBeenCalledWith(file, jasmine.any(Function));
-    expect(fixture.componentInstance.fileValidationError()).toBeNull();
-  });
-
-  it('usa o limite de tamanho da política do back-end na mensagem', async () => {
-    attachmentsStoreFake.policy.set({ ...ATTACHMENT_POLICY, maxFileSizeBytes: 2 * 1024 * 1024 });
-    const fixture = TestBed.createComponent(TicketDetailComponent);
-    await fixture.whenStable();
-
-    const file = new File([new Uint8Array(3 * 1024 * 1024)], 'medio.pdf', { type: 'application/pdf' });
-    const input = document.createElement('input');
-    Object.defineProperty(input, 'files', { value: [file] });
-    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
-
-    expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.fileValidationError()).toBe('O arquivo excede o tamanho máximo permitido de 2.0 MB.');
-  });
-
-  it('envia o upload quando o arquivo é válido', async () => {
+  it('entrega o arquivo escolhido ao store, que confere a política antes de enviar', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 
@@ -419,12 +365,43 @@ describe('TicketDetailComponent', () => {
 
     fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
 
-    expect(attachmentsStoreFake.upload).toHaveBeenCalledWith(file, jasmine.any(Function));
-    expect(fixture.componentInstance.fileValidationError()).toBeNull();
+    expect(attachmentsStoreFake.uploadIfValid).toHaveBeenCalledWith(file, jasmine.any(Function));
+    expect(attachmentsStoreFake.upload).not.toHaveBeenCalled();
+  });
+
+  it('não chama o store quando nenhum arquivo foi escolhido', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { value: [] });
+    fixture.componentInstance.onFileSelected({ target: input } as unknown as Event);
+
+    expect(attachmentsStoreFake.uploadIfValid).not.toHaveBeenCalled();
+  });
+
+  it('mostra o motivo da recusa pela política num alerta', async () => {
+    attachmentsStoreFake.validationError.set('O arquivo excede o tamanho máximo permitido de 2.0 MB.');
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const alerts = Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>);
+    expect(alerts.some(alert => alert.textContent?.includes('tamanho máximo permitido de 2.0 MB'))).toBeTrue();
+  });
+
+  it('prefere o motivo da recusa ao erro do envio anterior, num alerta só', async () => {
+    attachmentsStoreFake.validationError.set('O tipo de arquivo "application/x-msdownload" não é suportado.');
+    attachmentsStoreFake.uploadError.set('Erro ao enviar o anexo.');
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).toContain('não é suportado');
+    expect(text).not.toContain('Erro ao enviar o anexo.');
   });
 
   it('mostra um toast de sucesso ao enviar o anexo', async () => {
-    attachmentsStoreFake.upload.and.callFake((_file: File, onSuccess?: () => void) => onSuccess?.());
+    attachmentsStoreFake.uploadIfValid.and.callFake((_file: File, onSuccess?: () => void) => onSuccess?.());
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();
 

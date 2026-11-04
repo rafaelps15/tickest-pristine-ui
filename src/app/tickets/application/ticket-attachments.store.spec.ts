@@ -158,6 +158,102 @@ describe('TicketAttachmentsStore', () => {
     expect(dataService.upload).not.toHaveBeenCalled();
   });
 
+  describe('uploadIfValid (política do back-end)', () => {
+    /** Arquivo com o tamanho e o tipo pedidos (o conteúdo não importa). */
+    function fileOf(sizeBytes: number, type = 'application/pdf', name = 'arquivo.pdf'): File {
+      return new File([new Uint8Array(sizeBytes)], name, { type });
+    }
+
+    beforeEach(async () => {
+      dataService.upload.and.returnValue(of('new-attachment-id'));
+      store.loadForTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('envia o arquivo que passa na política', () => {
+      const file = fileOf(1024);
+      store.uploadIfValid(file);
+
+      expect(dataService.upload).toHaveBeenCalledOnceWith('t1', file);
+      expect(store.validationError()).toBeNull();
+    });
+
+    it('recusa um arquivo maior que o limite, sem enviar, com o limite na mensagem', () => {
+      store.uploadIfValid(fileOf(policy.maxFileSizeBytes + 1));
+
+      expect(dataService.upload).not.toHaveBeenCalled();
+      expect(store.validationError()).toBe('O arquivo excede o tamanho máximo permitido de 10.0 MB.');
+    });
+
+    it('recusa um tipo de arquivo que a política não aceita', () => {
+      store.uploadIfValid(fileOf(10, 'application/x-msdownload', 'script.exe'));
+
+      expect(dataService.upload).not.toHaveBeenCalled();
+      expect(store.validationError()).toBe('O tipo de arquivo "application/x-msdownload" não é suportado.');
+    });
+
+    it('recusa quando o chamado já tem o máximo de anexos', async () => {
+      const full = Array.from({ length: policy.maxAttachmentsPerTicket }, (_, index) => ({ ...attachment, id: `a${index}` }));
+      dataService.getAll.and.returnValue(of(pageOf(full)));
+      store.loadForTicket('t2');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      store.uploadIfValid(fileOf(10));
+
+      expect(dataService.upload).not.toHaveBeenCalled();
+      expect(store.validationError()).toContain('máximo de 20 anexos');
+    });
+
+    it('recusa quando a soma dos anexos passaria do limite do chamado', async () => {
+      dataService.getAll.and.returnValue(of(pageOf([{ ...attachment, fileSizeBytes: policy.maxTotalBytesPerTicket - 100 }])));
+      store.loadForTicket('t2');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      store.uploadIfValid(fileOf(200));
+
+      expect(dataService.upload).not.toHaveBeenCalled();
+      expect(store.validationError()).toBe('Com este arquivo, os anexos do chamado passariam do limite de 100.0 MB.');
+    });
+
+    it('com páginas por carregar, não confere quantidade nem soma e deixa para o back-end', async () => {
+      const full = Array.from({ length: policy.maxAttachmentsPerTicket }, (_, index) => ({ ...attachment, id: `a${index}` }));
+      dataService.getAll.and.returnValue(of(pageOf(full, true)));
+      store.loadForTicket('t2');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      store.uploadIfValid(fileOf(10));
+
+      expect(dataService.upload).toHaveBeenCalledTimes(1);
+      expect(store.validationError()).toBeNull();
+    });
+
+    it('limpa a recusa anterior quando o próximo arquivo passa', () => {
+      store.uploadIfValid(fileOf(policy.maxFileSizeBytes + 1));
+      store.uploadIfValid(fileOf(10));
+
+      expect(store.validationError()).toBeNull();
+      expect(dataService.upload).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('sem a política (leitura falhou), envia direto e deixa a validação para o back-end', async () => {
+    dataService.getPolicy.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    dataService.upload.and.returnValue(of('new-attachment-id'));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), TicketAttachmentsStore, { provide: TicketAttachmentDataService, useValue: dataService }]
+    });
+    const withoutPolicy = TestBed.inject(TicketAttachmentsStore);
+    withoutPolicy.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    const file = new File(['x'], 'script.exe', { type: 'application/x-msdownload' });
+    withoutPolicy.uploadIfValid(file);
+
+    expect(dataService.upload).toHaveBeenCalledOnceWith('t1', file);
+    expect(withoutPolicy.validationError()).toBeNull();
+  });
+
   it('baixa o anexo e dispara o download no navegador', async () => {
     const blob = new Blob(['conteúdo'], { type: 'application/pdf' });
     dataService.download.and.returnValue(of(blob));

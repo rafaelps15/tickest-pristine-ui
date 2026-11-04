@@ -3,12 +3,35 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, of } from 'rxjs';
-import { TicketAttachment } from '../entities/ticket-attachment';
+import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
-import { CursorPage, extractErrorMessage, valueOf } from '../../shared';
+import { CursorPage, extractErrorMessage, formatFileSize, valueOf } from '../../shared';
 
 /** Página vazia, usada antes de um ticket ser definido. */
 const EMPTY_PAGE: CursorPage<TicketAttachment> = { items: [], nextCursorDate: null, nextCursorId: null, hasNextPage: false };
+
+/**
+ * Motivo pelo qual a política do back-end recusaria o arquivo, ou `null` se ele passa. A quantidade e a soma
+ * por chamado só são conferidas com todos os anexos carregados (`complete`); com páginas por carregar, o
+ * back-end confere e devolve o motivo.
+ */
+export function attachmentPolicyViolation(file: File, policy: TicketAttachmentPolicy, current: TicketAttachment[], complete: boolean): string | null {
+  if (file.size > policy.maxFileSizeBytes) {
+    return `O arquivo excede o tamanho máximo permitido de ${formatFileSize(policy.maxFileSizeBytes)}.`;
+  }
+  if (!policy.allowedTypes.some(type => type.contentType === file.type)) {
+    return `O tipo de arquivo "${file.type || 'desconhecido'}" não é suportado.`;
+  }
+  if (!complete) return null;
+  if (current.length >= policy.maxAttachmentsPerTicket) {
+    return `O chamado já tem o máximo de ${policy.maxAttachmentsPerTicket} anexos. Exclua um para enviar outro.`;
+  }
+  const totalBytes = current.reduce((sum, attachment) => sum + attachment.fileSizeBytes, 0);
+  if (totalBytes + file.size > policy.maxTotalBytesPerTicket) {
+    return `Com este arquivo, os anexos do chamado passariam do limite de ${formatFileSize(policy.maxTotalBytesPerTicket)}.`;
+  }
+  return null;
+}
 
 /**
  * Store dos anexos de um ticket: listagem paginada por cursor ("carregar mais"), upload, download e exclusão.
@@ -21,6 +44,8 @@ export const TicketAttachmentsStore = signalStore(
     mutationError: null as string | null,
     uploading: false,
     uploadError: null as string | null,
+    /** Motivo pelo qual o arquivo escolhido foi recusado pela política antes de enviar (`null` quando passou). */
+    validationError: null as string | null,
     downloading: false,
     downloadError: null as string | null,
     deleting: false,
@@ -77,7 +102,7 @@ export const TicketAttachmentsStore = signalStore(
   withMethods((store) => ({
     /** Define o ticket cujos anexos devem ser carregados, disparando o resource da primeira página. */
     loadForTicket(ticketId: string): void {
-      patchState(store, { ticketId, mutationError: null, olderAttachments: [], lastPage: null });
+      patchState(store, { ticketId, mutationError: null, validationError: null, olderAttachments: [], lastPage: null });
     },
 
     /** Carrega a próxima página de anexos (mais antigos) e acrescenta à lista já exibida. */
@@ -174,6 +199,18 @@ export const TicketAttachmentsStore = signalStore(
           });
         }
       });
+    }
+  })),
+  withMethods((store) => ({
+    /**
+     * Confere o arquivo escolhido pela política do back-end e, se passar, envia. Sem a política (carregando
+     * ou com falha), envia direto: o back-end valida e devolve o motivo.
+     */
+    uploadIfValid(file: File, onSuccess?: () => void): void {
+      const policy = store.policy();
+      const violation = policy ? attachmentPolicyViolation(file, policy, store.attachments(), !store.hasMore()) : null;
+      patchState(store, { validationError: violation });
+      if (!violation) store.upload(file, onSuccess);
     }
   }))
 );

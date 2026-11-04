@@ -17,7 +17,7 @@ import {
     TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS
 } from '../entities/ticket-sla';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
-import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService, formatFileSize } from '../../shared';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
@@ -141,9 +141,6 @@ export class TicketDetailComponent implements OnInit {
 
     /** Destino do botão "Voltar" — a mesma tela de onde o usuário veio, não sempre "Meus Tickets". */
     protected readonly backLink = this.cameFromMonitor ? '/tickets/monitorar' : '/tickets';
-
-    /** Mensagem de erro de validação (tamanho/tipo) do arquivo escolhido, antes de enviar. */
-    fileValidationError = signal<string | null>(null);
 
     /**
      * Referência ao `<input type="file">` oculto, pra abrir o seletor de arquivo a partir de um
@@ -553,35 +550,17 @@ export class TicketDetailComponent implements OnInit {
 
     /** Formata o tamanho do arquivo em KB/MB para exibição. */
     formatSize(bytes: number): string {
-        if (bytes < 1024 * 1024) {
-            return `${(bytes / 1024).toFixed(0)} KB`;
-        }
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        return formatFileSize(bytes);
     }
 
-    /**
-     * Valida o arquivo escolhido (tamanho/tipo) pela política do back-end e, se válido, envia o upload.
-     * Sem a política (carregando ou com falha), envia direto: o back-end valida e devolve o motivo.
-     */
+    /** Entrega o arquivo escolhido ao Store, que confere a política do back-end antes de enviar. */
     onFileSelected(event: Event): void {
         const input = event.target as HTMLInputElement;
         const file = input.files?.[0];
         input.value = '';
         if (!file) return;
 
-        const policy = this.store.policy();
-        if (policy && file.size > policy.maxFileSizeBytes) {
-            this.fileValidationError.set(`O arquivo excede o tamanho máximo permitido de ${this.formatSize(policy.maxFileSizeBytes)}.`);
-            return;
-        }
-
-        if (policy && !policy.allowedTypes.some(type => type.contentType === file.type)) {
-            this.fileValidationError.set(`O tipo de arquivo "${file.type || 'desconhecido'}" não é suportado.`);
-            return;
-        }
-
-        this.fileValidationError.set(null);
-        this.store.upload(file, () => this.toastService.show('Anexo enviado.'));
+        this.store.uploadIfValid(file, () => this.toastService.show('Anexo enviado.'));
     }
 
     /** Confirma e exclui o anexo selecionado. */
