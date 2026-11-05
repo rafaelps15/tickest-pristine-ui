@@ -188,7 +188,7 @@ describe('authInterceptor — token renewal', () => {
   });
 
   for (const status of [0, 429, 503]) {
-    it(`deve manter a sessão e repassar o erro da renovação (${status}), não o 401 original, quando ela falha de forma passageira`, () => {
+    it(`keeps the session and passes on the refresh error (${status}), not the original 401, when the refresh fails transiently`, () => {
       tokenRefresh.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status })));
       let received: number | undefined;
       http.get('/tickets').subscribe({ error: (error: HttpErrorResponse) => received = error.status });
