@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../../shared/guards/auth.guard';
-import { adminMasterGuard } from '../../shared/guards/admin-master.guard';
+import { permissionGuard } from '../../shared/guards/permission.guard';
 import { pendingPasswordChangeGuard } from '../../shared/guards/pending-password-change.guard';
 
 /** Definição de rotas do sistema. */
@@ -49,18 +49,22 @@ export const routes: Routes = [
       },
       {
         path: 'tickets',
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'tickets:view-own' },
         loadComponent: () => import('../../tickets/feature-ticket-list/ticket-list.component')
           .then(m => m.TicketListComponent)
       },
       {
         path: 'tickets/novo',
+        canActivate: [permissionGuard],
+        data: { requiredPermission: 'tickets:create' },
         loadComponent: () => import('../../tickets/feature-ticket-create/ticket-create.component')
           .then(m => m.TicketCreateComponent)
       },
       {
         // Precisa vir antes de 'tickets/:id' — senão o router casaria "monitorar" como se fosse um id.
         path: 'tickets/monitorar',
-        canActivate: [adminMasterGuard],
+        canActivate: [permissionGuard],
         data: { requiredPermission: 'tickets:manage' },
         loadComponent: () => import('../../tickets/feature-ticket-monitor/ticket-monitor.component')
           .then(m => m.TicketMonitorComponent)
@@ -77,14 +81,14 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
-        canActivate: [adminMasterGuard],
+        canActivate: [permissionGuard],
         data: { requiredPermission: 'users:read' },
         loadComponent: () => import('../../users/feature-user-list/user-list.component')
           .then(m => m.UserListComponent)
       },
       {
         path: 'departamentos',
-        canActivate: [adminMasterGuard],
+        canActivate: [permissionGuard],
         data: { requiredPermission: ['departments:manage', 'sectors:manage'] },
         loadComponent: () => import('../../departments/feature-department-list/department-list.component')
           .then(m => m.DepartmentListComponent)
@@ -93,7 +97,7 @@ export const routes: Routes = [
       { path: 'setores', redirectTo: 'departamentos', pathMatch: 'full' },
       {
         path: 'roles',
-        canActivate: [adminMasterGuard],
+        canActivate: [permissionGuard],
         data: { requiredPermission: 'roles:manage' },
         loadComponent: () => import('../../roles/feature-role-list/role-list.component')
           .then(m => m.RoleListComponent)

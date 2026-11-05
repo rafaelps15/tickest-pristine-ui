@@ -12,14 +12,14 @@ describe('TicketCreateComponent', () => {
     id: 'dep-1',
     name: 'TI',
     description: 'Tecnologia da Informação',
-    responsibleUserName: null,
+    responsibleUserId: null, responsibleUserName: null,
     sectors: [{ id: 'sec-1', name: 'Helpdesk', description: null }]
   };
   const departmentWithoutSectors: Department = {
     id: 'dep-2',
     name: 'Jurídico',
     description: 'Contratos e processos',
-    responsibleUserName: null,
+    responsibleUserId: null, responsibleUserName: null,
     sectors: []
   };
 

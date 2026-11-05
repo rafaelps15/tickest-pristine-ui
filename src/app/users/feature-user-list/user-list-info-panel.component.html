@@ -56,10 +56,12 @@
       neutros, e o destrutivo/restaurativo fica por último, na cor da sua gravidade.
     -->
     <div class="panel-actions d-flex flex-column gap-2">
-      <button type="button" class="btn btn-outline-primary" (click)="assignRolesClick.emit()">
-        <i class="bx bx-shield-quarter me-1" aria-hidden="true"></i>Atribuir funções
-      </button>
-      @if (status() === 'pending') {
+      @if (canAssignRoles()) {
+        <button type="button" class="btn btn-outline-primary" (click)="assignRolesClick.emit()">
+          <i class="bx bx-shield-quarter me-1" aria-hidden="true"></i>Atribuir funções
+        </button>
+      }
+      @if (status() === 'pending' && canResendInvitation()) {
         <button type="button" class="btn btn-outline-secondary" [disabled]="resendingInvitation()" (click)="resendInvitationClick.emit()">
           @if (resendingInvitation()) {
             <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
@@ -69,31 +71,35 @@
           Reenviar convite
         </button>
       }
-      <button type="button" class="btn btn-outline-secondary" (click)="editClick.emit()">
-        <i class="bx bx-edit-alt me-1" aria-hidden="true"></i>Editar cadastro
-      </button>
-      @if (!isCurrentUser()) {
-        @if (!user().isActive) {
-          <button type="button" class="btn btn-outline-success" [disabled]="activating()" (click)="toggleActiveClick.emit()">
-            @if (activating()) {
-              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            } @else {
-              <i class="bx bx-check me-1" aria-hidden="true"></i>
-            }
-            Reativar
-          </button>
+      @if (canEdit()) {
+        <button type="button" class="btn btn-outline-secondary" (click)="editClick.emit()">
+          <i class="bx bx-edit-alt me-1" aria-hidden="true"></i>Editar cadastro
+        </button>
+      }
+      @if (canToggleActive()) {
+        @if (!isCurrentUser()) {
+          @if (!user().isActive) {
+            <button type="button" class="btn btn-outline-success" [disabled]="activating()" (click)="toggleActiveClick.emit()">
+              @if (activating()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              } @else {
+                <i class="bx bx-check me-1" aria-hidden="true"></i>
+              }
+              Reativar
+            </button>
+          } @else {
+            <button type="button" class="btn btn-outline-danger" [disabled]="deactivating()" (click)="toggleActiveClick.emit()">
+              @if (deactivating()) {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+              } @else {
+                <i class="bx bx-block me-1" aria-hidden="true"></i>
+              }
+              Desativar
+            </button>
+          }
         } @else {
-          <button type="button" class="btn btn-outline-danger" [disabled]="deactivating()" (click)="toggleActiveClick.emit()">
-            @if (deactivating()) {
-              <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-            } @else {
-              <i class="bx bx-block me-1" aria-hidden="true"></i>
-            }
-            Desativar
-          </button>
+          <p class="small text-muted mb-0">Sua própria conta não pode ser desativada por aqui.</p>
         }
-      } @else {
-        <p class="small text-muted mb-0">Sua própria conta não pode ser desativada por aqui.</p>
       }
     </div>
   </div>

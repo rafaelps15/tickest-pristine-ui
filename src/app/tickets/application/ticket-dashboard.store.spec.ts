@@ -30,8 +30,8 @@ describe('TicketDashboardStore', () => {
   let features: DashboardFeatures;
 
   /**
-   * Cria o Store com o Data Service falso, as permissões e as flags do teste. Por padrão, com o
-   * back-end pronto (flags ligadas) e o gráfico no escopo do recorte, pra exercitar todas as leituras.
+   * Cria o Store com o Data Service falso, as permissões e a flag do teste. Por padrão, com o volume
+   * do recorte ligado e o gráfico no escopo do recorte, pra exercitar todas as leituras.
    */
   function createStore(chartScope: 'company' | 'filtered' = 'filtered') {
     TestBed.configureTestingModule({
@@ -56,34 +56,21 @@ describe('TicketDashboardStore', () => {
     dataService.getTimes.and.returnValue(of(TIMES));
     dataService.getVolume.and.returnValue(of([{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]));
     permissions = new Set(['tickets:manage']);
-    features = { operationOverview: true, averageTimes: true, volumeResolved: true, companyStatsForAll: false, listPeriodFilter: false };
+    features = { volumeResolved: true };
   });
 
-  describe('back-end flags (DASHBOARD_FEATURES)', () => {
-    it('with the flags off, makes no request and nothing stays loading', async () => {
-      features = { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
-      const store = createStore();
-      store.setScope({ from: '2026-10-01', to: '2026-10-28' });
+  describe('volumeResolved flag (DASHBOARD_FEATURES)', () => {
+    it('off, does not request the volume of the slice, even in "Com filtros"; the overview and the times do not depend on a flag', async () => {
+      features = { volumeResolved: false };
+      createStore('filtered');
       await settle();
 
-      expect(dataService.getOverview).not.toHaveBeenCalled();
-      expect(dataService.getTimes).not.toHaveBeenCalled();
-      expect(dataService.getVolume).not.toHaveBeenCalled();
-      expect(store.overviewLoading()).toBeFalse();
-      expect(store.overviewError()).toBeNull();
-    });
-
-    it('each flag enables only its own read', async () => {
-      features = { operationOverview: false, averageTimes: true, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
-      createStore();
-      await settle();
-
-      expect(dataService.getOverview).not.toHaveBeenCalled();
+      expect(dataService.getOverview).toHaveBeenCalledTimes(1);
       expect(dataService.getTimes).toHaveBeenCalledTimes(1);
       expect(dataService.getVolume).not.toHaveBeenCalled();
     });
 
-    it('with the flag on, a 404 is a real error (not "em breve")', async () => {
+    it('a 404 in the overview is a real error (not "em breve")', async () => {
       dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
       const store = createStore();
       await settle();

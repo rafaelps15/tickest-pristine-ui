@@ -5,7 +5,7 @@ import { Department } from '../entities/department';
 
 function makeDepartment(overrides: Partial<Department> = {}): Department {
   return {
-    id: 'd1', name: 'TI', description: 'Tecnologia', responsibleUserName: 'Fulano',
+    id: 'd1', name: 'TI', description: 'Tecnologia', responsibleUserId: 'resp-1', responsibleUserName: 'Fulano',
     sectors: [{ id: 's1', name: 'Suporte', description: null }],
     ...overrides
   };
@@ -56,7 +56,7 @@ describe('DepartmentInsightsComponent', () => {
 
   it('warns how many departments have no assignee defined', async () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
-    fixture.componentRef.setInput('departments', [makeDepartment({ responsibleUserName: null })]);
+    fixture.componentRef.setInput('departments', [makeDepartment({ responsibleUserId: null, responsibleUserName: null })]);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent.replace(/\s+/g, ' ')).toContain('1 sem responsável');

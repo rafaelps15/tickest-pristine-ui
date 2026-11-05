@@ -2,8 +2,8 @@ import { Component, ChangeDetectionStrategy, inject, input, output } from '@angu
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 
-/** Tamanho máximo do motivo da reabertura — curto de propósito; o assunto continua na conversa do chamado. */
-export const TICKET_REOPEN_REASON_MAX_LENGTH = 500;
+/** Tamanho máximo do motivo da reabertura: o motivo vira mensagem do chamado, então vale o limite das mensagens no back-end. */
+export const TICKET_REOPEN_REASON_MAX_LENGTH = 4000;
 
 /**
  * Modal de reabertura de um chamado inativo, com um motivo opcional que vira mensagem no ticket —

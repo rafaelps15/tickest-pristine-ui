@@ -168,6 +168,32 @@ describe('CurrentUserService', () => {
     });
   });
 
+  it('marks the refusal of a deactivated account (403 Users.Deactivated in the title) with the reason', () => {
+    authDataService.getCurrentUser.and.returnValue(throwError(() => new HttpErrorResponse({
+      status: 403, error: { title: 'Users.Deactivated', detail: 'A conta está desativada.' }
+    })));
+
+    service.load().subscribe(value => expect(value).toEqual({ status: 'unauthenticated', reason: 'deactivated' }));
+
+    expect(session.setCurrentUser).not.toHaveBeenCalled();
+  });
+
+  it('reads the deactivated account from the code field too', () => {
+    authDataService.getCurrentUser.and.returnValue(throwError(() => new HttpErrorResponse({
+      status: 403, error: { title: 'Conta desativada', code: 'Users.Deactivated' }
+    })));
+
+    service.load().subscribe(value => expect(value).toEqual({ status: 'unauthenticated', reason: 'deactivated' }));
+  });
+
+  it('keeps another 403 as a refused session without the deactivated reason', () => {
+    authDataService.getCurrentUser.and.returnValue(throwError(() => new HttpErrorResponse({
+      status: 403, error: { title: 'Users.Unauthorized' }
+    })));
+
+    service.load().subscribe(value => expect(value).toEqual({ status: 'unauthenticated' }));
+  });
+
   it('treats a non-HTTP error as a refused session, without storing a user in the session', () => {
     authDataService.getCurrentUser.and.returnValue(throwError(() => new Error('falha inesperada')));
 

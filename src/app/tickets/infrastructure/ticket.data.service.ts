@@ -39,6 +39,11 @@ export class TicketDataService {
     return this.http.put<void>(`${this.apiUrl}/${ticketId}`, data);
   }
 
+  /** Fecha um ticket resolvido (POST /tickets/{id}/close), sem corpo; exige `tickets:manage`. */
+  close(ticketId: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${ticketId}/close`, null);
+  }
+
   /**
    * Reabre um ticket inativo (POST /tickets/{id}/reopen). Com motivo, o back-end grava também a
    * mensagem de quem reabriu, na mesma transação; sem motivo, vai sem corpo.
@@ -205,7 +210,8 @@ export class TicketDataService {
 
   /**
    * Busca o volume de chamados criados (e resolvidos) por período (GET /tickets/stats/volume): da
-   * empresa toda sem recorte, ou só do recorte; com `createdFrom`/`createdTo`, o período define o intervalo do gráfico.
+   * empresa toda sem recorte, para qualquer usuário logado (RN-35), ou só do recorte, que exige
+   * `tickets:manage`; com `createdFrom`/`createdTo`, o período define o intervalo do gráfico.
    */
   getVolume(groupBy: TicketVolumeGrouping, query: TicketStatsQuery = {}): Observable<TicketVolumePoint[]> {
     const params = appendStatsQuery(new HttpParams().set('groupBy', groupBy), query);

@@ -35,16 +35,8 @@ export class DashboardGuideComponent {
   readonly showOperation = input(false);
   /** Mostra a seção "Seus chamados" — só pra quem abre chamados e não atende a fila. */
   readonly showMine = input(false);
-  /** O escopo "Com filtros" já tem back-end (muda o que o guia diz sobre filtros e indicadores). */
-  readonly filteredAvailable = input(false);
   /** O gráfico por período também segue os filtros (spec 028). */
   readonly flowFilteredAvailable = input(false);
-  /** Os tempos médios de atendimento já estão no ar (spec 027). */
-  readonly timesAvailable = input(false);
-  /** Quem usa vê os números e o gráfico da empresa (senão, as seções deles não aparecem). */
-  readonly showCompany = input(true);
-  /** Há números que se atualizam na tela (sem eles, a seção "Atualização" não aparece). */
-  readonly showRefresh = input(true);
 
   /** O diálogo está aberto. */
   readonly open = signal(false);

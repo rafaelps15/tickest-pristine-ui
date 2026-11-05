@@ -13,7 +13,9 @@
   @if (attendingDepartments()) {
     <p class="first-use-departments small mb-4">Atendem chamados: {{ attendingDepartments() }}.</p>
   }
-  <a routerLink="/tickets/novo" class="btn btn-primary">
-    <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro chamado
-  </a>
+  @if (canCreateTickets()) {
+    <a routerLink="/tickets/novo" class="btn btn-primary">
+      <i class="bx bx-plus me-1" aria-hidden="true"></i> Abrir o primeiro chamado
+    </a>
+  }
 </div>

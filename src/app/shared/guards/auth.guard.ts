@@ -5,6 +5,7 @@ import { SessionService } from '../services/session.service';
 import { CurrentUserService } from '../services/current-user.service';
 import { CurrentUserLoadResult } from '../entities/current-user';
 import { sessionUnavailableUrlTree } from '../utils/session-unavailable.util';
+import { ACCOUNT_DEACTIVATED_LOGIN_REASON } from '../utils/account-deactivated.util';
 
 /**
  * Guard para rotas autenticadas — garante o usuário logado (GET /users/me) carregado antes de liberar a rota, cobrindo o F5.
@@ -26,7 +27,8 @@ export const authGuard: CanActivateFn = (_route, state) => {
 
 /**
  * Destino dos guards quando o usuário logado não carrega: falha passageira vai pra tela de sessão indisponível, com a
- * rota pedida; sessão recusada apaga os tokens salvos e vai pro login (como o `LoginStore` e o `SessionRecoveryStore`).
+ * rota pedida; sessão recusada apaga os tokens salvos e vai pro login (como o `LoginStore` e o `SessionRecoveryStore`),
+ * com o motivo quando a conta foi desativada.
  */
 export function redirectWhenUserNotLoaded(
   result: Exclude<CurrentUserLoadResult, { status: 'loaded' }>,
@@ -36,5 +38,7 @@ export function redirectWhenUserNotLoaded(
 ): UrlTree {
   if (result.status === 'unavailable') return sessionUnavailableUrlTree(router, result.reason, returnUrl);
   session.clearSession();
-  return router.createUrlTree(['/login']);
+  return result.reason === 'deactivated'
+    ? router.createUrlTree(['/login'], { queryParams: { motivo: ACCOUNT_DEACTIVATED_LOGIN_REASON } })
+    : router.createUrlTree(['/login']);
 }

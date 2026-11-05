@@ -61,6 +61,9 @@ export class TicketListComponent implements OnInit {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
   private readonly sessionService = inject(SessionService);
+
+  /** Pode abrir chamados (`tickets:create`): decide os atalhos para "Novo Chamado". */
+  protected readonly canCreateTickets = computed(() => this.sessionService.hasPermission('tickets:create'));
   private readonly departmentsStore = inject(DepartmentsStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);

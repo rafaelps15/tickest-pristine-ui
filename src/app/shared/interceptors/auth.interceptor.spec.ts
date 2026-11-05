@@ -57,6 +57,80 @@ describe('authInterceptor', () => {
 
     expect(currentUserService.load).toHaveBeenCalled();
   });
+
+  it('should keep the session when the reload after a 403 loads the user (permission changed)', () => {
+    const session = TestBed.inject(SessionService) as unknown as { clearSession: jasmine.Spy };
+
+    http.get('/tickets').subscribe({ error: () => undefined });
+    httpTesting.expectOne('/tickets').flush({ title: 'Users.Unauthorized' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(session.clearSession).not.toHaveBeenCalled();
+  });
+
+  it('should erase the session and go to the login with the reason when the reload after a 403 shows the account deactivated', () => {
+    currentUserService.load.and.returnValue(of({ status: 'unauthenticated' as const, reason: 'deactivated' as const }));
+    const session = TestBed.inject(SessionService) as unknown as { clearSession: jasmine.Spy };
+    const router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
+
+    http.get('/tickets').subscribe({ error: () => undefined });
+    httpTesting.expectOne('/tickets').flush(null, { status: 403, statusText: 'Forbidden' });
+
+    expect(session.clearSession).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { motivo: 'conta-desativada' } });
+  });
+
+  it('should not reload the logged-in user again when GET /users/me itself responds 403', () => {
+    http.get('/users/me').subscribe({ error: () => undefined });
+
+    httpTesting.expectOne('/users/me').flush({ title: 'Users.Deactivated' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(currentUserService.load).not.toHaveBeenCalled();
+  });
+});
+
+describe('authInterceptor + CurrentUserService — account deactivated during the session', () => {
+  let http: HttpClient;
+  let httpTesting: HttpTestingController;
+  let session: { token: () => string | null; currentUser: () => null; setCurrentUser: jasmine.Spy; clearSession: jasmine.Spy };
+  let router: jasmine.SpyObj<Router>;
+
+  beforeEach(() => {
+    session = {
+      token: () => 'token-valido', currentUser: () => null,
+      setCurrentUser: jasmine.createSpy('setCurrentUser'), clearSession: jasmine.createSpy('clearSession')
+    };
+    router = jasmine.createSpyObj('Router', ['navigate']);
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        CurrentUserService,
+        { provide: SessionService, useValue: session },
+        { provide: TokenRefreshService, useValue: jasmine.createSpyObj('TokenRefreshService', ['refresh']) },
+        { provide: Router, useValue: router }
+      ]
+    });
+    http = TestBed.inject(HttpClient);
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpTesting.verify());
+
+  it('a refused action reloads GET /users/me once, erases the session and opens the login with the reason', () => {
+    http.get('/tickets').subscribe({ error: () => undefined });
+    httpTesting.expectOne('/tickets').flush(null, { status: 403, statusText: 'Forbidden' });
+
+    httpTesting.expectOne(req => req.url.endsWith('/users/me')).flush(
+      { title: 'Users.Deactivated', detail: 'A conta está desativada.' },
+      { status: 403, statusText: 'Forbidden' }
+    );
+
+    // O verify do afterEach garante que não houve uma segunda chamada a GET /users/me.
+    expect(session.clearSession).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/login'], { queryParams: { motivo: 'conta-desativada' } });
+  });
 });
 
 describe('authInterceptor — token renewal', () => {

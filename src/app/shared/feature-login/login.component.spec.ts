@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { LoginComponent } from './login.component';
 import { LoginStore } from '../application/login.store';
 
@@ -25,6 +25,13 @@ describe('LoginComponent', () => {
     })
       .overrideProvider(LoginStore, { useValue: storeFake })
       .compileComponents();
+  });
+
+  it('does not show the deactivated account notice without the reason', async () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Sua conta foi desativada');
   });
 
   it('renders the email and password fields', async () => {
@@ -104,5 +111,27 @@ describe('LoginComponent', () => {
     expect(passwordInput.type).toBe('text');
     expect(toggleButton.getAttribute('aria-pressed')).toBe('true');
     expect(toggleButton.getAttribute('aria-label')).toBe('Ocultar senha');
+  });
+});
+
+describe('LoginComponent — session ended by a deactivated account', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ motivo: 'conta-desativada' }) } } }
+      ]
+    })
+      .overrideProvider(LoginStore, { useValue: { error: signal<string | null>(null), loading: signal(false), login: jasmine.createSpy('login') } })
+      .compileComponents();
+  });
+
+  it('shows that the account was deactivated', async () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Sua conta foi desativada');
   });
 });

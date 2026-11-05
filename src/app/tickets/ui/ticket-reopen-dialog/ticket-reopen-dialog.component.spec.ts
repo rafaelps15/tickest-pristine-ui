@@ -69,17 +69,29 @@ describe('TicketReopenDialogComponent', () => {
     expect(fixture.componentInstance.confirmedReason).toBeNull();
   });
 
+  it('emits a 600-character reason, within the limit of the ticket messages', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+
+    reasonField(fixture).value = 'x'.repeat(600);
+    reasonField(fixture).dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    submit(fixture);
+
+    expect(fixture.componentInstance.confirmedReason).toBe('x'.repeat(600));
+  });
+
   it('does not emit with a reason above the limit', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
 
-    reasonField(fixture).value = 'x'.repeat(501);
+    reasonField(fixture).value = 'x'.repeat(4001);
     reasonField(fixture).dispatchEvent(new Event('input'));
     await fixture.whenStable();
     submit(fixture);
 
     expect(fixture.componentInstance.confirmedReason).toBeUndefined();
-    expect(fixture.nativeElement.textContent).toContain('no máximo 500 caracteres');
+    expect(fixture.nativeElement.textContent).toContain('no máximo 4000 caracteres');
   });
 
   it('closes via Esc and click outside, but not while reopening', async () => {

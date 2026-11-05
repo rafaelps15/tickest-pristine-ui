@@ -773,6 +773,28 @@ describe('TicketDetailComponent', () => {
       expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.InProgress, ticket.description, jasmine.any(Function));
     });
 
+    it('changes the status without confirmation for "Marcar como resolvido"', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Marcar como resolvido')!.click();
+
+      expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Resolved, ticket.description, jasmine.any(Function));
+    });
+
+    it('asks the store to close a Resolvido ticket with "Fechar chamado", without confirmation', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      findButton(fixture, 'Fechar chamado')!.click();
+
+      expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Closed, ticket.description, jasmine.any(Function));
+    });
+
     it('asks for confirmation before cancelling, and cancels when confirmed', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       confirmDialogServiceFake.confirm.and.returnValue(of(true));

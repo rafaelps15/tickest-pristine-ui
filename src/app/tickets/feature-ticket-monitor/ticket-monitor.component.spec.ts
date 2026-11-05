@@ -18,7 +18,7 @@ import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketAssignee } from '../entities/ticket-assignee';
 import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { Department, DepartmentsStore } from '../../departments';
-import { DASHBOARD_FEATURES, SessionService, ToastService } from '../../shared';
+import { SessionService, ToastService } from '../../shared';
 
 describe('TicketMonitorComponent', () => {
   const ticket: TicketMonitorItem = {
@@ -28,7 +28,7 @@ describe('TicketMonitorComponent', () => {
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
-  const department: Department = { id: 'd1', name: 'TI', description: '', responsibleUserName: null, sectors: [{ id: 's1', name: 'Suporte', description: null }] };
+  const department: Department = { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's1', name: 'Suporte', description: null }] };
   const slaSummary: TicketSlaSummary = { activeCount: 10, onTimeCount: 6, atRiskCount: 3, breachedCount: 1, serverNowUtc: '2026-01-01T12:00:00Z' };
 
   /** Cria um store de monitoramento falso com signals reais, para o template reagir como no store verdadeiro. */
@@ -116,31 +116,12 @@ describe('TicketMonitorComponent', () => {
     }).compileComponents();
   });
 
-  describe('opening period before spec 025 on the back end', () => {
-    it('warns, in a neutral tone, that the period coming from Início does not filter the list yet', async () => {
-      TestBed.overrideProvider(DASHBOARD_FEATURES, { useValue: { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false } });
-      storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20', createdTo: '2026-10-26' });
-      const fixture = TestBed.createComponent(TicketMonitorComponent);
-      await fixture.whenStable();
+  it('the opening period coming from Início already filters the list: no "ainda não é aplicado" warning', async () => {
+    storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20', createdTo: '2026-10-26' });
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
 
-      const notice = fixture.nativeElement.querySelector('p[role="status"]') as HTMLElement;
-      expect(notice.textContent).toContain('O período de abertura (De 20/10/2026 a 26/10/2026) ainda não é aplicado nesta lista');
-      expect(notice.classList).not.toContain('text-danger');
-    });
-
-    it('without a period, shows no warning', async () => {
-      const fixture = TestBed.createComponent(TicketMonitorComponent);
-      await fixture.whenStable();
-      expect(fixture.nativeElement.textContent).not.toContain('ainda não é aplicado nesta lista');
-    });
-
-    it('with spec 025 live (flag on), the warning disappears', async () => {
-      TestBed.overrideProvider(DASHBOARD_FEATURES, { useValue: { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: true } });
-      storeFake.filters.set({ ...storeFake.filters(), createdFrom: '2026-10-20' });
-      const fixture = TestBed.createComponent(TicketMonitorComponent);
-      await fixture.whenStable();
-      expect(fixture.nativeElement.textContent).not.toContain('ainda não é aplicado nesta lista');
-    });
+    expect(fixture.nativeElement.textContent).not.toContain('ainda não é aplicado nesta lista');
   });
 
   it('loads the tickets on init, without reloading the departments (the store already loads them by itself)', async () => {

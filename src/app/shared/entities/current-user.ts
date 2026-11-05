@@ -25,9 +25,10 @@ export type SessionUnavailableReason = 'rate-limited' | 'offline' | 'server-erro
 
 /**
  * Resultado de carregar o usuário logado (GET /users/me): `loaded`; `unauthenticated` (a API recusou
- * a sessão); ou `unavailable` (falha passageira: a sessão pode continuar válida e dá pra tentar de novo).
+ * a sessão; com `reason: 'deactivated'` quando a recusa é da conta desativada); ou `unavailable` (falha
+ * passageira: a sessão pode continuar válida e dá pra tentar de novo).
  */
 export type CurrentUserLoadResult =
   | { status: 'loaded' }
-  | { status: 'unauthenticated' }
+  | { status: 'unauthenticated'; reason?: 'deactivated' }
   | { status: 'unavailable'; reason: SessionUnavailableReason };

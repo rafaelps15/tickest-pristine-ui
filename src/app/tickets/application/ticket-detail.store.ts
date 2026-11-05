@@ -164,14 +164,19 @@ export const TicketDetailStore = signalStore(
     },
 
     /**
-     * Muda o status do ticket (PUT /tickets/{id}, que exige descrição + status juntos — por isso
-     * recebe a descrição atual, sem oferecer edição aqui) e recarrega o detalhe em caso de
-     * sucesso. Exige a permissão `tickets:manage`.
+     * Muda o status do ticket e recarrega o detalhe em caso de sucesso. Fechar vai pela rota própria
+     * (POST /tickets/{id}/close), porque o PUT recusa o status Fechado; as demais transições vão pelo
+     * PUT /tickets/{id}, que exige descrição + status juntos — por isso recebe a descrição atual, sem
+     * oferecer edição aqui. Exige a permissão `tickets:manage`.
      */
     updateStatus(ticketId: string, status: TicketStatus, currentDescription: string, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, updatingStatus: true, _slaOverride: null });
 
-      store._ticketDataService.update(ticketId, { description: currentDescription, status }).pipe(
+      const request = status === TicketStatus.Closed
+        ? store._ticketDataService.close(ticketId)
+        : store._ticketDataService.update(ticketId, { description: currentDescription, status });
+
+      request.pipe(
         finalize(() => patchState(store, { updatingStatus: false }))
       ).subscribe({
         next: () => {
@@ -261,7 +266,7 @@ export const TicketDetailStore = signalStore(
         error: (err: HttpErrorResponse) => {
           // O candidato existe e está ativo, mas não tem a permissão tickets:manage — a mensagem do
           // back-end já descreve o problema; só falta apontar a correção (escolher outro candidato).
-          const candidateNotEligible = err.status === 400 && err.error?.title === 'Tickets.AssigneeCannotManageTickets';
+          const candidateNotEligible = err.status === 400 && err.error?.title === 'Tickets.AssigneeNotAttendant';
 
           patchState(store, {
             mutationError: candidateNotEligible

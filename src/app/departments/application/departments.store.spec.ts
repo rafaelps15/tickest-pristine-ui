@@ -5,7 +5,7 @@ import { of, throwError, Subject } from 'rxjs';
 import { DepartmentsStore } from './departments.store';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
-import { Department, DepartmentDetail } from '../entities/department';
+import { Department } from '../entities/department';
 import { UserDataService, UserSummary } from '../../users';
 import { PagedResponse } from '../../shared';
 
@@ -15,7 +15,7 @@ describe('DepartmentsStore', () => {
       id: 'dep-1',
       name: 'Tecnologia da Informação',
       description: 'Equipamentos, sistemas, redes e acessos.',
-      responsibleUserName: null,
+      responsibleUserId: null, responsibleUserName: null,
       sectors: [{ id: 'sec-1', name: 'Suporte técnico', description: null }]
     }
   ];
@@ -35,8 +35,8 @@ describe('DepartmentsStore', () => {
   let userDataService: jasmine.SpyObj<UserDataService>;
 
   beforeEach(() => {
-    departmentDataService = jasmine.createSpyObj('DepartmentDataService', ['getAll', 'getById', 'create', 'update', 'delete']);
-    sectorDataService = jasmine.createSpyObj('SectorDataService', ['create', 'update', 'delete']);
+    departmentDataService = jasmine.createSpyObj('DepartmentDataService', ['getAll', 'create', 'update', 'deactivate']);
+    sectorDataService = jasmine.createSpyObj('SectorDataService', ['create', 'update', 'deactivate']);
     userDataService = jasmine.createSpyObj('UserDataService', ['getAll']);
     departmentDataService.getAll.and.returnValue(of(departments));
 
@@ -133,15 +133,15 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('updates and deletes sectors by id', () => {
+  it('updates and deactivates sectors by id', () => {
     sectorDataService.update.and.returnValue(of(undefined));
-    sectorDataService.delete.and.returnValue(of(undefined));
+    sectorDataService.deactivate.and.returnValue(of(undefined));
 
     store.updateSector('sec-1', { name: 'Suporte' });
-    store.deleteSector('sec-1');
+    store.deactivateSector('sec-1');
 
     expect(sectorDataService.update).toHaveBeenCalledWith('sec-1', { name: 'Suporte' });
-    expect(sectorDataService.delete).toHaveBeenCalledWith('sec-1');
+    expect(sectorDataService.deactivate).toHaveBeenCalledWith('sec-1');
   });
 
   it('exposes the API message when the sector update fails', () => {
@@ -158,104 +158,71 @@ describe('DepartmentsStore', () => {
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('puts the sector deletion failure in deleteError, with its id, without polluting the page error', () => {
+  it('puts the sector deactivation failure in deactivateError, with its id, without polluting the page error', () => {
     const conflict = new HttpErrorResponse({
       status: 409,
       error: { detail: 'O setor tem chamados em aberto ou em andamento.' }
     });
-    sectorDataService.delete.and.returnValue(throwError(() => conflict));
+    sectorDataService.deactivate.and.returnValue(throwError(() => conflict));
     const onSuccess = jasmine.createSpy('onSuccess');
 
-    store.deleteSector('sec-1', onSuccess);
+    store.deactivateSector('sec-1', onSuccess);
 
-    expect(store.deleteError()).toEqual({ targetId: 'sec-1', message: 'O setor tem chamados em aberto ou em andamento.' });
+    expect(store.deactivateError()).toEqual({ targetId: 'sec-1', message: 'O setor tem chamados em aberto ou em andamento.' });
     expect(store.mutationError()).toBeNull();
-    expect(store.deletingId()).toBeNull();
+    expect(store.deactivatingId()).toBeNull();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it('uses the default message when the API returns no detail', () => {
-    sectorDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    sectorDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-    store.deleteSector('sec-1');
+    store.deactivateSector('sec-1');
 
-    expect(store.deleteError()?.message).toBe('Não foi possível excluir o setor.');
+    expect(store.deactivateError()?.message).toBe('Não foi possível desativar o setor.');
   });
 
-  it('deletes the department, calls onSuccess and releases deletingId', () => {
+  it('deactivates the department, calls onSuccess and releases deactivatingId', () => {
     const pending = new Subject<void>();
-    departmentDataService.delete.and.returnValue(pending.asObservable());
+    departmentDataService.deactivate.and.returnValue(pending.asObservable());
     const onSuccess = jasmine.createSpy('onSuccess');
 
-    store.delete('dep-1', onSuccess);
-    expect(store.deletingId()).toBe('dep-1');
+    store.deactivate('dep-1', onSuccess);
+    expect(store.deactivatingId()).toBe('dep-1');
 
     pending.next();
     pending.complete();
 
-    expect(departmentDataService.delete).toHaveBeenCalledWith('dep-1');
+    expect(departmentDataService.deactivate).toHaveBeenCalledWith('dep-1');
     expect(onSuccess).toHaveBeenCalled();
-    expect(store.deletingId()).toBeNull();
+    expect(store.deactivatingId()).toBeNull();
   });
 
-  it('ignores a second deletion while the first is in flight (double click)', () => {
-    departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
-    sectorDataService.delete.and.returnValue(of(undefined));
+  it('ignores a second deactivation while the first is in flight (double click)', () => {
+    departmentDataService.deactivate.and.returnValue(new Subject<void>().asObservable());
+    sectorDataService.deactivate.and.returnValue(of(undefined));
 
-    store.delete('dep-1');
-    store.delete('dep-1');
-    store.deleteSector('sec-1');
+    store.deactivate('dep-1');
+    store.deactivate('dep-1');
+    store.deactivateSector('sec-1');
 
-    expect(departmentDataService.delete).toHaveBeenCalledTimes(1);
-    expect(sectorDataService.delete).not.toHaveBeenCalled();
+    expect(departmentDataService.deactivate).toHaveBeenCalledTimes(1);
+    expect(sectorDataService.deactivate).not.toHaveBeenCalled();
   });
 
-  it('puts the department deletion failure in deleteError and clears it on retry or close', () => {
-    departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Tem chamados.' } })));
+  it('puts the department deactivation failure in deactivateError and clears it on retry or close', () => {
+    departmentDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'Tem chamados.' } })));
 
-    store.delete('dep-1');
-    expect(store.deleteError()).toEqual({ targetId: 'dep-1', message: 'Tem chamados.' });
+    store.deactivate('dep-1');
+    expect(store.deactivateError()).toEqual({ targetId: 'dep-1', message: 'Tem chamados.' });
 
-    departmentDataService.delete.and.returnValue(new Subject<void>().asObservable());
-    store.delete('dep-1');
-    expect(store.deleteError()).toBeNull();
+    departmentDataService.deactivate.and.returnValue(new Subject<void>().asObservable());
+    store.deactivate('dep-1');
+    expect(store.deactivateError()).toBeNull();
 
-    departmentDataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
-    store.clearDeleteError();
-    expect(store.deleteError()).toBeNull();
-  });
-
-  it('fetches the detail of a department and returns it to the callback', async () => {
-    const detail: DepartmentDetail = { id: 'dep-1', name: 'TI', description: 'Equipamentos', responsibleUserId: 'u-1' };
-    departmentDataService.getById.and.returnValue(of(detail));
-    const onLoaded = jasmine.createSpy('onLoaded');
-
-    store.getDepartmentDetail('dep-1', onLoaded);
-
-    expect(departmentDataService.getById).toHaveBeenCalledWith('dep-1');
-    expect(onLoaded).toHaveBeenCalledWith(detail);
-  });
-
-  it('passes the detail failure to onError, without calling onLoaded or polluting the page error', () => {
-    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-    const onLoaded = jasmine.createSpy('onLoaded');
-    const onError = jasmine.createSpy('onError');
-
-    store.getDepartmentDetail('dep-1', onLoaded, onError);
-
-    expect(onError).toHaveBeenCalledWith('Não foi possível carregar o responsável atual.');
-    expect(onLoaded).not.toHaveBeenCalled();
-    expect(store.mutationError()).toBeNull();
-    expect(store.listState().error).toBeNull();
-  });
-
-  it('reports in onError when there is no connection to the server', () => {
-    departmentDataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
-    const onError = jasmine.createSpy('onError');
-
-    store.getDepartmentDetail('dep-1', () => {}, onError);
-
-    expect(onError).toHaveBeenCalledWith('Não foi possível conectar ao servidor. Verifique sua conexão.');
+    departmentDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+    store.clearDeactivateError();
+    expect(store.deactivateError()).toBeNull();
   });
 
   it('searches for assignee candidates by name/email', async () => {

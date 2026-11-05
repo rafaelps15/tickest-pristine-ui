@@ -580,16 +580,14 @@ cada card levando a Meus Chamados — com título de card (`h2.h5`, passo headin
   (resolvidos, fechados e cancelados) e Todos — os mesmos de Meus Chamados, que não filtra por um
   status só. Cada card tem o número da lista que abre; a divisão fica no apoio ("2 abertos, 1 em
   andamento"; "5 resolvidos ou fechados, 0 cancelados") e no nome acessível do link.
-- **O conteúdo do papel primeiro (decisão de 2026-10-28):** quando os números da empresa não estão
-  disponíveis pra este papel (flag `companyStatsForAll` desligada; a spec 031 já os entrega e a flag
-  foi ligada na A-28), nada de aviso "em breve" antes dele — "Seus chamados" é a tela,
-  o subtítulo diz "Como estão os seus chamados." e não há card de Ações rápidas ("Ver todos" já leva
-  a Meus Chamados).
+- **Números da empresa e depois o do papel (RN-35):** os indicadores e o gráfico da empresa valem
+  pra todo colaborador (a spec 031 do back-end os entrega, sem flag no front), e "Seus chamados" vem
+  logo abaixo deles; não há card de Ações rápidas ("Ver todos" já leva a Meus Chamados).
 - **Primeiro uso:** sem nenhum chamado, os três zeros dão lugar a um convite ("Você ainda não abriu
   nenhum chamado." + "Abrir o primeiro chamado").
-- **Quem administra sem atender a fila** vê um card "Administração" com os atalhos que as permissões
-  dão (Usuários, Funções, Departamentos e setores), e não uma página vazia; sem números na tela, o
-  "Atualizado há" e o botão de atualizar não aparecem. O Guia só explica os blocos que o papel vê.
+- **Quem administra sem atender a fila** vê os números da empresa e um card "Administração" com os
+  atalhos que as permissões dão (Usuários, Funções, Departamentos e setores). O Guia só explica os
+  blocos que o papel vê.
 
 ### Início (gráfico principal, indicadores e operação)
 - **Para todo colaborador, números da empresa:** a faixa de indicadores (ver "Risco primeiro" abaixo:

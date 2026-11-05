@@ -10,12 +10,14 @@
     </a>
   </li>
 
-  <li class="menu-item" [class.active]="activeTicketsItem() === 'mine'">
-    <a routerLink="/tickets" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'mine' ? 'page' : null">
-      <i class="menu-icon tf-icons bx bx-receipt"></i>
-      <div>Meus Chamados</div>
-    </a>
-  </li>
+  @if (sessionService.hasPermission('tickets:view-own')) {
+    <li class="menu-item" [class.active]="activeTicketsItem() === 'mine'">
+      <a routerLink="/tickets" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'mine' ? 'page' : null">
+        <i class="menu-icon tf-icons bx bx-receipt"></i>
+        <div>Meus Chamados</div>
+      </a>
+    </li>
+  }
 
   <!-- Administração -->
   @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:manage') ||

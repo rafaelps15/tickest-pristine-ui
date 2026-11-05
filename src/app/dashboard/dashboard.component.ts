@@ -148,6 +148,12 @@ export class DashboardComponent implements OnInit {
   /** Quem atende a fila (`tickets:manage`): vê filtros, Central de atenção e Alertas de SLA. */
   protected readonly showOperation = computed(() => this.sessionService.hasPermission('tickets:manage'));
 
+  /** Pode abrir chamados (`tickets:create`): decide os atalhos para "Novo Chamado". */
+  protected readonly canCreateTickets = computed(() => this.sessionService.hasPermission('tickets:create'));
+
+  /** Pode ver os próprios chamados (`tickets:view-own`): decide os atalhos para "Meus Chamados". */
+  protected readonly canViewOwnTickets = computed(() => this.sessionService.hasPermission('tickets:view-own'));
+
   /** Mostra "Seus chamados": pra quem abre chamados e não atende a fila (quem atende tem os atalhos da fila). */
   protected readonly showMyTickets = computed(() =>
       this.sessionService.hasPermission('tickets:view-own') && !this.sessionService.hasPermission('tickets:manage'));
@@ -175,15 +181,12 @@ export class DashboardComponent implements OnInit {
   protected readonly scope = computed(() => resolveDashboardScope(
     this.filters.filters(), this.departmentsStore.departments(), this.departmentsStore.listState().loading, this.today));
 
-  /** O escopo "Com filtros" já tem back-end pros números: o agregado (spec 026). */
-  protected readonly filteredAvailable = computed(() => this.showOperation() && this.features.operationOverview);
-
   /** O fluxo do gráfico também segue os filtros: precisa do volume do recorte (spec 028). */
-  protected readonly flowFilteredAvailable = computed(() => this.filteredAvailable() && this.features.volumeResolved);
+  protected readonly flowFilteredAvailable = computed(() => this.showOperation() && this.features.volumeResolved);
 
-  /** Escopo efetivo dos números: "filtered" só com o back-end pronto e escolhido; senão a empresa toda. */
+  /** Escopo efetivo dos números: "filtered" só pra quem atende a fila e o escolheu; senão a empresa toda. */
   protected readonly chartScope = computed((): TicketDashboardChartScope =>
-      this.filteredAvailable() && this.operation.chartScope() === 'filtered' ? 'filtered' : 'company');
+      this.showOperation() && this.operation.chartScope() === 'filtered' ? 'filtered' : 'company');
 
   /** Escopo do fluxo: o dos números, menos "Com filtros" enquanto o volume do recorte não existe (fica a empresa). */
   protected readonly flowScope = computed((): TicketDashboardChartScope =>
@@ -202,10 +205,10 @@ export class DashboardComponent implements OnInit {
   // ── Números da empresa ou do recorte ──────────────────────────────────────────────────────────
 
   /**
-   * Os totais vêm do agregado da operação (spec 026): no escopo "Com filtros", o do recorte; no da
-   * empresa, o mesmo agregado com escopo vazio. Sem ele (quem não atende a fila), dos totais por status.
+   * Pra quem atende a fila, os totais vêm do agregado da operação (spec 026): no escopo "Com filtros", o
+   * do recorte; no da empresa, o mesmo agregado com escopo vazio. Pros demais, dos totais por status.
    */
-  private readonly countsFromOverview = computed(() => this.filteredAvailable());
+  private readonly countsFromOverview = computed(() => this.showOperation());
 
   /** Totais por status do escopo, como a fonte responde agora (null carregando ou em erro). */
   private readonly liveCounts = computed((): TicketStatusCounts | null => {
@@ -234,7 +237,7 @@ export class DashboardComponent implements OnInit {
 
   /** Estado dos totais por status (indicadores e composição); com números antigos na tela, não é erro. */
   protected readonly countsState = computed(() => widgetState({
-    available: this.countsFromOverview() || this.store.companyStatsAvailable(),
+    available: true,
     failed: this.countsFailed() && this.counts() === null,
     hasValue: this.counts() !== null
   }));
@@ -282,7 +285,7 @@ export class DashboardComponent implements OnInit {
     // Resolvidos só contam pro "vazio" quando a série aparece (flag volumeResolved); desligada, só os criados.
     const empty = points.every(point => point.count === 0 && !(this.features.volumeResolved && point.resolvedCount));
     return widgetState({
-      available: this.flowScope() === 'company' ? this.store.companyStatsAvailable() : true,
+      available: true,
       failed: this.flowFailed() && this.shownPoints() === null,
       hasValue: this.shownPoints() !== null,
       empty
@@ -292,15 +295,12 @@ export class DashboardComponent implements OnInit {
   /** A última atualização falhou, mas os números anteriores continuam na tela (velhos). */
   protected readonly staleAfterFailure = computed(() =>
     (this.countsFailed() && this.counts() !== null) || (this.flowFailed() && this.shownPoints() !== null)
-    || (this.filteredAvailable() && this.operation.overviewStale())
-    || (this.showOperation() && this.features.averageTimes && this.operation.timesStale())
+    || (this.showOperation() && this.operation.overviewStale())
+    || (this.showOperation() && this.operation.timesStale())
     || (this.showMyTickets() && !!this.myTickets?.stale()));
 
   /** Frase de destaque do gráfico, só com o fluxo carregado. */
   protected readonly insight = computed(() => this.flowState() === 'ready' ? volumeInsight(this.flowPoints(), this.flowGroupBy(), this.features.volumeResolved) : null);
-
-  /** Os números da empresa não existem pra este papel ainda: indicadores e gráfico viram um aviso só. */
-  protected readonly companyUnavailable = computed(() => this.countsState() === 'unavailable' && this.flowState() === 'unavailable');
 
   /**
    * Primeiro uso: a empresa não tem nenhum chamado (sem filtro) — o gráfico vazio vira um convite
@@ -382,7 +382,7 @@ export class DashboardComponent implements OnInit {
     const queue: DashboardKpi = { key: 'backlog', label: 'Na fila', value: backlog, hint: this.hasPeriod() ? 'abertos no período, ainda ativos' : 'abertos e em andamento', trend: countTrend(backlog ?? undefined, previous?.backlogCount),
       link: this.link({ status: 'active' }, {}, mine?.activeCount() ?? null, backlog) };
     if (this.showOperation()) {
-      return [this.overdueKpi(), ...(this.filteredAvailable() ? [this.unassignedKpi()] : []), queue, total];
+      return [this.overdueKpi(), this.unassignedKpi(), queue, total];
     }
     return [
       total,
@@ -394,20 +394,12 @@ export class DashboardComponent implements OnInit {
     ];
   });
 
-  /**
-   * Atrasados, o primeiro número de quem atende a fila. Com o agregado (spec 026), segue o escopo dos
-   * outros números; sem ele, vem dos Alertas de SLA (a empresa toda).
-   */
+  /** Atrasados, o primeiro número de quem atende a fila: do agregado (spec 026), no escopo dos outros números. */
   private overdueKpi(): DashboardKpi {
-    const link = this.link({ slaStatus: TicketSlaStatus.Breached }, {}, null, null);
-    if (this.filteredAvailable()) {
-      const overview = this.operation.overview();
-      return { key: 'overdue', label: 'Atrasados', value: overview?.attention.breachedCount ?? null, risk: 'danger',
-        loading: overview === null && !this.operation.overviewFailed(), hint: this.hasPeriod() ? 'abertos no período, passaram do prazo' : 'passaram do prazo', link };
-    }
-    const loaded = this.store.criticalTicketsLoadedAtMs() !== null;
-    return { key: 'overdue', label: 'Atrasados', value: loaded ? this.store.breachedCount() : null, risk: 'danger',
-      loading: !loaded && !this.store.criticalTicketsError(), hint: 'passaram do prazo', link };
+    const overview = this.operation.overview();
+    return { key: 'overdue', label: 'Atrasados', value: overview?.attention.breachedCount ?? null, risk: 'danger',
+      loading: overview === null && !this.operation.overviewFailed(), hint: this.hasPeriod() ? 'abertos no período, passaram do prazo' : 'passaram do prazo',
+      link: this.link({ slaStatus: TicketSlaStatus.Breached }, {}, null, null) };
   }
 
   /** Ativos sem responsável, do agregado (spec 026): o segundo risco da fila, logo depois dos atrasados. */
@@ -482,25 +474,14 @@ export class DashboardComponent implements OnInit {
   /** Subtítulo do cabeçalho, no que este papel vê na tela. */
   protected readonly subtitle = computed(() => {
     if (this.showOperation()) return 'Como está a operação e o que pede ação agora.';
-    if (this.companyUnavailable() && this.showMyTickets()) return 'Como estão os seus chamados.';
-    if (this.companyUnavailable() && this.adminLinks().length > 0) return 'Atalhos do que você administra.';
     return 'Como estão os chamados de toda a empresa.';
   });
-
-  /** Há números na tela que se atualizam (o "Atualizado há" e o botão de atualizar só aparecem com eles). */
-  protected readonly hasRefreshable = computed(() => !this.companyUnavailable() || this.showMyTickets());
-
-  /** O aviso "números da empresa em breve" só pra quem não teria mais nada na tela. */
-  protected readonly showCompanyNotice = computed(() => !this.showMyTickets() && this.adminLinks().length === 0);
 
   /** Quem abre chamados ainda não abriu nenhum: "Seus chamados" vira o convite pro primeiro. */
   protected readonly myTicketsEmpty = computed(() => {
     const mine = this.myTickets;
     return !!mine && !mine.loading() && !mine.failed() && mine.totalCount() === 0;
   });
-
-  /** SLA detalhado e tempos estão os dois esperando o back-end: um aviso só pra linha. */
-  protected readonly secondaryUnavailable = computed(() => !this.features.operationOverview && !this.features.averageTimes);
 
   /**
    * Os 3 cards de "Seus chamados", nos mesmos grupos de Meus Chamados (Em aberto, Encerrados e Todos):
@@ -545,8 +526,8 @@ export class DashboardComponent implements OnInit {
    */
   private readonly failedWithoutData = computed(() =>
     (this.countsFailed() && this.counts() === null) || (this.flowFailed() && this.shownPoints() === null)
-    || (this.filteredAvailable() && this.operation.overviewError() !== null && this.operation.overview() === null)
-    || (this.showOperation() && this.features.averageTimes && this.operation.timesError() !== null && this.operation.times() === null)
+    || (this.showOperation() && this.operation.overviewError() !== null && this.operation.overview() === null)
+    || (this.showOperation() && this.operation.timesError() !== null && this.operation.times() === null)
     || this.store.criticalTicketsError() !== null
     || (this.showMyTickets() && !!this.myTickets?.failed()));
 
@@ -599,7 +580,7 @@ export class DashboardComponent implements OnInit {
   constructor() {
     // O escopo vem da URL a cada visita: com filtros, "Com filtros"; sem, a empresa toda. O store é da
     // raiz e, sem isso, reabria a tela no escopo da visita anterior, com a barra vazia.
-    this.operation.setChartScope(this.filteredAvailable() && this.filters.active() ? 'filtered' : 'company');
+    this.operation.setChartScope(this.showOperation() && this.filters.active() ? 'filtered' : 'company');
 
     // Os widgets operacionais seguem o escopo: recorte da URL em "Com filtros", empresa toda no outro
     // (trocar um filtro cancela as requisições em voo). Os Alertas de SLA seguem o mesmo recorte (decisão

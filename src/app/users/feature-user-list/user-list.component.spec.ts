@@ -1208,6 +1208,21 @@ describe('UserListComponent', () => {
     expect(rows[1].textContent).toContain('Convite expirado');
   });
 
+  it('with only users:read, hides creating, editing, assigning roles, deactivating, reactivating and resending the invitation', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'users:read');
+    const pending: UserSummary = { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null };
+    usersStoreFake.users.set([pending, inactiveUser]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    // O guia da tela cita as ações em texto corrido: a conferência olha só os botões.
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).map(b => b.textContent ?? '');
+    for (const action of ['Novo Usuário', 'Atribuir funções', 'Editar cadastro', 'Reenviar convite', 'Desativar', 'Reativar']) {
+      expect(buttons.some(text => text.includes(action))).withContext(action).toBeFalse();
+    }
+    expect(fixture.nativeElement.querySelectorAll('tbody input[type="checkbox"]').length).toBe(0);
+  });
+
   it('offers "Reenviar convite" in the ⋮ only for someone who has not activated the account yet, and calls the store', async () => {
     const pending: UserSummary = { ...activeUser, pendingActivation: true, invitationExpiresAtUtc: null };
     usersStoreFake.users.set([pending, inactiveUser]);

@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { MainLayoutComponent, activeTicketsMenu } from './main-layout.component';
+import { SessionService } from '../../../services/session.service';
 
 /** Tela de teste com o título (h1) que recebe o foco depois de navegar pela gaveta. */
 @Component({ template: '<h1>Tela de teste</h1><button type="button">Ação</button>' })
@@ -123,6 +124,10 @@ describe('MainLayoutComponent', () => {
 
     it('when choosing a drawer item, focus goes to the title of the new screen', async () => {
       useStubRoutes();
+      // "Meus Chamados" só aparece para quem tem tickets:view-own.
+      TestBed.inject(SessionService).setCurrentUser({
+        id: 'u1', email: 'maria@empresa.com', firstName: 'Maria', lastName: 'Silva', roles: [], permissions: ['tickets:view-own']
+      });
       const { fixture, openButton } = await render();
       openButton.click();
       await fixture.whenStable();

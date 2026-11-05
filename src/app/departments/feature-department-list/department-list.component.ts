@@ -45,7 +45,7 @@ export class DepartmentListComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   /** Store de departamentos e setores (listagem, mutações e busca de responsável). */
   protected readonly store = inject(DepartmentsStore);
-  /** Diálogo de confirmação do sistema, usado antes de excluir. */
+  /** Diálogo de confirmação do sistema, usado antes de desativar. */
   private readonly confirmDialogService = inject(ConfirmDialogService);
   /** Sessão do usuário logado, pra checar as permissões de gestão. */
   private readonly sessionService = inject(SessionService);
@@ -56,13 +56,13 @@ export class DepartmentListComponent implements OnInit {
   /** Encerra os timers do realce de item novo quando a tela é destruída. */
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Cabeçalho da página — recebe o foco depois que o card excluído some. */
+  /** Cabeçalho da página — recebe o foco depois que o card desativado some. */
   private readonly pageHeader = viewChild(PageHeaderComponent);
 
-  /** Se o usuário logado pode criar, editar e excluir departamentos. */
+  /** Se o usuário logado pode criar, editar e desativar departamentos. */
   readonly canManageDepartments = computed(() => this.sessionService.hasPermission('departments:manage'));
 
-  /** Se o usuário logado pode criar, editar e excluir setores. */
+  /** Se o usuário logado pode criar, editar e desativar setores. */
   readonly canManageSectors = computed(() => this.sessionService.hasPermission('sectors:manage'));
 
   /** Departamento em edição (null quando o modal está no modo "criar"). */
@@ -86,20 +86,8 @@ export class DepartmentListComponent implements OnInit {
   /** Nome do responsável selecionado, pra exibir sem precisar re-buscar (vem da listagem ou da busca). */
   selectedResponsibleName = signal<string | null>(null);
 
-  /** Enquanto busca o id do responsável atual (GET /departments/{id}) ao abrir o modal de edição. */
-  loadingCurrentResponsible = signal(false);
-
   /** Departamento ou setor recém-criado, destacado por {@link NEW_ITEM_HIGHLIGHT_MS} pra quem acabou de salvar achar o que criou. */
   readonly highlightedId = signal<string | null>(null);
-
-  /** Falha ao buscar o responsável atual no modal de edição (mostrada ali, com "Tentar de novo"), ou `null`. */
-  currentResponsibleError = signal<string | null>(null);
-
-  /**
-   * Se já se sabe quem é o responsável a gravar. Na edição, só depois de carregar o atual ou de o admin
-   * escolher/remover um — o PUT grava o que for enviado, então salvar sem saber apagaria o responsável.
-   */
-  responsibleKnown = signal(true);
 
   /** Problema escolhido num aviso do Resumo ("sem setor"/"sem responsável"), ou `null` pra todos. */
   readonly issueFilter = signal<DepartmentIssue | null>(null);
@@ -139,11 +127,11 @@ export class DepartmentListComponent implements OnInit {
   });
 
   /** Departamento com uma exclusão em voo (dele ou de um setor dele) — o card fica `aria-busy` —, ou `null`. */
-  readonly deletingDepartmentId = computed(() => this.departmentOf(this.store.deletingId()));
+  readonly deactivatingDepartmentId = computed(() => this.departmentOf(this.store.deactivatingId()));
 
   /** Falha da última exclusão e o departamento em cujo card ela aparece (dele ou de um setor dele), ou `null`. */
-  readonly deleteErrorPlacement = computed(() => {
-    const error = this.store.deleteError();
+  readonly deactivateErrorPlacement = computed(() => {
+    const error = this.store.deactivateError();
     const departmentId = this.departmentOf(error?.targetId ?? null);
     return error && departmentId ? { departmentId, message: error.message } : null;
   });
@@ -176,7 +164,6 @@ export class DepartmentListComponent implements OnInit {
    * com o texto (dentro de um `@if`), o leitor de tela não anunciava.
    */
   readonly responsibleStatusMessage = computed(() => {
-    if (this.loadingCurrentResponsible()) return 'Carregando responsável atual…';
     if (this.responsibleSearchPending()) return 'Buscando usuários…';
     if (this.store.responsibleSearchError() || !this.responsibleSearchInput().trim()) return '';
     const count = this.store.responsibleCandidates().length;
@@ -257,16 +244,11 @@ export class DepartmentListComponent implements OnInit {
     this.responsibleSearchInput.set('');
     this.selectedResponsibleId.set(null);
     this.selectedResponsibleName.set(null);
-    this.loadingCurrentResponsible.set(false);
-    this.currentResponsibleError.set(null);
-    this.responsibleKnown.set(true);
   }
 
   /**
-   * Prepara o modal de departamento para edição do departamento informado. O nome do responsável
-   * atual já vem na listagem, mas o id não — busca o detalhe (GET /departments/{id}) pra saber
-   * quem está selecionado antes do admin trocar. Sem responsável na listagem, não há o que buscar:
-   * o "Salvar" já fica liberado (antes, uma falha nesse GET travava até renomear).
+   * Prepara o modal de departamento para edição do departamento informado, com o responsável atual (id e
+   * nome) que já vem na listagem.
    */
   openEditModal(department: Department, focusResponsible = false): void {
     this.focusResponsible.set(focusResponsible);
@@ -276,53 +258,8 @@ export class DepartmentListComponent implements OnInit {
     this.editingDepartment.set(department);
     this.form.setValue({ name: department.name, description: department.description });
     this.responsibleSearchInput.set('');
-    this.selectedResponsibleId.set(null);
+    this.selectedResponsibleId.set(department.responsibleUserId);
     this.selectedResponsibleName.set(department.responsibleUserName);
-    this.currentResponsibleError.set(null);
-    this.loadingCurrentResponsible.set(false);
-
-    if (!department.responsibleUserName) {
-      this.responsibleKnown.set(true);
-      return;
-    }
-    this.responsibleKnown.set(false);
-    this.loadCurrentResponsible(department);
-  }
-
-  /** "Tentar de novo" do responsável atual: busca outra vez e leva o foco à busca (o botão vira spinner). */
-  retryCurrentResponsible(): void {
-    const department = this.editingDepartment();
-    if (!department) return;
-    this.loadCurrentResponsible(department);
-    this.focusElement('#departmentResponsibleSearch');
-  }
-
-  /**
-   * Busca o id do responsável atual do departamento em edição (GET /departments/{id}). Também é o
-   * "Tentar de novo" do modal quando a busca falha.
-   */
-  loadCurrentResponsible(department: Department): void {
-    this.loadingCurrentResponsible.set(true);
-    this.currentResponsibleError.set(null);
-
-    // Nos dois callbacks, ignora a resposta se o admin já trocou de departamento no modal antes dela
-    // chegar (ex.: abriu "editar" em A e, antes de carregar, abriu "editar" em B).
-    const stillEditing = () => this.editingDepartment()?.id === department.id;
-
-    this.store.getDepartmentDetail(department.id, detail => {
-      if (!stillEditing()) return;
-
-      this.loadingCurrentResponsible.set(false);
-      // O admin pode ter escolhido outro responsável enquanto carregava: a escolha dele vale.
-      if (this.responsibleKnown()) return;
-      this.selectedResponsibleId.set(detail.responsibleUserId);
-      this.responsibleKnown.set(true);
-    }, message => {
-      if (!stillEditing()) return;
-
-      this.loadingCurrentResponsible.set(false);
-      this.currentResponsibleError.set(message);
-    });
   }
 
   /**
@@ -330,8 +267,6 @@ export class DepartmentListComponent implements OnInit {
    * candidatos some, então o foco volta pra busca.
    */
   onSelectResponsible(candidate: UserSummary): void {
-    this.responsibleKnown.set(true);
-    this.currentResponsibleError.set(null);
     this.selectedResponsibleId.set(candidate.id);
     this.selectedResponsibleName.set(`${candidate.firstName} ${candidate.lastName}`);
     this.responsibleSearchInput.set('');
@@ -340,13 +275,10 @@ export class DepartmentListComponent implements OnInit {
   }
 
   /**
-   * Remove o responsável selecionado no formulário de departamento (volta a "sem responsável"). Também
-   * é a saída quando o responsável atual não carregou. O botão some, então o foco vai pra busca.
+   * Remove o responsável selecionado no formulário de departamento (volta a "sem responsável"). O botão
+   * some, então o foco vai pra busca.
    */
   onClearResponsible(): void {
-    this.responsibleKnown.set(true);
-    this.currentResponsibleError.set(null);
-    this.loadingCurrentResponsible.set(false);
     this.selectedResponsibleId.set(null);
     this.selectedResponsibleName.set(null);
     this.focusElement('#departmentResponsibleSearch');
@@ -358,7 +290,6 @@ export class DepartmentListComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    if (!this.responsibleKnown()) return;
 
     const raw = this.form.getRawValue();
     const data = {
@@ -381,39 +312,39 @@ export class DepartmentListComponent implements OnInit {
         this.toastService.show(`Departamento "${data.name}" criado. Ele só aparece na abertura de chamados depois do primeiro setor.`, 'success', {
           label: 'Adicionar setor',
           run: () => this.openCreateSectorModal(this.store.departments().find(d => d.id === departmentId)
-            ?? { id: departmentId, name: data.name, description: data.description, responsibleUserName: null, sectors: [] })
+            ?? { id: departmentId, name: data.name, description: data.description, responsibleUserId: data.responsibleUserId ?? null, responsibleUserName: null, sectors: [] })
         });
       });
     }
   }
 
   /**
-   * Confirma e exclui o departamento selecionado. O botão diz o tamanho do estrago (os setores saem
-   * junto) e a mensagem antecipa a recusa do back quando há chamados em andamento (RN-10). No sucesso,
+   * Confirma e desativa o departamento selecionado. O botão diz o tamanho do efeito (os setores são
+   * desativados junto) e a mensagem antecipa a recusa do back quando há chamados em andamento (RN-10). No sucesso,
    * toast e foco no título (o card some); na falha, foco de volta no "⋮" do card, onde o erro aparece.
    */
-  onDelete(department: Department): void {
+  onDeactivate(department: Department): void {
     const sectorCount = department.sectors.length;
     const sectorsNotice = sectorCount === 0
       ? ''
       : sectorCount === 1
-        ? ' O setor dele também será excluído.'
-        : ` Os ${sectorCount} setores dele também serão excluídos.`;
+        ? ' O setor dele também será desativado.'
+        : ` Os ${sectorCount} setores dele também serão desativados.`;
 
     this.confirmDialogService.confirm({
-      title: `Excluir o departamento "${department.name}"?`,
-      message: `Ele deixa de aparecer na abertura de chamados.${sectorsNotice} Se algum setor tiver chamados em andamento, a exclusão é recusada. Essa ação não pode ser desfeita.`,
+      title: `Desativar o departamento "${department.name}"?`,
+      message: `Ele deixa de aparecer na abertura de chamados.${sectorsNotice} Os chamados já registrados continuam no histórico. Se algum setor tiver chamados em andamento, a desativação é recusada. Por enquanto, não dá para reativar pela tela.`,
       confirmLabel: sectorCount === 0
-        ? 'Excluir departamento'
-        : `Excluir departamento e ${sectorCount === 1 ? '1 setor' : `${sectorCount} setores`}`,
+        ? 'Desativar departamento'
+        : `Desativar departamento e ${sectorCount === 1 ? '1 setor' : `${sectorCount} setores`}`,
       variant: 'danger'
     }).subscribe(confirmed => {
       if (!confirmed) {
         this.focusRowActions(department.id);
         return;
       }
-      this.store.delete(department.id, () => {
-        this.toastService.show(`Departamento "${department.name}" excluído.`);
+      this.store.deactivate(department.id, () => {
+        this.toastService.show(`Departamento "${department.name}" desativado.`);
         this.pageHeader()?.focus();
       }, () => this.focusRowActions(department.id));
     });
@@ -528,22 +459,22 @@ export class DepartmentListComponent implements OnInit {
   }
 
   /**
-   * Confirma e exclui o setor selecionado. No sucesso, toast e foco no "⋮" do departamento (a linha do
+   * Confirma e desativa o setor selecionado. No sucesso, toast e foco no "⋮" do departamento (a linha do
    * setor some); na falha, foco de volta no "⋮" do setor, com o erro no card.
    */
-  onDeleteSector(department: Department, sector: DepartmentSector): void {
+  onDeactivateSector(department: Department, sector: DepartmentSector): void {
     this.confirmDialogService.confirm({
-      title: `Excluir o setor "${sector.name}"?`,
-      message: `Ele deixa de aparecer em ${department.name} na abertura de chamados. Se ele tiver chamados em andamento, a exclusão é recusada. Essa ação não pode ser desfeita.`,
-      confirmLabel: 'Excluir setor',
+      title: `Desativar o setor "${sector.name}"?`,
+      message: `Ele deixa de aparecer em ${department.name} na abertura de chamados. Os chamados já registrados continuam no histórico. Se ele tiver chamados em andamento, a desativação é recusada. Por enquanto, não dá para reativar pela tela.`,
+      confirmLabel: 'Desativar setor',
       variant: 'danger'
     }).subscribe(confirmed => {
       if (!confirmed) {
         this.focusRowActions(sector.id);
         return;
       }
-      this.store.deleteSector(sector.id, () => {
-        this.toastService.show(`Setor "${sector.name}" excluído de ${department.name}.`);
+      this.store.deactivateSector(sector.id, () => {
+        this.toastService.show(`Setor "${sector.name}" desativado em ${department.name}.`);
         this.focusRowActions(department.id);
       }, () => this.focusRowActions(sector.id));
     });

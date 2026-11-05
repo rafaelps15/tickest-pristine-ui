@@ -34,7 +34,8 @@ function rowAction(root: HTMLElement, text: string): HTMLButtonElement | undefin
 }
 
 /** Permissões do perfil Solicitante, dono dos chamados desta lista. */
-const OWNER_PERMISSIONS = (code: string) => code === 'tickets:update-own' || code === 'tickets:reopen-own';
+const OWNER_PERMISSIONS = (code: string) =>
+  code === 'tickets:update-own' || code === 'tickets:reopen-own' || code === 'tickets:create' || code === 'tickets:view-own';
 
 describe('TicketListComponent', () => {
   const openTicket: Ticket = {
@@ -184,6 +185,16 @@ describe('TicketListComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.spinner-border')).not.toBeNull();
+  });
+
+  it('does not offer "Novo Chamado" without tickets:create, in the header nor in the first-use state', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
+    storeFake.tickets.set([]);
+    storeFake.hasAnyTicket.set(false);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('a[href="/tickets/novo"]')).toBeNull();
   });
 
   it('shows the first-use empty state when the person has no tickets at all', async () => {
@@ -563,7 +574,14 @@ describe('TicketListComponent', () => {
     expect(router.url).toBe('/?status=all&q=monitor');
   });
 
-  it('searches by title only after the person stops typing', async () => {
+  it('says the search looks in the title or the description, as the back end does', async () => {
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement.querySelector('#ticketSearch') as HTMLInputElement).placeholder).toBe('Título ou descrição');
+  });
+
+  it('searches by title or description only after the person stops typing', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
     storeFake.setSearch.calls.reset();
