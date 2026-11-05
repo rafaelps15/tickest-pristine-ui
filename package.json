@@ -6,8 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "serve:ssr:TickestPristine": "node dist/tickest-pristine/server/server.mjs"
+    "test": "ng test"
   },
   "private": true,
   "dependencies": {
@@ -16,12 +15,9 @@
     "@angular/core": "^22.0.6",
     "@angular/forms": "^22.0.6",
     "@angular/platform-browser": "^22.0.6",
-    "@angular/platform-server": "^22.0.6",
     "@angular/router": "^22.0.6",
-    "@angular/ssr": "^22.0.6",
     "@ngrx/signals": "^22.0.0-beta.0",
     "chart.js": "^4.5.1",
-    "express": "^4.18.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -29,9 +25,7 @@
     "@angular/build": "^22.0.8",
     "@angular/cli": "^22.0.6",
     "@angular/compiler-cli": "^22.0.6",
-    "@types/express": "^4.17.17",
     "@types/jasmine": "~5.1.0",
-    "@types/node": "^18.18.0",
     "istanbul-lib-instrument": "^6.0.3",
     "jasmine-core": "~5.2.0",
     "karma": "~6.4.0",
