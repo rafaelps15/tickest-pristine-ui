@@ -72,7 +72,7 @@ rounded:
   pill: "999px"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
+    backgroundColor: "{colors.primary-dark}"
     textColor: "#ffffff"
     rounded: "{rounded.sm}"
     padding: "0.5rem 1rem"
@@ -151,39 +151,39 @@ A paleta é construída sobre um único acento (Índigo Confiança) e uma escala
 semânticas reservadas estritamente para status/prioridade — nunca usadas como decoração.
 
 ### Primary
-- **Índigo Confiança** (`#696cff`): a cor da marca. Usada em botões primários (como gradiente,
+- **Índigo Confiança** (token `primary`): a cor da marca. Usada em botões primários (como gradiente,
   ver Components), estado ativo do menu lateral, anel de foco de formulário, ícones de destaque.
   Aparece em ≤10% de qualquer tela — ver **The One Accent Rule** abaixo.
-- **Índigo Confiança Escuro** (`#5f61e6`): ponta clara do gradiente do botão primário (branco
-  sobre ele dá 4,8:1; sobre o `#696cff` puro dava só 4,0:1 — trocado na critique 2 de
+- **Índigo Confiança Escuro** (token `primary-dark`): ponta clara do gradiente do botão primário (branco
+  sobre ele dá 4,8:1; sobre o `primary` puro dava só 4,0:1 — trocado na critique 2 de
   Departamentos, 2026-10-28).
-- **Índigo Profundo** (`#3a3ca3`): acento mais escuro — wordmark ("tickest") no login/ativação,
+- **Índigo Profundo** (token `primary-darker`): acento mais escuro — wordmark ("tickest") no login/ativação,
   a outra ponta do gradiente do botão primário (misturado ao escuro) e, via `--tk-primary-text`,
   o índigo usado **como texto** sobre fundo claro (7,5:1). No tema escuro, `--tk-primary-text`
   vira `#b3b5ff` (6,9:1). Texto em índigo usa `--tk-primary-text`, nunca o `--tk-primary` puro.
 
 ### Neutral
-- **Grafite Texto** (`#2b2c40`): texto principal (claro).
-- **Ardósia Secundária** (`#5f6f82`): texto secundário/rótulos de formulário (claro).
+- **Grafite Texto** (token `text-primary`): texto principal (claro).
+- **Ardósia Secundária** (token `text-secondary`): texto secundário/rótulos de formulário (claro).
   Escurecida em 2026-10-27 (era `#697a8d`: ~4,40:1 sobre branco, ~4,05:1 sobre o fundo de página)
-  — agora ~5,1:1 sobre branco e ~4,7:1 sobre `#f5f5f9`; achado do audit de Meus Chamados.
-- **Névoa Terciária** (`#65707e`, escurecido em 2026-10-28 pra passar 4,5:1 também sobre o fundo da página): texto terciário/placeholder, cabeçalho de tabela (claro). O `.text-muted` do Bootstrap continua o dele (`--bs-secondary-color`, mais escuro): trocá-lo pelo token derrubava o contraste abaixo de 4,5:1 sobre fundos com tinta no escuro (revisão de 2026-10-29).
+  — agora ~5,1:1 sobre branco e ~4,7:1 sobre o `page-bg`; achado do audit de Meus Chamados.
+- **Névoa Terciária** (token `text-muted`, escurecido em 2026-10-28 pra passar 4,5:1 também sobre o fundo da página): texto terciário/placeholder, cabeçalho de tabela (claro). O `.text-muted` do Bootstrap continua o dele (`--bs-secondary-color`, mais escuro): trocá-lo pelo token derrubava o contraste abaixo de 4,5:1 sobre fundos com tinta no escuro (revisão de 2026-10-29).
   Escurecido em 2026-10-08 (era `#a1acb8`, ~2,31:1) pra passar 4,5:1 WCAG AA — auditado no
   Dashboard.
-- **Branco Superfície** (`#ffffff`): fundo de cards, modais, inputs (claro).
-- **Lavanda Nebulosa** (`#f5f5f9`): fundo de página, por trás dos cards (claro).
-- **Contorno Lavanda** (`#e7e7ff`): bordas sutis entre superfícies (claro).
-- **Gelo Escuro** (`#e9ecef`), **Cinza Médio** (`#adb5bd`), **Grafite Esmaecido** (`#868e96`):
+- **Branco Superfície** (token `surface`): fundo de cards, modais, inputs (claro).
+- **Lavanda Nebulosa** (token `page-bg`): fundo de página, por trás dos cards (claro).
+- **Contorno Lavanda** (token `border`): bordas sutis entre superfícies (claro).
+- **Gelo Escuro** (token `text-primary-dark`), **Cinza Médio** (token `text-secondary-dark`), **Grafite Esmaecido** (token `text-muted-dark`):
   equivalentes de texto primário/secundário/terciário no modo escuro.
-- **Carvão Superfície** (`#212529`), **Breu de Página** (`#1a1d20`), **Contorno Carvão**
-  (`#3a3f44`): equivalentes de superfície/fundo/borda no modo escuro.
+- **Carvão Superfície** (token `surface-dark`), **Breu de Página** (token `page-bg-dark`), **Contorno Carvão**
+  (token `border-dark`): equivalentes de superfície/fundo/borda no modo escuro.
 
 ### Semantic (status e prioridade — nunca decorativas)
-- **Verde Resolução** (`#71dd37`): status "Ativo"/"Resolvido", ação de reativar. Em gráficos,
+- **Verde Resolução** (token `success`): status "Ativo"/"Resolvido", ação de reativar. Em gráficos,
   ícones e qualquer uso de área (não texto pequeno).
-- **Âmbar Atenção** (`#ffab00`): status "Aberto", prioridade "Alta". Mesma ressalva de uso acima.
-- **Ciano Andamento** (`#03c3ec`): status "Em Andamento". Mesma ressalva de uso acima.
-- **Vermelho Alerta** (`#ff3e1d`): ação destrutiva (excluir, desativar), prioridade "Urgente",
+- **Âmbar Atenção** (token `warning`): status "Aberto", prioridade "Alta". Mesma ressalva de uso acima.
+- **Ciano Andamento** (token `info`): status "Em Andamento". Mesma ressalva de uso acima.
+- **Vermelho Alerta** (token `danger`): ação destrutiva (excluir, desativar), prioridade "Urgente",
   SLA atrasado/perdido. Mesma ressalva de uso acima. Status "Cancelado" saiu do vermelho em
   2026-10-27: é um estado final, muitas vezes escolhido pelo próprio solicitante, e não um alerta —
   usa o badge neutro, como "Fechado" (achado do critique de Meus Chamados).
@@ -192,12 +192,12 @@ semânticas reservadas estritamente para status/prioridade — nunca usadas como
 A cor semântica "pura" acima, usada direto como texto sobre o próprio fundo pastel do badge,
 mede entre 1,6:1 e 3,8:1 de contraste — falha WCAG AA (4,5:1). Auditado e corrigido em
 2026-10-08: estas são versões escurecidas do mesmo matiz, só para texto pequeno sobre fundo claro.
-- **Verde Resolução Texto** (`#2e7d14`): ~4,7:1 sobre `#e8fadf`.
-- **Âmbar Atenção Texto** (`#92400e`): ~6,4:1 sobre `#fff2e2`.
-- **Ciano Andamento Texto** (`#0c6478`): ~6,0:1 sobre `#e5f5fa`.
-- **Vermelho Alerta Texto** (`#991b1b`): ~7,0:1 sobre `#ffe5e5`.
-- **Ardósia Secundária Texto** (`#5a6b7d`): ~4,7:1 sobre `#eceef1` (badge neutro).
-- Badge primário reusa o Índigo Profundo (`#3a3ca3`) já existente — ~7,3:1 sobre `#e7e7ff`.
+- **Verde Resolução Texto** (token `success-text`): ~4,7:1 sobre o fundo do `badge-success`.
+- **Âmbar Atenção Texto** (token `warning-text`): ~6,4:1 sobre o fundo do `badge-warning`.
+- **Ciano Andamento Texto** (token `info-text`): ~6,0:1 sobre o fundo do `badge-info`.
+- **Vermelho Alerta Texto** (token `danger-text`): ~7,0:1 sobre o fundo do `badge-danger`.
+- **Ardósia Secundária Texto** (token `secondary-text`): ~4,7:1 sobre o fundo do `badge-secondary` (badge neutro).
+- Badge primário reusa o Índigo Profundo (token `primary-darker`) já existente — ~7,3:1 sobre o fundo do `badge-primary`.
 - As variantes de modo escuro dos badges (texto mais claro sobre fundo de baixa opacidade) já
   media 6:1+ antes desta correção e não foram alteradas.
 
@@ -225,9 +225,9 @@ rótulo, número ou ícone. Duas escalas, que não se misturam no mesmo gráfico
 
 | Significado | Token de área | Contorno (≥3:1) | Texto sobre a área | Onde aparece |
 |---|---|---|---|---|
-| Aberto | `--tk-status-open` (#ffab00) | `--tk-status-open-edge` | `--tk-status-label` | marcador do KPI, fatia, legenda |
-| Em andamento | `--tk-status-in-progress` (#03c3ec) | `--tk-status-in-progress-edge` | `--tk-status-label` | idem |
-| Resolvido | `--tk-status-resolved` (#71dd37) | `--tk-status-resolved-edge` | `--tk-status-label` | idem; série "Resolvidos" do gráfico |
+| Aberto | `--tk-status-open` (= `warning`) | `--tk-status-open-edge` | `--tk-status-label` | marcador do KPI, fatia, legenda |
+| Em andamento | `--tk-status-in-progress` (= `info`) | `--tk-status-in-progress-edge` | `--tk-status-label` | idem |
+| Resolvido | `--tk-status-resolved` (= `success`) | `--tk-status-resolved-edge` | `--tk-status-label` | idem; série "Resolvidos" do gráfico |
 | Fechado | `--tk-status-closed` (= `--tk-text-muted`) | `--tk-status-closed-edge` | `--tk-status-closed-label` (branco no claro, `--tk-page-bg` no escuro) | idem |
 | Cancelado | sem cor de área | — | texto secundário | "+ N cancelados" fora da barra |
 
@@ -263,7 +263,7 @@ opacidade 0.65 e o motivo num tooltip de hover/foco ("Em breve", "Período longo
 `rgba(var(--tk-primary-rgb), α)`, `rgba(var(--tk-danger-rgb), α)` e `rgba(var(--tk-success-rgb), α)`
 (o verde, desde 2026-10-28: hover do "Reativar" e badge escuro) — nunca o valor literal
 (`rgba(105, 108, 255, …)`). Consolidado em 2026-10-27. O fundo âmbar "soft" do badge de aviso tem
-token próprio, `--tk-warning-soft-bg` (`#fff2e2` no claro; o âmbar a 16% no escuro), usado pelo
+token próprio, `--tk-warning-soft-bg` (o fundo do `badge-warning` no claro; o âmbar a 16% no escuro), usado pelo
 `.bg-label-warning` e pelo chip "sem setor" pressionado (2026-10-28).
 
 **The Badge Pair Rule.** Toda cor semântica (success/warning/info/danger) existe em dois pares:
@@ -580,8 +580,9 @@ cada card levando a Meus Chamados — com título de card (`h2.h5`, passo headin
   (resolvidos, fechados e cancelados) e Todos — os mesmos de Meus Chamados, que não filtra por um
   status só. Cada card tem o número da lista que abre; a divisão fica no apoio ("2 abertos, 1 em
   andamento"; "5 resolvidos ou fechados, 0 cancelados") e no nome acessível do link.
-- **O conteúdo do papel primeiro (decisão de 2026-10-28):** enquanto os números da empresa não
-  existem pra este papel (spec 031), nada de aviso "em breve" antes dele — "Seus chamados" é a tela,
+- **O conteúdo do papel primeiro (decisão de 2026-10-28):** quando os números da empresa não estão
+  disponíveis pra este papel (flag `companyStatsForAll` desligada; a spec 031 já os entrega e a flag
+  foi ligada na A-28), nada de aviso "em breve" antes dele — "Seus chamados" é a tela,
   o subtítulo diz "Como estão os seus chamados." e não há card de Ações rápidas ("Ver todos" já leva
   a Meus Chamados).
 - **Primeiro uso:** sem nenhum chamado, os três zeros dão lugar a um convite ("Você ainda não abriu
@@ -737,6 +738,10 @@ projetado navega (Dashboard). Nada de "toque pra filtrar" — a legenda descreve
 - **Carregando:** spinner com texto pra leitor de tela, no lugar do valor. Uma lista ou bloco
   inteiro usa `<app-loading-state label="Carregando usuários…">` (spinner + texto visível,
   `role="status"`) — nunca um spinner mudo.
+- **Recarregando com dados na tela:** em Funções, Meus Chamados e Monitorar, a tabela fica com meia
+  opacidade e sem receber clique até a resposta, em vez de dar lugar a um spinner (que tirava o foco
+  do menu de ações); Usuários e Início mantêm os dados sem esmaecer e indicam a recarga na barra ou no
+  cabeçalho.
 - **Disponível em breve:** um bloco cujo endpoint o back-end ainda não entrega (flag desligada em
   `DASHBOARD_FEATURES`, sem requisição) mostra uma linha compacta, neutra, com o ícone
   `bx-info-circle` e texto secundário — nunca esqueleto (promete carga) nem gráfico fantasma (parece
