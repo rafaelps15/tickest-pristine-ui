@@ -9,6 +9,11 @@ function jwtFor(sub: string, nonce = ''): string {
   return `header.${payload}.signature`;
 }
 
+/** Acesso de teste ao recarregamento da troca de conta, que é protegido no serviço. */
+interface AccountSwitchReload {
+  reloadForAccountSwitch(): void;
+}
+
 describe('SessionService', () => {
   const user: CurrentUser = {
     id: 'user-1',
@@ -52,7 +57,7 @@ describe('SessionService', () => {
   });
 
   it('should reload the application when another tab signs in with another account', () => {
-    const reload = spyOn<any>(service, 'reloadForAccountSwitch');
+    const reload = spyOn(service as unknown as AccountSwitchReload, 'reloadForAccountSwitch');
     service.saveSession({ accessToken: jwtFor('user-1'), refreshToken: 'r' });
     service.setCurrentUser(user);
 
@@ -64,7 +69,7 @@ describe('SessionService', () => {
   });
 
   it('should not reload when another tab only renews the token of the same account', () => {
-    const reload = spyOn<any>(service, 'reloadForAccountSwitch');
+    const reload = spyOn(service as unknown as AccountSwitchReload, 'reloadForAccountSwitch');
     service.saveSession({ accessToken: jwtFor('user-1'), refreshToken: 'r' });
     service.setCurrentUser(user);
 

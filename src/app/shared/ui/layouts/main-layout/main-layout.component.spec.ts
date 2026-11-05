@@ -46,8 +46,8 @@ describe('MainLayoutComponent', () => {
       offCanvas = true;
       spyOn(window, 'matchMedia').and.callFake((query: string) => ({
         matches: query.includes('max-width') ? offCanvas : false,
-        addEventListener: () => {},
-        removeEventListener: () => {}
+        addEventListener: jasmine.createSpy('addEventListener'),
+        removeEventListener: jasmine.createSpy('removeEventListener')
       }) as unknown as MediaQueryList);
     });
 

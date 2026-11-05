@@ -25,8 +25,6 @@ describe('DepartmentListComponent', () => {
     responsibleUserId: null, responsibleUserName: null,
     sectors: []
   };
-  /** TI com responsável: só assim a edição busca o id do responsável atual (GET do detalhe). */
-  const itWithResponsible: Department = { ...informationTechnology, responsibleUserId: 'resp-1', responsibleUserName: 'Carlos Souza' };
 
   /** Card do departamento pelo id — a lista põe os sem setor primeiro, então a posição não é a da fixture. */
   function cardOf(root: HTMLElement, departmentId: string): HTMLElement {
