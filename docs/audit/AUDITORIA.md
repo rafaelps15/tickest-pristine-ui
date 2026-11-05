@@ -8,8 +8,8 @@
 |---|---|
 | Período | 2026-10-29 a 2026-11-04 |
 | Responsável | Rafael Santos |
-| Front (`tickest-pristine-front`) | `main` local em `7fe3bec`, 11 commits à frente da `origin/main` (`e977f64`, merge do PR #4), sem push (`git rev-list --count origin/main..HEAD` = 11) |
-| Working tree do front nesta redação | `DESIGN.md`, `tsconfig.app.json` e `tsconfig.spec.json` alterados pelas limpezas L-5 e L-6, e este documento, novo; tudo sem stage nem commit (`git status`, 04/11). O `tsconfig.json` voltou ao conteúdo do HEAD quando as supressões NG8102 e NG8107 saíram de todas as configurações, na revisão de 04/11 (§9) |
+| Front (`tickest-pristine-front`) | `main` em `2ccf5d5`. A `origin/main` foi de `e977f64` (merge do PR #4) para `d1f5d97` no push de 04/11, às 22:51 (14 commits). O `2ccf5d5` e esta atualização entram no push seguinte (§11) |
+| Working tree do front nesta redação | Limpo, salvo esta atualização. As limpezas L-4 a L-6 estão nos commits `2445a2a`, `56495bd` e `d1f5d97` (§11) |
 | Back (`tickest-pristine`) | Conferido na `origin/main` `ef1c981` (merge do PR #57, 2026-10-31 00:36) durante a auditoria de 31/10. Em 04/11, a `origin/main` do back está em `e5d8a38`, 45 commits depois (§12) |
 | Documentos de origem | `docs/audit/FRONTEND_AUDIT.md` ("FA", Anexo A) e `docs/audit/FINAL_ACCEPTANCE_AUDIT.md` ("FI", Anexo B), no commit `7fe3bec` |
 
@@ -20,7 +20,8 @@
 - `FA:n` e `FI:n` apontam a linha `n` do arquivo original. É a mesma linha `n` contada a partir do
   marcador de início de cada anexo.
 - Caminhos do front partem de `src/app/`, salvo os da raiz (`src/styles.css`, `src/environments/`,
-  `server.ts`). Linhas do front são do HEAD `7fe3bec`, salvo indicação.
+  `server.ts`). Linhas do front são do `7fe3bec`, salvo indicação; o código de `src/` não mudou
+  depois desse commit.
 - Arquivos de código do back aparecem pelo nome, com linhas do commit `ef1c981`, salvo indicação.
   As specs 044 a 049 do back não são versionadas: foram lidas no working tree do back em 04/11.
 - **Gravidade** (FA:8-10): Crítica (segurança, perda de sessão ou dado); Alta (contrato quebrado ou
@@ -30,7 +31,8 @@
 - **Classe** (FA:12-14): Defeito, Skill, Back-end, Melhoria, Mantido.
 - **Estado atual:**
   - **Corrigido (origin/main):** publicado até o PR #4 (`e977f64`);
-  - **Corrigido (main local):** nos commits de 04/11 (E-00), integrados à `main` local, sem push;
+  - **Corrigido (main local):** nos commits de 04/11 (E-00), integrados à `main` local e publicados
+    no push de 04/11, às 22:51 (§11);
   - **Removido:** só o A-05 (BR-001);
   - **Mantido:** analisado e mantido, com justificativa;
   - **Pendente:** aberto, com a dependência indicada;
@@ -56,21 +58,25 @@
   - C-02, C-03, C-04, C-06, C-08, C-11 (membros listados) e C-12.
   - Validação desse estado: 1361 testes; build inicial de 381,03 kB com 4 avisos de orçamento
     (FA:606-607; repetida em 04/11 em `e00v2/logs/test-0.log` e `build-0.log`).
-- **Só na `main` local (11 commits, sem push):**
+- **Publicado no push de 04/11, às 22:51 (`e977f64` → `d1f5d97`, 14 commits):**
   - os 10 commits da E-00: A-28, aviso de nova tentativa do A-42, C-07, C-09, A-33, R-05, R-06, R-07,
     C-10 e 6.3;
-  - a L-3 (`7fe3bec`), que remove o `@angular/animations`.
-- **Números atuais (`7fe3bec`, cópia isolada, 04/11):** 1381 de 1381 testes; build inicial de
-  382,02 kB, 0 avisos (`l3/x5a/.x5a/test.log` e `build.log`, ver §14).
+  - a L-3 (`7fe3bec`), que remove o `@angular/animations`;
+  - as limpezas L-4 a L-6, em três commits: este documento (`2445a2a`), o `DESIGN.md` (`56495bd`) e
+    o tsconfig sem as supressões NG8102 e NG8107 (`d1f5d97`).
+- **Na `main`, para o próximo push:** o `cli.analytics` como `false` (`2ccf5d5`) e esta atualização.
+- **Números atuais (`2ccf5d5`, cópia isolada com o `node_modules` do `npm ci` de 04/11):** 1381 de
+  1381 testes; build inicial de 382,02 kB, 0 avisos (`l48/v7a/.v7a/test.log` e `build.log`, ver §14).
 - **Mantidos com justificativa:** A-12 a A-21, A-31, C-05 e o breakpoint repetido do C-07 (§5).
 - **Pendentes (§6):**
   - com o back: A-23 (spec 046), A-24 (047), A-30 (048) e a volta da cor da função (A-05/BR-001,
     spec 044), todas em descoberta;
-  - com Rafael Santos: A-27 (pendente de propósito), C-01, o push da `main`, a sincronização do
-    `node_modules`, o `.impeccable/design.json` (sem regenerar por enquanto), o `cli.analytics` do
-    `angular.json`, o commit das limpezas L-4 a L-6 (plano de dois commits numa branch temporária) e,
-    depois de o back atualizar as referências, a exclusão dos originais de `docs/audit`;
-  - na etapa E-01: os defeitos conhecidos das etapas integradas;
+  - com Rafael Santos: A-27 (pendente de propósito), C-01, o `.impeccable/design.json` (sem
+    regenerar por enquanto) e, depois de o back atualizar as referências, a exclusão dos originais de
+    `docs/audit`;
+  - liberadas em 04/11: D-SF5, E-01 (os defeitos conhecidos das etapas integradas) e E-12 (decisões
+    estruturais, agora também com as fontes do Google no build e as vulnerabilidades das
+    dependências, §6, itens 23 e 24);
   - a reavaliar: A-22 e as evidências do back que não existem mais em `ef1c981` (N-7).
 - **Abertos da auditoria geral de 31/10 (§8):**
   - dez divergências front/back; duas de gravidade Alto: DIV-1 ("Fechar chamado" sempre falha) e
@@ -91,7 +97,7 @@ Os detalhes ficam nos anexos.
 | Aceitação | As 13 seções da missão original | Matriz PASS, PARTIAL, FAIL, BLOCKED, NOT APPLICABLE (FI:87-245); validações em cópia isolada (FI:60-85) | FI:60-256 |
 | Conformidade com as skills e saneamento, 30/10 | 51 arquivos de `src` sobre `a4cedca` | Revisor independente, só leitura; depois, saneamento autorizado (FA:509-608) | FA:509-608 |
 | Auditoria geral, 31/10 | Front e back (`ef1c981`), só leitura | Relatório entregue na conversa, sem arquivo no repositório; plano E-00 a E-15 | §7; §8 |
-| Execuções de 04/11 | E-00, L-9 e L-3, na `main` local; L-4 (este documento), L-5 e L-6, no working tree, sem commit. Na revisão de 04/11, as supressões NG8102 e NG8107 saíram de todas as configurações, e a pasta `.impeccable/live/`, sem arquivos e ignorada pelo Git, foi apagada | Cada mudança validada em cópia isolada antes de entrar na `main` | §3; §11; §14 |
+| Execuções de 04/11 | E-00, L-9, L-3 e as limpezas L-4 a L-6, integradas à `main` e publicadas no push das 22:51; depois, o `cli.analytics` (`2ccf5d5`) e o `npm ci`. Na revisão de 04/11, as supressões NG8102 e NG8107 saíram de todas as configurações, e a pasta `.impeccable/live/`, sem arquivos e ignorada pelo Git, foi apagada | Cada mudança validada em cópia isolada antes de entrar na `main` | §3; §11; §14 |
 | Esta consolidação, 04/11 | FA, FI, Git e código do front e do back | Só leitura. As linhas citadas dos originais foram conferidas. A redação não rodou build, teste nem `npm`: os números do §3 vêm dos logs. Na revisão de 04/11, o build e os testes do estado final rodaram numa cópia isolada, sem `npm install` nem `npm ci` (§3) | — |
 
 ### 3. Linha de base e validações
@@ -110,6 +116,8 @@ Os detalhes ficam nos anexos.
 | E-00 (`9d7e238`) | 04/11 | 1381 | 386,51 kB | 0 | `e00v2/logs/test-final.log`, `build-final.log` |
 | L-3 (`7fe3bec`) | 04/11 | 1381 | 382,02 kB | 0 | `l3/modificada/.x2/` e `l3/x5a/.x5a/` (`test.log`, `build.log`) |
 | Limpeza L-4 a L-6, estado final: `7fe3bec` com este documento, o `DESIGN.md` e os tsconfig sem as supressões NG8102 e NG8107 | 04/11 | 1381 | 382,02 kB | 0 | `l48/v6b/.v6b/` (`test.log`, `build.log`) |
+| Commit `d1f5d97`, extraído por `git archive` | 04/11 | 1381 | 382,02 kB | 0 | `l48/v6e/.v6e/` (`test.log`, `build.log`) |
+| `main` em `2ccf5d5`, com o `node_modules` do `npm ci` | 04/11 | 1381 | 382,02 kB | 0 | `l48/v7a/.v7a/` (`test.log`, `build.log`) |
 
 - Os 4 avisos eram de orçamento de CSS por componente, anteriores à missão (FI:25-27). Saíram com o
   A-33 (`0df5718`).
@@ -126,6 +134,11 @@ Os detalhes ficam nos anexos.
 - Com um `??` e um `?.` desnecessários de propósito no `LoadingStateComponent`, só nas cópias, o
   build sem as supressões avisa NG8102 e NG8107 e termina com sucesso (`l48/v6c/.v6c/build.log`).
   Com as supressões do `7fe3bec`, o mesmo código não gera aviso (`l48/v6d/.v6d/build.log`).
+- O build do `d1f5d97` saiu igual ao da cópia v6b em 116 dos 122 arquivos. Os outros 6 (os HTML e o
+  manifest do SSR) diferem só na CSS das fontes do Google, que o build de produção baixa e embute no
+  HTML: o Google devolveu URLs diferentes às 22:21 e às 22:48
+  (`l48/v6e/.v6e/dist-v6e-x-v6b-fontes.txt`). A saída do build depende, portanto, da resposta do
+  Google Fonts (§6, item 23).
 - O build de produção pré-renderiza só `/login` ("Prerendered 1 static route", `l3/x5a/.x5a/build.log`).
   As outras rotas respondem 500 no servidor SSR (§6, item 10).
 - Lint: o projeto não tem ESLint. A análise estática é o `strict` + `strictTemplates` (FI:81).
@@ -258,21 +271,23 @@ Lista única. Substitui as cinco listas dos originais (errata 6).
 | 5 | A-27: URL de produção | Implantação; pendente de propósito (Rafael Santos, 31/10) | `src/environments/environment.prod.ts:3-4` | Informar a URL na implantação; ver N-8 (portas) |
 | 6 | C-01: exceção do resultado tipado nos serviços de sessão | Rafael Santos | FA:534; FA:587 | Decidir se a exceção entra nas skills |
 | 7 | A-22: motivo da reabertura (500 × 4000) | Rafael Santos (LAC-10) | §5 | Decidir o limite e ajustar o diálogo |
-| 8 | Defeitos conhecidos das etapas integradas | Front: etapa E-01, ainda não aprovada | Tabela abaixo | Corrigir na E-01 |
+| 8 | Defeitos conhecidos das etapas integradas | Front: etapa E-01, liberada em 04/11 | Tabela abaixo | Corrigir na E-01 |
 | 9 | Validação visual com login | API: o container `webapi:dev` não respondia | Etapa E-04 | Revalidar na aplicação real o A-34, R-05 a R-07 e o aviso do A-42 |
-| 10 | SSR responde 500 nas rotas não pré-renderizadas: `new CommonEngine()` sem `allowedHosts` | Front; problema preexistente | `server.ts:15`; `l3/modificada/.x2/ssr-requests-localhost.txt` e `ssr-server.log` | Etapa E-12 |
-| 11 | `node_modules` local sem sincronizar | Rafael Santos (autorizar o `npm ci`) | `node_modules/@angular/animations/` ainda existe; o `package.json` de `7fe3bec` não tem o pacote | Sincronizar com o lockfile quando autorizado |
-| 12 | Push da `main` (11 commits) | Rafael Santos (não autorizado) | §11 | Autorizar ou não |
+| 10 | SSR responde 500 nas rotas não pré-renderizadas: `new CommonEngine()` sem `allowedHosts` | Front; problema preexistente | `server.ts:15`; `l3/modificada/.x2/ssr-requests-localhost.txt` e `ssr-server.log` | Etapa E-12, liberada em 04/11 |
+| 11 | `node_modules` local sem sincronizar | — | `l48/integ/npm-ci.log` | Resolvido em 04/11: `npm ci` às 22:52, sem mudar o lockfile; o `@angular/animations` saiu do `node_modules` |
+| 12 | Push da `main` | — | §11 | Resolvido em 04/11: push às 22:51 (`e977f64` → `d1f5d97`, 14 commits). O `2ccf5d5` e esta atualização vão no push seguinte |
 | 13 | `.impeccable/design.json` defasado | Rafael Santos (decisão pendente) | `.impeccable/design.json:3` (`generatedAt` 2026-10-27); DOC-10 | Não regenerar por enquanto (04/11). Decidir depois se regenera pelo fluxo `/impeccable document` |
 | 14 | Evidências do back que não existem mais (N-7); texto do A-25; classificação do A-31 | Front (documentação) | §4; §5; §7 | Reconferir contra a `origin/main` atual do back (`e5d8a38`) e registrar aqui |
 | 15 | N-4 e N-5 | Front; Rafael Santos (incluir no plano) | §7 | A E-01 cobre só a spec do `SideMenuNavComponent` (N-5). O N-4 e os outros quatro arquivos do N-5 não têm etapa no plano de 31/10 |
-| 16 | D-SF5: nomenclatura de specs, branches e commits do front | Rafael Santos | §9; §13 | Em aberto: aguarda a tabela de controle das specs do back, que Rafael Santos está enviando em partes. Nada da nomenclatura foi decidido |
-| 17 | Achados da auditoria geral de 31/10 (DIV-, LAC-, DOC-, BK-) | Front, back e responsável | §8 | Seguem no plano de 31/10 (E-01 a E-15, sem aprovação; a E-00 já foi executada). DIV-1 e DIV-3 (Alto) afetam o uso hoje; a E-02 prevê corrigir DIV-1, DIV-2, DIV-4, DIV-9 e DIV-10 |
-| 18 | Commit das limpezas L-4, L-5 e L-6 (este documento, `DESIGN.md`, `tsconfig.app.json` e `tsconfig.spec.json`) | Rafael Santos (autorizar o plano final) | §9; §11 | Plano de 04/11: branch temporária a partir da `main`, com dois commits independentes, um com este documento e outro com o `DESIGN.md` e o tsconfig. Nenhuma operação de Git antes da autorização expressa; merge na `main`, exclusão da branch e push dependem de autorização própria |
-| 19 | Supressões NG8102 e NG8107 (`extendedDiagnostics`, no `tsconfig.app.json` e no `tsconfig.spec.json` do `7fe3bec`) | Rafael Santos (commit, item 18) | §3; §9 | Remoção de todas as configurações decidida em 04/11, aplicada no working tree e validada em cópia isolada. Entra no commit do `DESIGN.md` e do tsconfig |
+| 16 | D-SF5: nomenclatura de specs, branches e commits do front | Rafael Santos | §9; §13 | Liberada em 04/11. A tabela de controle das specs do back ainda não chegou inteira |
+| 17 | Achados da auditoria geral de 31/10 (DIV-, LAC-, DOC-, BK-) | Front, back e responsável | §8 | Seguem no plano de 31/10 (a E-00 já foi executada; E-01 e E-12 liberadas em 04/11; as demais sem aprovação). DIV-1 e DIV-3 (Alto) afetam o uso hoje; a E-02 prevê corrigir DIV-1, DIV-2, DIV-4, DIV-9 e DIV-10 |
+| 18 | Commit das limpezas L-4, L-5 e L-6 | — | §9; §11 | Resolvido em 04/11: três commits independentes (`2445a2a`, `56495bd`, `d1f5d97`), integrados à `main` por fast-forward e publicados |
+| 19 | Supressões NG8102 e NG8107 (`extendedDiagnostics`, no `tsconfig.app.json` e no `tsconfig.spec.json` do `7fe3bec`) | — | §3; §9 | Resolvido em 04/11: removidas de todas as configurações no `d1f5d97` |
 | 20 | Excluir `docs/audit/FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` | Rafael Santos; back (referências do §12) | §12; §15 | Preservar os dois até o back atualizar as referências (decisão de 04/11). O front não altera o back |
-| 21 | Itens da revisão da raiz de 04/11 | Rafael Santos | §9; relatório das limpezas L-4 a L-8 | `server.ts` fica na raiz até a E-12 (o Angular 22 gera `src/server.ts`); `README.md` (DOC-6) e `PRODUCT.md` (DOC-1 a DOC-5) ficam para a E-06; o `cli.analytics` do `angular.json` segue sem alteração até a decisão (análise entregue em 04/11). A pasta `.impeccable/live/` foi apagada em 04/11; a regra `.impeccable/live/` do `.gitignore` continua |
+| 21 | Itens da revisão da raiz de 04/11 | Rafael Santos | §9; relatório das limpezas L-4 a L-8 | `server.ts` fica na raiz até a E-12 (o Angular 22 gera `src/server.ts`); `README.md` (DOC-6) e `PRODUCT.md` (DOC-1 a DOC-5) ficam para a E-06. Resolvidos em 04/11: o `cli.analytics` como `false` (`2ccf5d5`) e a pasta `.impeccable/live/`, apagada (a regra `.impeccable/live/` do `.gitignore` continua) |
 | 22 | Impacto no front das specs do back mergeadas depois de 31/10 (022, 023, 045, 024, 035, 051 e 050) | Front | §12 | Avaliar; não foi feito nesta consolidação |
+| 23 | Fontes do Google embutidas no build | Front (E-12) | `src/index.html:9-12`; §3 | O build de produção baixa a CSS do Google Fonts e a embute no HTML: a saída não é reproduzível, o build depende da rede, e o navegador busca as fontes no Google (CSP, privacidade, desempenho). Avaliar hospedar as fontes no projeto |
+| 24 | Vulnerabilidades nas dependências | Front (E-12) | `l48/integ/npm-audit-prod.json`; `npm-audit-completo.txt` | `npm audit` de 04/11: 48 no total; 12 nas de produção (1 crítica, 4 altas, 7 moderadas), entre elas avisos do Angular 22.0.6 (SSR, sanitização, router) e de dependências do Express (`proxy-addr`, `body-parser`, `qs`). Atualizar para as versões corrigidas, com validação |
 
 **Defeitos conhecidos para a E-01**
 
@@ -360,7 +375,7 @@ A coluna "Relaciona-se com" é leitura desta redação.
 | DOC-6 | — | O `README.md` é o modelo do Angular CLI: cita a versão 18.2.6 e manda rodar `ng e2e` | `README.md:3,23` | Aberto |
 | DOC-7 | — | `CLAUDE.md` com exemplo antigo (`TicketsService`) e sem `core/` e `dashboard/` | `CLAUDE.md:19-24,38` | Aberto |
 | DOC-8 | — | Skills citam lint que não existe, Prettier, `flushEffects`/`fakeAsync` e `console.error` | `.claude/skills/add-context/SKILL.md:74`; `add-feature/SKILL.md:41,56`; `add-feature/references/store-method.md:34,115`; `add-tests/SKILL.md:29-30`; `ca-review/SKILL.md:99`; `.claude/skills/README.md:100,105` | Aberto; as skills não foram alteradas |
-| DOC-9 | — | `DESIGN.md`: token do botão primário, texto transitório da spec 031 e o padrão `is-refreshing` não registrado | `DESIGN.md` no HEAD | Tratados na limpeza L-5, aprovada em 04/11 sem regenerar o documento; entram no commit do §6, item 18 |
+| DOC-9 | — | `DESIGN.md`: token do botão primário, texto transitório da spec 031 e o padrão `is-refreshing` não registrado | `DESIGN.md` no HEAD | Tratados na limpeza L-5, aprovada em 04/11 sem regenerar o documento (`56495bd`) |
 | DOC-10 | — | `.impeccable/design.json` defasado | `.impeccable/design.json:3` (`generatedAt` 2026-10-27) | Pendente (§6, item 13); sem regenerar por enquanto (04/11) |
 
 #### 8.4 Modelo de specs do back (BK-)
@@ -436,6 +451,10 @@ Fonte: relatório de 31/10.
 | 04/11 | Apagar a pasta `.impeccable/live/` se continuasse vazia. Não tinha arquivos, só as subpastas `annotations/` e `sessions/`, vazias, de 27/10 | Conversa de 04/11; `l48/impeccable-live.txt` |
 | 04/11 | `cli.analytics`: apresentar o valor, o funcionamento e as alternativas, sem alterar. `server.ts` na raiz até a E-12; `README.md` e `PRODUCT.md` na E-06; nenhuma alteração no back, com as referências quebradas ou pendentes documentadas (§12) | Conversa de 04/11 |
 | 04/11 | Integração: branch temporária a partir da `main`, com dois commits independentes (este documento; `DESIGN.md` e tsconfig). Nenhum stage ou commit antes da autorização do plano final; sem push, sem `npm ci` e sem iniciar D-SF5, E-01 ou E-12 | Conversa de 04/11 |
+| 04/11 | P0 a P4 autorizados, com três commits independentes em vez de dois (este documento; `DESIGN.md`; tsconfig), na `chore/cleanup-audit-design-tsconfig`. Antes de cada commit, conferir que só os arquivos correspondentes estão no stage; parar se qualquer condição falhar | Conversa de 04/11; §11 |
+| 04/11 | Concluir o P4 depois da parada no `git fsck`; registrar a integração neste documento num commit posterior; deixar como está o stash antigo `27e92c8` | Conversa de 04/11 |
+| 04/11 | Liberados: fast-forward da `main` para o `d1f5d97`, exclusão da branch, push, `cli.analytics` como `false` em commit separado, `npm ci`, D-SF5, E-01 e E-12 | Conversa de 04/11; §11 |
+| 04/11 | Seguir como sênior de Angular e UI/UX até a implementação do SDD: excelência técnica, arquitetura de componentes, design tokens, desempenho e integridade dos fluxos | Conversa de 04/11 |
 
 ### 10. Matriz de aceitação
 
@@ -493,7 +512,14 @@ Horários de Brasília, salvo indicação.
 | 04/11, até 14:58:31 | L-9, P4: exclusão com `git branch -d` de `fix/frontend-audit-pending-stages` | — | `l9/refs-depois-P4.txt` |
 | 04/11 15:25 | L-9, P5: conferência final, `git fsck` sem erro, remotas intocadas | — | `l9/remotas-P5.txt`; `l9/fsck-P5.txt` (vazio) |
 | 04/11 15:59–16:09 | L-3: branch temporária `chore/remove-angular-animations`; commit às 16:00:33 (`app.config.ts`, `package.json`, `package-lock.json`); validação em cópia isolada (X5-A); fast-forward da `main` às 16:09:02; branch excluída com `git branch -d` | `7fe3bec` ("chore(deps): remove @angular/animations obsoleto [L-3]") | Reflog; `l3/refs-antes-X5B.txt`, `refs-depois-X5B.txt`; `l3/fsck-X5B.txt` (vazio) |
-| 04/11, nesta redação | Só existe a `main` local, em `7fe3bec`, 11 commits à frente da `origin/main` (`e977f64`), sem push. No GitHub seguem `origin/docs/frontend-audit-merge-record` (`523af11`) e `origin/fix/frontend-audit-integration` (`f449599`) | — | `git branch -a`; `l48/refs-inicio.txt` |
+| 04/11 22:35:53–22:36:36 | L-4 a L-6: branch temporária `chore/cleanup-audit-design-tsconfig` criada de `7fe3bec`, com três commits. Antes de cada commit, o stage tinha só os arquivos correspondentes, com os blobs planejados | `2445a2a` (L-4, este documento), `56495bd` (L-5, `DESIGN.md`), `d1f5d97` (L-6, tsconfig) | Reflog da branch; `l48/integ/p0.txt`, `p4.txt`, `refs-antes-P1.txt`, `refs-depois-P3.txt` |
+| 04/11, depois de 22:36 | P4: 21 de 22 conferências passaram. O `git fsck` completo listou 15 objetos antigos sem referência (o stash `27e92c8`, de 26/10, e blobs num pack de 29/10), e o P4 parou. O `git fsck --connectivity-only --no-dangling` da L-9 e da L-3 e o `git fsck --no-dangling` saíram vazios | — | `l48/integ/fsck-P4.txt`, `fsck-P4-conectividade.txt`, `fsck-P4-completo-sem-dangling.txt` |
+| 04/11 22:48 | P4 concluído com autorização: o `d1f5d97`, extraído por `git archive`, com build sem avisos (382,02 kB) e 1381 testes passando (§3) | — | `l48/v6e/.v6e/` |
+| 04/11 22:50:47 | Fast-forward da `main` de `7fe3bec` para `d1f5d97`, sem trocar arquivos no working tree; branch temporária excluída com `git branch -d` | — | Reflog da `main` ("fetch . chore/cleanup-audit-design-tsconfig:main: fast-forward"); `l48/integ/refs-depois-ff.txt` |
+| 04/11 22:51:08 | Push da `main`: a `origin/main` foi de `e977f64` para `d1f5d97`, por fast-forward (14 commits: E-00, L-3 e L-4 a L-6) | — | `l48/integ/push-1.txt`; `git ls-remote` antes e depois |
+| 04/11 22:51:39 | `cli.analytics` como `false` no `angular.json`, num commit separado | `2ccf5d5` ("chore: desliga a telemetria do Angular CLI no projeto") | `ng analytics info`: configuração local e estado efetivo "disabled" |
+| 04/11 22:52 | `npm ci`: o `node_modules` local passa a seguir o lockfile, sem o `@angular/animations`; o lockfile não mudou | — | `l48/integ/npm-ci.log`; `l48/v7a/.v7a/` (§3) |
+| 04/11, nesta redação | Só existe a `main` local, em `2ccf5d5`, um commit à frente da `origin/main` (`d1f5d97`). Esta atualização é o commit seguinte, e os dois vão no próximo push. No GitHub seguem `origin/docs/frontend-audit-merge-record` (`523af11`) e `origin/fix/frontend-audit-integration` (`f449599`) | — | `git branch -a` |
 
 ### 12. Rastreabilidade com o back
 
@@ -558,7 +584,7 @@ Ficam fora do repositório e podem sumir. Só a localização fica registrada.
 | Pasta | O que tem | Período |
 |---|---|---|
 | `C:\Users\rafae\AppData\Local\Temp\claude\c--dev-tickest-pristine-front\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | Backup do BR-001 (`backup-br001\`), patch da missão, cópias isoladas e logs (`acc\`, `final2\` a `final8\`), medições de foco (`focus\`), preparação da E-00 (`e00\`, `a33\`) e scripts de 31/10 | 29/10 a 31/10 |
-| `C:\Users\rafae\AppData\Local\Temp\claude\cb02df504aad776f\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | `backup\` (antes da reindentação e da tradução dos títulos); `e00v2\` (simulação e execução da E-00: commits, `manifest.json`, logs de build e de testes por estado); `l9\` (fotos das refs e `git fsck` da L-9); `l3\` (validação da L-3: `original\`, `modificada\`, `x5a\`); `l48\` (rascunho e validação deste documento; diffs e conferências das limpezas L-5 e L-6; `v6b\`, `v6h\`, `v6c\` e `v6d\`, cópias isoladas da revisão de 04/11; `impeccable-live.txt`); `status-*.txt` | 04/11 |
+| `C:\Users\rafae\AppData\Local\Temp\claude\cb02df504aad776f\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | `backup\` (antes da reindentação e da tradução dos títulos); `e00v2\` (simulação e execução da E-00: commits, `manifest.json`, logs de build e de testes por estado); `l9\` (fotos das refs e `git fsck` da L-9); `l3\` (validação da L-3: `original\`, `modificada\`, `x5a\`); `l48\` (rascunho e validação deste documento; diffs e conferências das limpezas L-5 e L-6; `v6b\`, `v6h\`, `v6c\` e `v6d\`, cópias isoladas da revisão de 04/11; `impeccable-live.txt`; `integ\`, conferências P0 a P4, `fsck`, refs, push, `npm ci` e `npm audit` da integração; `v6e\` e `v7a\`, validação do `d1f5d97` e do `2ccf5d5`); `status-*.txt` | 04/11 |
 
 Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l48/…`) partem da pasta de
 04/11. `focus/compare.md` parte da pasta de 29–31/10.
@@ -576,6 +602,9 @@ Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l4
   ficam até as referências do §12 serem atualizadas (§6, item 20).
 - **Revisão de 04/11:** Rafael Santos aprovou o documento e o local. As decisões da revisão estão no
   §9; as pendências que restam, no §6 (itens 13 e 18 a 21).
+- **04/11, depois da integração:** este documento entrou no `2445a2a` com o texto da revisão, que
+  ainda falava em dois commits. Esta atualização corrige esse texto, registra a integração (§11) e
+  dois achados da validação (§6, itens 23 e 24).
 - **Regra:** a Parte I prevalece. Os anexos preservam o texto original, sem alterações.
 - **Cópia dos anexos:** texto idêntico aos blobs de `7fe3bec`, conferido por script
   (`l48/l4-validate.cjs`). No working tree do Windows, este documento e os originais usam CRLF
@@ -587,7 +616,7 @@ Para cada contradição: o que diz o original e o valor correto.
 
 | # | Tema | O que diz o original | Valor correto |
 |---|---|---|---|
-| 1 | A-42 | FA:43: "Corrigido em duas etapas". FI:256: "A-42 — espera da primeira carga", PARTIAL. FA:371-372 registra o limite | As duas etapas estão na `origin/main` (`591bc90`). A espera sem aviso foi tratada pelo `00b7252` (main local, sem push). Estado: corrigido, com defeitos para a E-01 (§6) |
+| 1 | A-42 | FA:43: "Corrigido em duas etapas". FI:256: "A-42 — espera da primeira carga", PARTIAL. FA:371-372 registra o limite | As duas etapas estão na `origin/main` (`591bc90`). A espera sem aviso foi tratada pelo `00b7252` (E-00, publicado no push de 04/11). Estado: corrigido, com defeitos para a E-01 (§6) |
 | 2 | A-31 | FA:490 o põe em "Pendências e melhorias não executadas"; FI:186: "mantidos com justificativa" | Mantido (§5); a classificação fica a reavaliar |
 | 3 | Número de testes | FI:121, FI:207 e FI:236 dão 1358 como estado final | 1358 é anterior ao saneamento. O estado do PR #3 e da `origin/main` é 1361 (FI:80; FA:607). Hoje, 1381 (§3) |
 | 4 | Specs do back | FA:482-483, FA:489 e FI:362-364: A-23, A-24 e A-30 sem spec. FA:489: a 024 "aprovada, ainda não mergeada" | Specs 046, 047 e 048 criadas em 31/10, Em descoberta, não versionadas (`spec.md:101`, `:98` e `:90`). A 024 está Verificada e mergeada desde 01/11 (PR #61) |
