@@ -18,7 +18,7 @@ async function settle(fixture: { detectChanges(): void }): Promise<void> {
 describe('AppComponent', () => {
   /** Guard pendente: a navegação para `/espera` só termina quando o teste emitir. */
   let guardResult: Subject<boolean>;
-  /** Nova tentativa de GET /users/me em andamento, controlada pelo teste. */
+  /** Nova tentativa da primeira carga de GET /users/me em andamento, controlada pelo teste. */
   const retrying = signal(false);
 
   beforeEach(() => {
@@ -29,7 +29,7 @@ describe('AppComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([{ path: 'espera', component: TargetComponent, canActivate: [() => guardResult] }]),
-        { provide: CurrentUserService, useValue: { retrying } }
+        { provide: CurrentUserService, useValue: { retryingFirstLoad: retrying } }
       ]
     });
   });

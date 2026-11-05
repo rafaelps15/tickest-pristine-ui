@@ -17,7 +17,7 @@ import { CurrentUserService } from './shared/services/current-user.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <router-outlet />
-    @if (navigating() && currentUserService.retrying()) {
+    @if (navigating() && currentUserService.retryingFirstLoad()) {
       <app-session-retry-notice />
     }
     <app-confirm-dialog />
@@ -25,12 +25,12 @@ import { CurrentUserService } from './shared/services/current-user.service';
   `
 })
 export class AppComponent {
-  /** Carregamento do usuário logado, que diz quando GET /users/me está numa nova tentativa. */
+  /** Carregamento do usuário logado, que diz quando a primeira carga de GET /users/me está numa nova tentativa. */
   protected readonly currentUserService = inject(CurrentUserService);
 
   /**
-   * Uma navegação está esperando (o guard aguarda GET /users/me): só aí a tela fica vazia. Nas recargas
-   * em segundo plano do usuário, sem navegação pendente, o aviso não aparece.
+   * Uma navegação está esperando (o guard aguarda GET /users/me): só aí a tela fica vazia. Junto com
+   * `retryingFirstLoad`, o aviso não aparece nas recargas de fundo, com ou sem navegação pendente.
    */
   protected readonly navigating = toSignal(
     inject(Router).events.pipe(

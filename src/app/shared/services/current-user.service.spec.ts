@@ -142,18 +142,18 @@ describe('CurrentUserService', () => {
 
       expect(attempts).toBe(1);
       expect(results).toEqual([{ status: 'unauthenticated' }]);
-      expect(service.retrying()).toBeFalse();
+      expect(service.retryingFirstLoad()).toBeFalse();
     });
 
     it('marks "tentando de novo" after the first transient failure and unmarks it when it ends', () => {
       failThenSucceed(503);
-      expect(service.retrying()).toBeFalse();
+      expect(service.retryingFirstLoad()).toBeFalse();
 
       service.load().subscribe();
-      expect(service.retrying()).toBeTrue();
+      expect(service.retryingFirstLoad()).toBeTrue();
 
       jasmine.clock().tick(1000);
-      expect(service.retrying()).toBeFalse();
+      expect(service.retryingFirstLoad()).toBeFalse();
     });
 
     it('unmarks "tentando de novo" when it gives up and returns "indisponível"', () => {
@@ -161,10 +161,20 @@ describe('CurrentUserService', () => {
 
       service.load().subscribe();
       jasmine.clock().tick(1000 + 2000 + 4000);
-      expect(service.retrying()).toBeTrue();
+      expect(service.retryingFirstLoad()).toBeTrue();
 
       jasmine.clock().tick(8000);
-      expect(service.retrying()).toBeFalse();
+      expect(service.retryingFirstLoad()).toBeFalse();
+    });
+
+    it('keeps the first-load indicator off when the user is already loaded and a later reload retries', () => {
+      session.currentUser.and.returnValue(user);
+      failThenSucceed(503);
+
+      service.load().subscribe();
+
+      expect(attempts).toBe(1);
+      expect(service.retryingFirstLoad()).toBeFalse();
     });
   });
 

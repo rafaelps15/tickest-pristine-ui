@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable, of, throwError, timer } from 'rxjs';
 import { catchError, finalize, map, retry, shareReplay } from 'rxjs/operators';
 import { AuthDataService } from '../infrastructure/auth.data.service';
@@ -27,8 +27,12 @@ export class CurrentUserService {
 
   /** Uma falha passageira já aconteceu e o carregamento está esperando ou fazendo uma nova tentativa. */
   private readonly retryingSignal = signal(false);
-  /** Leitura pública de {@link retryingSignal}: o shell mostra um aviso enquanto a primeira tela espera. */
-  readonly retrying = this.retryingSignal.asReadonly();
+  /**
+   * Nova tentativa da primeira carga: ainda não há usuário na sessão, então a navegação espera por ela e o
+   * shell mostra o aviso. Numa recarga de fundo (interceptor ou renovação do token), com o usuário já
+   * carregado, fica falso.
+   */
+  readonly retryingFirstLoad = computed(() => this.retryingSignal() && !this.session.currentUser());
 
   /**
    * Busca o usuário logado e grava na sessão. Falha passageira (rede, 429, 5xx) tenta de novo antes de
