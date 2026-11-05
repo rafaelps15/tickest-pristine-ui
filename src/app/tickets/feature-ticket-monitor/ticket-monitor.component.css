@@ -68,21 +68,6 @@
   }
 }
 
-/*
- * Ao trocar filtro/página com a lista já carregada, mantém as linhas atuais visíveis e só esmaece
- * até os dados novos chegarem, sem o "pisca-tudo" de recarregar do zero — o conteúdo vai mudar, e o
- * esmaecido diz isso. Mesmo padrão de Usuários. (A atualização automática do Início é outro caso:
- * ali os números continuam valendo e não esmaecem.)
- */
-.table {
-  transition: opacity 150ms ease;
-}
-
-.table.is-refreshing {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
 /* "Atualizar" do topo da tabela: discreto, cor de texto secundário, sem competir com a fila. */
 .monitor-refresh {
   color: var(--tk-text-secondary);
