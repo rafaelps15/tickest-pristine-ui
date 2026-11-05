@@ -1344,13 +1344,20 @@ router-outlet + * {
   }
 }
 
-/* Toque: itens de menu e o X de fechar com o alvo mínimo de 44px (o padrão do Bootstrap dá ~30px e 16px). */
+/*
+ * Toque: itens de menu e o X de fechar com o alvo mínimo de 44px (o padrão do Bootstrap dá ~30px e 16px).
+ * O item vira flex para o texto ficar no meio da altura maior; o X passa a border-box, porque no
+ * content-box do Bootstrap o padding de 0,25em somava aos 44px.
+ */
 @media (pointer: coarse) {
   .dropdown-item {
+    display: flex;
+    align-items: center;
     min-height: 2.75rem;
   }
 
   .btn-close {
+    box-sizing: border-box;
     min-width: 2.75rem;
     min-height: 2.75rem;
   }
