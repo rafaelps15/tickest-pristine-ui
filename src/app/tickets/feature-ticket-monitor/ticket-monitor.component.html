@@ -386,7 +386,7 @@
                                      [canAssignToMe]="canAssignToMe(ticket)" [canAssignResponsible]="canAssignResponsible(ticket)"
                                      [dueRelative]="dueRelative(ticket)" [overdue]="isOverdue(ticket)"
                                      [assigningToMe]="store.assigningToMeIds().includes(ticket.id)"
-                                     (close)="closeInfoPanel()" (assignToMeClick)="onAssignToMe(ticket.id)"
+                                     (closeRequested)="closeInfoPanel()" (assignToMeClick)="onAssignToMe(ticket.id)"
                                      (assignResponsibleClick)="onOpenAssignResponsibleModal(ticket.id)" />
     </div>
   }
@@ -399,6 +399,6 @@
                             [candidates]="store.responsibleCandidates()" [searching]="store.searchingResponsibleCandidates()"
                             [searchError]="store.responsibleSearchError()"
                             [saving]="store.assigningResponsible()" [error]="store.mutationError()"
-                            (search)="store.searchResponsibleCandidates($event)" (selectionChange)="store.clearMutationError()"
+                            (searchRequested)="store.searchResponsibleCandidates($event)" (selectionChange)="store.clearMutationError()"
                             (confirm)="onConfirmResponsible($event)" (closed)="assigningResponsibleTicketId.set(undefined)" />
 }

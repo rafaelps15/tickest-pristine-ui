@@ -253,7 +253,7 @@ describe('UserListInfoPanelComponent', () => {
     const fixture = createFixture();
     await fixture.whenStable();
     const closeSpy = jasmine.createSpy('close');
-    fixture.componentInstance.close.subscribe(closeSpy);
+    fixture.componentInstance.closeRequested.subscribe(closeSpy);
 
     const button = fixture.nativeElement.querySelector('button[aria-label="Fechar painel de informações do usuário"]') as HTMLButtonElement;
     button.click();

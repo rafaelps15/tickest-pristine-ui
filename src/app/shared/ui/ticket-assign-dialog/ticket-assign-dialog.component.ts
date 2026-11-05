@@ -48,8 +48,11 @@ export class TicketAssignDialogComponent {
   /** Erro da última tentativa de atribuir. */
   readonly error = input<string | null>(null);
 
-  /** Pede a busca de candidatos pelo termo digitado (já com debounce de 300ms). */
-  readonly search = output<string>();
+  /**
+   * Pede a busca de candidatos pelo termo digitado (já com debounce de 300ms). Não se chama `search`:
+   * o `search` nativo do campo (Enter ou limpar) borbulha até o host e chegava ao pai como um `Event`.
+   */
+  readonly searchRequested = output<string>();
   /** Confirma a atribuição do candidato escolhido (id e nome, pro aviso de sucesso). */
   readonly confirm = output<{ userId: string; name: string }>();
   /** Pede pra fechar sem atribuir. */
@@ -80,7 +83,7 @@ export class TicketAssignDialogComponent {
       takeUntilDestroyed()
     ).subscribe(term => {
       this.focusedIndex.set(0);
-      this.search.emit(term);
+      this.searchRequested.emit(term);
     });
   }
 

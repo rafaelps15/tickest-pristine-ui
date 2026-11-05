@@ -44,7 +44,7 @@ export class UserListInfoPanelComponent {
   readonly canToggleActive = input(true);
 
   /** Pedido de fechar o painel (X). */
-  readonly close = output<void>();
+  readonly closeRequested = output<void>();
   /** Pedido de abrir "Editar cadastro". */
   readonly editClick = output<void>();
   /** Pedido de abrir "Atribuir funções". */

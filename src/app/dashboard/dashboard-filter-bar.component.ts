@@ -29,7 +29,7 @@ const CUSTOM_PERIOD = 'custom';
         <label class="form-label small" for="dashboardPeriod">Período de abertura</label>
         <!-- [selected] em cada opção, não [value] no select: a opção certa fica marcada mesmo quando a lista chega depois (DESIGN.md). -->
         <select #periodSelect id="dashboardPeriod" class="form-select"
-                (change)="change.emit(toPeriod(periodSelect.value))">
+                (change)="filterChanged.emit(toPeriod(periodSelect.value))">
           <option value="" [selected]="periodValue() === ''">Todo o período</option>
           @for (period of periodOptions; track period) {
             <option [value]="period" [selected]="periodValue() === period">{{ periodLabels[period] }}</option>
@@ -40,7 +40,7 @@ const CUSTOM_PERIOD = 'custom';
       <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardDepartment">Departamento</label>
         <select #departmentSelect id="dashboardDepartment" class="form-select"
-                (change)="change.emit(toDepartment(departmentSelect.value))">
+                (change)="filterChanged.emit(toDepartment(departmentSelect.value))">
           <option value="" [selected]="!filters().departmentId">Todos os departamentos</option>
           @for (department of departmentOptions(); track department.id) {
             <option [value]="department.id" [selected]="department.id === filters().departmentId">{{ department.name }}</option>
@@ -50,7 +50,7 @@ const CUSTOM_PERIOD = 'custom';
       <div class="col-12 col-md-4">
         <label class="form-label small" for="dashboardSector">Setor</label>
         <select #sectorSelect id="dashboardSector" class="form-select"
-                (change)="change.emit({ sectorId: sectorSelect.value || undefined })">
+                (change)="filterChanged.emit({ sectorId: sectorSelect.value || undefined })">
           <option value="" [selected]="!filters().sectorId">{{ selectedDepartment() ? 'Todos do departamento' : 'Todos os setores' }}</option>
           @for (department of sectorGroups(); track department.id) {
             <optgroup [label]="department.name">
@@ -66,7 +66,7 @@ const CUSTOM_PERIOD = 'custom';
       <div class="col-6 col-md-4">
         <label class="form-label small" for="dashboardPriority">Prioridade</label>
         <select #prioritySelect id="dashboardPriority" class="form-select"
-                (change)="change.emit({ priority: toPriority(prioritySelect.value) })">
+                (change)="filterChanged.emit({ priority: toPriority(prioritySelect.value) })">
           <option value="" [selected]="filters().priority === undefined">Todas</option>
           @for (priority of priorityOptions; track priority) {
             <option [value]="priority" [selected]="filters().priority === priority">{{ priorityLabels[priority] }}</option>
@@ -76,7 +76,7 @@ const CUSTOM_PERIOD = 'custom';
       <div class="col-6 col-md-4">
         <label class="form-label small" for="dashboardAssignee">Responsável</label>
         <select #assigneeSelect id="dashboardAssignee" class="form-select"
-                (change)="change.emit(toAssignee(assigneeSelect.value))">
+                (change)="filterChanged.emit(toAssignee(assigneeSelect.value))">
           <option value="" [selected]="assigneeValue() === ''">Qualquer um</option>
           <option value="me" [selected]="assigneeValue() === 'me'">Atribuídos a mim</option>
           <option value="none" [selected]="assigneeValue() === 'none'">Sem responsável</option>
@@ -127,7 +127,7 @@ const CUSTOM_PERIOD = 'custom';
           @for (chip of chips(); track chip.key) {
             <li>
               <button type="button" class="btn btn-sm filter-chip" [attr.aria-label]="'Remover o filtro ' + chip.label"
-                      (click)="change.emit(chip.removal)">
+                      (click)="filterChanged.emit(chip.removal)">
                 {{ chip.label }} <i class="bx bx-x" aria-hidden="true"></i>
               </button>
             </li>
@@ -182,8 +182,11 @@ export class DashboardFilterBarComponent {
   /** Hoje (`aaaa-mm-dd`, horário de Brasília): limite do período e fim do personalizado. */
   readonly today = input.required<string>();
 
-  /** Troca de um filtro (`undefined` remove aquele filtro). */
-  readonly change = output<Partial<DashboardFilters>>();
+  /**
+   * Troca de um filtro (`undefined` remove aquele filtro). Não se chama `change`: o `change` nativo dos
+   * seletores borbulha até o host e chegava ao pai junto com esta saída.
+   */
+  readonly filterChanged = output<Partial<DashboardFilters>>();
   /** Remove todos os filtros. */
   readonly clear = output<void>();
 
@@ -280,7 +283,7 @@ export class DashboardFilterBarComponent {
     const value = field.value;
     if (value === '') {
       this.dateError.set(null);
-      this.change.emit({ [edge]: undefined });
+      this.filterChanged.emit({ [edge]: undefined });
       return;
     }
     const other = edge === 'from' ? this.filters().to : this.filters().from;
@@ -291,6 +294,6 @@ export class DashboardFilterBarComponent {
       return;
     }
     this.dateError.set(null);
-    this.change.emit({ [edge]: value });
+    this.filterChanged.emit({ [edge]: value });
   }
 }

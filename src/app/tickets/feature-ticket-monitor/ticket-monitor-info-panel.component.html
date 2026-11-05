@@ -3,7 +3,7 @@
     <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
       <h2 id="ticketInfoPanelTitle" class="h5 info-panel-title fw-bold mb-0" tabindex="-1" data-side-panel-title>{{ ticket().title }}</h2>
       <button type="button" class="btn btn-sm btn-icon rounded-circle btn-outline-secondary flex-shrink-0"
-              aria-label="Fechar painel de informações do chamado" (click)="close.emit()">
+              aria-label="Fechar painel de informações do chamado" (click)="closeRequested.emit()">
         <i class="bx bx-x" aria-hidden="true"></i>
       </button>
     </div>

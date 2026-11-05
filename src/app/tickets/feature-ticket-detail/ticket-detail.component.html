@@ -437,7 +437,7 @@
                             [candidates]="detailStore.assigneeCandidates()" [searching]="detailStore.searchingAssignees()"
                             [searchError]="detailStore.assigneeSearchError()"
                             [saving]="detailStore.assigningTicket()" [error]="detailStore.mutationError()"
-                            (search)="detailStore.searchAssignees($event)" (selectionChange)="detailStore.clearMutationError()"
+                            (searchRequested)="detailStore.searchAssignees($event)" (selectionChange)="detailStore.clearMutationError()"
                             (confirm)="onConfirmAssign($event)" (closed)="assignDialogOpen.set(false)" />
 }
 

@@ -186,7 +186,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     await fixture.whenStable();
 
     const closeSpy = jasmine.createSpy('close');
-    fixture.componentInstance.close.subscribe(closeSpy);
+    fixture.componentInstance.closeRequested.subscribe(closeSpy);
 
     const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar painel de informações do chamado"]') as HTMLButtonElement;
     closeButton.click();

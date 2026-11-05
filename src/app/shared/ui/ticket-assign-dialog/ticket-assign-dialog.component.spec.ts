@@ -12,7 +12,7 @@ const other: AssigneeCandidate = { id: 'u3', fullName: 'Ana Lima', sectorName: n
     <app-ticket-assign-dialog ticketTitle="Impressora parada" [currentName]="currentName()" currentUserId="u9"
                               [candidates]="candidates()" [searching]="searching()" [searchError]="searchError()"
                               [saving]="saving()" [error]="error()"
-                              (search)="searches.push($event)" (confirm)="confirmed.push($event)" (closed)="closedCount = closedCount + 1" />
+                              (searchRequested)="searches.push($event)" (confirm)="confirmed.push($event)" (closed)="closedCount = closedCount + 1" />
   `
 })
 class HostComponent {
@@ -76,6 +76,16 @@ describe('TicketAssignDialogComponent', () => {
 
     await new Promise(resolve => setTimeout(resolve, 350));
     expect(fixture.componentInstance.searches).toEqual(['joão']);
+  });
+
+  it('does not take the native search event of the field (Enter or clearing it) as a search request', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+    const input = fixture.nativeElement.querySelector('#ticketAssigneeSearch') as HTMLInputElement;
+
+    input.dispatchEvent(new Event('search', { bubbles: true }));
+
+    expect(fixture.componentInstance.searches).toEqual([]);
   });
 
   it('asks the user to type when the search is empty, and warns when nobody is found', async () => {

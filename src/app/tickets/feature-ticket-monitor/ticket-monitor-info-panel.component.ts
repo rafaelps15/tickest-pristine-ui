@@ -42,7 +42,8 @@ export class TicketMonitorInfoPanelComponent {
   readonly overdue = input(false);
   /** Situação de SLA que a linha mostra (acompanha o relógio); sem ela, a que veio da lista. */
   readonly slaStatus = input<TicketSlaStatus | null>(null);
-  readonly close = output<void>();
+  /** Pedido de fechar o painel (X). */
+  readonly closeRequested = output<void>();
   /** Atalho do painel: atribuir o chamado a quem está logado. */
   readonly assignToMeClick = output<void>();
   /** Atalho do painel: abrir o diálogo "Atribuir responsável". */

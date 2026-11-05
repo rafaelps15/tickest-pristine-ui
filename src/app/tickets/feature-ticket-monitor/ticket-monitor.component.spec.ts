@@ -1086,7 +1086,7 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const dialog = fixture.debugElement.query(By.directive(TicketAssignDialogComponent)).componentInstance as TicketAssignDialogComponent;
-    dialog.search.emit('joão');
+    dialog.searchRequested.emit('joão');
     expect(storeFake.searchResponsibleCandidates).toHaveBeenCalledWith('joão');
 
     dialog.confirm.emit({ userId: 'u2', name: 'João Pedro' });

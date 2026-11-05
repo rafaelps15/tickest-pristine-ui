@@ -330,7 +330,7 @@
                                  [activating]="store.activatingIds().includes(user.id)"
                                  [resendingInvitation]="store.resendingInvitationIds().includes(user.id)"
                                  (resendInvitationClick)="onPanelResendInvitation()"
-                                 (close)="closeInfoPanel()"
+                                 (closeRequested)="closeInfoPanel()"
                                  (editClick)="onPanelEdit()"
                                  (assignRolesClick)="onPanelAssignRoles()"
                                  (toggleActiveClick)="onPanelToggleActive()" />

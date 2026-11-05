@@ -669,7 +669,7 @@ describe('TicketDetailComponent', () => {
       expect(dialog.candidates()).toEqual([candidate]);
       expect(fixture.nativeElement.textContent).toContain('O usuário não atende chamados e não pode ser o responsável.');
 
-      dialog.search.emit('joão');
+      dialog.searchRequested.emit('joão');
       expect(detailStoreFake.searchAssignees).toHaveBeenCalledWith('joão');
     });
 

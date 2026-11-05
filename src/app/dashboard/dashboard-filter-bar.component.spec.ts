@@ -7,7 +7,7 @@ import { TicketAssignee } from '../tickets';
 
 @Component({
   template: `<app-dashboard-filter-bar [filters]="filters()" [departments]="departments()" [assignees]="assignees()" [assigneesTotal]="assigneesTotal" today="2026-10-28"
-                                       (change)="changes.push($event)" (clear)="cleared = true" />`,
+                                       (filterChanged)="changes.push($event)" (clear)="cleared = true" />`,
   imports: [DashboardFilterBarComponent]
 })
 class HostComponent {
@@ -87,6 +87,17 @@ describe('DashboardFilterBarComponent', () => {
     choose(fixture, '#dashboardDepartment', 'd1');
 
     expect(fixture.componentInstance.changes).toEqual([{ departmentId: 'd2', sectorId: undefined }, { departmentId: 'd1', sectorId: 's1' }]);
+  });
+
+  it('reports one change per choice, without the native change event that bubbles from the select', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+    const select = fixture.nativeElement.querySelector('#dashboardDepartment') as HTMLSelectElement;
+
+    select.value = 'd2';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(fixture.componentInstance.changes).toEqual([{ departmentId: 'd2', sectorId: undefined }]);
   });
 
   it('notifies the priority and assignee change (person, "meus" or none)', async () => {
