@@ -1,4 +1,4 @@
-/* Nome, amostra de cor e badges de estado numa linha só, quebrando juntos no celular. */
+/* Nome e badges de estado numa linha só, quebrando juntos no celular. */
 .role-name {
   display: flex;
   flex-wrap: wrap;
