@@ -57,7 +57,11 @@ export class TicketCreateComponent implements OnInit {
 
     this.form.controls.departmentId.valueChanges.subscribe(departmentId => {
       this.form.controls.sectorId.reset('');
-      departmentId ? this.form.controls.sectorId.enable() : this.form.controls.sectorId.disable();
+      if (departmentId) {
+        this.form.controls.sectorId.enable();
+      } else {
+        this.form.controls.sectorId.disable();
+      }
     });
   }
 

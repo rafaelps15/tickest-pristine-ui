@@ -155,7 +155,11 @@ export const LoginStore = signalStore(
 
         store._authDataService.logout(refreshToken).pipe(
           finalize(finishLogout)
-        ).subscribe({ error: () => {} });
+        ).subscribe({
+          error: () => {
+            // De propósito: se o servidor não registrar a saída, a sessão local termina igual, no finalize.
+          }
+        });
       }
     };
   })

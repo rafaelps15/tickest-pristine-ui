@@ -251,7 +251,7 @@ export class DashboardHeroChartComponent implements OnDestroy {
     const last = this.points().length - 1;
     if (last < 0) return;
     const current = this.activeIndex();
-    let next: number | null = current;
+    let next: number | null;
     switch (event.key) {
       case 'ArrowRight': next = current === null ? 0 : Math.min(last, current + 1); break;
       case 'ArrowLeft': next = current === null ? last : Math.max(0, current - 1); break;

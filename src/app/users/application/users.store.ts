@@ -3,7 +3,6 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } from 'rxjs';
-import { UserSummary } from '../entities/user-summary';
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
