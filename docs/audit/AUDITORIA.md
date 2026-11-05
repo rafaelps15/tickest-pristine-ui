@@ -6,11 +6,11 @@
 
 | Item | Valor |
 |---|---|
-| Período | 2026-10-29 a 2026-11-04 |
+| Período | 2026-10-29 a 2026-11-05 |
 | Responsável | Rafael Santos |
-| Front (`tickest-pristine-front`) | `main` em `2ccf5d5`. A `origin/main` foi de `e977f64` (merge do PR #4) para `d1f5d97` no push de 04/11, às 22:51 (14 commits). O `2ccf5d5` e esta atualização entram no push seguinte (§11) |
-| Working tree do front nesta redação | Limpo, salvo esta atualização. As limpezas L-4 a L-6 estão nos commits `2445a2a`, `56495bd` e `d1f5d97` (§11) |
-| Atualização de 05/11 | Só o A-22 e o que depende dele (DIV-5 e a pendência 7 do §6) e o nome do guard no A-21, pela T-512 da spec 049 do back, na branch `fix/SPEC-049-fe0-front-alignment` (PR da FE-0). O resto da Parte I é de 04/11 |
+| Front (`tickest-pristine-front`) | `main` local em `82c7462` (push de 04/11, 22:59). A `origin/main` foi a `5cd3dce` em 05/11, às 00:50, com o merge do PR #5 (FE-0 da spec 049 do back, `4b7b0de`). A E-01 e a E-12 foram rebaseadas sobre o `5cd3dce` em 05/11 e estão em branches locais, sem merge nem push: `fix/E-01-audit-known-defects` (10 commits) e `chore/E-12-structural-decisions` (13 commits sobre a E-01), que traz esta atualização (§11) |
+| Working tree desta redação | O worktree isolado da E-01 e da E-12 (`<scratchpad>\wt-e01`). O working tree principal está na branch `fix/SPEC-049-fe0-front-alignment`, de outra sessão, com mudanças não commitadas no `CLAUDE.md` e neste documento, que esta redação não tocou |
+| Atualizações de 05/11 | Na FE-0 (PR #5): só o A-22 e o que depende do A-22 (DIV-5 e a pendência 7 do §6) e o nome do guard no A-21, pela T-512 da spec 049 do back. Depois, nesta redação: a D-SF5, a E-01 e a E-12, rebaseadas sobre o PR #5 (§1, §3, §6, §7, §9 e §11). As outras tarefas da FE-0 não foram conferidas contra esta Parte I (§6, item 31) |
 | Back (`tickest-pristine`) | Conferido na `origin/main` `ef1c981` (merge do PR #57, 2026-10-31 00:36) durante a auditoria de 31/10. Em 04/11, a `origin/main` do back está em `e5d8a38`, 45 commits depois (§12) |
 | Documentos de origem | `docs/audit/FRONTEND_AUDIT.md` ("FA", Anexo A) e `docs/audit/FINAL_ACCEPTANCE_AUDIT.md` ("FI", Anexo B), no commit `7fe3bec` |
 
@@ -21,8 +21,8 @@
 - `FA:n` e `FI:n` apontam a linha `n` do arquivo original. É a mesma linha `n` contada a partir do
   marcador de início de cada anexo.
 - Caminhos do front partem de `src/app/`, salvo os da raiz (`src/styles.css`, `src/environments/`,
-  `server.ts`). Linhas do front são do `7fe3bec`, salvo indicação; o código de `src/` não mudou
-  depois desse commit.
+  `server.ts`). Linhas do front são do `7fe3bec`, salvo indicação; até o `82c7462`, o código de
+  `src/` não mudou depois desse commit. O PR #5, a E-01 e a E-12 mudam `src/` (§1).
 - Arquivos de código do back aparecem pelo nome, com linhas do commit `ef1c981`, salvo indicação.
   As specs 044 a 049 do back não são versionadas: foram lidas no working tree do back em 04/11.
 - **Gravidade** (FA:8-10): Crítica (segurança, perda de sessão ou dado); Alta (contrato quebrado ou
@@ -65,9 +65,25 @@
   - a L-3 (`7fe3bec`), que remove o `@angular/animations`;
   - as limpezas L-4 a L-6, em três commits: este documento (`2445a2a`), o `DESIGN.md` (`56495bd`) e
     o tsconfig sem as supressões NG8102 e NG8107 (`d1f5d97`).
-- **Na `main`, para o próximo push:** o `cli.analytics` como `false` (`2ccf5d5`) e esta atualização.
-- **Números atuais (`2ccf5d5`, cópia isolada com o `node_modules` do `npm ci` de 04/11):** 1381 de
+- **Publicado no push de 04/11, às 22:59:** o `cli.analytics` como `false` (`2ccf5d5`) e o registro da
+  integração (`82c7462`).
+- **Na `origin/main` desde 05/11, às 00:50 (merge do PR #5, `5cd3dce`):** a FE-0 da spec 049 do back
+  (`4b7b0de`), feita por outra sessão. Neste documento, o PR #5 mudou só o A-21, o A-22, o DIV-5 e a
+  pendência 7 (§6, item 31).
+- **Nas branches da E-01 e da E-12, rebaseadas sobre o `5cd3dce` e aguardando a aprovação do merge
+  (§11):**
+  - E-01: os defeitos conhecidos (C-09, A-42, R-07, A-33, N-3, N-6 e N-1) e a spec do
+    `SideMenuNavComponent`, em 10 commits validados um a um. O N-2 já veio resolvido pelo PR #5, e o
+    commit do N-2 saiu no rebase;
+  - E-12: remoção do SSR, Angular 22.2 e `@ngrx/signals` 22.0.1 estável, fontes e ícones no próprio
+    build, SRI e lint com o `angular-eslint`, em 12 commits validados um a um.
+- **Números da `main` (`2ccf5d5`, cópia isolada com o `node_modules` do `npm ci` de 04/11):** 1381 de
   1381 testes; build inicial de 382,02 kB, 0 avisos (`l48/v7a/.v7a/test.log` e `build.log`, ver §14).
+- **Números da `origin/main` (`5cd3dce`, extraído por `git archive`):** 1439 testes; build inicial de
+  382,56 kB, 0 avisos.
+- **Números da branch da E-01 (`79e5129`):** 1454 testes; build inicial de 380,25 kB, 0 avisos.
+- **Números da branch da E-12 (`2647ab3`):** 1456 testes; build inicial de 433,61 kB, 0 avisos;
+  lint sem erros; `npm audit` das dependências de produção sem vulnerabilidades (§3).
 - **Mantidos com justificativa:** A-12 a A-21, A-31, C-05 e o breakpoint repetido do C-07 (§5).
 - **Pendentes (§6):**
   - com o back: A-23 (spec 046), A-24 (047), A-30 (048) e a volta da cor da função (A-05/BR-001,
@@ -75,9 +91,9 @@
   - com Rafael Santos: A-27 (pendente de propósito), C-01, o `.impeccable/design.json` (sem
     regenerar por enquanto) e, depois de o back atualizar as referências, a exclusão dos originais de
     `docs/audit`;
-  - liberadas em 04/11: D-SF5, E-01 (os defeitos conhecidos das etapas integradas) e E-12 (decisões
-    estruturais, agora também com as fontes do Google no build e as vulnerabilidades das
-    dependências, §6, itens 23 e 24);
+  - D-SF5 definida em 04/11 (§9); E-01 e E-12 feitas nas branches, rebaseadas sobre o PR #5 em 05/11
+    e aguardando o merge (§6, itens 8, 10 e 21 a 24). Restam da E-12 a guarda de plataforma do
+    `TicketMonitorComponent` (item 25) e a URL de produção do A-27 (item 5);
   - a reavaliar: as evidências do back que não existem mais em `ef1c981` (N-7). O A-22 foi corrigido em
     05/11, na branch da FE-0 (§5).
 - **Abertos da auditoria geral de 31/10 (§8):**
@@ -120,6 +136,11 @@ Os detalhes ficam nos anexos.
 | Limpeza L-4 a L-6, estado final: `7fe3bec` com este documento, o `DESIGN.md` e os tsconfig sem as supressões NG8102 e NG8107 | 04/11 | 1381 | 382,02 kB | 0 | `l48/v6b/.v6b/` (`test.log`, `build.log`) |
 | Commit `d1f5d97`, extraído por `git archive` | 04/11 | 1381 | 382,02 kB | 0 | `l48/v6e/.v6e/` (`test.log`, `build.log`) |
 | `main` em `2ccf5d5`, com o `node_modules` do `npm ci` | 04/11 | 1381 | 382,02 kB | 0 | `l48/v7a/.v7a/` (`test.log`, `build.log`) |
+| E-01 sobre o `82c7462`, antes do rebase: cada um dos 11 commits numa cópia própria | 05/11 | 1396 | 379,72 kB | 0 | `e01-val/<commit>/.val/`; `e01-logs/valida-commits.txt` |
+| E-12 sobre a E-01, antes do rebase, com lint sem erros e `npm audit` de produção sem vulnerabilidades | 05/11 | 1398 | 433,02 kB | 0 | `e12-val/lint-5-autofocus/.val/` |
+| `origin/main` em `5cd3dce` (merge do PR #5), extraído por `git archive` | 05/11 | 1439 | 382,56 kB | 0 | `rebase/val/5cd3dce/.val/` |
+| E-01 rebaseada sobre o `5cd3dce` (`79e5129`): cada um dos 10 commits numa cópia própria | 05/11 | 1454 | 380,25 kB | 0 | `rebase/val/79e5129/.val/`; `rebase/val-e01/<commit>/.val/` |
+| E-12 rebaseada sobre a E-01 (`2647ab3`): cada um dos 12 commits numa cópia própria, com o `node_modules` exato do seu lockfile; lint sem erros e `npm audit` de produção sem vulnerabilidades | 05/11 | 1456 | 433,61 kB | 0 | `rebase/val-e12/` (uma pasta por commit, de 01 a 12); `rebase/audit/` |
 
 - Os 4 avisos eram de orçamento de CSS por componente, anteriores à missão (FI:25-27). Saíram com o
   A-33 (`0df5718`).
@@ -141,9 +162,19 @@ Os detalhes ficam nos anexos.
   HTML: o Google devolveu URLs diferentes às 22:21 e às 22:48
   (`l48/v6e/.v6e/dist-v6e-x-v6b-fontes.txt`). A saída do build depende, portanto, da resposta do
   Google Fonts (§6, item 23).
-- O build de produção pré-renderiza só `/login` ("Prerendered 1 static route", `l3/x5a/.x5a/build.log`).
-  As outras rotas respondem 500 no servidor SSR (§6, item 10).
-- Lint: o projeto não tem ESLint. A análise estática é o `strict` + `strictTemplates` (FI:81).
+- Na E-01, importar o `CurrentUserService` pelo caminho direto, e não pelo barrel `./shared`, tirou
+  2,47 kB do build inicial (`75413f2`: 382,56 → 380,09 kB; antes do rebase, 2,46 kB).
+- Na E-12, o build inicial foi a 355,53 kB sem o SSR e sem a hidratação (`06f537b`), a 359,19 kB
+  com o Angular 22.2 (`1135935`) e a 433,61 kB com as fontes e o Boxicons no próprio build
+  (`ce43d3f`). Este último salto é quase todo o CSS do Boxicons (68 KB), que antes o navegador
+  baixava do unpkg. Com as fontes no build, dois builds seguidos saem idênticos, byte a byte, nos 90
+  arquivos (`rebase/val-e12/`, pasta 05; antes do rebase, `e12-val/fontes/.val/`).
+- Até a E-12, o build de produção pré-renderizava só `/login` ("Prerendered 1 static route",
+  `l3/x5a/.x5a/build.log`), e as outras rotas respondiam 500 no servidor SSR (§6, item 10). Sem o
+  SSR (`06f537b`), o build gera só a saída do navegador.
+- Lint: até a E-12, o projeto não tinha ESLint, e a análise estática era o `strict` +
+  `strictTemplates` (FI:81). Com a E-12 (`21735f4`), `npm run lint` roda o `angular-eslint`; na
+  ponta da branch, sem erros.
 - Os 1358 de FI:121, FI:207 e FI:236 são anteriores ao saneamento (errata 3).
 
 ### 4. Catálogo-mestre de achados
@@ -277,23 +308,30 @@ Lista única. Substitui as cinco listas dos originais (errata 6).
 | 5 | A-27: URL de produção | Implantação; pendente de propósito (Rafael Santos, 31/10) | `src/environments/environment.prod.ts:3-4` | Informar a URL na implantação; ver N-8 (portas) |
 | 6 | C-01: exceção do resultado tipado nos serviços de sessão | Rafael Santos | FA:534; FA:587 | Decidir se a exceção entra nas skills |
 | 7 | A-22: motivo da reabertura (500 × 4000) | Rafael Santos (LAC-10) | §5 | Resolvido em 05/11: o limite ficou em 4000, o do back (T-512 da spec 049 do back), na branch da FE-0 |
-| 8 | Defeitos conhecidos das etapas integradas | Front: etapa E-01, liberada em 04/11 | Tabela abaixo | Corrigir na E-01 |
+| 8 | Defeitos conhecidos das etapas integradas | Rafael Santos (aprovar o merge da E-01) | Tabela abaixo; §11 | Corrigidos na E-01, na branch `fix/E-01-audit-known-defects` (`0ae9ee4` a `79e5129`, rebaseada sobre o `5cd3dce`), ainda sem merge. O N-2 veio resolvido pelo PR #5 |
 | 9 | Validação visual com login | API: o container `webapi:dev` não respondia | Etapa E-04 | Revalidar na aplicação real o A-34, R-05 a R-07 e o aviso do A-42 |
-| 10 | SSR responde 500 nas rotas não pré-renderizadas: `new CommonEngine()` sem `allowedHosts` | Front; problema preexistente | `server.ts:15`; `l3/modificada/.x2/ssr-requests-localhost.txt` e `ssr-server.log` | Etapa E-12, liberada em 04/11 |
+| 10 | SSR responde 500 nas rotas não pré-renderizadas: `new CommonEngine()` sem `allowedHosts` | Front; problema preexistente | `server.ts:15`; `l3/modificada/.x2/ssr-requests-localhost.txt` e `ssr-server.log` | Resolvido na E-12 com a remoção do SSR (`06f537b`), ainda sem merge. A implantação passa a servir arquivos estáticos (item 28) |
 | 11 | `node_modules` local sem sincronizar | — | `l48/integ/npm-ci.log` | Resolvido em 04/11: `npm ci` às 22:52, sem mudar o lockfile; o `@angular/animations` saiu do `node_modules` |
-| 12 | Push da `main` | — | §11 | Resolvido em 04/11: push às 22:51 (`e977f64` → `d1f5d97`, 14 commits). O `2ccf5d5` e esta atualização vão no push seguinte |
+| 12 | Push da `main` | — | §11 | Resolvido em 04/11: push às 22:51 (`e977f64` → `d1f5d97`, 14 commits) e às 22:59 (`2ccf5d5` e o registro da integração, `82c7462`). O merge da E-01 e da E-12 na `main` e o push seguinte dependem de aprovação |
 | 13 | `.impeccable/design.json` defasado | Rafael Santos (decisão pendente) | `.impeccable/design.json:3` (`generatedAt` 2026-10-27); DOC-10 | Não regenerar por enquanto (04/11). Decidir depois se regenera pelo fluxo `/impeccable document` |
 | 14 | Evidências do back que não existem mais (N-7); texto do A-25; classificação do A-31 | Front (documentação) | §4; §5; §7 | Reconferir contra a `origin/main` atual do back (`e5d8a38`) e registrar aqui |
 | 15 | N-4 e N-5 | Front; Rafael Santos (incluir no plano) | §7 | A E-01 cobre só a spec do `SideMenuNavComponent` (N-5). O N-4 e os outros quatro arquivos do N-5 não têm etapa no plano de 31/10 |
-| 16 | D-SF5: nomenclatura de specs, branches e commits do front | Rafael Santos | §9; §13 | Liberada em 04/11. A tabela de controle das specs do back ainda não chegou inteira |
-| 17 | Achados da auditoria geral de 31/10 (DIV-, LAC-, DOC-, BK-) | Front, back e responsável | §8 | Seguem no plano de 31/10 (a E-00 já foi executada; E-01 e E-12 liberadas em 04/11; as demais sem aprovação). DIV-1 e DIV-3 (Alto) afetam o uso hoje; a E-02 prevê corrigir DIV-1, DIV-2, DIV-4, DIV-9 e DIV-10 |
+| 16 | D-SF5: nomenclatura de specs, branches e commits do front | — | §9 | Definida em 04/11: `FE-NNN` espelhando o back (§9). Vale para o trabalho do SDD; as etapas do plano de 31/10 seguem com os IDs da auditoria |
+| 17 | Achados da auditoria geral de 31/10 (DIV-, LAC-, DOC-, BK-) | Front, back e responsável | §8 | Seguem no plano de 31/10 (E-00 feita; E-01 e E-12 feitas nas branches, rebaseadas sobre o PR #5, sem merge; as demais sem aprovação). DIV-1 e DIV-3 (Alto) afetavam o uso em 31/10; o PR #5 traz a correção do DIV-1 (T-500, fechar pelo `POST /tickets/{id}/close`), ainda não conferida no §8 (item 31). A E-02 prevê corrigir DIV-1, DIV-2, DIV-4, DIV-9 e DIV-10 |
 | 18 | Commit das limpezas L-4, L-5 e L-6 | — | §9; §11 | Resolvido em 04/11: três commits independentes (`2445a2a`, `56495bd`, `d1f5d97`), integrados à `main` por fast-forward e publicados |
 | 19 | Supressões NG8102 e NG8107 (`extendedDiagnostics`, no `tsconfig.app.json` e no `tsconfig.spec.json` do `7fe3bec`) | — | §3; §9 | Resolvido em 04/11: removidas de todas as configurações no `d1f5d97` |
 | 20 | Excluir `docs/audit/FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` | Rafael Santos; back (referências do §12) | §12; §15 | Preservar os dois até o back atualizar as referências (decisão de 04/11). O front não altera o back |
-| 21 | Itens da revisão da raiz de 04/11 | Rafael Santos | §9; relatório das limpezas L-4 a L-8 | `server.ts` fica na raiz até a E-12 (o Angular 22 gera `src/server.ts`); `README.md` (DOC-6) e `PRODUCT.md` (DOC-1 a DOC-5) ficam para a E-06. Resolvidos em 04/11: o `cli.analytics` como `false` (`2ccf5d5`) e a pasta `.impeccable/live/`, apagada (a regra `.impeccable/live/` do `.gitignore` continua) |
+| 21 | Itens da revisão da raiz de 04/11 | Rafael Santos | §9; relatório das limpezas L-4 a L-8 | O `server.ts` saiu da raiz com o SSR, na E-12 (`06f537b`, ainda sem merge); `README.md` (DOC-6) e `PRODUCT.md` (DOC-1 a DOC-5) ficam para a E-06. Resolvidos em 04/11: o `cli.analytics` como `false` (`2ccf5d5`) e a pasta `.impeccable/live/`, apagada (a regra `.impeccable/live/` do `.gitignore` continua) |
 | 22 | Impacto no front das specs do back mergeadas depois de 31/10 (022, 023, 045, 024, 035, 051 e 050) | Front | §12 | Avaliar; não foi feito nesta consolidação |
-| 23 | Fontes do Google embutidas no build | Front (E-12) | `src/index.html:9-12`; §3 | O build de produção baixa a CSS do Google Fonts e a embute no HTML: a saída não é reproduzível, o build depende da rede, e o navegador busca as fontes no Google (CSP, privacidade, desempenho). Avaliar hospedar as fontes no projeto |
-| 24 | Vulnerabilidades nas dependências | Front (E-12) | `l48/integ/npm-audit-prod.json`; `npm-audit-completo.txt` | `npm audit` de 04/11: 48 no total; 12 nas de produção (1 crítica, 4 altas, 7 moderadas), entre elas avisos do Angular 22.0.6 (SSR, sanitização, router) e de dependências do Express (`proxy-addr`, `body-parser`, `qs`). Atualizar para as versões corrigidas, com validação |
+| 23 | Fontes do Google embutidas no build | Front (E-12) | `src/index.html:9-12`; §3 | Resolvido na E-12 (`ce43d3f`, ainda sem merge): Public Sans (400, 400 itálico, 500, 600 e 700) e Sora (700) pelo `@fontsource`, e o Boxicons pelo npm. Dois builds seguidos saem idênticos, e o navegador não busca mais fontes no Google nem no unpkg |
+| 24 | Vulnerabilidades nas dependências | Front (E-12) | `l48/integ/npm-audit-prod.json`; `npm-audit-completo.txt` | Resolvido na E-12 para as dependências de produção (`06f537b`, sem a cadeia do Express; `1135935`, Angular 22.2; `c1508a6`, `@ngrx/signals` 22.0.1): `npm audit --omit=dev` sem vulnerabilidades. Restam as de desenvolvimento (item 27) |
+| 25 | Guarda `isPlatformBrowser` que sobrou no `TicketMonitorComponent` | Front | `55c5744` tirou as outras cinco | Inofensiva num app só de navegador. Tirar num commit próprio |
+| 26 | Menu lateral: só os itens de chamados expõem `aria-current`, e os ícones decorativos não têm `aria-hidden` | Front (acessibilidade) | Achado da spec do `SideMenuNavComponent` (E-01, N-5) | Usar `ariaCurrentWhenActive` nos `routerLinkActive` e `aria-hidden="true"` nos ícones |
+| 27 | Vulnerabilidades nas dependências de desenvolvimento | Front | `npm audit` de 05/11 na ponta da E-12 (`rebase/audit/`) | 23 (17 moderadas, 6 altas), no ferramental de lint e de testes, fora do pacote entregue. Na primeira medição da E-12, antes do rebase, eram 8 (2 moderadas, 6 altas), com o mesmo lockfile: a diferença é um aviso do `minimatch` (GHSA-g3hv-75wg-m249) que não aparecia antes e chega pelo `eslint`, pelo `typescript-eslint` e pelo `angular-eslint`; a correção que o npm sugere rebaixa esses pacotes de versão major. As 6 altas são da cadeia do Karma (`body-parser`, `engine.io`, `socket.io-parser`, `follow-redirects`), do `brace-expansion` e do `browserslist`. O Karma foi descontinuado: avaliar o runner de testes recomendado para o Angular 22 e um `overrides` do `minimatch` |
+| 28 | Implantação sem SSR | Implantação (A-27) | `06f537b` | Servir `dist/tickest-pristine/browser` como arquivos estáticos, com as rotas desconhecidas redirecionadas para o `index.html` |
+| 29 | Bootstrap ainda vem do jsDelivr | Front | `src/index.html` | Tem `integrity`. Trazer o pacote `bootstrap` 5.3.3 para o build deixaria a página toda na mesma origem e a CSP mais simples |
+| 30 | Build inicial perto do aviso de orçamento | Front | §3 | 433,61 kB contra o aviso de 500 kB; quase todo o salto é o CSS do Boxicons. Avaliar usar só os ícones que o app usa |
+| 31 | Tarefas da FE-0 (PR #5) sem conferência nesta Parte I | Front (documentação) | Mensagem do `4b7b0de`; §6; §7; §8 | O registro do PR #5 neste documento cobre o A-21, o A-22, o DIV-5 e a pendência 7. As outras tarefas não foram conferidas contra os achados: a T-500 (fechar pelo `POST /tickets/{id}/close`) corresponde ao DIV-1, e a T-517 (sem as flags das rotas entregues) cobriu o N-2. Conferir cada tarefa contra o §6, o §7 e o §8 e atualizar os estados |
 
 **Defeitos conhecidos para a E-01**
 
@@ -308,16 +346,22 @@ Lista única. Substitui as cinco listas dos originais (errata 6).
 | N-1, N-2 | Comentários desatualizados | `roles/feature-role-list/role-list.component.css:1`; `shared/entities/dashboard-features.ts:4-8` |
 | N-5 (parte) | Falta a spec do `SideMenuNavComponent` | `shared/ui/layouts/main-layout/side-menu-nav.component.ts` |
 
+Todos corrigidos na E-01, um commit por item, rebaseados sobre o `5cd3dce` e ainda sem merge (§11):
+C-09 em `0ae9ee4`; A-42 em `75413f2` (import) e `39f1982` (aviso só na primeira carga); R-07 em
+`d95b336`; A-33 em `887fee5` (reserva do `--bs-card-bg`) e `4c5c575` (cópia do Monitor); N-3 em
+`855ad11`; N-6 em `a0eb626`; N-1 em `77fb19d`; e a spec do `SideMenuNavComponent` em `79e5129`, que
+amplia a que o PR #5 criou. O N-2 veio resolvido pelo PR #5 (T-517), e o commit do N-2 saiu no rebase.
+
 ### 7. Itens novos da conferência de 31/10
 
 | ID | Achado | Evidência | Estado | Próximo passo |
 |---|---|---|---|---|
-| N-1 | Comentário fala em "amostra de cor", que saiu com o BR-001 | `roles/feature-role-list/role-list.component.css:1` | Pendente | E-01 |
-| N-2 | Comentário diz que as flags do Início esperam endpoint que o back "ainda não entrega"; hoje as cinco flags estão ligadas | `shared/entities/dashboard-features.ts:4-8`; `src/environments/environment.ts:9-13` | Pendente | E-01 |
-| N-3 | Título de teste em português ("deve manter a sessão…") | `shared/interceptors/auth.interceptor.spec.ts:117` | Pendente | E-01 |
+| N-1 | Comentário fala em "amostra de cor", que saiu com o BR-001 | `roles/feature-role-list/role-list.component.css:1` | Corrigido na E-01 (`77fb19d`), sem merge | — |
+| N-2 | Comentário diz que as flags do Início esperam endpoint que o back "ainda não entrega"; hoje as cinco flags estão ligadas | `shared/entities/dashboard-features.ts:4-8`; `src/environments/environment.ts:9-13` | Corrigido na `origin/main` pelo PR #5 (T-517, `4b7b0de`): ficou só a flag `volumeResolved`, e o comentário foi reescrito. O commit da E-01 saiu no rebase | — |
+| N-3 | Título de teste em português ("deve manter a sessão…") | `shared/interceptors/auth.interceptor.spec.ts:117` | Corrigido na E-01 (`855ad11`), sem merge | — |
 | N-4 | Variáveis com nome em português em teste (`prazoDd`, `prazoText`, `prazoLines`) | `tickets/feature-ticket-detail/ticket-detail.component.spec.ts:256,280,1102` | Pendente | Sem etapa no plano de 31/10 |
-| N-5 | Cinco arquivos novos sem spec própria | `shared/utils/focus-trap.util.ts`; `shared/ui/session-retry-notice/session-retry-notice.component.ts`; `shared/ui/layouts/main-layout/side-menu-nav.component.ts`; `tickets/feature-ticket-list/ticket-list-first-use.component.ts`; `tickets/feature-ticket-list/ticket-list-due-cell.component.ts` | Pendente. Há testes indiretos, como `focus-trap.directive.spec.ts` e `app.component.spec.ts` (cobertura não medida) | A E-01 só para o `SideMenuNavComponent`; os outros quatro, sem etapa |
-| N-6 | Referência `#menu` sem uso: o `.ts` só lê `menuOpener`, `menuCloser` e `mainContent` | `main-layout.component.html:4`; `main-layout.component.ts:68-74` | Pendente | E-01 |
+| N-5 | Cinco arquivos novos sem spec própria | `shared/utils/focus-trap.util.ts`; `shared/ui/session-retry-notice/session-retry-notice.component.ts`; `shared/ui/layouts/main-layout/side-menu-nav.component.ts`; `tickets/feature-ticket-list/ticket-list-first-use.component.ts`; `tickets/feature-ticket-list/ticket-list-due-cell.component.ts` | Em parte: o PR #5 criou a spec do `SideMenuNavComponent`, com 2 testes, e a E-01 (`79e5129`, sem merge) a amplia para 13. Os outros quatro seguem só com testes indiretos, como `focus-trap.directive.spec.ts` e `app.component.spec.ts` | Os outros quatro, sem etapa no plano de 31/10 |
+| N-6 | Referência `#menu` sem uso: o `.ts` só lê `menuOpener`, `menuCloser` e `mainContent` | `main-layout.component.html:4`; `main-layout.component.ts:68-74` | Corrigido na E-01 (`a0eb626`), sem merge | — |
 | N-7 | Evidências do back que não existem em `ef1c981`: `TicketAccessGuard.EnsureOwnerOrManagerAsync` (A-06, FA:149), `UserValidationRules.NameMaxLength` (A-09, FA:168), `TicketStatusTransitions.CanTransition` (A-12, FA:466), `TicketSla.GetStatus` (A-14, FA:468) e os limites do A-22 (FA:476) | Busca no `ef1c981` sem ocorrência; entre `a72e07b` e `ef1c981` entraram as specs 039, 042 e 041 (PRs #55, #56 e #57) | A reavaliar | Registrado nesta Parte I (§4, §5); os anexos ficam como estão |
 | N-8 | Portas diferentes: 5000 em desenvolvimento e 5195 em produção | `src/environments/environment.ts:3`; `src/environments/environment.prod.ts:4` | Registrado (ligado ao A-27) | Resolver junto com a URL de produção |
 
@@ -380,7 +424,7 @@ A coluna "Relaciona-se com" é leitura desta redação.
 | DOC-5 | — | "Nenhum requisito de acessibilidade" × WCAG AA aplicado no `DESIGN.md` | `PRODUCT.md:92-94`; `DESIGN.md:171,193` | Aberto |
 | DOC-6 | — | O `README.md` é o modelo do Angular CLI: cita a versão 18.2.6 e manda rodar `ng e2e` | `README.md:3,23` | Aberto |
 | DOC-7 | — | `CLAUDE.md` com exemplo antigo (`TicketsService`) e sem `core/` e `dashboard/` | `CLAUDE.md:19-24,38` | Aberto |
-| DOC-8 | — | Skills citam lint que não existe, Prettier, `flushEffects`/`fakeAsync` e `console.error` | `.claude/skills/add-context/SKILL.md:74`; `add-feature/SKILL.md:41,56`; `add-feature/references/store-method.md:34,115`; `add-tests/SKILL.md:29-30`; `ca-review/SKILL.md:99`; `.claude/skills/README.md:100,105` | Aberto; as skills não foram alteradas |
+| DOC-8 | — | Skills citam lint que não existe, Prettier, `flushEffects`/`fakeAsync` e `console.error` | `.claude/skills/add-context/SKILL.md:74`; `add-feature/SKILL.md:41,56`; `add-feature/references/store-method.md:34,115`; `add-tests/SKILL.md:29-30`; `ca-review/SKILL.md:99`; `.claude/skills/README.md:100,105` | Em parte: o lint passou a existir na E-12 (`21735f4`, `npm run lint`, ainda sem merge). As skills não foram alteradas e ainda citam Prettier, `flushEffects`/`fakeAsync` e `console.error` |
 | DOC-9 | — | `DESIGN.md`: token do botão primário, texto transitório da spec 031 e o padrão `is-refreshing` não registrado | `DESIGN.md` no HEAD | Tratados na limpeza L-5, aprovada em 04/11 sem regenerar o documento (`56495bd`) |
 | DOC-10 | — | `.impeccable/design.json` defasado | `.impeccable/design.json:3` (`generatedAt` 2026-10-27) | Pendente (§6, item 13); sem regenerar por enquanto (04/11) |
 
@@ -461,6 +505,10 @@ Fonte: relatório de 31/10.
 | 04/11 | Concluir o P4 depois da parada no `git fsck`; registrar a integração neste documento num commit posterior; deixar como está o stash antigo `27e92c8` | Conversa de 04/11 |
 | 04/11 | Liberados: fast-forward da `main` para o `d1f5d97`, exclusão da branch, push, `cli.analytics` como `false` em commit separado, `npm ci`, D-SF5, E-01 e E-12 | Conversa de 04/11; §11 |
 | 04/11 | Seguir como sênior de Angular e UI/UX até a implementação do SDD: excelência técnica, arquitetura de componentes, design tokens, desempenho e integridade dos fluxos | Conversa de 04/11 |
+| 04/11 | D-SF5 = `FE-NNN` espelhando o back: pasta `specs/FE-NNN-slug-em-português/spec.md`; branch `tipo/FE-NNN-slug-em-inglês` (feat, fix, refactor, chore, docs ou test); commit `tipo(escopo): descrição em português [FE-NNN]`, com as tarefas como `[FE-NNN T-n]`. Os achados FE-01 a FE-28 da spec 049 do back passam a ser citados como `049/FE-nn`. As etapas do plano de 31/10 seguem com os IDs da auditoria | Conversa de 04/11 (pergunta direta) |
+| 04/11 | E-12: remover o SSR; hospedar as fontes no projeto; adicionar o `angular-eslint` agora | Conversa de 04/11 (pergunta direta) |
+| 04/11 | Seguir até o SDD sem parar: o A-42 em commits pequenos, cada item da E-01 no seu commit, a revisão pela skill `ca-review`, a E-12 e o registro da D-SF5. Tudo nas branches isoladas; merge e push na `main` só depois da validação final | Conversa de 04/11 |
+| 05/11 | Rebase sequencial da E-01 e depois da E-12 sobre o `5cd3dce` (merge do PR #5), com os conflitos resolvidos pela integridade da arquitetura e build, lint e testes depois de cada rebase; avisar quando estiver pronto para o merge na `main`, que segue dependendo de aprovação | Conversa de 05/11 |
 
 ### 10. Matriz de aceitação
 
@@ -525,7 +573,14 @@ Horários de Brasília, salvo indicação.
 | 04/11 22:51:08 | Push da `main`: a `origin/main` foi de `e977f64` para `d1f5d97`, por fast-forward (14 commits: E-00, L-3 e L-4 a L-6) | — | `l48/integ/push-1.txt`; `git ls-remote` antes e depois |
 | 04/11 22:51:39 | `cli.analytics` como `false` no `angular.json`, num commit separado | `2ccf5d5` ("chore: desliga a telemetria do Angular CLI no projeto") | `ng analytics info`: configuração local e estado efetivo "disabled" |
 | 04/11 22:52 | `npm ci`: o `node_modules` local passa a seguir o lockfile, sem o `@angular/animations`; o lockfile não mudou | — | `l48/integ/npm-ci.log`; `l48/v7a/.v7a/` (§3) |
-| 04/11, nesta redação | Só existe a `main` local, em `2ccf5d5`, um commit à frente da `origin/main` (`d1f5d97`). Esta atualização é o commit seguinte, e os dois vão no próximo push. No GitHub seguem `origin/docs/frontend-audit-merge-record` (`523af11`) e `origin/fix/frontend-audit-integration` (`f449599`) | — | `git branch -a` |
+| 04/11 22:59 | Push do `2ccf5d5` e do registro da integração: a `origin/main` vai a `82c7462` | `82c7462` | `l48/integ/push-2.txt` |
+| 04/11 23:16 | Outra sessão começa a mexer no working tree principal (o DIV-1, rota de fechar chamado, no `TicketDetailStore` e no `TicketDataService`). Para não interferir, a E-01 e a E-12 passam a um worktree próprio, criado às 23:19 do `82c7462` | — | `git worktree list` |
+| 04/11 23:22–23:55 | E-01 na branch `fix/E-01-audit-known-defects`, sobre o `82c7462`: 11 commits, um por item, cada um validado sozinho (build e testes) e revisado pela skill `ca-review` | Reescritos no rebase de 05/11 | `e01-logs/valida-commits.txt`; `e01-val/` |
+| 05/11 00:13–00:57 | E-12 na branch `chore/E-12-structural-decisions`, sobre a E-01: 12 commits (SSR, guardas de plataforma, Angular 22.2, `@ngrx/signals`, fontes, SRI, o lint e as correções que o lint pediu), mais este registro. As dependências foram instaladas em cópias isoladas, com `npm ci` próprio; o npm nunca tocou o `node_modules` compartilhado | Reescritos no rebase de 05/11 | `e12-val/` |
+| 05/11 00:46–00:50 | PR #5 (FE-0 da spec 049 do back, branch `fix/SPEC-049-fe0-front-alignment`), de outra sessão, mergeado no GitHub: a `origin/main` vai de `82c7462` a `5cd3dce` | `4b7b0de`; `5cd3dce` | `git log origin/main` |
+| 05/11 14:03–14:07 | Rebase da E-01 sobre o `5cd3dce`: 9 commits sem conflito; o do N-2 descartado, porque o PR #5 já tinha tirado as flags e reescrito o comentário; a spec do `SideMenuNavComponent`, criada também pelo PR #5, unida numa só, com os 2 testes do PR #5 e os 11 da E-01. Depois, cada um dos 10 commits validado sozinho (build e testes) | `0ae9ee4` a `79e5129` | `rebase/refs-antes.txt`; `rebase/val/`; `rebase/val-e01/` |
+| 05/11 14:11–14:52 | Rebase da E-12 sobre a E-01 rebaseada: 10 commits sem conflito e 3 resolvidos (as specs de departamentos, em que o PR #5 tirou o fluxo do responsável atual; o template do Início, que o PR #5 reorganizou; e este documento). Cada um dos 12 commits validado sozinho, com o `node_modules` exato do seu lockfile, e as mensagens com os números medidos sobre o `5cd3dce` | `06f537b` a `2647ab3` | `rebase/val-e12/`; `rebase/audit/` |
+| 05/11, nesta redação | `main` local em `82c7462`; `origin/main` em `5cd3dce`. As branches da E-01 e da E-12 estão só no local, rebaseadas, sem merge nem push, aguardando a aprovação de Rafael Santos. No GitHub seguem também `origin/fix/SPEC-049-fe0-front-alignment` (`4b7b0de`), `origin/docs/frontend-audit-merge-record` (`523af11`) e `origin/fix/frontend-audit-integration` (`f449599`) | — | `git branch -a` |
 
 ### 12. Rastreabilidade com o back
 
@@ -590,10 +645,11 @@ Ficam fora do repositório e podem sumir. Só a localização fica registrada.
 | Pasta | O que tem | Período |
 |---|---|---|
 | `C:\Users\rafae\AppData\Local\Temp\claude\c--dev-tickest-pristine-front\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | Backup do BR-001 (`backup-br001\`), patch da missão, cópias isoladas e logs (`acc\`, `final2\` a `final8\`), medições de foco (`focus\`), preparação da E-00 (`e00\`, `a33\`) e scripts de 31/10 | 29/10 a 31/10 |
-| `C:\Users\rafae\AppData\Local\Temp\claude\cb02df504aad776f\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | `backup\` (antes da reindentação e da tradução dos títulos); `e00v2\` (simulação e execução da E-00: commits, `manifest.json`, logs de build e de testes por estado); `l9\` (fotos das refs e `git fsck` da L-9); `l3\` (validação da L-3: `original\`, `modificada\`, `x5a\`); `l48\` (rascunho e validação deste documento; diffs e conferências das limpezas L-5 e L-6; `v6b\`, `v6h\`, `v6c\` e `v6d\`, cópias isoladas da revisão de 04/11; `impeccable-live.txt`; `integ\`, conferências P0 a P4, `fsck`, refs, push, `npm ci` e `npm audit` da integração; `v6e\` e `v7a\`, validação do `d1f5d97` e do `2ccf5d5`); `status-*.txt` | 04/11 |
+| `C:\Users\rafae\AppData\Local\Temp\claude\cb02df504aad776f\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | `backup\` (antes da reindentação e da tradução dos títulos); `e00v2\` (simulação e execução da E-00: commits, `manifest.json`, logs de build e de testes por estado); `l9\` (fotos das refs e `git fsck` da L-9); `l3\` (validação da L-3: `original\`, `modificada\`, `x5a\`); `l48\` (rascunho e validação deste documento; diffs e conferências das limpezas L-5 e L-6; `v6b\`, `v6h\`, `v6c\` e `v6d\`, cópias isoladas da revisão de 04/11; `impeccable-live.txt`; `integ\`, conferências P0 a P4, `fsck`, refs, push, `npm ci` e `npm audit` da integração; `v6e\` e `v7a\`, validação do `d1f5d97` e do `2ccf5d5`); `status-*.txt`; `wt-e01\` (worktree da E-01 e da E-12); `e01-logs\` (mensagens dos commits, scripts de validação e medidas do R-07 e do A-33); `e01-val\` (validação de cada commit da E-01); `e12-val\` (cópias da E-12, cada uma com `npm ci` próprio, e os logs do `ng update`, das fontes e do lint); `rebase\` (rebase de 05/11: refs, mensagens, a validação de cada commit da E-01 e da E-12 sobre o `5cd3dce` em `val\`, `val-e01\` e `val-e12\`, o `npm audit` de cada lockfile em `audit\`, o `node_modules` próprio do commit do Angular 22.2 e a cópia do validador deste documento) | 04/11 a 05/11 |
 
-Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l48/…`) partem da pasta de
-04/11. `focus/compare.md` parte da pasta de 29–31/10.
+Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l48/…`, `e01-logs/…`,
+`e01-val/…`, `e12-val/…` e `rebase/…`) partem da pasta de 04/11. `focus/compare.md` parte da pasta de
+29–31/10.
 
 ### 15. Histórico deste documento
 
@@ -611,6 +667,12 @@ Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l4
 - **04/11, depois da integração:** este documento entrou no `2445a2a` com o texto da revisão, que
   ainda falava em dois commits. Esta atualização corrige esse texto, registra a integração (§11) e
   dois achados da validação (§6, itens 23 e 24).
+- **05/11, depois da E-01 e da E-12:** registra a D-SF5 (§9), a E-01 e a E-12 (§1, §3, §6, §7 e §11)
+  e os achados novos (§6, itens 25 a 30). Vai no último commit da branch da E-12, ainda sem merge.
+- **05/11, no rebase sobre o PR #5:** junta a atualização do PR #5 (A-21, A-22, DIV-5 e pendência 7)
+  com a da E-01 e da E-12; troca os hashes e os números pelos da base nova; corrige o que tinha
+  ficado para trás no §0 ("Como ler"), no §3 (SSR e lint) e no item 12; atualiza o item 27 e
+  acrescenta o item 31 (§6).
 - **Regra:** a Parte I prevalece. Os anexos preservam o texto original, sem alterações.
 - **Cópia dos anexos:** texto idêntico aos blobs de `7fe3bec`, conferido por script
   (`l48/l4-validate.cjs`). No working tree do Windows, este documento e os originais usam CRLF
