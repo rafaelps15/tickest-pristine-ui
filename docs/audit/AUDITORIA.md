@@ -10,6 +10,7 @@
 | Responsável | Rafael Santos |
 | Front (`tickest-pristine-front`) | `main` em `2ccf5d5`. A `origin/main` foi de `e977f64` (merge do PR #4) para `d1f5d97` no push de 04/11, às 22:51 (14 commits). O `2ccf5d5` e esta atualização entram no push seguinte (§11) |
 | Working tree do front nesta redação | Limpo, salvo esta atualização. As limpezas L-4 a L-6 estão nos commits `2445a2a`, `56495bd` e `d1f5d97` (§11) |
+| Atualização de 05/11 | Só o A-22 e o que depende dele (DIV-5 e a pendência 7 do §6) e o nome do guard no A-21, pela T-512 da spec 049 do back, na branch `fix/SPEC-049-fe0-front-alignment` (PR da FE-0). O resto da Parte I é de 04/11 |
 | Back (`tickest-pristine`) | Conferido na `origin/main` `ef1c981` (merge do PR #57, 2026-10-31 00:36) durante a auditoria de 31/10. Em 04/11, a `origin/main` do back está em `e5d8a38`, 45 commits depois (§12) |
 | Documentos de origem | `docs/audit/FRONTEND_AUDIT.md` ("FA", Anexo A) e `docs/audit/FINAL_ACCEPTANCE_AUDIT.md` ("FI", Anexo B), no commit `7fe3bec` |
 
@@ -77,7 +78,8 @@
   - liberadas em 04/11: D-SF5, E-01 (os defeitos conhecidos das etapas integradas) e E-12 (decisões
     estruturais, agora também com as fontes do Google no build e as vulnerabilidades das
     dependências, §6, itens 23 e 24);
-  - a reavaliar: A-22 e as evidências do back que não existem mais em `ef1c981` (N-7).
+  - a reavaliar: as evidências do back que não existem mais em `ef1c981` (N-7). O A-22 foi corrigido em
+    05/11, na branch da FE-0 (§5).
 - **Abertos da auditoria geral de 31/10 (§8):**
   - dez divergências front/back; duas de gravidade Alto: DIV-1 ("Fechar chamado" sempre falha) e
     DIV-3 (o PUT reenvia descrição e status lidos);
@@ -170,8 +172,8 @@ Todos os 66 IDs dos documentos. "Detalhe" aponta as linhas do original no anexo.
 | A-18 | Somas de ativos e finalizados | — | Mantido | — | `my-tickets-summary.store.ts` (FA:472) | FA:472 |
 | A-19 | Busca e contagem em Departamentos e Funções | — | Mantido | — | `departments/feature-department-list/*`, `role-insights` (FA:473) | FA:473 |
 | A-20 | Impacto e ações em lote de Usuários | — | Mantido | — | `users.store.ts` (FA:474) | FA:474 |
-| A-21 | Guards e menus só como UX | — | Mantido | — | `admin-master.guard.ts`, `main-layout` (FA:475) | FA:475 |
-| A-22 | Limites de texto iguais aos do servidor | — | A reavaliar | — | Front: motivo da reabertura 500 (`tickets/ui/ticket-reopen-dialog/ticket-reopen-dialog.component.ts:6,41`). Back: `ReopenTicketCommandValidator.cs:9` só confere o id; limite efetivo 4000 (spec 042); texto acima do limite responde 400 (`GlobalExceptionHandler.cs:46-60`). Ver §5 | FA:476; FI:365 |
+| A-21 | Guards e menus só como UX | — | Mantido | — | `permission.guard.ts` (antes `admin-master.guard.ts`, nome trocado em 05/11), `main-layout` (FA:475) | FA:475 |
+| A-22 | Limites de texto iguais aos do servidor | — | Corrigido (branch da FE-0, 05/11) | `fix/SPEC-049-fe0-front-alignment` | Front: motivo da reabertura 4000 (`TICKET_REOPEN_REASON_MAX_LENGTH`, `tickets/ui/ticket-reopen-dialog/ticket-reopen-dialog.component.ts:6,41`; o spec ao lado envia 600 caracteres e bloqueia 4001), antes 500. Back: `ReopenTicketCommandValidator.cs:9` só confere o id; limite efetivo 4000 (spec 042); texto acima do limite responde 400 (`GlobalExceptionHandler.cs:46-60`). Ver §5 | FA:476; FI:365 |
 | A-23 | Tokens de acesso e de renovação no `localStorage` | Média | Pendente → spec 046 do back | — | FA:482; back `specs/046-sessao-em-cookie-httponly/spec.md:101` | FA:482; FI:362 |
 | A-24 | A API só informa `canCancel` | Baixa | Pendente → spec 047 | — | FA:483; back `specs/047-acoes-permitidas-do-chamado/spec.md:98` | FA:483; FI:363 |
 | A-25 | Limites de anexo fixos no front | Baixa | Corrigido (origin/main), como A-39; texto a reavaliar | `8473d24`, PR #3 | FA:484 diz que os limites por chamado "continuam só no back-end". Desde `6df64e1` o Store os aplica quando a lista está completa (`tickets/application/ticket-attachments.store.ts:18-34`) | FA:484 |
@@ -219,8 +221,8 @@ Todos os 66 IDs dos documentos. "Detalhe" aponta as linhas do original no anexo.
 
 Contagem: 38 corrigidos na `origin/main` (o A-05 como remoção); 10 corrigidos só na `main` local
 (A-28, A-33, A-42 na parte do aviso, R-05, R-06, R-07, C-07 na parte do foco preso, C-09, C-10 e
-6.3); 12 mantidos (A-12 a A-21, A-31 e C-05); 5 pendentes (A-23, A-24, A-27, A-30 e C-01); 1 a
-reavaliar (A-22).
+6.3); 12 mantidos (A-12 a A-21, A-31 e C-05); 5 pendentes (A-23, A-24, A-27, A-30 e C-01). O A-22,
+antes a reavaliar, foi corrigido em 05/11, na branch da FE-0 (`fix/SPEC-049-fe0-front-alignment`).
 
 ### 5. Analisados e mantidos
 
@@ -237,7 +239,7 @@ Justificativas completas em FA:462-476 e FA:585-590.
 | A-18 | `my-tickets-summary.store.ts` | Somas de contadores com o agrupamento do back (`OwnTicketStatusGroup`) | — |
 | A-19 | `departments/feature-department-list/*` e `role-insights` | `GET /departments` e `GET /roles` vêm sem paginação; filtrar a lista carregada é apresentação | Muda se o back paginar |
 | A-20 | `users.store.ts` | Aviso informativo e orquestração de chamadas que o servidor valida uma a uma | A LAC-6 pede o impacto da desativação no back |
-| A-21 | `admin-master.guard.ts`, `main-layout` | Só UX; a API aplica `[HasPermission]` | DIV-9 e DIV-10: telas que não conferem a permissão de cada ação |
+| A-21 | `permission.guard.ts` (antes `admin-master.guard.ts`, nome trocado em 05/11), `main-layout` | Só UX; a API aplica `[HasPermission]` | DIV-9 e DIV-10: telas que não conferem a permissão de cada ação |
 | A-31 | Linha "Prazo" do detalhe, quando o painel de SLA não carrega | Fallback documentado no template; o painel de SLA usa o relógio do servidor | Classificação a reavaliar (errata 2) |
 | C-05 | `shared/application/session-recovery.store.ts` | Mesmo formato do `LoginStore` e do `ActivateAccountStore`; não há resource a duplicar | — |
 | C-07 (breakpoint) | `shared/ui/layouts/main-layout/main-layout.component.ts:110` e `.css:110` | O CSS não lê constantes do TS; um comentário liga os dois (FA:585) | O resto do C-07 foi corrigido (`0573c20`) |
@@ -249,7 +251,7 @@ Justificativas completas em FA:462-476 e FA:585-590.
 | Mensagem | 4000 (`tickets/entities/ticket-message.ts:12`) | Coluna 4000 (`TicketMessageConfiguration.cs:16`) | Igual |
 | Título do chamado | 200 (`tickets/feature-ticket-create/ticket-create.component.ts:35`) | Coluna 200 (`TicketConfiguration.cs:20`) | Igual |
 | Descrição do chamado | 10 a 500 (`ticket-create.component.ts:36`; `tickets/ui/ticket-edit-dialog/ticket-edit-dialog.component.ts:47`) | Coluna 500 (`TicketConfiguration.cs:23`) e check de 10 a 500 (spec 042, REQ-3) | Igual |
-| Motivo da reabertura | 500 (`ticket-reopen-dialog.component.ts:6,41`) | Sem limite próprio: `ReopenTicketCommandValidator.cs:9` só confere o id; vale a coluna da mensagem, 4000 (spec 042, REQ-4 e DEC-17) | **Diverge** (DIV-5): o front recusa texto que o back aceita |
+| Motivo da reabertura | 4000 desde 05/11 (`TICKET_REOPEN_REASON_MAX_LENGTH`, `ticket-reopen-dialog.component.ts:6,41`); antes 500 | Sem limite próprio: `ReopenTicketCommandValidator.cs:9` só confere o id; vale a coluna da mensagem, 4000 (spec 042, REQ-4 e DEC-17) | Igual desde 05/11 (DIV-5 resolvido); antes, o front recusava texto que o back aceita |
 | Nome e descrição de departamento e de setor | 100 e 500 (`departments/feature-department-list/department-list.component.ts:195-196,201-202`) | Colunas 100 e 500 (`DepartmentConfiguration.cs:15,23`; `SectorConfiguration.cs:15,23`) | Igual. Acima do limite, o back responde 400, não 500 (`GlobalExceptionHandler.cs:46-60`; spec 042, REQ-7 e AC-6) |
 | Nome e sobrenome do usuário | 100 (`users/entities/user-profile.ts:2`) e mínimo de 2 | Colunas 100 (`UserConfiguration.cs:16-17`), sem mínimo | Máximo igual; mínimo só no front (DIV-8) |
 | Senha | Mínimo 6 e `strongPasswordValidator` (ex.: `shared/feature-activate-account/activate-account.component.ts:45`) | Senha forte no validator (spec 042, REQ-1) | Regra exata não reconferida (a confirmar) |
@@ -257,6 +259,10 @@ Justificativas completas em FA:462-476 e FA:585-590.
 Conclusão: o A-22 segue válido como validação de experiência, menos no motivo da reabertura. O 500
 de FA:476 e FI:365 vale para a spec 038; a spec 042 (PR #56, anterior a `ef1c981`) o trocou por
 400. Próximo passo: a LAC-10 (limites de texto próprios) e a FE-19 da spec 049, que propõe 4000.
+
+Atualização de 05/11: o motivo da reabertura passou a 4000, o limite efetivo do back (T-512 da spec
+049 do back, AC-515 e FE-19), na branch da FE-0. Com isso, o A-22 vale para todos os
+campos da tabela; a LAC-10 continua aberta para o mínimo do nome (DIV-8).
 
 ### 6. Pendências abertas
 
@@ -270,7 +276,7 @@ Lista única. Substitui as cinco listas dos originais (errata 6).
 | 4 | Volta da cor da função (A-05/BR-001) | Back: spec 044, Em descoberta, DEC-1 a DEC-7 abertas | FA:116-143; FI:337-356 | Responder as DECs. Depois da entrega, os passos de FA:136-143 |
 | 5 | A-27: URL de produção | Implantação; pendente de propósito (Rafael Santos, 31/10) | `src/environments/environment.prod.ts:3-4` | Informar a URL na implantação; ver N-8 (portas) |
 | 6 | C-01: exceção do resultado tipado nos serviços de sessão | Rafael Santos | FA:534; FA:587 | Decidir se a exceção entra nas skills |
-| 7 | A-22: motivo da reabertura (500 × 4000) | Rafael Santos (LAC-10) | §5 | Decidir o limite e ajustar o diálogo |
+| 7 | A-22: motivo da reabertura (500 × 4000) | Rafael Santos (LAC-10) | §5 | Resolvido em 05/11: o limite ficou em 4000, o do back (T-512 da spec 049 do back), na branch da FE-0 |
 | 8 | Defeitos conhecidos das etapas integradas | Front: etapa E-01, liberada em 04/11 | Tabela abaixo | Corrigir na E-01 |
 | 9 | Validação visual com login | API: o container `webapi:dev` não respondia | Etapa E-04 | Revalidar na aplicação real o A-34, R-05 a R-07 e o aviso do A-42 |
 | 10 | SSR responde 500 nas rotas não pré-renderizadas: `new CommonEngine()` sem `allowedHosts` | Front; problema preexistente | `server.ts:15`; `l3/modificada/.x2/ssr-requests-localhost.txt` e `ssr-server.log` | Etapa E-12, liberada em 04/11 |
@@ -334,7 +340,7 @@ Auditoria só de leitura, do front e do back (`ef1c981`). O relatório foi entre
 | DIV-2 | Baixo | Regra de reabrir | Dono com `tickets:reopen-own` ou qualquer um com `tickets:manage` (`tickets/ui/ticket-action-permissions.ts:28-31`) | Dono só com `tickets:reopen-own`; os demais com `tickets:manage` (`ReopenTicketCommandHandler.cs:33-36`) | Aberto: o dono com `manage` e sem `reopen-own` vê o botão e recebe 403 |
 | DIV-3 | Alto | O PUT reenvia a descrição e o status lidos | Cancelar pela lista manda a descrição carregada na tela (`tickets/feature-ticket-list/ticket-list.component.ts:357`) | O PUT recebe o estado inteiro (descrição e status) | Aberto: pode desfazer edição alheia (LAC-1) |
 | DIV-4 | Baixo | Código de erro esperado | `Tickets.AssigneeCannotManageTickets` (`tickets/application/ticket-detail.store.ts:264`) | Devolve `Tickets.AssigneeNotAttendant` (`TicketErrors.cs:23-24`; `AssignTicketCommandHandler.cs:65`) | Aberto: a orientação "Escolha outro usuário na lista" (`ticket-detail.store.ts:264-268`) não aparece |
-| DIV-5 | — | Motivo da reabertura | 500 | 4000 | Ver A-22 (§5) |
+| DIV-5 | — | Motivo da reabertura | 4000 desde 05/11 (antes 500) | 4000 | Resolvido em 05/11, na branch da FE-0 (A-22, §5) |
 | DIV-6 | — | "Atribuir a mim" | Só sem responsável (`tickets/feature-ticket-monitor/ticket-monitor-info-panel.component.ts:33`) | Permite assumir chamado que já tem responsável (levantamento de 31/10) | Decisão de produto (LAC-9) |
 | DIV-7 | — | Administrador tirar a própria função de administrador | Só o front impede (`users/feature-user-list/user-list.component.ts:564`) | Não impede (levantamento de 31/10) | Decisão (LAC-8) |
 | DIV-8 | — | Mínimo de 2 caracteres no nome | Só no front (FA:173-175) | Só exige não vazio (FA:173-174) | Decisão (LAC-10) |

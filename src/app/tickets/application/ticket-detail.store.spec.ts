@@ -45,11 +45,12 @@ describe('TicketDetailStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'reopen', 'getSla', 'getAssignees']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'assignTicket', 'update', 'close', 'reopen', 'getSla', 'getAssignees']);
     dataService.getById.and.returnValue(of(ticket));
     dataService.removeAssignee.and.returnValue(of(undefined));
     dataService.assignTicket.and.returnValue(of(undefined));
     dataService.update.and.returnValue(of(undefined));
+    dataService.close.and.returnValue(of(undefined));
     dataService.reopen.and.returnValue(of(undefined));
     dataService.getSla.and.returnValue(of(sla));
     dataService.getAssignees.and.returnValue(of({
@@ -191,9 +192,9 @@ describe('TicketDetailStore', () => {
       expect(store.mutationError()).toBe('O chamado não está ativo.');
     });
 
-    it('exposes the back-end message with an action hint when the candidate cannot manage tickets (400 Chamados.AssigneeCannotManageTickets)', async () => {
+    it('exposes the back-end message with an action hint when the candidate cannot manage tickets (400 Tickets.AssigneeNotAttendant)', async () => {
       dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({
-        status: 400, error: { title: 'Tickets.AssigneeCannotManageTickets', detail: 'O usuário não atende chamados e não pode ser o responsável.' }
+        status: 400, error: { title: 'Tickets.AssigneeNotAttendant', detail: 'O usuário não atende chamados e não pode ser o responsável.' }
       })));
 
       store.assignTicket('t1', 'u2');
@@ -246,6 +247,38 @@ describe('TicketDetailStore', () => {
       expect(dataService.getById).toHaveBeenCalledTimes(2);
       expect(onSuccess).toHaveBeenCalled();
       expect(store.mutationError()).toBeNull();
+    });
+
+    it('closes through POST close, without the PUT, reloads the detail and calls onSuccess', async () => {
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      store.updateStatus('t1', TicketStatus.Closed, 'Não imprime.', onSuccess);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.close).toHaveBeenCalledOnceWith('t1');
+      expect(dataService.update).not.toHaveBeenCalled();
+      expect(dataService.getById).toHaveBeenCalledTimes(2);
+      expect(onSuccess).toHaveBeenCalled();
+    });
+
+    for (const status of [TicketStatus.InProgress, TicketStatus.Resolved, TicketStatus.Canceled]) {
+      it(`keeps the status ${status} on the PUT, without the close route`, async () => {
+        store.updateStatus('t1', status, 'Não imprime.');
+        await TestBed.inject(ApplicationRef).whenStable();
+
+        expect(dataService.update).toHaveBeenCalledOnceWith('t1', { description: 'Não imprime.', status });
+        expect(dataService.close).not.toHaveBeenCalled();
+      });
+    }
+
+    it('exposes the permission message when closing is refused (403)', async () => {
+      dataService.close.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.updateStatus('t1', TicketStatus.Closed, 'Não imprime.');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.mutationError()).toBe('Você não tem permissão para mudar o status deste chamado.');
+      expect(store.updatingStatus()).toBeFalse();
     });
 
     it('exposes a specific message when permission is missing (403)', async () => {

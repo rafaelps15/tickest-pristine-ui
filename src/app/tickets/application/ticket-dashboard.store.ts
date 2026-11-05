@@ -53,8 +53,8 @@ export type TicketDashboardChartScope = 'company' | 'filtered';
  * (Volume, SLA e Central de atenção numa chamada, GET /tickets/stats/overview), os tempos médios
  * (GET /tickets/stats/times) e o gráfico Criados x Resolvidos do recorte (GET /tickets/stats/volume),
  * todos com o mesmo recorte. Cada um tem o seu `rxResource`: carrega, falha e se recupera sozinho, e
- * trocar o recorte cancela as requisições em voo. Todo número vem do servidor. Cada leitura só sai
- * com a sua flag em `DASHBOARD_FEATURES` ligada, que acompanha a liberação de cada rota no ambiente.
+ * trocar o recorte cancela as requisições em voo. Todo número vem do servidor. Só o volume do recorte
+ * ainda depende de flag (`volumeResolved` em `DASHBOARD_FEATURES`).
  */
 export const TicketDashboardStore = signalStore(
   { providedIn: 'root' },
@@ -93,14 +93,12 @@ export const TicketDashboardStore = signalStore(
 
     /** Só pergunta à API com a permissão de ver a fila e um recorte possível — sem isso, o resource fica parado. */
     const allowed = () => store._session.hasPermission('tickets:manage') && !store.scopeHeld();
-    /** Agregado liberado: permissão e a rota já entregue pelo back-end (flag). */
-    const overviewOn = () => allowed() && store._features.operationOverview;
 
     return {
       // Volume, SLA e atenção contam os chamados abertos no período.
       _overviewResource: rxResource({
         params: () => {
-          const query = overviewOn() ? base() : null;
+          const query = allowed() ? base() : null;
           return query ? { ...query, createdFrom: store.scope().from, createdTo: store.scope().to } : undefined;
         },
         stream: ({ params }) => store._ticketDataService.getOverview(params)
@@ -109,7 +107,7 @@ export const TicketDashboardStore = signalStore(
       // anterior"); só com as duas pontas do período — sem período, não há "anterior".
       _previousOverviewResource: rxResource({
         params: () => {
-          const query = overviewOn() ? base() : null;
+          const query = allowed() ? base() : null;
           const { from, to } = store.scope();
           if (!query || !from || !to) return undefined;
           const previous = previousIsoRange(from, to);
@@ -120,7 +118,7 @@ export const TicketDashboardStore = signalStore(
       // Os tempos médios consideram as conclusões no período (spec 027, DEC-4).
       _timesResource: rxResource({
         params: () => {
-          const query = allowed() && store._features.averageTimes ? base() : null;
+          const query = allowed() ? base() : null;
           return query ? { ...query, resolvedFrom: store.scope().from, resolvedTo: store.scope().to } : undefined;
         },
         stream: ({ params }) => store._ticketDataService.getTimes(params)

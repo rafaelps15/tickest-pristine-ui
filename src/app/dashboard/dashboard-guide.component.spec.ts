@@ -79,13 +79,13 @@ describe('DashboardGuideComponent', () => {
     expect(titles).toEqual(['Indicadores', 'Gráfico da operação', 'Atualização']);
   });
 
-  it('for those who handle the queue, also explains filters, Central de atenção and Alertas de SLA', async () => {
+  it('for those who handle the queue, also explains filters, Central de atenção, SLA, times and Alertas de SLA', async () => {
     const { fixture, trigger } = await setup({ showOperation: true });
     trigger.click();
     await fixture.whenStable();
 
     const titles = Array.from(document.querySelectorAll('[role="dialog"] h3')).map(h => h.textContent?.trim());
-    expect(titles).toEqual(['Indicadores', 'Gráfico da operação', 'Filtros', 'Central de atenção', 'Alertas de SLA', 'Atualização']);
+    expect(titles).toEqual(['Indicadores', 'Gráfico da operação', 'Filtros', 'Central de atenção', 'SLA', 'Tempos de atendimento', 'Alertas de SLA', 'Atualização']);
     expect(document.querySelector('[role="dialog"]')!.textContent).toContain('75% do prazo');
   });
 

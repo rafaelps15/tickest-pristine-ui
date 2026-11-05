@@ -72,7 +72,6 @@ export interface CreateTicketData {
   priority: TicketPriority;
   sectorId: string;
   requesterId?: string;
-  responsibleId?: string;
 }
 
 /** Dados para atualização de um ticket existente (PUT /tickets/{id}). */

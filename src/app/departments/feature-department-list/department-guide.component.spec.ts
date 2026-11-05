@@ -16,7 +16,7 @@ describe('DepartmentGuideComponent', () => {
 
   afterEach(() => localStorage.removeItem(STORAGE_KEY));
 
-  it('explains what the screen does not say on its own: Resumo filters, search, deletion rule and assignee', async () => {
+  it('explains what the screen does not say on its own: Resumo filters, search, deactivation rule and assignee', async () => {
     const fixture = TestBed.createComponent(DepartmentGuideComponent);
     await fixture.whenStable();
 
@@ -26,7 +26,7 @@ describe('DepartmentGuideComponent', () => {
     expect(text).toContain('O que a busca encontra');
     // Os títulos do Guia não repetem os títulos dos cards da tela (DESIGN.md).
     expect(text).not.toMatch(/\bResumo\b/);
-    expect(text).toContain('com chamados em andamento não pode ser excluído');
+    expect(text).toContain('com chamados em andamento não pode ser desativado');
     expect(text).toContain('Responsável');
     // A relação departamento × setor já está no subtítulo e no card: o Guia não repete.
     expect(text).not.toContain('Departamento e setor');

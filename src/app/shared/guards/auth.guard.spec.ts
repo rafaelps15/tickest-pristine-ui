@@ -65,6 +65,20 @@ describe('authGuard', () => {
     });
   });
 
+  it('should erase the session and redirect to the login with the reason when the account was deactivated', (done) => {
+    session.isAuthenticated.and.returnValue(true);
+    currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const, reason: 'deactivated' as const }));
+
+    const result = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
+
+    (result as Observable<boolean | UrlTree>).subscribe(value => {
+      expect(value).toBe(urlTree);
+      expect(router.createUrlTree).toHaveBeenCalledWith(['/login'], { queryParams: { motivo: 'conta-desativada' } });
+      expect(session.clearSession).toHaveBeenCalled();
+      done();
+    });
+  });
+
   it('on a transient failure leads to the unavailable-session screen with the reason and the requested route, not to the login', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unavailable' as const, reason: 'rate-limited' as const }));

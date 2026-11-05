@@ -1,8 +1,10 @@
 <app-page-header title="Meus Chamados" subtitle="Os chamados que você abriu: quem está atendendo, até quando e a última movimentação."
                  [crumbs]="[{ label: 'Início', link: '/dashboard' }]">
-  <a pageActions routerLink="/tickets/novo" class="btn btn-primary">
-    <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
-  </a>
+  @if (canCreateTickets()) {
+    <a pageActions routerLink="/tickets/novo" class="btn btn-primary">
+      <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
+    </a>
+  }
 </app-page-header>
 
 <app-ticket-list-guide />
@@ -28,7 +30,7 @@
     <label class="form-label small" for="ticketSearch">Buscar</label>
     <div class="input-group">
       <span class="input-group-text"><i class="bx bx-search" aria-hidden="true"></i></span>
-      <input id="ticketSearch" type="search" class="form-control" placeholder="Título do chamado"
+      <input id="ticketSearch" type="search" class="form-control" placeholder="Título ou descrição"
              [value]="searchInput()" (input)="searchInput.set($any($event.target).value)" />
     </div>
   </div>
@@ -82,7 +84,7 @@
           <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro chamado. -->
           <tr>
             <td colspan="6" class="first-use py-5">
-              <app-ticket-list-first-use [attendingDepartments]="attendingDepartments()" />
+              <app-ticket-list-first-use [attendingDepartments]="attendingDepartments()" [canCreateTickets]="canCreateTickets()" />
             </td>
           </tr>
         } @else if (store.tickets().length === 0 && store.search()) {

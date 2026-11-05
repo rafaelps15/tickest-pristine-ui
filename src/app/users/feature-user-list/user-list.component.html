@@ -1,8 +1,10 @@
 <app-page-header title="Usuários" subtitle="Cadastre colaboradores, atribua funções e controle quem pode acessar o sistema."
                  [crumbs]="[{ label: 'Administração' }]">
-  <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
-    <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Usuário
-  </button>
+  @if (canCreateUsers()) {
+    <button pageActions type="button" class="btn btn-primary" (click)="openCreateModal()">
+      <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Usuário
+    </button>
+  }
 </app-page-header>
 
 <app-user-list-guide />
@@ -171,9 +173,11 @@
               @if (!hasFilters()) {
                 <app-empty-state icon="bx-group" title="Nenhum usuário cadastrado ainda."
                                  hint="Cadastre o primeiro colaborador pra atribuir funções e liberar o acesso ao Tickest.">
-                  <button type="button" class="btn btn-primary" (click)="openCreateModal()">
-                    <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Usuário
-                  </button>
+                  @if (canCreateUsers()) {
+                    <button type="button" class="btn btn-primary" (click)="openCreateModal()">
+                      <i class="bx bx-plus me-1" aria-hidden="true"></i>Novo Usuário
+                    </button>
+                  }
                 </app-empty-state>
               } @else {
                 <app-empty-state icon="bx-search-alt" title="Nenhum usuário encontrado com esses filtros."
@@ -200,7 +204,7 @@
                   </label>
                 } @else {
                   <!-- Sem checkbox: diz o motivo pro leitor de tela, em vez de uma célula muda. -->
-                  <span class="visually-hidden">{{ self ? 'Sua conta não entra na desativação em lote.' : 'Já inativo: não entra na desativação em lote.' }}</span>
+                  <span class="visually-hidden">{{ self ? 'Sua conta não entra na desativação em lote.' : !user.isActive ? 'Já inativo: não entra na desativação em lote.' : 'Sem permissão para desativar usuários.' }}</span>
                 }
               </td>
               <td class="fw-semibold table-stack-title">
@@ -256,24 +260,30 @@
                 </span>
               </td>
               <td class="text-end table-stack-actions" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                @if (hasRowActions()) {
                 <app-row-actions [label]="'Ações para ' + user.firstName + ' ' + user.lastName" [rowKey]="user.id" [busy]="isRowBusy(user.id)">
-                  <li>
-                    <button type="button" class="dropdown-item" (click)="openAssignRolesModal(user)">
-                      <i class="bx bx-shield-quarter me-2" aria-hidden="true"></i>Atribuir funções
-                    </button>
-                  </li>
-                  <li>
-                    <button type="button" class="dropdown-item" (click)="openEditModal(user)">
-                      <i class="bx bx-edit-alt me-2" aria-hidden="true"></i>Editar cadastro
-                    </button>
-                  </li>
-                  @if (statusOf(user) === 'pending') {
+                  @if (canAssignRoles()) {
+                    <li>
+                      <button type="button" class="dropdown-item" (click)="openAssignRolesModal(user)">
+                        <i class="bx bx-shield-quarter me-2" aria-hidden="true"></i>Atribuir funções
+                      </button>
+                    </li>
+                  }
+                  @if (canEditUsers()) {
+                    <li>
+                      <button type="button" class="dropdown-item" (click)="openEditModal(user)">
+                        <i class="bx bx-edit-alt me-2" aria-hidden="true"></i>Editar cadastro
+                      </button>
+                    </li>
+                  }
+                  @if (statusOf(user) === 'pending' && canCreateUsers()) {
                     <li>
                       <button type="button" class="dropdown-item" [disabled]="store.resendingInvitationIds().includes(user.id)" (click)="onResendInvitation(user)">
                         <i class="bx bx-envelope me-2" aria-hidden="true"></i>Reenviar convite
                       </button>
                     </li>
                   }
+                  @if (canDeactivateUsers()) {
                   <li><hr class="dropdown-divider" /></li>
                   @if (self) {
                     <li><span class="dropdown-item-text small text-muted">Sua própria conta não pode ser desativada.</span></li>
@@ -290,7 +300,9 @@
                       }
                     </li>
                   }
+                  }
                 </app-row-actions>
+                }
               </td>
             </tr>
           }
@@ -312,6 +324,8 @@
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
       <app-user-list-info-panel [user]="user" [modal]="isOverlayViewport()" [isCurrentUser]="isCurrentUser(user)"
+                                 [canAssignRoles]="canAssignRoles()" [canEdit]="canEditUsers()"
+                                 [canResendInvitation]="canCreateUsers()" [canToggleActive]="canDeactivateUsers()"
                                  [deactivating]="store.deactivatingIds().includes(user.id) || store.countingTicketsIds().includes(user.id)"
                                  [activating]="store.activatingIds().includes(user.id)"
                                  [resendingInvitation]="store.resendingInvitationIds().includes(user.id)"

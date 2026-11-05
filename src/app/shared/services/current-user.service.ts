@@ -5,6 +5,7 @@ import { AuthDataService } from '../infrastructure/auth.data.service';
 import { SessionService } from './session.service';
 import { isTransientHttpError } from '../utils/http-error.util';
 import { transientFailureReason } from '../utils/session-unavailable.util';
+import { isAccountDeactivated } from '../utils/account-deactivated.util';
 import { CurrentUserLoadResult } from '../entities/current-user';
 
 /**
@@ -32,7 +33,8 @@ export class CurrentUserService {
   /**
    * Busca o usuário logado e grava na sessão. Falha passageira (rede, 429, 5xx) tenta de novo antes de
    * desistir e, se continuar, devolve `unavailable` com o motivo: a sessão pode seguir válida, então
-   * não é tratada como recusa. Qualquer outra falha (401 e afins, ou erro que não é passageiro) devolve `unauthenticated`.
+   * não é tratada como recusa. Qualquer outra falha (401 e afins, ou erro que não é passageiro) devolve `unauthenticated`,
+   * com `reason: 'deactivated'` quando a recusa é da conta desativada (403 `Users.Deactivated`).
    */
   load(): Observable<CurrentUserLoadResult> {
     if (this.inFlight$) {
@@ -54,7 +56,11 @@ export class CurrentUserService {
       }),
       catchError((error: unknown) => {
         const reason = transientFailureReason(error);
-        return of<CurrentUserLoadResult>(reason ? { status: 'unavailable', reason } : { status: 'unauthenticated' });
+        if (reason) return of<CurrentUserLoadResult>({ status: 'unavailable', reason });
+
+        return of<CurrentUserLoadResult>(isAccountDeactivated(error)
+          ? { status: 'unauthenticated', reason: 'deactivated' }
+          : { status: 'unauthenticated' });
       }),
       finalize(() => {
         this.inFlight$ = null;

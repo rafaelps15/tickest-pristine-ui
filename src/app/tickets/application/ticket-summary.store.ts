@@ -9,7 +9,7 @@ import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { DASHBOARD_FEATURES, extractErrorMessage, SessionService, valueOf } from '../../shared';
+import { extractErrorMessage, SessionService, valueOf } from '../../shared';
 import { TicketAssignee } from '../entities/ticket-assignee';
 import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
 
@@ -61,27 +61,19 @@ export const TicketSummaryStore = signalStore(
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
-    _sessionService: inject(SessionService),
-    _features: inject(DASHBOARD_FEATURES)
+    _sessionService: inject(SessionService)
   })),
   withProps((store) => {
-    /**
-     * Os números da empresa (GET /tickets/stats/status e /stats/volume) exigem `tickets:manage` no
-     * back-end; pros demais colaboradores, só depois que ele liberar (flag `companyStatsForAll`) —
-     * antes disso a requisição daria 403 certo e não sai.
-     */
-    const companyStatsAvailable = computed(() => store._sessionService.hasPermission('tickets:manage') || store._features.companyStatsForAll);
+    // Os números da empresa (GET /tickets/stats/status e /stats/volume) valem para todo colaborador (RN-35).
     return {
-      /** Os números da empresa podem ser pedidos por quem está logado (permissão ou back-end liberado). */
-      companyStatsAvailable,
       // Quem atende a fila já recebe os totais da empresa no agregado da operação (spec 026, escopo
       // vazio): não pede a mesma conta duas vezes a cada atualização.
       _statusCountsResource: rxResource({
-        params: () => (companyStatsAvailable() && !(store._sessionService.hasPermission('tickets:manage') && store._features.operationOverview) ? true : undefined),
+        params: () => (store._sessionService.hasPermission('tickets:manage') ? undefined : true),
         stream: () => store._ticketDataService.getStatusCounts()
       }),
       _volumeResource: rxResource({
-        params: () => (companyStatsAvailable() ? store.groupBy() : undefined),
+        params: () => store.groupBy(),
         stream: ({ params }) => store._ticketDataService.getVolume(params)
       }),
       /**

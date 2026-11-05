@@ -5,8 +5,7 @@
     <span pageTitle>{{ greeting }}!</span>
   }
 
-  <!-- Idade dos números e atualização manual: o espaço livre do cabeçalho, sem acrescentar altura. Sem números na tela, não aparece. -->
-  @if (hasRefreshable()) {
+  <!-- Idade dos números e atualização manual: o espaço livre do cabeçalho, sem acrescentar altura. -->
   <div pageActions class="freshness">
     @if (freshness(); as label) {
       <span class="freshness-label" [class.freshness-failed]="anyFailure() && !retryingAfterTotalFailure()">
@@ -26,99 +25,75 @@
     <!-- A atualização (a cada 2 min) só diz "Atualizado agora"; trocar um filtro ou o escopo diz um resumo curto dos números novos. -->
     <span class="visually-hidden" aria-live="polite">{{ liveAnnouncement() }}</span>
   </div>
-  }
-  <!-- O Guia só aparece quando há algo na tela pra explicar (o card de Administração dispensa). -->
-  @if (hasRefreshable()) {
-  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" [showCompany]="!companyUnavailable()" [showRefresh]="hasRefreshable()" [filteredAvailable]="filteredAvailable()" [flowFilteredAvailable]="flowFilteredAvailable()" [timesAvailable]="features.averageTimes" />
-  }
-  @if (!isAdministrative()) {
+  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" [flowFilteredAvailable]="flowFilteredAvailable()" />
+  @if (!isAdministrative() && canCreateTickets()) {
     <a pageActions class="btn btn-primary touch-cta" routerLink="/tickets/novo">
       <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
     </a>
   }
 </app-page-header>
 
-@if (companyUnavailable()) {
-  <!--
-    Sem os números da empresa pra este papel: o conteúdo dele vem primeiro ("Seus chamados" ou a
-    Administração, abaixo) e não um "em breve". O aviso só fica pra quem não teria mais nada na tela.
-  -->
-  @if (showCompanyNotice()) {
-    <div class="card px-3 py-2 mb-3">
-      <app-dashboard-notice text="Números de toda a empresa (indicadores e gráfico da operação): disponível em breve." />
+<!--
+  Escopo dos números (Empresa ou Com filtros): vale pros indicadores, o gráfico, a Central e o SLA,
+  por isso mora acima de todos, e não dentro do gráfico. "Com filtros" abre a barra logo abaixo.
+-->
+@if (showOperation()) {
+  <div class="scope-row">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Escopo dos números">
+      <button type="button" class="btn" [class.btn-primary]="chartScope() === 'company'" [class.btn-outline-secondary]="chartScope() !== 'company'"
+              [attr.aria-pressed]="chartScope() === 'company'" (click)="chooseScope('company')">Empresa</button>
+      <button type="button" class="btn" [class.btn-primary]="chartScope() === 'filtered'" [class.btn-outline-secondary]="chartScope() !== 'filtered'"
+              [attr.aria-pressed]="chartScope() === 'filtered'" (click)="chooseScope('filtered')">Com filtros</button>
     </div>
-  }
-} @else {
-  <!--
-    Escopo dos números (Empresa ou Com filtros): vale pros indicadores, o gráfico, a Central e o SLA,
-    por isso mora acima de todos, e não dentro do gráfico. "Com filtros" abre a barra logo abaixo.
-  -->
-  @if (filteredAvailable()) {
-    <div class="scope-row">
-      <div class="btn-group btn-group-sm" role="group" aria-label="Escopo dos números">
-        <button type="button" class="btn" [class.btn-primary]="chartScope() === 'company'" [class.btn-outline-secondary]="chartScope() !== 'company'"
-                [attr.aria-pressed]="chartScope() === 'company'" (click)="chooseScope('company')">Empresa</button>
-        <button type="button" class="btn" [class.btn-primary]="chartScope() === 'filtered'" [class.btn-outline-secondary]="chartScope() !== 'filtered'"
-                [attr.aria-pressed]="chartScope() === 'filtered'" (click)="chooseScope('filtered')">Com filtros</button>
-      </div>
-    </div>
-  }
-
-  <!-- Filtros: a barra só no escopo "Com filtros"; na empresa toda, os filtros da URL valem pras listas e ficam à vista. -->
-  @if (showOperation() && chartScope() === 'filtered') {
-    <app-dashboard-filter-bar [filters]="filters.filters()" [departments]="departmentsStore.departments()"
-                              [assignees]="assigneesStore.assignees()" [assigneesTotal]="assigneesStore.total()" [today]="today"
-                              (change)="onFilterChange($event)" (clear)="filters.clear()" />
-  } @else if (filterChips().length > 0) {
-    <p class="applied-filters">
-      <i class="bx bx-filter-alt" aria-hidden="true"></i>
-      <span>Filtros aplicados às listas: {{ filterChipLabels() }}</span>
-      <button type="button" class="btn btn-link btn-sm p-0 tap-target" (click)="filters.clear()">Limpar</button>
-    </p>
-  }
-
-  <app-dashboard-kpi-strip class="d-block kpi-row" [kpis]="kpis()" [state]="countsState()" [errorText]="countsErrorText()" (retry)="reloadCounts()" />
-
-  <app-dashboard-hero-chart class="d-block mb-4"
-                            [scope]="chartScope()" [flowFiltered]="flowScope() === 'filtered'" [resolvedEnabled]="features.volumeResolved"
-                            [insight]="insight()" [composition]="composition()" [compositionState]="countsState()" [statusLinks]="statusLinks()"
-                            [points]="flowPoints()" [groupBy]="flowGroupBy()" [unavailableGroupings]="unavailableGroupings()" [flowState]="flowState()" [bucketLink]="bucketLink()"
-                            [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()" [range]="scope()"
-                            (groupByChange)="setGroupBy($event)" (retryFlow)="reloadFlow()" />
+  </div>
 }
+
+<!-- Filtros: a barra só no escopo "Com filtros"; na empresa toda, os filtros da URL valem pras listas e ficam à vista. -->
+@if (showOperation() && chartScope() === 'filtered') {
+  <app-dashboard-filter-bar [filters]="filters.filters()" [departments]="departmentsStore.departments()"
+                            [assignees]="assigneesStore.assignees()" [assigneesTotal]="assigneesStore.total()" [today]="today"
+                            (change)="onFilterChange($event)" (clear)="filters.clear()" />
+} @else if (filterChips().length > 0) {
+  <p class="applied-filters">
+    <i class="bx bx-filter-alt" aria-hidden="true"></i>
+    <span>Filtros aplicados às listas: {{ filterChipLabels() }}</span>
+    <button type="button" class="btn btn-link btn-sm p-0 tap-target" (click)="filters.clear()">Limpar</button>
+  </p>
+}
+
+<app-dashboard-kpi-strip class="d-block kpi-row" [kpis]="kpis()" [state]="countsState()" [errorText]="countsErrorText()" (retry)="reloadCounts()" />
+
+<app-dashboard-hero-chart class="d-block mb-4"
+                          [scope]="chartScope()" [flowFiltered]="flowScope() === 'filtered'" [resolvedEnabled]="features.volumeResolved"
+                          [insight]="insight()" [composition]="composition()" [compositionState]="countsState()" [statusLinks]="statusLinks()"
+                          [points]="flowPoints()" [groupBy]="flowGroupBy()" [unavailableGroupings]="unavailableGroupings()" [flowState]="flowState()" [bucketLink]="bucketLink()"
+                          [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()" [canCreateTickets]="canCreateTickets()" [range]="scope()"
+                          (groupByChange)="setGroupBy($event)" (retryFlow)="reloadFlow()" />
 
 <!--
   O que pede ação, lado a lado no desktop (Central à esquerda, Alertas à direita) e empilhado no
-  celular com os Alertas primeiro — o DOM segue a ordem do celular e só o desktop reordena. Com a
-  Central "em breve", ela fica estreita e os Alertas largos; nenhum dos dois estica pra casar a altura.
+  celular com os Alertas primeiro — o DOM segue a ordem do celular e só o desktop reordena. Nenhum
+  dos dois estica pra casar a altura.
 -->
 @if (showOperation()) {
   <div class="row g-3 mb-4 align-items-start">
-    <div class="col-12 order-lg-2" [class.col-lg-7]="features.operationOverview" [class.col-lg-8]="!features.operationOverview">
+    <div class="col-12 col-lg-7 order-lg-2">
       <app-dashboard-insights [criticalTickets]="store.criticalTickets()"
-                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()" [showTotals]="!features.operationOverview" [filtered]="chartScope() === 'filtered'" [queueParams]="alertsQueueParams()"
+                              [breachedCount]="store.breachedCount()" [atRiskCount]="store.atRiskCount()" [showTotals]="false" [filtered]="chartScope() === 'filtered'" [queueParams]="alertsQueueParams()"
                               [clockOffsetMs]="store.clockOffsetMs()"
                               [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
                               [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
                               [canAssign]="sessionService.hasPermission('tickets:assign')"
                               (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
     </div>
-    <div class="col-12 order-lg-1" [class.col-lg-5]="features.operationOverview" [class.col-lg-4]="!features.operationOverview">
-      @if (features.operationOverview) {
-        <!-- O erro do agregado aparece uma vez só, na faixa do topo (com o "Tentar novamente"); a Central e o SLA só remetem a ele. -->
-        <app-dashboard-metric-group title="Central de atenção" [description]="'O que pede ação agora, do mais grave ao menos grave. Os atrasados e os sem responsável estão no topo da tela.' + scopeNote()"
-                                    [columnClass]="attentionMetrics().length > 1 ? 'col-12 col-sm-6' : 'col-12'" [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()"
-                                    [unavailable]="operation.overviewFailed()"
-                                    [emptyTitle]="isFirstUse() ? emptyTitle() : 'Nenhum chamado crítico agora.'"
-                                    [emptyIcon]="isFirstUse() ? 'bx-receipt' : 'bx-check-circle'"
-                                    [emptyHint]="isFirstUse() ? emptyHint() : 'Os urgentes ainda ativos aparecem aqui.'" />
-      } @else {
-        <!-- "Em breve" compacto: o card não estica até a altura dos Alertas de SLA. -->
-        <section class="card p-3" aria-labelledby="attentionTitle">
-          <h2 id="attentionTitle" class="h5 card-title fw-bold mb-1">Central de atenção</h2>
-          <app-dashboard-notice text="Atrasados, críticos, sem responsável e aguardando, do mais grave ao menos grave: disponível em breve." />
-        </section>
-      }
+    <div class="col-12 col-lg-5 order-lg-1">
+      <!-- O erro do agregado aparece uma vez só, na faixa do topo (com o "Tentar novamente"); a Central e o SLA só remetem a ele. -->
+      <app-dashboard-metric-group title="Central de atenção" [description]="'O que pede ação agora, do mais grave ao menos grave. Os atrasados e os sem responsável estão no topo da tela.' + scopeNote()"
+                                  [columnClass]="attentionMetrics().length > 1 ? 'col-12 col-sm-6' : 'col-12'" [metrics]="attentionMetrics()" [loading]="operation.overviewLoading()"
+                                  [unavailable]="operation.overviewFailed()"
+                                  [emptyTitle]="isFirstUse() ? emptyTitle() : 'Nenhum chamado crítico agora.'"
+                                  [emptyIcon]="isFirstUse() ? 'bx-receipt' : 'bx-check-circle'"
+                                  [emptyHint]="isFirstUse() ? emptyHint() : 'Os urgentes ainda ativos aparecem aqui.'" />
     </div>
   </div>
 }
@@ -128,33 +103,12 @@
 <div class="row g-3 mb-4 align-items-start">
   <div class="col-12 d-flex flex-column gap-3" [class.col-lg-8]="showQuickActions()">
     @if (showOperation()) {
-      @if (secondaryUnavailable()) {
-        <section class="card p-3" aria-labelledby="slaDetailTitle">
-          <h2 id="slaDetailTitle" class="h5 card-title fw-bold mb-1">SLA e tempos de atendimento</h2>
-          <app-dashboard-notice text="Situação de SLA por chamado e tempos médios de primeira resposta e de resolução: disponível em breve." />
-        </section>
-      } @else {
-        @if (features.operationOverview) {
-          <app-dashboard-metric-group title="SLA" [description]="'Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão no topo da tela.' + scopeNote()"
-                                      columnClass="col-12 col-sm-6 col-xxl-3" [lead]="slaLead()"
-                                      [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" emptyIcon="bx-receipt"
-                                      [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="operation.overviewFailed()" />
-        } @else {
-          <section class="card p-3" aria-labelledby="slaDetailTitle">
-            <h2 id="slaDetailTitle" class="h5 card-title fw-bold mb-1">SLA</h2>
-            <app-dashboard-notice text="Situação de SLA por chamado: disponível em breve." />
-          </section>
-        }
-        @if (features.averageTimes) {
-          <app-dashboard-times [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesFailed() ? operation.timesError() : null"
-                               [hasPeriod]="hasPeriod()" [scopeNote]="scopeNote()" (retry)="operation.reloadTimes()" />
-        } @else {
-          <section class="card p-3" aria-labelledby="timesTitle">
-            <h2 id="timesTitle" class="h5 card-title fw-bold mb-1">Tempos de atendimento</h2>
-            <app-dashboard-notice text="Tempos médios de primeira resposta e de resolução: disponível em breve." />
-          </section>
-        }
-      }
+      <app-dashboard-metric-group title="SLA" [description]="'Prazo de resolução, pela regra do sistema: em risco a partir de 75% do prazo. Os atrasados estão no topo da tela.' + scopeNote()"
+                                  columnClass="col-12 col-sm-6 col-xxl-3" [lead]="slaLead()"
+                                  [emptyTitle]="emptyTitle()" [emptyHint]="emptyHint()" emptyIcon="bx-receipt"
+                                  [metrics]="slaMetrics()" [loading]="operation.overviewLoading()" [unavailable]="operation.overviewFailed()" />
+      <app-dashboard-times [times]="operation.times()" [loading]="operation.timesLoading()" [error]="operation.timesFailed() ? operation.timesError() : null"
+                           [hasPeriod]="hasPeriod()" [scopeNote]="scopeNote()" (retry)="operation.reloadTimes()" />
     } @else if (showMyTickets() && myTickets) {
       <section aria-labelledby="myTicketsTitle">
         <div class="d-flex align-items-baseline justify-content-between gap-2 mb-2">
@@ -171,7 +125,9 @@
           <div class="card">
             <app-empty-state icon="bx-message-square-add" title="Você ainda não abriu nenhum chamado."
                              hint="Peça ajuda a qualquer setor por aqui e acompanhe cada passo do atendimento.">
-              <a class="btn btn-primary mt-2 touch-cta" routerLink="/tickets/novo"><i class="bx bx-plus me-1" aria-hidden="true"></i>Abrir o primeiro chamado</a>
+              @if (canCreateTickets()) {
+                <a class="btn btn-primary mt-2 touch-cta" routerLink="/tickets/novo"><i class="bx bx-plus me-1" aria-hidden="true"></i>Abrir o primeiro chamado</a>
+              }
             </app-empty-state>
           </div>
         } @else {
@@ -222,7 +178,7 @@
       <section class="card p-3" aria-labelledby="quickActionsTitle">
           <h2 id="quickActionsTitle" class="h5 card-title fw-bold mb-2">Ações rápidas</h2>
           <ul class="list-unstyled mb-0 quick-links">
-            @if (!isAdministrative()) {
+            @if (!isAdministrative() && canViewOwnTickets()) {
               <li>
                 <a class="quick-link" routerLink="/tickets">
                   <span class="badge bg-label-info rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-receipt fs-5"></i></span>

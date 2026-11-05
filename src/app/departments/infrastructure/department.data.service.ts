@@ -1,10 +1,10 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Department, DepartmentData, DepartmentDetail } from '../entities/department';
+import { Department, DepartmentData } from '../entities/department';
 import { environment } from '../../../environments/environment';
 
-/** Acesso HTTP aos departamentos (listagem, detalhe, criação, atualização e exclusão). */
+/** Acesso HTTP aos departamentos (listagem, criação, atualização e desativação). */
 @Injectable({ providedIn: 'root' })
 export class DepartmentDataService {
   /** Cliente HTTP do Angular. */
@@ -17,11 +17,6 @@ export class DepartmentDataService {
     return this.http.get<Department[]>(this.apiUrl);
   }
 
-  /** Busca um departamento pelo id, incluindo o id do responsável (GET /departments/{departmentId}). */
-  getById(departmentId: string): Observable<DepartmentDetail> {
-    return this.http.get<DepartmentDetail>(`${this.apiUrl}/${departmentId}`);
-  }
-
   /** Cria um novo departamento (POST /departments). */
   create(data: DepartmentData): Observable<string> {
     return this.http.post<string>(this.apiUrl, data);
@@ -32,8 +27,8 @@ export class DepartmentDataService {
     return this.http.put<void>(`${this.apiUrl}/${departmentId}`, data);
   }
 
-  /** Exclui um departamento (DELETE /departments/{departmentId}). */
-  delete(departmentId: string): Observable<void> {
+  /** Desativa um departamento e os setores dele (DELETE /departments/{departmentId}); o back-end mantém o registro, desativado. */
+  deactivate(departmentId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${departmentId}`);
   }
 }

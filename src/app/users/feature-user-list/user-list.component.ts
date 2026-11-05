@@ -105,6 +105,18 @@ export class UserListComponent implements OnInit {
   protected readonly rolesStore = inject(RolesStore);
   /** Sessão de quem está logado — pra proteger a própria conta. */
   private readonly sessionService = inject(SessionService);
+
+  /** Pode cadastrar usuários e reenviar convites (`users:create`). */
+  protected readonly canCreateUsers = computed(() => this.sessionService.hasPermission('users:create'));
+  /** Pode editar o cadastro de outros usuários (`users:update`). */
+  protected readonly canEditUsers = computed(() => this.sessionService.hasPermission('users:update'));
+  /** Pode atribuir funções (`users:assign-roles`). */
+  protected readonly canAssignRoles = computed(() => this.sessionService.hasPermission('users:assign-roles'));
+  /** Pode desativar e reativar usuários (`users:deactivate`), sozinho ou em lote. */
+  protected readonly canDeactivateUsers = computed(() => this.sessionService.hasPermission('users:deactivate'));
+  /** Há pelo menos uma ação de linha liberada; sem nenhuma, a linha não mostra o menu de ações. */
+  protected readonly hasRowActions = computed(() =>
+    this.canCreateUsers() || this.canEditUsers() || this.canAssignRoles() || this.canDeactivateUsers());
   /** Modal de confirmação global (desativar, reativar). */
   private readonly confirmDialogService = inject(ConfirmDialogService);
   /** Toasts de confirmação, com "Desfazer"/"Reenviar convite". */
@@ -715,9 +727,12 @@ export class UserListComponent implements OnInit {
     if (user) this.onResendInvitation(user);
   }
 
-  /** Indica se o usuário pode ser marcado para ação em lote: ativo e diferente da própria conta logada. */
+  /**
+   * Indica se o usuário pode ser marcado para ação em lote: quem está logado tem `users:deactivate`, e o usuário
+   * está ativo e não é a própria conta.
+   */
   canSelectForBulk(user: UserSummary): boolean {
-    return user.isActive && !this.isCurrentUser(user);
+    return this.canDeactivateUsers() && user.isActive && !this.isCurrentUser(user);
   }
 
   /** Marca ou desmarca um usuário na seleção em lote. */

@@ -15,7 +15,7 @@
 
 <!--
   Só a falha de leitura aparece aqui, em tom neutro (vermelho é risco operacional, não falha do sistema).
-  Erro de salvar fica no diálogo; de excluir, no card.
+  Erro de salvar fica no diálogo; de desativar, no card.
 -->
 @if (store.listState().error; as error) {
   <div class="department-load-error" role="alert">
@@ -92,7 +92,7 @@
     @for (department of filteredDepartments(); track department.id) {
       <section class="card shadow-sm border-0" [attr.aria-labelledby]="'department-' + department.id"
                [attr.data-item-id]="department.id" [class.item-new]="highlightedId() === department.id"
-               [attr.aria-busy]="deletingDepartmentId() === department.id ? 'true' : null">
+               [attr.aria-busy]="deactivatingDepartmentId() === department.id ? 'true' : null">
         <div class="card-header d-flex align-items-start justify-content-between gap-3">
           <div class="min-w-0">
             <h2 class="h5 mb-1 fw-bold text-wrap-anywhere" [id]="'department-' + department.id">{{ department.name }}</h2>
@@ -119,27 +119,27 @@
           </div>
           @if (canManageDepartments()) {
             <app-row-actions class="flex-shrink-0" [label]="'Ações para o departamento ' + department.name"
-                             [busy]="store.deletingId() === department.id" [rowKey]="department.id">
+                             [busy]="store.deactivatingId() === department.id" [rowKey]="department.id">
               <li>
                 <button type="button" class="dropdown-item" (click)="openEditModal(department)">
                   <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar departamento
                 </button>
               </li>
               <li>
-                <button type="button" class="dropdown-item text-danger" (click)="onDelete(department)">
-                  <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir departamento
+                <button type="button" class="dropdown-item text-danger" (click)="onDeactivate(department)">
+                  <i class="bx bx-block me-2" aria-hidden="true"></i>Desativar departamento
                 </button>
               </li>
             </app-row-actions>
           }
         </div>
 
-        <!-- A falha de excluir este departamento ou um setor dele aparece aqui, perto de onde a ação partiu. -->
-        @if (deleteErrorPlacement(); as deleteError) {
-          @if (deleteError.departmentId === department.id) {
+        <!-- A falha de desativar este departamento ou um setor dele aparece aqui, perto de onde a ação partiu. -->
+        @if (deactivateErrorPlacement(); as deactivateError) {
+          @if (deactivateError.departmentId === department.id) {
           <div class="alert alert-danger border-0 rounded-0 mb-0 py-2 small d-flex align-items-start justify-content-between gap-2" role="alert">
-            <span>{{ deleteError.message }}</span>
-            <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearDeleteError()"></button>
+            <span>{{ deactivateError.message }}</span>
+            <button type="button" class="btn-close flex-shrink-0" aria-label="Fechar aviso" (click)="store.clearDeactivateError()"></button>
           </div>
           }
         }
@@ -168,15 +168,15 @@
                   </div>
                   @if (canManageSectors()) {
                     <app-row-actions class="flex-shrink-0" [label]="'Ações para o setor ' + sector.name"
-                                     [busy]="store.deletingId() === sector.id" [rowKey]="sector.id">
+                                     [busy]="store.deactivatingId() === sector.id" [rowKey]="sector.id">
                       <li>
                         <button type="button" class="dropdown-item" (click)="openEditSectorModal(department, sector)">
                           <i class="bx bx-edit me-2" aria-hidden="true"></i>Editar setor
                         </button>
                       </li>
                       <li>
-                        <button type="button" class="dropdown-item text-danger" (click)="onDeleteSector(department, sector)">
-                          <i class="bx bx-trash me-2" aria-hidden="true"></i>Excluir setor
+                        <button type="button" class="dropdown-item text-danger" (click)="onDeactivateSector(department, sector)">
+                          <i class="bx bx-block me-2" aria-hidden="true"></i>Desativar setor
                         </button>
                       </li>
                     </app-row-actions>
@@ -245,23 +245,7 @@
         <!-- A região viva existe sempre e só o texto muda: criada junto com o texto, o leitor de tela não anuncia. -->
         <p class="visually-hidden" role="status">{{ responsibleStatusMessage() }}</p>
 
-        @if (loadingCurrentResponsible()) {
-          <div class="small text-muted mb-2" id="departmentResponsibleStatus">
-            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Carregando responsável atual…
-          </div>
-        } @else if (currentResponsibleError(); as responsibleError) {
-          <!--
-            Sem saber o responsável atual, salvar o apagaria: o erro fica aqui, com as duas saídas — tentar
-            de novo ou tirar o responsável — além de escolher outro na busca abaixo.
-          -->
-          <div class="alert alert-warning border-0 py-2 small" role="alert" id="departmentResponsibleStatus">
-            <p class="mb-2">{{ responsibleError }} Para salvar, tente de novo, remova o responsável ou escolha outro abaixo.</p>
-            <div class="d-flex flex-wrap gap-2">
-              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="retryCurrentResponsible()">Tentar de novo</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="onClearResponsible()">Remover responsável</button>
-            </div>
-          </div>
-        } @else if (selectedResponsibleName(); as currentName) {
+        @if (selectedResponsibleName(); as currentName) {
           <p class="small mb-2">
             Responsável selecionado: <span class="fw-semibold">{{ currentName }}</span>
             <button type="button" class="btn btn-link btn-sm p-0 ms-2 align-baseline tap-target" (click)="onClearResponsible()">Remover</button>
@@ -303,9 +287,7 @@
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="closeDialog()">Cancelar</button>
-      <!-- Desabilitado sem saber o responsável atual: o aviso acima diz o porquê (aria-describedby). -->
-      <button type="submit" class="btn btn-primary" [disabled]="store.mutating() || !responsibleKnown()"
-              [attr.aria-describedby]="!responsibleKnown() ? 'departmentResponsibleStatus' : null">
+      <button type="submit" class="btn btn-primary" [disabled]="store.mutating()">
         @if (store.mutating()) {
           <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
         }

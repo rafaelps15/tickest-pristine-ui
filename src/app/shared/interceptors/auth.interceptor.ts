@@ -6,6 +6,7 @@ import { CurrentUserService } from '../services/current-user.service';
 import { isTransientHttpError } from '../utils/http-error.util';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { ACCOUNT_DEACTIVATED_LOGIN_REASON } from '../utils/account-deactivated.util';
 
 const AUTH_ENDPOINTS = ['/users/login', '/users/login/new-password', '/users/refresh-token', '/users/logout'];
 
@@ -17,6 +18,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
   const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => req.url.includes(endpoint));
+  // A recusa do próprio GET /users/me volta para quem o chamou (CurrentUserService.load), sem uma segunda releitura.
+  const isCurrentUserRequest = req.url.endsWith('/users/me');
 
   const sentToken = session.token();
 
@@ -52,10 +55,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         router.navigate(['/login']);
       }
 
-      if (error.status === 403 && !isAuthEndpoint) {
+      if (error.status === 403 && !isAuthEndpoint && !isCurrentUserRequest) {
         // 403 é falta de permissão, não sessão inválida — mantém a sessão, só atualiza o menu (a permissão pode ter mudado).
+        // Se a releitura recusar a sessão (conta desativada, por exemplo), apaga a sessão e vai pro login com o motivo.
         // Num endpoint de autenticação o 403 é regra de negócio (ex.: troca de senha pendente) e ainda não há sessão.
-        currentUserService.load().subscribe();
+        currentUserService.load().subscribe(result => {
+          if (result.status !== 'unauthenticated') return;
+
+          session.clearSession();
+          if (result.reason === 'deactivated') {
+            router.navigate(['/login'], { queryParams: { motivo: ACCOUNT_DEACTIVATED_LOGIN_REASON } });
+          } else {
+            router.navigate(['/login']);
+          }
+        });
       }
 
       return throwError(() => error);

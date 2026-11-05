@@ -19,11 +19,24 @@ describe('RoleDataService', () => {
 
   afterEach(() => httpMock.verify());
 
+  it('getAll reads the roles from GET /roles', () => {
+    const roles = [{ name: 'Atendente', permissionCodes: ['tickets:manage'], isDefault: true, isAdministrator: false }];
+    let received: unknown;
+
+    service.getAll().subscribe(value => received = value);
+
+    const req = httpMock.expectOne({ method: 'GET', url: `${environment.apiUrl}/roles` });
+    expect(req.request.body).toBeNull();
+    req.flush(roles);
+    expect(received).toEqual(roles);
+  });
+
   it('encodes the role name in the URL when assigning permissions, preventing special characters from breaking the route', () => {
     service.assignPermissions('TI/Suporte', ['tickets:manage']).subscribe();
 
     const req = httpMock.expectOne(`${environment.apiUrl}/roles/TI%2FSuporte/permissions`);
     expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ permissionCodes: ['tickets:manage'] });
     req.flush(null);
   });
 });

@@ -85,7 +85,9 @@
                 <a class="btn btn-primary" routerLink="/departamentos">Cadastrar departamentos e setores</a>
               } @else {
                 <p class="text-muted small mb-3">Quando alguém abrir o primeiro chamado, o volume aparece aqui.</p>
-                <a class="btn btn-primary" routerLink="/tickets/novo">Abrir o primeiro chamado</a>
+                @if (canCreateTickets()) {
+                  <a class="btn btn-primary" routerLink="/tickets/novo">Abrir o primeiro chamado</a>
+                }
               }
             </div>
           } @else if (flowState() === 'empty') {

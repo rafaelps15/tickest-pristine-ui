@@ -15,4 +15,6 @@ import { RouterLink } from '@angular/router';
 export class TicketListFirstUseComponent {
   /** Departamentos que atendem chamados, por extenso ("TI, RH e Financeiro"); vazio esconde a linha. */
   readonly attendingDepartments = input('');
+  /** Mostra o atalho "Abrir o primeiro chamado" (quem tem `tickets:create`). */
+  readonly canCreateTickets = input(false);
 }

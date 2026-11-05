@@ -3,7 +3,7 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
-import { Department, DepartmentData, DepartmentDetail } from '../entities/department';
+import { Department, DepartmentData } from '../entities/department';
 import { CreateSectorData, UpdateSectorData } from '../entities/sector';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
@@ -22,13 +22,13 @@ export const DepartmentsStore = signalStore(
     mutationError: null as string | null,
     /** Em voo uma criação/atualização/exclusão de departamento ou setor — evita duplo submit. */
     mutating: false,
-    /** Id do departamento ou setor sendo excluído agora (um por vez — evita o clique duplo), ou `null`. */
-    deletingId: null as string | null,
+    /** Id do departamento ou setor sendo desativado agora (um por vez — evita o clique duplo), ou `null`. */
+    deactivatingId: null as string | null,
     /**
      * Falha da última exclusão, com o id do departamento ou setor: a tela mostra no card dele, perto de
      * onde a ação partiu, em vez do alerta da página.
      */
-    deleteError: null as { targetId: string; message: string } | null,
+    deactivateError: null as { targetId: string; message: string } | null,
     /** Candidatos a responsável encontrados na busca do formulário de departamento. */
     responsibleCandidates: [] as UserSummary[],
     /** Em voo uma busca de candidatos a responsável. */
@@ -56,7 +56,7 @@ export const DepartmentsStore = signalStore(
     departments: computed(() => valueOf(store._listResource) ?? ([] as Department[])),
     /**
      * Estado da carga da listagem. O erro é só o da leitura: falha de salvar fica no diálogo
-     * ({@link mutationError}) e de excluir no card ({@link deleteError}) — antes o erro de salvar
+     * ({@link mutationError}) e de desativar no card ({@link deactivateError}) — antes o erro de salvar
      * entrava aqui e a tela dizia que a lista não tinha carregado.
      */
     listState: computed(() => {
@@ -112,25 +112,6 @@ export const DepartmentsStore = signalStore(
     },
 
     /**
-     * Busca o detalhe de um departamento, incluindo o id do responsável (GET /departments/{id}) —
-     * a listagem só traz o nome dele. Usado ao abrir o modal de edição, pra saber quem já está
-     * selecionado antes do admin trocar. A falha vai pro `onError` (o modal mostra ali mesmo), não pro
-     * erro de mutação — senão apareceria também no alerta da página, atrás do modal. A mensagem é
-     * sempre a do modal (a da API, tipo "Falha no servidor", não diz o que ficou faltando), exceto sem
-     * conexão.
-     */
-    getDepartmentDetail(departmentId: string, onLoaded: (detail: DepartmentDetail) => void, onError?: (message: string) => void): void {
-      store._departmentDataService.getById(departmentId).subscribe({
-        next: onLoaded,
-        error: (err: HttpErrorResponse) => {
-          onError?.(err.status === 0
-            ? extractErrorMessage(err)
-            : 'Não foi possível carregar o responsável atual.');
-        }
-      });
-    },
-
-    /**
      * Busca usuários ativos candidatos a responsável do departamento, pelo nome/sobrenome/e-mail (GET
      * /users). Um termo novo cancela a busca anterior em voo — uma resposta antiga e lenta não
      * sobrescreve mais a da busca atual.
@@ -152,16 +133,16 @@ export const DepartmentsStore = signalStore(
     },
 
     /**
-     * Exclui um departamento e recarrega a listagem em caso de sucesso (DELETE /departments/{id}). Ignora
-     * o pedido se já há uma exclusão em voo; a falha vai pra {@link deleteError}, com o id do departamento,
+     * Desativa um departamento e os setores dele e recarrega a listagem em caso de sucesso (DELETE
+     * /departments/{id}: o back-end mantém o registro, desativado). Ignora o pedido se já há uma desativação em voo; a falha vai pra {@link deactivateError}, com o id do departamento,
      * e avisa o `onError` (a tela devolve o foco pro card).
      */
-    delete(departmentId: string, onSuccess?: () => void, onError?: () => void): void {
-      if (store.deletingId()) return;
-      patchState(store, { deletingId: departmentId, deleteError: null });
+    deactivate(departmentId: string, onSuccess?: () => void, onError?: () => void): void {
+      if (store.deactivatingId()) return;
+      patchState(store, { deactivatingId: departmentId, deactivateError: null });
 
-      store._departmentDataService.delete(departmentId).pipe(
-        finalize(() => patchState(store, { deletingId: null }))
+      store._departmentDataService.deactivate(departmentId).pipe(
+        finalize(() => patchState(store, { deactivatingId: null }))
       ).subscribe({
         next: () => {
           store._listResource.reload();
@@ -169,7 +150,7 @@ export const DepartmentsStore = signalStore(
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
-            deleteError: { targetId: departmentId, message: extractErrorMessage(err, {}, 'Não foi possível excluir o departamento.') }
+            deactivateError: { targetId: departmentId, message: extractErrorMessage(err, {}, 'Não foi possível desativar o departamento.') }
           });
           onError?.();
         }
@@ -211,15 +192,15 @@ export const DepartmentsStore = signalStore(
     },
 
     /**
-     * Exclui um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}). Mesma
-     * guarda e mesmo destino de erro de {@link delete}, com o id do setor.
+     * Desativa um setor e recarrega a listagem em caso de sucesso (DELETE /sectors/{sectorId}: o back-end
+     * mantém o registro, desativado). Mesma guarda e mesmo destino de erro de {@link deactivate}, com o id do setor.
      */
-    deleteSector(sectorId: string, onSuccess?: () => void, onError?: () => void): void {
-      if (store.deletingId()) return;
-      patchState(store, { deletingId: sectorId, deleteError: null });
+    deactivateSector(sectorId: string, onSuccess?: () => void, onError?: () => void): void {
+      if (store.deactivatingId()) return;
+      patchState(store, { deactivatingId: sectorId, deactivateError: null });
 
-      store._sectorDataService.delete(sectorId).pipe(
-        finalize(() => patchState(store, { deletingId: null }))
+      store._sectorDataService.deactivate(sectorId).pipe(
+        finalize(() => patchState(store, { deactivatingId: null }))
       ).subscribe({
         next: () => {
           store._listResource.reload();
@@ -227,7 +208,7 @@ export const DepartmentsStore = signalStore(
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
-            deleteError: { targetId: sectorId, message: extractErrorMessage(err, {}, 'Não foi possível excluir o setor.') }
+            deactivateError: { targetId: sectorId, message: extractErrorMessage(err, {}, 'Não foi possível desativar o setor.') }
           });
           onError?.();
         }
@@ -239,9 +220,9 @@ export const DepartmentsStore = signalStore(
       patchState(store, { mutationError: null });
     },
 
-    /** Fecha o aviso de falha da última exclusão. */
-    clearDeleteError(): void {
-      patchState(store, { deleteError: null });
+    /** Fecha o aviso de falha da última desativação. */
+    clearDeactivateError(): void {
+      patchState(store, { deactivateError: null });
     }
   })),
   withHooks({

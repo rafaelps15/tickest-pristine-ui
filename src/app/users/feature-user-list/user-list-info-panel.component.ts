@@ -34,6 +34,14 @@ export class UserListInfoPanelComponent {
   readonly activating = input(false);
   /** Reenvio de convite em andamento para este usuário. */
   readonly resendingInvitation = input(false);
+  /** Mostra "Atribuir funções"; a tela passa a permissão `users:assign-roles` de quem está logado. */
+  readonly canAssignRoles = input(true);
+  /** Mostra "Editar cadastro"; a tela passa a permissão `users:update` de quem está logado. */
+  readonly canEdit = input(true);
+  /** Mostra "Reenviar convite"; a tela passa a permissão `users:create` de quem está logado. */
+  readonly canResendInvitation = input(true);
+  /** Mostra "Desativar" e "Reativar"; a tela passa a permissão `users:deactivate` de quem está logado. */
+  readonly canToggleActive = input(true);
 
   /** Pedido de fechar o painel (X). */
   readonly close = output<void>();

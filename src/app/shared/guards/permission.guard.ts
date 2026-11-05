@@ -6,7 +6,7 @@ import { CurrentUserService } from '../services/current-user.service';
 import { redirectWhenUserNotLoaded } from './auth.guard';
 
 /**
- * Guard para rotas administrativas.
+ * Guard de rota por permissão: libera a rota só para quem tem a permissão declarada nela.
  *
  * A rota deve declarar a permissão exigida em `data.requiredPermission` (código
  * igual ao usado pelo back-end em `[HasPermission]`, ex. `"users:read"`), ou uma lista
@@ -16,7 +16,7 @@ import { redirectWhenUserNotLoaded } from './auth.guard';
  * sem isso, o usuário só descobria via 403 da API depois de já estar na tela. Se o carregamento
  * falhar, segue o mesmo destino do `authGuard` (tela de sessão indisponível ou login).
  */
-export const adminMasterGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
   const session = inject(SessionService);
   const currentUserService = inject(CurrentUserService);
   const router = inject(Router);

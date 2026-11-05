@@ -3,14 +3,10 @@ export const environment = {
   // TODO: substituir pela URL real da API .NET em produção antes do deploy.
   apiUrl: 'http://localhost:5195',
   /**
-   * Funcionalidades do Início que esperam um endpoint do back-end (ver `DashboardFeatures`). Cada
-   * flag é ligada no mesmo PR que entrega o endpoint; desligada, o front não faz a requisição.
+   * Funcionalidade do Início que ainda depende de flag (ver `DashboardFeatures`): só a dos resolvidos
+   * por período, até a conferência do A-28.
    */
   dashboardFeatures: {
-    operationOverview: true,
-    averageTimes: true,
-    volumeResolved: true,
-    companyStatsForAll: true,
-    listPeriodFilter: true
+    volumeResolved: true
   }
 };

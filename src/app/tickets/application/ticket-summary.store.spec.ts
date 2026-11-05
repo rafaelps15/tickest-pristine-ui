@@ -61,7 +61,7 @@ describe('TicketSummaryStore', () => {
 
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
-    features = { operationOverview: false, averageTimes: false, volumeResolved: false, companyStatsForAll: false, listPeriodFilter: false };
+    features = { volumeResolved: false };
 
     configure();
     store = await createStore();
@@ -80,28 +80,15 @@ describe('TicketSummaryStore', () => {
     });
   }
 
-  it('whoever serves the queue requests the whole company numbers (Início indicators and chart)', () => {
-    expect(dataService.getStatusCounts).toHaveBeenCalledTimes(1);
-    expect(dataService.getVolume).toHaveBeenCalledWith('Day');
-    expect(store.companyStatsAvailable()).toBeTrue();
-    expect(store.statusCounts()).toEqual(statusCounts);
-    expect(store.volumeHasValue()).toBeTrue();
-  });
-
-  it('with the operation aggregate live, whoever serves the queue does not request the totals by status again (they come in the aggregate)', async () => {
-    TestBed.resetTestingModule();
-    features = { ...features, operationOverview: true };
-    dataService.getStatusCounts.calls.reset();
-    dataService.getVolume.calls.reset();
-    configure();
-    store = await createStore();
-
+  it('whoever serves the queue requests the company volume (chart), but not the totals by status: they come in the operation aggregate', () => {
     expect(dataService.getStatusCounts).not.toHaveBeenCalled();
     expect(dataService.getVolume).toHaveBeenCalledWith('Day');
+    expect(store.volumeHasValue()).toBeTrue();
   });
 
   it('a totals error remains in effect while the retry loads (the Angular resource keeps the error on reload)', async () => {
     TestBed.resetTestingModule();
+    sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
     dataService.getStatusCounts.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     configure();
     store = await createStore();
@@ -115,30 +102,13 @@ describe('TicketSummaryStore', () => {
     expect(store.statusCountsFailed()).toBeTrue();
   });
 
-  it('whoever does not serve the queue does not request the company numbers while the back end requires tickets:manage (avoids the expected 403)', async () => {
-    TestBed.resetTestingModule();
-    sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
-    dataService.getStatusCounts.calls.reset();
-    dataService.getVolume.calls.reset();
-    configure();
-    store = await createStore();
-
-    expect(dataService.getStatusCounts).not.toHaveBeenCalled();
-    expect(dataService.getVolume).not.toHaveBeenCalled();
-    expect(store.companyStatsAvailable()).toBeFalse();
-    expect(store.statusCounts()).toBeNull();
-    expect(store.summaryError()).toBeNull();
-  });
-
-  describe('company view for whoever does not serve the queue, with the back end released (companyStatsForAll)', () => {
+  describe('company view for whoever does not serve the queue (RN-35)', () => {
     beforeEach(async () => {
       TestBed.resetTestingModule();
       sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
-      features = { ...features, companyStatsForAll: true, listPeriodFilter: false };
       configure();
       store = await createStore();
     });
-
 
     it('fetches the totals by status and the volume (grouped by day, by default) of the whole company', () => {
       expect(dataService.getStatusCounts).toHaveBeenCalled();

@@ -2,11 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { adminMasterGuard } from './admin-master.guard';
+import { permissionGuard } from './permission.guard';
 import { SessionService } from '../services/session.service';
 import { CurrentUserService } from '../services/current-user.service';
 
-describe('adminMasterGuard', () => {
+describe('permissionGuard', () => {
   let session: jasmine.SpyObj<SessionService>;
   let currentUserService: jasmine.SpyObj<CurrentUserService>;
   let router: jasmine.SpyObj<Router>;
@@ -36,7 +36,7 @@ describe('adminMasterGuard', () => {
   it('should redirect to login when there is no session', () => {
     session.isAuthenticated.and.returnValue(false);
 
-    const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:read'), {} as never));
+    const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:read'), {} as never));
 
     expect(result).toBe(urlTree);
     expect(currentUserService.ensureLoaded).not.toHaveBeenCalled();
@@ -47,7 +47,7 @@ describe('adminMasterGuard', () => {
     session.hasPermission.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
-    const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:read'), {} as never));
+    const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:read'), {} as never));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBeTrue();
@@ -61,7 +61,7 @@ describe('adminMasterGuard', () => {
     session.hasPermission.and.returnValue(false);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
-    const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:delete'), {} as never));
+    const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:delete'), {} as never));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBe(urlTree);
@@ -76,7 +76,7 @@ describe('adminMasterGuard', () => {
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
     const result = TestBed.runInInjectionContext(() =>
-      adminMasterGuard(routeWithPermission(['departments:manage', 'sectors:manage']), {} as never));
+      permissionGuard(routeWithPermission(['departments:manage', 'sectors:manage']), {} as never));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBeTrue();
@@ -90,7 +90,7 @@ describe('adminMasterGuard', () => {
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
     const result = TestBed.runInInjectionContext(() =>
-      adminMasterGuard(routeWithPermission(['departments:manage', 'sectors:manage']), {} as never));
+      permissionGuard(routeWithPermission(['departments:manage', 'sectors:manage']), {} as never));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBe(urlTree);
@@ -102,7 +102,7 @@ describe('adminMasterGuard', () => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
-    const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission(undefined), {} as never));
+    const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission(undefined), {} as never));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBeTrue();
@@ -116,7 +116,7 @@ describe('adminMasterGuard', () => {
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unavailable' as const, reason: 'offline' as const }));
     const state = { url: '/usuarios' } as RouterStateSnapshot;
 
-    const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:read'), state));
+    const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:read'), state));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBe(urlTree);
@@ -133,7 +133,7 @@ describe('adminMasterGuard', () => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const }));
 
-    const result = TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:read'), {} as never));
+    const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:read'), {} as never));
 
     (result as Observable<boolean | UrlTree>).subscribe(value => {
       expect(value).toBe(urlTree);
@@ -148,7 +148,7 @@ describe('adminMasterGuard', () => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
-    TestBed.runInInjectionContext(() => adminMasterGuard(routeWithPermission('users:read'), {} as never));
+    TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:read'), {} as never));
 
     expect(currentUserService.ensureLoaded).toHaveBeenCalled();
   });

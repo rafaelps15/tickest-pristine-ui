@@ -15,7 +15,7 @@ import { SessionService } from '../../../services/session.service';
   styleUrl: './side-menu-nav.component.css'
 })
 export class SideMenuNavComponent {
-  /** Sessão: permissões que decidem os itens de administração. */
+  /** Sessão: permissões que decidem os itens do menu (Meus Chamados e os de administração). */
   protected readonly sessionService = inject(SessionService);
 
   /** Item de tickets ativo para a URL atual (ver `activeTicketsMenu`). */

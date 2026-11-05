@@ -84,6 +84,8 @@ export class DashboardHeroChartComponent implements OnDestroy {
   readonly firstUse = input(false);
   /** Quem vê pode cadastrar departamentos e setores (o convite do primeiro uso muda). */
   readonly canSetUpStructure = input(false);
+  /** Mostra o atalho "Abrir o primeiro chamado" no primeiro uso (quem tem `tickets:create`). */
+  readonly canCreateTickets = input(false);
   /** Período escolhido nos filtros (escopo "Com filtros"); com as duas pontas, o subtítulo mostra as datas. */
   readonly range = input<{ from?: string; to?: string } | null>(null);
 

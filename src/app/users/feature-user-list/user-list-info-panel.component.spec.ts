@@ -23,6 +23,21 @@ describe('UserListInfoPanelComponent', () => {
     return fixture;
   }
 
+  it('hides each action the screen does not allow', async () => {
+    const fixture = TestBed.createComponent(UserListInfoPanelComponent);
+    fixture.componentRef.setInput('user', { ...activeUser, pendingActivation: true });
+    fixture.componentRef.setInput('canAssignRoles', false);
+    fixture.componentRef.setInput('canEdit', false);
+    fixture.componentRef.setInput('canResendInvitation', false);
+    fixture.componentRef.setInput('canToggleActive', false);
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent as string;
+    for (const action of ['Atribuir funções', 'Editar cadastro', 'Reenviar convite', 'Desativar', 'Reativar']) {
+      expect(text).withContext(action).not.toContain(action);
+    }
+  });
+
   it('is a region labeled by the user name outside modal mode', async () => {
     const fixture = createFixture();
     await fixture.whenStable();
