@@ -1324,7 +1324,8 @@ router-outlet + * {
 /*
  * Item recém-criado (card, setor ou linha de tabela): um realce índigo que se desfaz em 4s — quem salvou
  * acha o que criou depois que a lista reordena. Termina na superfície do card, não em `transparent`, que
- * mostrava o fundo da página por 4s e voltava de uma vez. Com movimento reduzido, o tingido fica parado.
+ * mostrava o fundo da página por 4s e voltava de uma vez. Fora de um `.card`, onde o Bootstrap não define
+ * `--bs-card-bg`, vale a superfície do tema (`--tk-surface`). Com movimento reduzido, o tingido fica parado.
  */
 .item-new,
 .item-new-row > td {
@@ -1332,15 +1333,15 @@ router-outlet + * {
 }
 
 @keyframes tk-new-item {
-  from { background-color: color-mix(in srgb, var(--tk-primary) 14%, var(--bs-card-bg)); }
-  to { background-color: var(--bs-card-bg); }
+  from { background-color: color-mix(in srgb, var(--tk-primary) 14%, var(--bs-card-bg, var(--tk-surface))); }
+  to { background-color: var(--bs-card-bg, var(--tk-surface)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .item-new,
   .item-new-row > td {
     animation: none;
-    background-color: color-mix(in srgb, var(--tk-primary) 8%, var(--bs-card-bg));
+    background-color: color-mix(in srgb, var(--tk-primary) 8%, var(--bs-card-bg, var(--tk-surface)));
   }
 }
 
