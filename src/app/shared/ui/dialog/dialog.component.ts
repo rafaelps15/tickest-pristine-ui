@@ -27,6 +27,7 @@ const openDialogs: DialogComponent[] = [];
   template: `
     <div class="modal-backdrop fade show"></div>
 
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -- Clicar fora do conteúdo fecha; no teclado, o Esc fecha pelo document:keydown.escape (onEscape). -->
     <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" [attr.aria-labelledby]="titleId"
          (click)="onBackdropClick($event)">
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" [class.modal-lg]="size() === 'lg'">

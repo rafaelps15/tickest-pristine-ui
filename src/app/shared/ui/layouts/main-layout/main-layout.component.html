@@ -1,6 +1,7 @@
 <div class="layout-wrapper layout-content-navbar" [class.menu-open]="menuOpen()">
   <div class="layout-container">
     <!-- Menu (Sidebar) -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- Delegação: o clique vem dos links do menu, que são focáveis e disparam o clique com Enter. -->
     <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme" [attr.inert]="menuHidden() ? '' : null"
            [appFocusTrap]="pageBehindMenu()" (click)="onMenuClick($event)">
       <div class="app-brand demo d-flex justify-content-center" style="height: 120px; padding: 1rem 0;">
@@ -51,5 +52,6 @@
     <!-- / Layout page -->
   </div>
   <!-- Overlay -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- Fundo da gaveta, só para mouse e toque; no teclado, o Esc fecha (document:keydown.escape). -->
   <div class="layout-overlay layout-menu-toggle" (click)="closeMenuAndRestoreFocus()"></div>
 </div>

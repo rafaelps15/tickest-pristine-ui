@@ -321,6 +321,7 @@
 
   @if (infoPanelUser(); as user) {
     <!-- Abaixo de "lg", o painel vira um overlay de tela cheia: a tabela não tem espaço pra encolher mais sem virar inutilizável. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -- Fundo do painel no celular, só para mouse e toque; o painel fecha pelo X e pelo Esc. -->
     <div class="info-panel-backdrop d-lg-none" (click)="closeInfoPanel()"></div>
     <div class="col-12 col-lg-4 info-panel-col">
       <app-user-list-info-panel [user]="user" [modal]="isOverlayViewport()" [isCurrentUser]="isCurrentUser(user)"

@@ -28,6 +28,7 @@
       } @else if (candidates().length === 0) {
         <p class="text-muted small mb-0">Ninguém que atenda a fila com esse nome.</p>
       } @else {
+        <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -- Listbox com foco móvel (WAI-ARIA): o foco fica nas opções (tabindex 0/-1) e o keydown sobe até a lista. -->
         <ul #list class="list-group assignee-candidates" role="listbox" aria-label="Responsáveis encontrados"
             (keydown)="onListKeydown($event, list)">
           @for (candidate of candidates(); track candidate.id; let i = $index) {
