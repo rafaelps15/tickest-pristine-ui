@@ -50,6 +50,7 @@
                 }
               ],
               "outputHashing": "all",
+              "subresourceIntegrity": true,
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
