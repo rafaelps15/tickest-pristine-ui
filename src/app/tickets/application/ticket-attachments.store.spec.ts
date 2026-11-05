@@ -314,4 +314,50 @@ describe('TicketAttachmentsStore', () => {
 
     expect(store.listState().error).toBe('Você não tem permissão para excluir este anexo.');
   });
+
+  describe('delete after a refused upload', () => {
+    /** Arquivo PDF pequeno, aceito pelo tipo e pelo tamanho. */
+    const smallPdf = () => new File([new Uint8Array(10)], 'arquivo.pdf', { type: 'application/pdf' });
+
+    beforeEach(async () => {
+      const full = Array.from({ length: policy.maxAttachmentsPerTicket }, (_, index) => ({ ...attachment, id: `a${index}` }));
+      dataService.getAll.and.returnValue(of(pageOf(full)));
+      store.loadForTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('clears the refusal of the chosen file after a successful deletion, which may undo its reason', async () => {
+      store.uploadIfValid(smallPdf());
+      expect(store.validationError()).toContain('máximo de 20 anexos');
+
+      dataService.delete.and.returnValue(of(undefined));
+      store.delete('a0');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.validationError()).toBeNull();
+    });
+
+    it('clears the error of the last upload refused by the back end after a successful deletion', async () => {
+      dataService.upload.and.returnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
+      store.upload(smallPdf());
+      expect(store.uploadError()).toBeTruthy();
+
+      dataService.delete.and.returnValue(of(undefined));
+      store.delete('a0');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.uploadError()).toBeNull();
+    });
+
+    it('keeps the refusal of the chosen file when the deletion fails', async () => {
+      store.uploadIfValid(smallPdf());
+      dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.delete('a0');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.validationError()).toContain('máximo de 20 anexos');
+      expect(store.listState().error).toBe('Você não tem permissão para excluir este anexo.');
+    });
+  });
 });

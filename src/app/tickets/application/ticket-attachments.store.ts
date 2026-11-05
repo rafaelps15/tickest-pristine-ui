@@ -178,7 +178,10 @@ export const TicketAttachmentsStore = signalStore(
       });
     },
 
-    /** Exclui um anexo e recarrega a listagem em caso de sucesso. */
+    /**
+     * Exclui um anexo e recarrega a listagem em caso de sucesso. A exclusão pode desfazer o motivo da
+     * última recusa de envio (quantidade ou soma por chamado), então essas mensagens saem.
+     */
     delete(attachmentId: string, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, deleting: true });
 
@@ -186,7 +189,7 @@ export const TicketAttachmentsStore = signalStore(
         finalize(() => patchState(store, { deleting: false }))
       ).subscribe({
         next: () => {
-          patchState(store, { mutationError: null });
+          patchState(store, { mutationError: null, validationError: null, uploadError: null });
           store._reloadFirstPage();
           onSuccess?.();
         },
