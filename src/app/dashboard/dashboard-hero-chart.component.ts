@@ -1,5 +1,4 @@
-import { Component, inject, Injector, OnDestroy, ElementRef, PLATFORM_ID, ChangeDetectionStrategy, DestroyRef, signal, computed, effect, input, output, viewChild, afterNextRender } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Component, inject, Injector, OnDestroy, ElementRef, ChangeDetectionStrategy, DestroyRef, signal, computed, effect, input, output, viewChild, afterNextRender } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { Chart as ChartInstance, ChartDataset, Plugin } from 'chart.js';
 import { TicketDashboardChartScope, TicketVolumeGrouping, TicketVolumePoint, TICKET_VOLUME_GROUPING_LABELS, TICKET_VOLUME_GROUPING_OPTIONS } from '../tickets';
@@ -43,8 +42,6 @@ const COMPACT_QUERY = '(max-width: 575.98px)';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardHeroChartComponent implements OnDestroy {
-  /** Plataforma: o gráfico só é desenhado no navegador (não no SSR). */
-  private readonly platformId = inject(PLATFORM_ID);
   /** Navega pro drill-down ao clicar num período do gráfico. */
   private readonly router = inject(Router);
   /** Solta o ouvinte da largura da tela ao sair. */
@@ -190,20 +187,18 @@ export class DashboardHeroChartComponent implements OnDestroy {
 
   /** Acompanha a largura da tela (versão do celular) e redesenha o fluxo quando os dados mudam. */
   constructor() {
-    if (isPlatformBrowser(this.platformId)) {
-      const query = window.matchMedia(COMPACT_QUERY);
-      this.compact.set(query.matches);
-      const onChange = (event: MediaQueryListEvent) => this.compact.set(event.matches);
-      query.addEventListener('change', onChange);
-      this.destroyRef.onDestroy(() => query.removeEventListener('change', onChange));
+    const query = window.matchMedia(COMPACT_QUERY);
+    this.compact.set(query.matches);
+    const onChange = (event: MediaQueryListEvent) => this.compact.set(event.matches);
+    query.addEventListener('change', onChange);
+    this.destroyRef.onDestroy(() => query.removeEventListener('change', onChange));
 
-      // Trocar o tema com a tela aberta redesenha o gráfico com as cores novas (antes, só na próxima carga).
-      const root = document.documentElement;
-      this.theme.set(root.getAttribute('data-bs-theme') ?? 'light');
-      const observer = new MutationObserver(() => this.theme.set(root.getAttribute('data-bs-theme') ?? 'light'));
-      observer.observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
-      this.destroyRef.onDestroy(() => observer.disconnect());
-    }
+    // Trocar o tema com a tela aberta redesenha o gráfico com as cores novas (antes, só na próxima carga).
+    const root = document.documentElement;
+    this.theme.set(root.getAttribute('data-bs-theme') ?? 'light');
+    const observer = new MutationObserver(() => this.theme.set(root.getAttribute('data-bs-theme') ?? 'light'));
+    observer.observe(root, { attributes: true, attributeFilter: ['data-bs-theme'] });
+    this.destroyRef.onDestroy(() => observer.disconnect());
 
     // Redesenha o fluxo quando os pontos, o agrupamento, a versão (celular), o tema ou o canvas mudam.
     effect(() => {
@@ -213,7 +208,6 @@ export class DashboardHeroChartComponent implements OnDestroy {
       const resolved = this.hasResolved() && !this.compact();
       this.theme();
       this.drawAttempt();
-      if (!isPlatformBrowser(this.platformId)) return;
       if (canvasRef) {
         void this.renderChart(canvasRef, points, labels, resolved);
       } else if (this.chart) {

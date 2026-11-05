@@ -1,5 +1,4 @@
-import { Component, afterNextRender, inject, Injector, OnInit, ChangeDetectionStrategy, signal, computed, effect, linkedSignal, untracked, DestroyRef, DOCUMENT, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Component, afterNextRender, inject, Injector, OnInit, ChangeDetectionStrategy, signal, computed, effect, linkedSignal, untracked, DestroyRef, DOCUMENT } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
 import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketSlaStatus, TicketPriority, TicketStatusCounts, TicketDashboardChartScope, TicketDashboardScope } from '../tickets';
 import { DepartmentsStore } from '../departments';
@@ -114,9 +113,7 @@ export class DashboardComponent implements OnInit {
   private readonly document = inject(DOCUMENT);
   /** Injetor pro `afterNextRender` do foco ao abrir os filtros. */
   private readonly injector = inject(Injector);
-  /** Plataforma: relógio e atualização automática só no navegador (não no SSR). */
-  private readonly platformId = inject(PLATFORM_ID);
-  /** Atualização automática ligada (null no SSR). */
+  /** Atualização automática, ligada no fim do construtor (null até lá). */
   private autoRefresh: DashboardAutoRefresh | null = null;
   /**
    * A recarga em curso veio de uma atualização, e de onde: o botão (quem pediu sempre ouve o resultado)
@@ -628,13 +625,11 @@ export class DashboardComponent implements OnInit {
       });
     });
 
-    if (isPlatformBrowser(this.platformId)) {
-      // Com a aba oculta, ninguém lê o "Atualizado há": o relógio não avança (volta certo ao reaparecer, no próximo tick).
-      const tick = setInterval(() => { if (!this.document.hidden) this.nowMs.set(Date.now()); }, FRESHNESS_TICK_MS);
-      this.destroyRef.onDestroy(() => clearTimeout(this.announceTimer));
-      this.destroyRef.onDestroy(() => clearInterval(tick));
-      this.autoRefresh = startDashboardAutoRefresh(this.document, () => this.updatedAtMs(), () => this.refresh('auto'), this.destroyRef);
-    }
+    // Com a aba oculta, ninguém lê o "Atualizado há": o relógio não avança (volta certo ao reaparecer, no próximo tick).
+    const tick = setInterval(() => { if (!this.document.hidden) this.nowMs.set(Date.now()); }, FRESHNESS_TICK_MS);
+    this.destroyRef.onDestroy(() => clearTimeout(this.announceTimer));
+    this.destroyRef.onDestroy(() => clearInterval(tick));
+    this.autoRefresh = startDashboardAutoRefresh(this.document, () => this.updatedAtMs(), () => this.refresh('auto'), this.destroyRef);
   }
 
   /**

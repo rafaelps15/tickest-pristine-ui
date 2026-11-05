@@ -1,5 +1,5 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked, inject, viewChild, afterNextRender, ElementRef, Injector, DestroyRef, PLATFORM_ID } from '@angular/core';
-import { DatePipe, isPlatformBrowser } from '@angular/common';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked, inject, viewChild, afterNextRender, ElementRef, Injector, DestroyRef } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { Params, RouterLink } from '@angular/router';
 import { TicketMonitorItem, TicketSlaStatus } from '../tickets';
 import { formatSlaDuration } from '../shared';
@@ -38,7 +38,6 @@ interface CriticalTicketView {
 })
 export class DashboardInsightsComponent {
   private readonly destroyRef = inject(DestroyRef);
-  private readonly platformId = inject(PLATFORM_ID);
   /** Injetor pro `afterNextRender` do foco depois de uma nova tentativa que deu certo. */
   private readonly injector = inject(Injector);
 
@@ -168,8 +167,6 @@ export class DashboardInsightsComponent {
       }
     });
     this.destroyRef.onDestroy(() => this.highlightTimers.forEach(clearTimeout));
-
-    if (!isPlatformBrowser(this.platformId)) return;
 
     const tick = () => {
       if (!document.hidden) this.nowMs.set(Date.now());

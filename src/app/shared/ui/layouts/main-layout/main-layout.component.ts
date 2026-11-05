@@ -1,5 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, PLATFORM_ID, ChangeDetectionStrategy, DestroyRef, ElementRef, Injector, afterNextRender, viewChild } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Component, inject, signal, computed, OnInit, OnDestroy, ChangeDetectionStrategy, DestroyRef, ElementRef, Injector, afterNextRender, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationSkipped, Router, RouterModule } from '@angular/router';
 import { filter, map, take } from 'rxjs';
@@ -32,8 +31,6 @@ export function activeTicketsMenu(url: string): 'mine' | 'monitor' | null {
   host: { '(document:keydown.escape)': 'onEscape()' }
 })
 export class MainLayoutComponent implements OnInit, OnDestroy {
-  /** Plataforma: tema e breakpoint só são lidos no navegador (não no SSR). */
-  private readonly platformId = inject(PLATFORM_ID);
   /** Router: URL atual e fim da navegação para o foco depois da gaveta. */
   private readonly router = inject(Router);
 
@@ -100,8 +97,6 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
    * depois sem precisar tocar nos tokens, já que tudo já está em `[data-bs-theme="dark"]`.
    */
   ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-
     this.darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
     this.applyDarkModePreference(this.darkModeQuery);
     this.darkModeQuery.addEventListener('change', this.applyDarkModePreference);
