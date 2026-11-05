@@ -5,7 +5,7 @@ import { filter, map } from 'rxjs';
 import { ConfirmDialogComponent } from './shared/ui/confirm-dialog/confirm-dialog.component';
 import { ToastContainerComponent } from './shared/ui/toast-container/toast-container.component';
 import { SessionRetryNoticeComponent } from './shared/ui/session-retry-notice/session-retry-notice.component';
-import { CurrentUserService } from './shared';
+import { CurrentUserService } from './shared/services/current-user.service';
 
 /**
  * Componente host das rotas — também monta o modal de confirmação, a pilha de toasts globais e o aviso

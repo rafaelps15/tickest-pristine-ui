@@ -3,7 +3,7 @@ import { Component, provideZonelessChangeDetection, signal } from '@angular/core
 import { Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { AppComponent } from './app.component';
-import { CurrentUserService } from './shared';
+import { CurrentUserService } from './shared/services/current-user.service';
 
 /** Tela de destino dos testes de navegação. */
 @Component({ template: 'destino' })
