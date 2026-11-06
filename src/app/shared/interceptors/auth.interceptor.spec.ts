@@ -36,7 +36,7 @@ describe('authInterceptor', () => {
 
   afterEach(() => httpTesting.verify());
 
-  it('should not reload the logged-in user when the login responds 403 (pending password change)', () => {
+  it('does not reload the logged-in user when the login responds 403 (pending password change)', () => {
     http.post('/users/login', {}).subscribe({ error: () => undefined });
 
     httpTesting.expectOne('/users/login').flush(
@@ -47,7 +47,7 @@ describe('authInterceptor', () => {
     expect(currentUserService.load).not.toHaveBeenCalled();
   });
 
-  it('should reload the logged-in user when another route responds 403 (permission changed)', () => {
+  it('reloads the logged-in user when another route responds 403 (permission changed)', () => {
     http.get('/tickets').subscribe({ error: () => undefined });
 
     httpTesting.expectOne('/tickets').flush(
@@ -58,7 +58,7 @@ describe('authInterceptor', () => {
     expect(currentUserService.load).toHaveBeenCalled();
   });
 
-  it('should keep the session when the reload after a 403 loads the user (permission changed)', () => {
+  it('keeps the session when the reload after a 403 loads the user (permission changed)', () => {
     const session = TestBed.inject(SessionService) as unknown as { clearSession: jasmine.Spy };
 
     http.get('/tickets').subscribe({ error: () => undefined });
@@ -67,7 +67,7 @@ describe('authInterceptor', () => {
     expect(session.clearSession).not.toHaveBeenCalled();
   });
 
-  it('should erase the session and go to the login with the reason when the reload after a 403 shows the account deactivated', () => {
+  it('erases the session and goes to the login with the reason when the reload after a 403 shows the account deactivated', () => {
     currentUserService.load.and.returnValue(of({ status: 'unauthenticated' as const, reason: 'deactivated' as const }));
     const session = TestBed.inject(SessionService) as unknown as { clearSession: jasmine.Spy };
     const router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
@@ -79,7 +79,7 @@ describe('authInterceptor', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { motivo: 'conta-desativada' } });
   });
 
-  it('should not reload the logged-in user again when GET /users/me itself responds 403', () => {
+  it('does not reload the logged-in user again when GET /users/me itself responds 403', () => {
     http.get('/users/me').subscribe({ error: () => undefined });
 
     httpTesting.expectOne('/users/me').flush({ title: 'Users.Deactivated' }, { status: 403, statusText: 'Forbidden' });
@@ -162,7 +162,7 @@ describe('authInterceptor — token renewal', () => {
 
   afterEach(() => httpTesting.verify());
 
-  it('should retry with the current token, without a new renewal, when the session was renewed during the request', () => {
+  it('retries with the current token, without a new renewal, when the session was renewed during the request', () => {
     http.get('/tickets').subscribe();
 
     const first = httpTesting.expectOne('/tickets');
@@ -176,7 +176,7 @@ describe('authInterceptor — token renewal', () => {
     expect(tokenRefresh.refresh).not.toHaveBeenCalled();
   });
 
-  it('should renew and retry with the new token when the token sent is still the current one', () => {
+  it('renews and retries with the new token when the token sent is still the current one', () => {
     tokenRefresh.refresh.and.returnValue(of('token-renovado'));
     http.get('/tickets').subscribe();
 
@@ -200,7 +200,7 @@ describe('authInterceptor — token renewal', () => {
     });
   }
 
-  it('should end the session when the back-end refuses the renewal', () => {
+  it('ends the session when the back-end refuses the renewal', () => {
     tokenRefresh.refresh.and.returnValue(of(null));
     http.get('/tickets').subscribe({ error: () => undefined });
 

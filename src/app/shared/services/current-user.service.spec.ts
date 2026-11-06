@@ -36,7 +36,7 @@ describe('CurrentUserService', () => {
     service = TestBed.inject(CurrentUserService);
   });
 
-  it('should load only once when there are simultaneous calls', () => {
+  it('loads only once when there are simultaneous calls', () => {
     const subject = new Subject<CurrentUser>();
     authDataService.getCurrentUser.and.returnValue(subject.asObservable());
 
@@ -53,7 +53,7 @@ describe('CurrentUserService', () => {
     expect(session.setCurrentUser).toHaveBeenCalledOnceWith(user);
   });
 
-  it('should not call the API again when a user is already loaded (ensureLoaded)', () => {
+  it('does not call the API again when a user is already loaded (ensureLoaded)', () => {
     session.currentUser.and.returnValue(user);
 
     const result = service.ensureLoaded();
@@ -62,7 +62,7 @@ describe('CurrentUserService', () => {
     expect(authDataService.getCurrentUser).not.toHaveBeenCalled();
   });
 
-  it('should load via ensureLoaded when there is no user in the session yet', () => {
+  it('loads via ensureLoaded when there is no user in the session yet', () => {
     session.currentUser.and.returnValue(null);
     authDataService.getCurrentUser.and.returnValue(of(user));
 

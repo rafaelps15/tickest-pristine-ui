@@ -25,7 +25,7 @@ describe('MainLayoutComponent', () => {
 
     const openButton = fixture.nativeElement.querySelector('button[aria-label="Abrir menu"]') as HTMLButtonElement;
     const closeButton = fixture.nativeElement.querySelector('button[aria-label="Fechar menu"]') as HTMLButtonElement;
-    expect(openButton).withContext('o ☰ deve ser um <button> rotulado, não um link javascript:void(0)').toBeTruthy();
+    expect(openButton).withContext('the ☰ must be a labeled <button>, not a javascript:void(0) link').toBeTruthy();
     expect(closeButton).toBeTruthy();
     expect(openButton.getAttribute('aria-expanded')).toBe('false');
 

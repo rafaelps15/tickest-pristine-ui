@@ -29,7 +29,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('should redirect to the login when there is no session', () => {
+  it('redirects to the login when there is no session', () => {
     session.isAuthenticated.and.returnValue(false);
 
     const result = TestBed.runInInjectionContext(() => authGuard({} as never, {} as never));
@@ -39,7 +39,7 @@ describe('authGuard', () => {
     expect(currentUserService.ensureLoaded).not.toHaveBeenCalled();
   });
 
-  it('should allow the route when the logged-in user is loaded successfully', (done) => {
+  it('allows the route when the logged-in user is loaded successfully', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
@@ -51,7 +51,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('should erase the session and redirect to the login when the API refuses the session', (done) => {
+  it('erases the session and redirects to the login when the API refuses the session', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const }));
 
@@ -65,7 +65,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('should erase the session and redirect to the login with the reason when the account was deactivated', (done) => {
+  it('erases the session and redirects to the login with the reason when the account was deactivated', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const, reason: 'deactivated' as const }));
 

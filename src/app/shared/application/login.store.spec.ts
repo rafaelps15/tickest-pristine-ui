@@ -54,7 +54,7 @@ describe('LoginStore', () => {
     store.login(credentials);
   }
 
-  it('should start the session and go to the dashboard when the login succeeds', () => {
+  it('starts the session and goes to the dashboard when the login succeeds', () => {
     dataService.login.and.returnValue(of(tokens));
 
     store.login(credentials);
@@ -138,7 +138,7 @@ describe('LoginStore', () => {
     expect(currentUserService.load).not.toHaveBeenCalled();
   });
 
-  it('should keep the credentials and go to first access when the password is temporary', () => {
+  it('keeps the credentials and goes to first access when the password is temporary', () => {
     loginWithProvisionalPassword();
 
     expect(store.pendingCredentials()).toEqual(credentials);
@@ -147,7 +147,7 @@ describe('LoginStore', () => {
     expect(session.saveSession).not.toHaveBeenCalled();
   });
 
-  it('should show a generic message when the credentials are invalid', () => {
+  it('shows a generic message when the credentials are invalid', () => {
     dataService.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
 
     store.login(credentials);
@@ -157,7 +157,7 @@ describe('LoginStore', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should show the API message when the account is locked due to attempts (403)', () => {
+  it('shows the API message when the account is locked due to attempts (403)', () => {
     dataService.login.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 403,
       error: { title: 'Users.LockedOut', detail: 'Muitas tentativas de login sem sucesso. A conta está bloqueada por alguns minutos; tente de novo mais tarde.' }
@@ -169,7 +169,7 @@ describe('LoginStore', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should show its own message when the rate limiter blocks the request (429, no body)', () => {
+  it('shows its own message when the rate limiter blocks the request (429, no body)', () => {
     dataService.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
 
     store.login(credentials);
@@ -177,7 +177,7 @@ describe('LoginStore', () => {
     expect(store.error()).toBe('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
   });
 
-  it('should change the temporary password, clear the credentials and start the session', () => {
+  it('changes the temporary password, clears the credentials and starts the session', () => {
     loginWithProvisionalPassword();
     dataService.changeRequiredPassword.and.returnValue(of(tokens));
 
@@ -209,7 +209,7 @@ describe('LoginStore', () => {
     expect(store.loading()).toBeFalse();
   });
 
-  it('should show the API message and keep the credentials when the new password is rejected', () => {
+  it('shows the API message and keeps the credentials when the new password is rejected', () => {
     loginWithProvisionalPassword();
     dataService.changeRequiredPassword.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 400,
@@ -223,7 +223,7 @@ describe('LoginStore', () => {
     expect(store.loading()).toBeFalse();
   });
 
-  it('should go back to the login when there is no pending password change (409)', () => {
+  it('goes back to the login when there is no pending password change (409)', () => {
     loginWithProvisionalPassword();
     dataService.changeRequiredPassword.and.returnValue(throwError(() => new HttpErrorResponse({
       status: 409,
@@ -237,14 +237,14 @@ describe('LoginStore', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('should go back to the login without calling the API when there are no pending credentials', () => {
+  it('goes back to the login without calling the API when there are no pending credentials', () => {
     store.changeRequiredPassword('NovaSenha#2');
 
     expect(dataService.changeRequiredPassword).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('should discard the credentials and go back to the login when canceling the password change', () => {
+  it('discards the credentials and goes back to the login when canceling the password change', () => {
     loginWithProvisionalPassword();
 
     store.cancelPasswordChange();
@@ -253,7 +253,7 @@ describe('LoginStore', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('should revoke the refresh token, clear the session and go back to the login on logout', () => {
+  it('revokes the refresh token, clears the session and goes back to the login on logout', () => {
     session.refreshToken.and.returnValue('refresh-token');
     dataService.logout.and.returnValue(of(undefined));
 
@@ -264,7 +264,7 @@ describe('LoginStore', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('should clear the session and go back to the login even if the revocation fails on the server', () => {
+  it('clears the session and goes back to the login even if the revocation fails on the server', () => {
     session.refreshToken.and.returnValue('refresh-token');
     dataService.logout.and.returnValue(throwError(() => new Error('offline')));
 

@@ -33,7 +33,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should redirect to login when there is no session', () => {
+  it('redirects to login when there is no session', () => {
     session.isAuthenticated.and.returnValue(false);
 
     const result = TestBed.runInInjectionContext(() => permissionGuard(routeWithPermission('users:read'), {} as never));
@@ -42,7 +42,7 @@ describe('permissionGuard', () => {
     expect(currentUserService.ensureLoaded).not.toHaveBeenCalled();
   });
 
-  it('should allow the route when the logged-in user has the required permission', (done) => {
+  it('allows the route when the logged-in user has the required permission', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -56,7 +56,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should redirect to the dashboard when the required permission is missing', (done) => {
+  it('redirects to the dashboard when the required permission is missing', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.returnValue(false);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -70,7 +70,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should allow the route when the user has any of the permissions in the list', (done) => {
+  it('allows the route when the user has any of the permissions in the list', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.callFake(code => code === 'sectors:manage');
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -84,7 +84,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should redirect to the dashboard when all the permissions in the list are missing', (done) => {
+  it('redirects to the dashboard when all the permissions in the list are missing', (done) => {
     session.isAuthenticated.and.returnValue(true);
     session.hasPermission.and.returnValue(false);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
@@ -98,7 +98,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should allow the route when the route requires no permission', (done) => {
+  it('allows the route when the route requires no permission', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 
@@ -129,7 +129,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should clear the session and redirect to login when the API rejects the session', (done) => {
+  it('clears the session and redirects to login when the API rejects the session', (done) => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'unauthenticated' as const }));
 
@@ -144,7 +144,7 @@ describe('permissionGuard', () => {
     });
   });
 
-  it('should wait for the logged-in user to load (ensureLoaded) before checking the permission', () => {
+  it('waits for the logged-in user to load (ensureLoaded) before checking the permission', () => {
     session.isAuthenticated.and.returnValue(true);
     currentUserService.ensureLoaded.and.returnValue(of({ status: 'loaded' as const }));
 

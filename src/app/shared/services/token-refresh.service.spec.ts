@@ -31,7 +31,7 @@ describe('TokenRefreshService', () => {
     service = TestBed.inject(TokenRefreshService);
   });
 
-  it('should store the new tokens and return the renewed access token', () => {
+  it('stores the new tokens and returns the renewed access token', () => {
     authDataService.refresh.and.returnValue(of({ accessToken: 'a2', refreshToken: 'r2' }));
     let result: string | null | undefined;
 
@@ -42,7 +42,7 @@ describe('TokenRefreshService', () => {
     expect(result).toBe('a2');
   });
 
-  it('should return null when the back end rejects the refresh token', () => {
+  it('returns null when the back end rejects the refresh token', () => {
     authDataService.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
     let result: string | null | undefined;
 
@@ -51,7 +51,7 @@ describe('TokenRefreshService', () => {
     expect(result).toBeNull();
   });
 
-  it('should rethrow the error when the renewal fails with no server response', () => {
+  it('rethrows the error when the renewal fails with no server response', () => {
     authDataService.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     let status: number | undefined;
 
@@ -61,7 +61,7 @@ describe('TokenRefreshService', () => {
     expect(session.saveSession).not.toHaveBeenCalled();
   });
 
-  it('should rethrow the error when the server rate limits the requests (429), without ending the session', () => {
+  it('rethrows the error when the server rate limits the requests (429), without ending the session', () => {
     authDataService.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 429 })));
     let status: number | undefined;
 
@@ -71,7 +71,7 @@ describe('TokenRefreshService', () => {
     expect(session.saveSession).not.toHaveBeenCalled();
   });
 
-  it('should rethrow the error when the server responds 5xx', () => {
+  it('rethrows the error when the server responds 5xx', () => {
     authDataService.refresh.and.returnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
     let status: number | undefined;
 
@@ -80,7 +80,7 @@ describe('TokenRefreshService', () => {
     expect(status).toBe(503);
   });
 
-  it('should share the same renewal across simultaneous calls', () => {
+  it('shares the same renewal across simultaneous calls', () => {
     const response = new Subject<{ accessToken: string; refreshToken: string }>();
     authDataService.refresh.and.returnValue(response);
     const results: (string | null)[] = [];

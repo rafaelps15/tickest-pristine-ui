@@ -25,7 +25,7 @@ describe('pendingPasswordChangeGuard', () => {
     });
   });
 
-  it('should allow the route when there is a pending password change', () => {
+  it('allows the route when there is a pending password change', () => {
     pendingCredentials.set({ email: 'admin@empresa.com', password: 'Provisoria@1' });
 
     const result = TestBed.runInInjectionContext(() => pendingPasswordChangeGuard({} as never, {} as never));
@@ -33,7 +33,7 @@ describe('pendingPasswordChangeGuard', () => {
     expect(result).toBeTrue();
   });
 
-  it('should redirect to login when there is no pending password change', () => {
+  it('redirects to login when there is no pending password change', () => {
     const result = TestBed.runInInjectionContext(() => pendingPasswordChangeGuard({} as never, {} as never));
 
     expect(result).toBe(urlTree);

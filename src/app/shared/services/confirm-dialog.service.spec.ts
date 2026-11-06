@@ -10,13 +10,13 @@ describe('ConfirmDialogService', () => {
     service = TestBed.inject(ConfirmDialogService);
   });
 
-  it('should expose the confirmation request options as soon as confirm() is called', () => {
+  it('exposes the confirmation request options as soon as confirm() is called', () => {
     service.confirm({ title: 'Excluir?', message: 'Essa ação não pode ser desfeita.' }).subscribe();
 
     expect(service.options()).toEqual({ title: 'Excluir?', message: 'Essa ação não pode ser desfeita.' });
   });
 
-  it('should emit true and clear the options when resolved with confirmation', () => {
+  it('emits true and clears the options when resolved with confirmation', () => {
     let result: boolean | undefined;
     service.confirm({ title: 'Excluir?', message: '...' }).subscribe(value => result = value);
 
@@ -26,7 +26,7 @@ describe('ConfirmDialogService', () => {
     expect(service.options()).toBeNull();
   });
 
-  it('should emit false when resolved with cancellation', () => {
+  it('emits false when resolved with cancellation', () => {
     let result: boolean | undefined;
     service.confirm({ title: 'Excluir?', message: '...' }).subscribe(value => result = value);
 
@@ -35,7 +35,7 @@ describe('ConfirmDialogService', () => {
     expect(result).toBeFalse();
   });
 
-  it('should answer false to the previous request when another is opened before it is resolved', () => {
+  it('answers false to the previous request when another is opened before it is resolved', () => {
     let first: boolean | undefined;
     let firstCompleted = false;
     service.confirm({ title: 'Primeiro', message: '...' }).subscribe({
@@ -53,7 +53,7 @@ describe('ConfirmDialogService', () => {
     expect(service.options()).toBeNull();
   });
 
-  it('should support a new confirmation request after the previous one is resolved', () => {
+  it('supports a new confirmation request after the previous one is resolved', () => {
     service.confirm({ title: 'Primeiro', message: '...' }).subscribe();
     service.resolve(true);
 
