@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, input, output, effect } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ConfirmDialogService } from '../../../shared';
+import { ConfirmDialogService, trimmed } from '../../../shared';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 
 /** Dados mínimos de um ticket para editar a descrição — o suficiente tanto em `Ticket` quanto em `TicketDetail`. */
@@ -42,9 +42,12 @@ export class TicketEditDialogComponent {
   /** Disparado ao fechar o modal (sem alteração pendente, ou após confirmar descartá-la). */
   readonly closed = output<void>();
 
-  /** Formulário com a descrição editada — mesmas regras de tamanho do back-end (10 a 500 caracteres). */
+  /**
+   * Formulário com a descrição editada — mesmas regras de tamanho do back-end (10 a 500 caracteres). O obrigatório
+   * e o mínimo valem para o texto aparado, que é o enviado; o máximo, para o digitado, o mesmo que o contador mostra.
+   */
   readonly form = this.fb.group({
-    description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]]
+    description: ['', [trimmed(Validators.required), trimmed(Validators.minLength(10)), Validators.maxLength(500)]]
   });
 
   constructor() {

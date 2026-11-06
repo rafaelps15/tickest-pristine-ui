@@ -145,6 +145,58 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('A descrição deve ter pelo menos 10 caracteres.');
   });
 
+  it('with a title of only spaces, does not open the ticket and says the title is required', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.form.controls.title.setValue('     ');
+    component.form.controls.description.setValue('A impressora do 2º andar não imprime nada.');
+    component.form.controls.departmentId.setValue('dep-1');
+    component.form.controls.sectorId.setValue('sec-1');
+    component.onSubmit();
+    fixture.detectChanges();
+
+    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#ticketTitleError')?.textContent).toContain('O título é obrigatório.');
+  });
+
+  it('does not count the surrounding spaces toward the minimum: with "abc" followed by 7 spaces, does not open the ticket and shows the minimum message', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.form.controls.title.setValue('Impressora não funciona');
+    component.form.controls.description.setValue('abc       ');
+    component.form.controls.departmentId.setValue('dep-1');
+    component.form.controls.sectorId.setValue('sec-1');
+    component.onSubmit();
+    fixture.detectChanges();
+
+    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('#ticketDescriptionError')?.textContent)
+      .toContain('A descrição deve ter pelo menos 10 caracteres.');
+  });
+
+  it('opens the ticket with the title and the description trimmed of surrounding spaces', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const component = fixture.componentInstance;
+
+    component.form.controls.title.setValue('  Impressora não funciona  ');
+    component.form.controls.description.setValue('  A impressora do 2º andar não imprime nada.  ');
+    component.form.controls.departmentId.setValue('dep-1');
+    component.form.controls.sectorId.setValue('sec-1');
+    component.onSubmit();
+
+    expect(ticketsStoreFake.create).toHaveBeenCalledWith({
+      title: 'Impressora não funciona',
+      description: 'A impressora do 2º andar não imprime nada.',
+      priority: TicketPriority.Medium,
+      sectorId: 'sec-1'
+    }, jasmine.any(Function));
+  });
+
   it('marks all fields as touched when trying to submit an invalid form', async () => {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();

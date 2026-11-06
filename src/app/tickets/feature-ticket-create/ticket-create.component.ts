@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
-import { ToastService } from '../../shared';
+import { ToastService, trimmed } from '../../shared';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { TicketCreateGuideComponent } from './ticket-create-guide.component';
 
@@ -31,9 +31,13 @@ export class TicketCreateComponent implements OnInit {
     { value: TicketPriority.Urgent, label: TICKET_PRIORITY_LABELS[TicketPriority.Urgent] }
   ];
 
+  /**
+   * Formulário do chamado. O obrigatório e o mínimo do título e da descrição valem para o texto aparado, que é o
+   * enviado (só espaços o back-end recusa); o máximo, para o digitado, o mesmo que o contador mostra.
+   */
   form = this.fb.group({
-    title: ['', [Validators.required, Validators.maxLength(200)]],
-    description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
+    title: ['', [trimmed(Validators.required), Validators.maxLength(200)]],
+    description: ['', [trimmed(Validators.required), trimmed(Validators.minLength(10)), Validators.maxLength(500)]],
     priority: [TicketPriority.Medium, [Validators.required]],
     departmentId: ['', [Validators.required]],
     sectorId: [{ value: '', disabled: true }, [Validators.required]]
@@ -72,8 +76,8 @@ export class TicketCreateComponent implements OnInit {
   }
 
   /**
-   * Abre o chamado; com o formulário inválido, só marca os campos como tocados pra mostrar os erros
-   * (o botão fica habilitado de propósito — desabilitado, quem clica não descobre o que falta).
+   * Abre o chamado com o título e a descrição aparados; com o formulário inválido, só marca os campos como tocados
+   * pra mostrar os erros (o botão fica habilitado de propósito — desabilitado, quem clica não descobre o que falta).
    */
   onSubmit(): void {
     if (this.form.invalid) {
@@ -83,8 +87,8 @@ export class TicketCreateComponent implements OnInit {
 
     const raw = this.form.getRawValue();
     this.store.create({
-      title: raw.title!,
-      description: raw.description!,
+      title: raw.title!.trim(),
+      description: raw.description!.trim(),
       priority: raw.priority!,
       sectorId: raw.sectorId!
     }, () => {

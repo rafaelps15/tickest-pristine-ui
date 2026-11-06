@@ -63,6 +63,37 @@ describe('TicketEditDialogComponent', () => {
     expect(fixture.componentInstance.savedDescription).toBeNull();
   });
 
+  it('does not count the surrounding spaces toward the minimum: "abc" followed by 7 spaces is not saved and the minimum message shows', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+
+    textarea(fixture).value = 'abc       ';
+    textarea(fixture).dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    const saveButton = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(saveButton.disabled).toBeTrue();
+    expect(fixture.nativeElement.querySelector('#ticketEditDescriptionError')?.textContent)
+      .toContain('A descrição deve ter pelo menos 10 caracteres.');
+
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.savedDescription).toBeNull();
+  });
+
+  it('treats a description of only spaces as empty: it is not saved and the required message shows', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    await fixture.whenStable();
+
+    textarea(fixture).value = '            ';
+    textarea(fixture).dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.savedDescription).toBeNull();
+    expect(fixture.nativeElement.querySelector('#ticketEditDescriptionError')?.textContent).toContain('A descrição é obrigatória.');
+  });
+
   it('emits save with the edited description and trimmed of surrounding spaces', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();
