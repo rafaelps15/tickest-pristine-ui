@@ -24,7 +24,7 @@ describe('TicketHistoryStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getById', 'removeAssignee', 'getHistory']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getHistory']);
     dataService.getHistory.and.returnValue(of(pageOf([entry])));
 
     TestBed.configureTestingModule({
