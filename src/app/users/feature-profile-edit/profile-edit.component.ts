@@ -15,8 +15,11 @@ import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.com
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProfileEditComponent {
+  /** Construtor dos formulários de perfil e de senha. */
   private readonly fb = inject(FormBuilder);
+  /** Store da edição de perfil: perfil, gravação e troca de senha. */
   protected readonly store = inject(ProfileEditStore);
+  /** Toasts de confirmação do perfil atualizado e da senha alterada. */
   private readonly toastService = inject(ToastService);
 
   /** Limite de nome e sobrenome nos campos, o mesmo do back-end. */
@@ -38,6 +41,7 @@ export class ProfileEditComponent {
   /** Controla se os três campos de senha são exibidos em texto claro. */
   readonly showPasswords = signal(false);
 
+  /** Carrega o perfil e liga o preenchimento do formulário e os toasts de sucesso. */
   constructor() {
     this.store.loadCurrentUser();
 

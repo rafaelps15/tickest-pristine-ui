@@ -11,20 +11,31 @@ import { extractErrorMessage, SessionService, CurrentUserService, valueOf } from
 export const ProfileEditStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Id do usuário cujo perfil é editado (o logado); trocar dispara a leitura do perfil. */
     userId: undefined as string | undefined,
+    /** Gravação de nome e sobrenome em andamento. */
     saving: false,
+    /** A última gravação do perfil deu certo (a tela mostra o toast e limpa). */
     saved: false,
+    /** Falha da última gravação do perfil. */
     mutationError: null as string | null,
+    /** Troca de senha em andamento. */
     changingPassword: false,
+    /** A última troca de senha deu certo (a tela mostra o toast e limpa). */
     passwordChanged: false,
+    /** Falha da última troca de senha. */
     passwordError: null as string | null
   }),
   withProps(() => ({
+    /** Acesso HTTP aos usuários (perfil e troca de senha). */
     _userDataService: inject(UserDataService),
+    /** Sessão atual, de onde vem o id do usuário logado. */
     _session: inject(SessionService),
+    /** Recarrega o usuário logado (GET /users/me) depois de salvar o perfil. */
     _currentUserService: inject(CurrentUserService)
   })),
   withProps((store) => ({
+    /** Perfil do usuário (GET /users/{id}), lido a cada troca de {@link userId}. */
     _profileResource: rxResource({
       params: () => store.userId(),
       stream: ({ params }) => params !== undefined
