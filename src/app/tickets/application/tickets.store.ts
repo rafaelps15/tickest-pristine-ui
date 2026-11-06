@@ -66,7 +66,12 @@ export const TicketsStore = signalStore(
     /** Página atual devolvida pela API, ou undefined enquanto carrega ou em erro (hasValue() evita a exceção de value()). */
     _listPage: computed(() => store._listResource.hasValue() ? store._listResource.value() : undefined),
     /** Resposta da sondagem "tem algum chamado?", ou undefined enquanto não houver. */
-    _anyTicketPage: computed(() => store._anyTicketResource.hasValue() ? store._anyTicketResource.value() : undefined)
+    _anyTicketPage: computed(() => store._anyTicketResource.hasValue() ? store._anyTicketResource.value() : undefined),
+    /** Erro só da leitura da listagem (sem os erros de mutação) — o único que "Tentar novamente" resolve. */
+    loadError: computed(() => {
+      const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
+      return resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados') : null;
+    })
   })),
   withComputed((store) => ({
     /** Página atual devolvida pela API (itens + dados de paginação). */
@@ -87,21 +92,8 @@ export const TicketsStore = signalStore(
       const probe = store._anyTicketPage();
       return probe ? probe.totalCount > 0 : null;
     }),
-    /** Erro só da leitura da listagem (sem os erros de mutação) — o único que "Tentar novamente" resolve. */
-    loadError: computed(() => {
-      const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
-      return resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados') : null;
-    }),
-    /** Estado agregado da listagem: carregamento e erro (de leitura ou de mutação). */
-    state: computed(() => {
-      const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
-      return {
-        loading: store._listResource.isLoading(),
-        error: store.mutationError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados')
-          : null)
-      };
-    })
+    /** Estado da leitura da listagem: carregamento e erro de leitura (o de mutação fica em `mutationError`). */
+    state: computed(() => ({ loading: store._listResource.isLoading(), error: store.loadError() }))
   })),
   withComputed((store) => ({
     /** Página atual (1-based). */

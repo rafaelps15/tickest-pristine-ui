@@ -434,13 +434,69 @@ describe('TicketAttachmentsStore', () => {
     expect(store.deleting()).toBeFalse();
   });
 
-  it('exposes the error message when the deletion fails with 403', async () => {
+  it('exposes the error message when the deletion fails with 403, as a mutation error and not as a read error', async () => {
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
     dataService.delete.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
     store.delete('a1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Você não tem permissão para excluir este anexo.');
+    expect(store.mutationError()).toBe('Você não tem permissão para excluir este anexo.');
+    expect(store.listState().error).toBeNull();
+    expect(store.attachments()).toEqual([attachment]);
+  });
+
+  describe('when "carregar mais" fails', () => {
+    beforeEach(async () => {
+      dataService.getAll.and.returnValues(
+        of(pageOf([attachment], true)),
+        throwError(() => new HttpErrorResponse({ status: 500 }))
+      );
+      store.loadForTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      store.loadMore();
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('exposes the failure as a read error of its own, not as a mutation error nor as a failure of the list', () => {
+      expect(store.loadMoreError()).toBe('Erro ao carregar mais anexos');
+      expect(store.mutationError()).toBeNull();
+      expect(store.listState().error).toBeNull();
+      expect(store.attachments()).toEqual([attachment]);
+      expect(store.loadingMore()).toBeFalse();
+    });
+
+    it('clears the failure when "carregar mais" is tried again and works', async () => {
+      const older: TicketAttachment = { ...attachment, id: 'a0', fileName: 'antigo.pdf' };
+      dataService.getAll.and.returnValue(of(pageOf([older])));
+
+      store.loadMore();
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.loadMoreError()).toBeNull();
+      expect(store.attachments()).toEqual([attachment, older]);
+    });
+
+    it('clears the failure when the list goes back to the first page after an upload', async () => {
+      dataService.upload.and.returnValue(of('new-attachment-id'));
+      dataService.getAll.and.returnValue(of(pageOf([attachment], true)));
+
+      store.upload(new File(['x'], 'novo.pdf', { type: 'application/pdf' }));
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.loadMoreError()).toBeNull();
+    });
+
+    it('does not carry the failure over to another ticket', async () => {
+      dataService.getAll.and.returnValue(of(pageOf([attachment])));
+
+      store.loadForTicket('t2');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.loadMoreError()).toBeNull();
+    });
   });
 
   describe('delete after a refused upload', () => {
@@ -485,7 +541,7 @@ describe('TicketAttachmentsStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.validationError()).toContain('máximo de 20 anexos');
-      expect(store.listState().error).toBe('Você não tem permissão para excluir este anexo.');
+      expect(store.mutationError()).toBe('Você não tem permissão para excluir este anexo.');
     });
   });
 });

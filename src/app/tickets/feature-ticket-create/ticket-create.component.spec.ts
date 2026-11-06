@@ -24,7 +24,8 @@ describe('TicketCreateComponent', () => {
   };
 
   let ticketsStoreFake: {
-    state: ReturnType<typeof signal<{ error: string | null }>>;
+    state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>;
+    mutationError: ReturnType<typeof signal<string | null>>;
     creating: ReturnType<typeof signal<boolean>>;
     create: jasmine.Spy;
   };
@@ -36,7 +37,12 @@ describe('TicketCreateComponent', () => {
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
-    ticketsStoreFake = { state: signal({ error: null }), creating: signal(false), create: jasmine.createSpy('create') };
+    ticketsStoreFake = {
+      state: signal({ loading: false, error: null }),
+      mutationError: signal<string | null>(null),
+      creating: signal(false),
+      create: jasmine.createSpy('create')
+    };
     departmentsStoreFake = {
       departments: signal<Department[]>([informationTechnology, departmentWithoutSectors]),
       listState: signal({ loading: false, error: null }),
@@ -309,8 +315,17 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Escolha um departamento primeiro.');
   });
 
+  it('does not show a failure to read the list of tickets as a submit error', async () => {
+    ticketsStoreFake.state.set({ loading: false, error: 'Erro ao carregar chamados' });
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Erro ao carregar chamados');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it('shows the submit error right above the submit button, as an alert', async () => {
-    ticketsStoreFake.state.set({ error: 'O setor escolhido não atende mais chamados.' });
+    ticketsStoreFake.mutationError.set('O setor escolhido não atende mais chamados.');
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 

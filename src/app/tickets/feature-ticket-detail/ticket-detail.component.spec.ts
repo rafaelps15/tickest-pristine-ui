@@ -121,8 +121,10 @@ describe('TicketDetailComponent', () => {
       policy: signal<TicketAttachmentPolicy | null>(ATTACHMENT_POLICY),
       hasMore: signal(false),
       loadingMore: signal(false),
+      loadMoreError: signal<string | null>(null),
       loadMore: jasmine.createSpy('loadMore'),
       listState: signal({ loading: false, error: null as string | null }),
+      mutationError: signal<string | null>(null),
       uploading: signal(false),
       uploadError: signal<string | null>(null),
       validationError: signal<string | null>(null),
@@ -423,6 +425,34 @@ describe('TicketDetailComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('não é suportado');
     expect(text).not.toContain('Erro ao enviar o anexo.');
+  });
+
+  it('shows the failure of an attachment deletion in an alert of its own, without "Tentar novamente"', async () => {
+    attachmentsStoreFake.mutationError.set('Você não tem permissão para excluir este anexo.');
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const alerts = Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>);
+    const deletionAlert = alerts.find(alert => alert.textContent?.includes('Você não tem permissão para excluir este anexo.'));
+    expect(deletionAlert).toBeTruthy();
+    expect(deletionAlert?.querySelector('button')).toBeNull();
+    expect(Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .some(button => button.textContent?.includes('Tentar novamente'))).toBeFalse();
+  });
+
+  it('shows the failure of "Carregar mais anexos" below the button', async () => {
+    attachmentsStoreFake.hasMore.set(true);
+    attachmentsStoreFake.loadMoreError.set('Erro ao carregar mais anexos');
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    const loadMoreButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.includes('Carregar mais anexos'));
+    const alert = Array.from(fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>)
+      .find(element => element.textContent?.includes('Erro ao carregar mais anexos'));
+    expect(loadMoreButton).toBeTruthy();
+    expect(alert).toBeTruthy();
+    expect(loadMoreButton!.compareDocumentPosition(alert!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('shows a success toast when the attachment is uploaded', async () => {

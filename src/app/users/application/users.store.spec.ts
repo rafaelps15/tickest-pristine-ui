@@ -194,7 +194,7 @@ describe('UsersStore', () => {
     expect(store.listLoadFailed()).toBeTrue();
   });
 
-  it('does not flag a load failure when the error comes from an action (deactivate), which reloading does not fix', async () => {
+  it('keeps the error of an action (deactivate), which reloading does not fix, out of the read state of the list', async () => {
     store.loadAll();
     await TestBed.inject(ApplicationRef).whenStable();
     userDataService.deactivate.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
@@ -202,8 +202,20 @@ describe('UsersStore', () => {
     store.deactivate('u1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Erro ao desativar usuário');
+    expect(store.listMutationError()).toBe('Erro ao desativar usuário');
+    expect(store.listState().error).toBeNull();
     expect(store.listLoadFailed()).toBeFalse();
+  });
+
+  it('exposes a failed load in the read state of the list, without an action error', async () => {
+    userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    store.loadAll();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.listState().error).toBe('Erro ao carregar usuários');
+    expect(store.listLoadFailed()).toBeTrue();
+    expect(store.listMutationError()).toBeNull();
   });
 
   it('creates a user, flags success and reloads the listing', async () => {
@@ -350,7 +362,7 @@ describe('UsersStore', () => {
     store.resendInvitation('u1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Este usuário já recebeu 5 convites nas últimas 24 horas. Tente de novo mais tarde.');
+    expect(store.listMutationError()).toBe('Este usuário já recebeu 5 convites nas últimas 24 horas. Tente de novo mais tarde.');
     expect(store.resendingInvitationIds()).toEqual([]);
   });
 
@@ -361,7 +373,7 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.profileError()).toBe('Erro ao atualizar cadastro');
-    expect(store.listState().error).toBeNull();
+    expect(store.listMutationError()).toBeNull();
   });
 
   it('exposes the role assignment failure in the modal error, without polluting the listing error', async () => {
@@ -371,7 +383,7 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.rolesError()).toBe('Erro ao atribuir funções');
-    expect(store.listState().error).toBeNull();
+    expect(store.listMutationError()).toBeNull();
   });
 
   it('does not let a role assignment error appear in the registration edit modal', async () => {
@@ -424,7 +436,7 @@ describe('UsersStore', () => {
     store.deactivate('u1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Este usuário já está desativado.');
+    expect(store.listMutationError()).toBe('Este usuário já está desativado.');
     expect(store.deactivatingIds()).toEqual([]);
   });
 
@@ -446,7 +458,7 @@ describe('UsersStore', () => {
     store.activate('u1');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.listState().error).toBe('Este usuário já está ativo.');
+    expect(store.listMutationError()).toBe('Este usuário já está ativo.');
     expect(store.activatingIds()).toEqual([]);
   });
 
@@ -464,7 +476,7 @@ describe('UsersStore', () => {
     expect(userDataService.deactivate).toHaveBeenCalledWith('u1');
     expect(userDataService.deactivate).toHaveBeenCalledWith('u2');
     expect(onDone).toHaveBeenCalledWith(jasmine.arrayWithExactContents(['u1', 'u2']), 0);
-    expect(store.listState().error).toBeNull();
+    expect(store.listMutationError()).toBeNull();
     expect(store.deactivatingIds()).toEqual([]);
     expect(listCalls()).toBe(2);
   });
@@ -483,7 +495,7 @@ describe('UsersStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(onDone).toHaveBeenCalledWith(['u1'], 1);
-    expect(store.listState().error).toBe('Não foi possível desativar: João Santos.');
+    expect(store.listMutationError()).toBe('Não foi possível desativar: João Santos.');
   });
 
   it('limits to 10 deactivations in flight at the same time, even when selecting more users than that', async () => {

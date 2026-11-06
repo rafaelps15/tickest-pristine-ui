@@ -58,6 +58,7 @@ export const TicketAttachmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
     ticketId: undefined as string | undefined,
+    /** Falha da última exclusão de anexo (a da leitura vem do resource, em {@link listState}). */
     mutationError: null as string | null,
     uploading: false,
     uploadError: null as string | null,
@@ -70,7 +71,9 @@ export const TicketAttachmentsStore = signalStore(
     olderAttachments: [] as TicketAttachment[],
     /** Última página carregada por "carregar mais" (nula enquanto só a primeira foi carregada). */
     lastPage: null as CursorPage<TicketAttachment> | null,
-    loadingMore: false
+    loadingMore: false,
+    /** Falha do último "carregar mais", que é de leitura: não vai para {@link mutationError}. */
+    loadMoreError: null as string | null
   }),
   withProps(() => ({
     _ticketAttachmentDataService: inject(TicketAttachmentDataService)
@@ -91,15 +94,16 @@ export const TicketAttachmentsStore = signalStore(
     attachments: computed(() => [...(valueOf(store._listResource)?.items ?? []), ...store.olderAttachments()]),
     /** Página de onde sai o cursor da próxima: a última carregada por "carregar mais" ou, antes disso, a primeira. */
     currentPage: computed(() => store.lastPage() ?? valueOf(store._listResource)),
+    /** Estado da leitura da primeira página: carregamento e erro de leitura, sem os erros das ações. */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
         loading: store._listResource.isLoading(),
-        error: store.mutationError() ?? (resourceError
+        error: resourceError
           ? extractErrorMessage(resourceError, {
               403: 'Você não tem permissão para ver os anexos deste chamado.'
             }, 'Erro ao carregar anexos')
-          : null)
+          : null
       };
     })
   })),
@@ -108,9 +112,9 @@ export const TicketAttachmentsStore = signalStore(
     hasMore: computed(() => store.currentPage()?.hasNextPage ?? false)
   })),
   withMethods((store) => {
-    /** Volta para a primeira página: descarta as páginas acumuladas e recarrega o resource. */
+    /** Volta para a primeira página: descarta as páginas acumuladas (e a falha de carregá-las) e recarrega o resource. */
     const reloadFirstPage = () => {
-      patchState(store, { olderAttachments: [], lastPage: null });
+      patchState(store, { olderAttachments: [], lastPage: null, loadMoreError: null });
       store._listResource.reload();
     };
 
@@ -122,7 +126,7 @@ export const TicketAttachmentsStore = signalStore(
      * Com o mesmo ticket ("Tentar novamente", reabrir a tela), recarrega a primeira página.
      */
     loadForTicket(ticketId: string): void {
-      patchState(store, { mutationError: null, validationError: null, uploadError: null, downloadError: null });
+      patchState(store, { mutationError: null, validationError: null, uploadError: null, downloadError: null, loadMoreError: null });
       if (store.ticketId() === ticketId) {
         store._reloadFirstPage();
         return;
@@ -136,7 +140,7 @@ export const TicketAttachmentsStore = signalStore(
       const page = store.currentPage();
       if (!ticketId || !page?.hasNextPage || !page.nextCursorDate || !page.nextCursorId || store.loadingMore()) return;
 
-      patchState(store, { loadingMore: true, mutationError: null });
+      patchState(store, { loadingMore: true, loadMoreError: null });
 
       store._ticketAttachmentDataService.getAll(ticketId, { cursorDate: page.nextCursorDate, cursorId: page.nextCursorId }).pipe(
         finalize(() => patchState(store, { loadingMore: false }))
@@ -148,7 +152,7 @@ export const TicketAttachmentsStore = signalStore(
           });
         },
         error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao carregar mais anexos') });
+          patchState(store, { loadMoreError: extractErrorMessage(err, {}, 'Erro ao carregar mais anexos') });
         }
       });
     },

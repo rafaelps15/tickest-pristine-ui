@@ -255,6 +255,10 @@
         @if (attachmentActionError) {
           <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ attachmentActionError }}</div>
         }
+        <!-- Falha de exclusão num alerta próprio: pode vir junto com a recusa de um arquivo, e recarregar não a resolve. -->
+        @if (store.mutationError()) {
+          <div class="alert alert-danger border-0 shadow-sm py-2 small" role="alert">{{ store.mutationError() }}</div>
+        }
         @if (store.listState().error) {
           <div class="alert alert-danger border-0 shadow-sm py-2 small d-flex align-items-center justify-content-between gap-3" role="alert">
             <span>{{ store.listState().error }}</span>
@@ -300,6 +304,9 @@
                 Carregar mais anexos
               </button>
             </div>
+          }
+          @if (store.loadMoreError()) {
+            <div class="alert alert-danger border-0 shadow-sm py-2 small mt-3 mb-0" role="alert">{{ store.loadMoreError() }}</div>
           }
         }
       </div>

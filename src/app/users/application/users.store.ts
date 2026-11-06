@@ -75,19 +75,14 @@ export const UsersStore = signalStore(
   withComputed((store) => ({
     /** Página atual devolvida pela API (itens + dados de paginação). */
     usersPage: computed(() => valueOf(store._listResource)),
-    /**
-     * Se a última carga da lista falhou — distinto de um erro de ação (desativar, reativar…), que
-     * também aparece em {@link listState}: só a falha de carga se resolve recarregando.
-     */
+    /** Se a última carga da lista falhou — o erro de uma ação (desativar, reativar…) fica em {@link listMutationError}. */
     listLoadFailed: computed(() => !!store._listResource.error()),
-    /** Estado da lista pra tela: carregando e a mensagem de erro (de ação, ou de carga quando não há erro de ação). */
+    /** Estado da leitura da lista: carregando e a mensagem da falha de carga, sem os erros de ação. */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
         loading: store._listResource.isLoading(),
-        error: store.listMutationError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar usuários')
-          : null)
+        error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar usuários') : null
       };
     })
   })),

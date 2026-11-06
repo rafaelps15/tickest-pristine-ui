@@ -112,7 +112,7 @@ describe('TicketsStore', () => {
 
     expect(dataService.create).toHaveBeenCalledWith({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
     expect(onSuccess).toHaveBeenCalled();
-    expect(store.state().error).toBeNull();
+    expect(store.mutationError()).toBeNull();
   });
 
   it('sets creating during the creation, and releases it when done', async () => {
@@ -151,7 +151,7 @@ describe('TicketsStore', () => {
     store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao abrir o chamado');
+    expect(store.mutationError()).toBe('Erro ao abrir o chamado');
   });
 
   it('updates the description with the status of the ticket re-read just before the PUT, and reloads the listing', async () => {
@@ -164,7 +164,7 @@ describe('TicketsStore', () => {
     expect(dataService.getById).toHaveBeenCalledOnceWith('t1');
     expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Atualizado', status: TicketStatus.Open });
     expect(dataService.getMine).toHaveBeenCalledTimes(2);
-    expect(store.state().error).toBeNull();
+    expect(store.mutationError()).toBeNull();
   });
 
   it('exposes an error message when the update fails', async () => {
@@ -174,7 +174,7 @@ describe('TicketsStore', () => {
     store.update('t1', { description: 'Atualizado' });
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao atualizar o chamado');
+    expect(store.mutationError()).toBe('Erro ao atualizar o chamado');
   });
 
   it('cancels with the description re-read just before the PUT, not the one loaded on the screen (DIV-3)', async () => {
@@ -196,7 +196,7 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.update).not.toHaveBeenCalled();
-    expect(store.state().error).toBe('Chamado não encontrado — ele pode ter sido removido.');
+    expect(store.mutationError()).toBe('Chamado não encontrado — ele pode ter sido removido.');
     expect(store.pendingTicketIds()).toEqual([]);
   });
 
@@ -235,7 +235,7 @@ describe('TicketsStore', () => {
 
     expect(dataService.reopen).toHaveBeenCalledWith('t1', null);
     expect(dataService.getMine).toHaveBeenCalledTimes(2);
-    expect(store.state().error).toBeNull();
+    expect(store.mutationError()).toBeNull();
   });
 
   it('exposes an error message when the reopening fails', async () => {
@@ -245,7 +245,7 @@ describe('TicketsStore', () => {
     store.reopen('t1', null);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.state().error).toBe('Erro ao reabrir o chamado');
+    expect(store.mutationError()).toBe('Erro ao reabrir o chamado');
   });
 
   it('marks the ticket as pending during the reopening, and releases it when done', async () => {
@@ -274,6 +274,26 @@ describe('TicketsStore', () => {
     expect(store.mutationError()).toBe('Erro ao reabrir o chamado');
 
     store.clearMutationError();
+    expect(store.mutationError()).toBeNull();
+  });
+
+  it('keeps a failed mutation out of the read state, so the list does not look like it failed to load', async () => {
+    dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.update('t1', { description: 'Atualizado' });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutationError()).toBe('Erro ao atualizar o chamado');
+    expect(store.state().error).toBeNull();
+    expect(store.tickets()).toEqual([ticket]);
+  });
+
+  it('exposes a read failure in the read state, without a mutation error', async () => {
+    dataService.getMine.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.state().error).toBe('Erro ao carregar chamados');
     expect(store.mutationError()).toBeNull();
   });
 
@@ -415,6 +435,6 @@ describe('TicketsStore with the real TicketDataService (DIV-3)', () => {
 
     http.expectOne({ method: 'GET', url }).flush(null, { status: 500, statusText: 'Server Error' });
     http.expectNone({ method: 'PUT', url });
-    expect(store.state().error).toBe('Erro ao atualizar o chamado');
+    expect(store.mutationError()).toBe('Erro ao atualizar o chamado');
   });
 });
