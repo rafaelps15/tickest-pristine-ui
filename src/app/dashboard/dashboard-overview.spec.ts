@@ -13,21 +13,17 @@ function days(counts: number[], resolved?: number[]): TicketVolumePoint[] {
 
 describe('dashboard-overview', () => {
   describe('widgetState', () => {
-    it('unavailable wins over everything (flag off: it does not even ask)', () => {
-      expect(widgetState({ available: false, failed: true, hasValue: true })).toBe('unavailable');
-    });
-
-    it('an error from a route that exists is an error', () => {
-      expect(widgetState({ available: true, failed: true, hasValue: false })).toBe('error');
+    it('a failed read is an error', () => {
+      expect(widgetState({ failed: true, hasValue: false })).toBe('error');
     });
 
     it('with a response: empty or ready; on a reload, the previous response remains valid', () => {
-      expect(widgetState({ available: true, failed: false, hasValue: true, empty: true })).toBe('empty');
-      expect(widgetState({ available: true, failed: false, hasValue: true })).toBe('ready');
+      expect(widgetState({ failed: false, hasValue: true, empty: true })).toBe('empty');
+      expect(widgetState({ failed: false, hasValue: true })).toBe('ready');
     });
 
     it('with no response yet: loading', () => {
-      expect(widgetState({ available: true, failed: false, hasValue: false })).toBe('loading');
+      expect(widgetState({ failed: false, hasValue: false })).toBe('loading');
     });
   });
 
@@ -171,21 +167,15 @@ describe('dashboard-overview', () => {
       expect(volumeInsight(days([20, 30, 1]), 'Month')).toBe('10 chamados a mais (+50%) no mês passado que no anterior.');
     });
 
-    it('with the resolved flag on (spec 028), compares incoming and resolutions in the same window', () => {
+    it('when the response brings the resolved ones (spec 028), compares incoming and resolutions in the same window, with no flag', () => {
       const created = Array(15).fill(10);
-      expect(volumeInsight(days(created, Array(15).fill(12)), 'Day', true)).toBe('Mais chamados resolvidos do que abertos nos 7 dias até ontem.');
-      expect(volumeInsight(days(created, Array(15).fill(8)), 'Day', true)).toBe('Entraram mais chamados do que foram resolvidos nos 7 dias até ontem.');
-      expect(volumeInsight(days(created, Array(15).fill(10.2)), 'Day', true)).toBe('Fila estável: tantos chamados resolvidos quanto abertos nos 7 dias até ontem.');
-    });
-
-    it('with the flag off, never states anything about the queue, even if the response brings resolved', () => {
-      const insight = volumeInsight(days(Array(15).fill(10), Array(15).fill(30)), 'Day');
-      expect(insight).toBe('A entrada de chamados ficou estável nos 7 dias até ontem.');
-      expect(insight).not.toContain('resolvidos');
+      expect(volumeInsight(days(created, Array(15).fill(12)), 'Day')).toBe('Mais chamados resolvidos do que abertos nos 7 dias até ontem.');
+      expect(volumeInsight(days(created, Array(15).fill(8)), 'Day')).toBe('Entraram mais chamados do que foram resolvidos nos 7 dias até ontem.');
+      expect(volumeInsight(days(created, Array(15).fill(10.2)), 'Day')).toBe('Fila estável: tantos chamados resolvidos quanto abertos nos 7 dias até ontem.');
     });
 
     it('the thresholds come from a single place (changing the rule changes the sentence)', () => {
-      expect(volumeInsight(series(10, 11.5), 'Day', false, { ...DASHBOARD_INSIGHT_RULES, changePercent: 20 })).toBe('A entrada de chamados ficou estável nos 7 dias até ontem.');
+      expect(volumeInsight(series(10, 11.5), 'Day', { ...DASHBOARD_INSIGHT_RULES, changePercent: 20 })).toBe('A entrada de chamados ficou estável nos 7 dias até ontem.');
     });
   });
 });

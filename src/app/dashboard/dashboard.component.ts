@@ -7,7 +7,7 @@ import { DashboardFilters, dashboardFilterChips, resolveDashboardScope, toMonito
 import { DashboardTimesComponent } from './dashboard-times.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
 import { DashboardMetric, DashboardMetricGroupComponent, DashboardMetricLead } from './dashboard-metric-group.component';
-import { DASHBOARD_FEATURES, SessionService, ToastService, todayInSaoPaulo } from '../shared';
+import { SessionService, ToastService, todayInSaoPaulo } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { DashboardHeroChartComponent } from './dashboard-hero-chart.component';
@@ -103,8 +103,6 @@ export class DashboardComponent implements OnInit {
   protected readonly departmentsStore = inject(DepartmentsStore);
   /** Responsáveis elegíveis pro filtro de responsável (GET /tickets/assignees). */
   protected readonly assigneesStore = inject(TicketAssigneesStore);
-  /** Funcionalidades que dependem de endpoints novos do back-end. */
-  protected readonly features = inject(DASHBOARD_FEATURES);
   /** Aviso de sucesso do "Atribuir". */
   private readonly toastService = inject(ToastService);
   /** Encerra o relógio e a atualização automática ao sair da tela. */
@@ -124,8 +122,8 @@ export class DashboardComponent implements OnInit {
   private lastOutcome: DashboardRefreshOutcome | null = null;
   /**
    * O recorte mudou (filtro ou escopo) e o resumo ainda não foi dito ao leitor de tela. Signal, e não
-   * campo: quando a troca não dispara nenhuma busca (ex.: "Com filtros" sem filtro, com o volume do
-   * recorte desligado), o anúncio sai na hora, em vez de ficar pendurado até a próxima atualização.
+   * campo: quando a troca não dispara nenhuma busca (ex.: a volta pra "Empresa" sem filtro), o anúncio
+   * sai na hora, em vez de ficar pendurado até a próxima atualização.
    */
   private readonly pendingScopeAnnouncement = signal(false);
   /** Recorte aplicado por último, pra saber quando ele muda (o primeiro não é anunciado). */
@@ -178,16 +176,12 @@ export class DashboardComponent implements OnInit {
   protected readonly scope = computed(() => resolveDashboardScope(
     this.filters.filters(), this.departmentsStore.departments(), this.departmentsStore.listState().loading, this.today));
 
-  /** O fluxo do gráfico também segue os filtros: precisa do volume do recorte (spec 028). */
-  protected readonly flowFilteredAvailable = computed(() => this.showOperation() && this.features.volumeResolved);
-
-  /** Escopo efetivo dos números: "filtered" só pra quem atende a fila e o escolheu; senão a empresa toda. */
+  /**
+   * Escopo efetivo dos números e do fluxo: "filtered" só pra quem atende a fila e o escolheu; senão a
+   * empresa toda. No "filtered", o fluxo vem do volume do recorte (spec 028).
+   */
   protected readonly chartScope = computed((): TicketDashboardChartScope =>
       this.showOperation() && this.operation.chartScope() === 'filtered' ? 'filtered' : 'company');
-
-  /** Escopo do fluxo: o dos números, menos "Com filtros" enquanto o volume do recorte não existe (fica a empresa). */
-  protected readonly flowScope = computed((): TicketDashboardChartScope =>
-      this.chartScope() === 'filtered' && this.flowFilteredAvailable() ? 'filtered' : 'company');
 
   /** Filtros ativos em texto, pra linha "Filtros aplicados às listas" (escopo da empresa). */
   protected readonly filterChips = computed(() =>
@@ -234,7 +228,6 @@ export class DashboardComponent implements OnInit {
 
   /** Estado dos totais por status (indicadores e composição); com números antigos na tela, não é erro. */
   protected readonly countsState = computed(() => widgetState({
-    available: true,
     failed: this.countsFailed() && this.counts() === null,
     hasValue: this.counts() !== null
   }));
@@ -246,7 +239,7 @@ export class DashboardComponent implements OnInit {
   });
 
   /** Agrupamento do fluxo, do escopo. */
-  protected readonly flowGroupBy = computed(() => this.flowScope() === 'company' ? this.store.groupBy() : this.operation.trendGroupBy());
+  protected readonly flowGroupBy = computed(() => this.chartScope() === 'company' ? this.store.groupBy() : this.operation.trendGroupBy());
 
   /** Complemento das descrições dos grupos abaixo da dobra: no escopo "Com filtros", diz que eles seguem os filtros. */
   protected readonly scopeNote = computed(() => this.chartScope() === 'filtered' ? ' Com os filtros escolhidos acima.' : '');
@@ -257,19 +250,19 @@ export class DashboardComponent implements OnInit {
 
   /** Agrupamentos que não cabem no período do recorte (só no fluxo filtrado; a empresa usa as janelas padrão). */
   protected readonly unavailableGroupings = computed((): TicketVolumeGrouping[] =>
-      this.flowScope() === 'filtered' ? this.operation.unavailableGroupings() : []);
+      this.chartScope() === 'filtered' ? this.operation.unavailableGroupings() : []);
 
   /** Pontos do fluxo como a fonte responde agora (null carregando ou em erro). */
-  private readonly livePoints = computed((): TicketVolumePoint[] | null => this.flowScope() === 'company'
+  private readonly livePoints = computed((): TicketVolumePoint[] | null => this.chartScope() === 'company'
     ? (this.store.volumeHasValue() ? this.store.volume() : null)
     : (this.operation.trendHasValue() ? this.operation.trend() : null));
 
   /** A leitura do fluxo falhou agora. */
-  private readonly flowFailed = computed(() => this.flowScope() === 'company' ? this.store.volumeFailed() : !!this.operation.trendError());
+  private readonly flowFailed = computed(() => this.chartScope() === 'company' ? this.store.volumeFailed() : !!this.operation.trendError());
 
   /** Pontos exibidos: os de agora ou os últimos bons do mesmo escopo e agrupamento (ver {@link counts}). */
   private readonly shownPoints = linkedSignal<{ key: string; value: TicketVolumePoint[] | null }, TicketVolumePoint[] | null>({
-    source: () => ({ key: `${this.flowScope()}|${this.flowGroupBy()}`, value: this.livePoints() }),
+    source: () => ({ key: `${this.chartScope()}|${this.flowGroupBy()}`, value: this.livePoints() }),
     computation: (current, previous) => current.value ?? (previous && previous.source.key === current.key ? previous.value : null)
   });
 
@@ -279,10 +272,9 @@ export class DashboardComponent implements OnInit {
   /** Estado do fluxo: vazio quando nenhum período tem chamado; com pontos antigos na tela, não é erro. */
   protected readonly flowState = computed(() => {
     const points = this.flowPoints();
-    // Resolvidos só contam pro "vazio" quando a série aparece (flag volumeResolved); desligada, só os criados.
-    const empty = points.every(point => point.count === 0 && !(this.features.volumeResolved && point.resolvedCount));
+    // Um período com resoluções não é vazio: a série dos resolvidos aparece mesmo sem nenhum criado.
+    const empty = points.every(point => point.count === 0 && !point.resolvedCount);
     return widgetState({
-      available: true,
       failed: this.flowFailed() && this.shownPoints() === null,
       hasValue: this.shownPoints() !== null,
       empty
@@ -297,7 +289,7 @@ export class DashboardComponent implements OnInit {
     || (this.showMyTickets() && !!this.myTickets?.stale()));
 
   /** Frase de destaque do gráfico, só com o fluxo carregado. */
-  protected readonly insight = computed(() => this.flowState() === 'ready' ? volumeInsight(this.flowPoints(), this.flowGroupBy(), this.features.volumeResolved) : null);
+  protected readonly insight = computed(() => this.flowState() === 'ready' ? volumeInsight(this.flowPoints(), this.flowGroupBy()) : null);
 
   /**
    * Primeiro uso: a empresa não tem nenhum chamado (sem filtro) — o gráfico vazio vira um convite
@@ -336,8 +328,8 @@ export class DashboardComponent implements OnInit {
   protected readonly bucketLink = computed(() => {
     if (!this.showOperation()) return null;
     const groupBy = this.flowGroupBy();
-    // Fluxo da empresa (sem o volume do recorte): o período abre sem os filtros, pra lista bater com a barra.
-    const scope = this.flowScope() === 'filtered' ? this.scope() ?? {} : {};
+    // Fluxo da empresa: o período abre sem os filtros, pra lista bater com a barra.
+    const scope = this.chartScope() === 'filtered' ? this.scope() ?? {} : {};
     return (periodStart: string): DashboardLink => {
       const range = bucketRange(periodStart, groupBy);
       return { route: '/tickets/monitorar', queryParams: toMonitorQueryParams({ ...scope, from: range.from, to: range.to }) };
@@ -721,7 +713,7 @@ export class DashboardComponent implements OnInit {
 
   /** Muda o agrupamento do fluxo (dia/semana/mês), na fonte do escopo. */
   setGroupBy(groupBy: TicketVolumeGrouping): void {
-    if (this.flowScope() === 'filtered') {
+    if (this.chartScope() === 'filtered') {
       this.operation.setGroupBy(groupBy);
     } else {
       this.store.setGroupBy(groupBy);
@@ -739,7 +731,7 @@ export class DashboardComponent implements OnInit {
 
   /** "Tentar novamente" do fluxo, na fonte do escopo. */
   reloadFlow(): void {
-    if (this.flowScope() === 'filtered') {
+    if (this.chartScope() === 'filtered') {
       this.operation.reloadTrend();
     } else {
       this.store.load();

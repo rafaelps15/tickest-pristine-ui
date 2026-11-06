@@ -7,7 +7,7 @@ import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketDashboardOverview, TicketDashboardScope } from '../entities/ticket-dashboard';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketAverageTimes } from '../entities/ticket-average-times';
-import { DASHBOARD_FEATURES, SessionService, extractErrorMessage, isoRangeDays, previousIsoRange, todayInSaoPaulo } from '../../shared';
+import { SessionService, extractErrorMessage, isoRangeDays, previousIsoRange, todayInSaoPaulo } from '../../shared';
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
 function widgetError(error: unknown, fallback: string): string | null {
@@ -53,8 +53,7 @@ export type TicketDashboardChartScope = 'company' | 'filtered';
  * (Volume, SLA e Central de atenção numa chamada, GET /tickets/stats/overview), os tempos médios
  * (GET /tickets/stats/times) e o gráfico Criados x Resolvidos do recorte (GET /tickets/stats/volume),
  * todos com o mesmo recorte. Cada um tem o seu `rxResource`: carrega, falha e se recupera sozinho, e
- * trocar o recorte cancela as requisições em voo. Todo número vem do servidor. Só o volume do recorte
- * ainda depende de flag (`volumeResolved` em `DASHBOARD_FEATURES`).
+ * trocar o recorte cancela as requisições em voo. Todo número vem do servidor.
  */
 export const TicketDashboardStore = signalStore(
   { providedIn: 'root' },
@@ -72,8 +71,7 @@ export const TicketDashboardStore = signalStore(
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
-    _session: inject(SessionService),
-    _features: inject(DASHBOARD_FEATURES)
+    _session: inject(SessionService)
   })),
   withProps((store) => {
     /**
@@ -124,11 +122,10 @@ export const TicketDashboardStore = signalStore(
         stream: ({ params }) => store._ticketDataService.getTimes(params)
       }),
       // O período define o intervalo do gráfico; sem período, as janelas padrão do back-end. Só no
-      // escopo "filtered" e com a spec 028 no ar: antes dela, a rota ignora os filtros e devolveria
-      // a empresa toda como se fosse o recorte.
+      // escopo "filtered": no da empresa, o fluxo vem do volume da empresa (TicketSummaryStore).
       _trendResource: rxResource({
         params: () => {
-          const query = allowed() && store._features.volumeResolved && store.chartScope() === 'filtered' ? base() : null;
+          const query = allowed() && store.chartScope() === 'filtered' ? base() : null;
           return query
             ? { groupBy: fittingGrouping(store.groupBy(), store.scope()), query: { ...query, createdFrom: store.scope().from, createdTo: store.scope().to } }
             : undefined;

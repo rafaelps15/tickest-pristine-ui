@@ -18,13 +18,13 @@
         <h3 class="section-label mb-1">Gráfico da operação</h3>
         <p class="small text-muted mb-2"><strong>A frase de cima</strong> resume a semana em linguagem simples (ex.: "12 chamados a mais (+18%) nos 7 dias até ontem que nos 7 anteriores"). Com poucos chamados, ela não aparece.</p>
         <p class="small text-muted mb-2"><strong>A barra colorida</strong> mostra como os chamados estão divididos agora@if (showOperation()) { (no escopo "Com filtros" com período, os abertos nesse período)}: abertos, em andamento, resolvidos e fechados, com número e percentual. Cancelados ficam fora da barra, à direita na mesma linha, pra a soma bater com o total.</p>
-        <p class="small text-muted mb-0"><strong>As barras por período</strong> contam os chamados criados em cada dia, semana ou mês (botões Dia, Semana e Mês)@if (flowFilteredAvailable()) { e, ao lado, as resoluções do período — um chamado reaberto e resolvido de novo conta outra vez}. Num período de mais de um ano, "Dia" fica indisponível. Passe o mouse pra ver os números; clique num período ou num status pra abrir a lista. O botão de tabela, ao lado de Mês, mostra os mesmos números em texto.</p>
+        <p class="small text-muted mb-0"><strong>As barras por período</strong> contam os chamados criados em cada dia, semana ou mês (botões Dia, Semana e Mês) e, ao lado, as resoluções do período — um chamado reaberto e resolvido de novo conta outra vez. Num período de mais de um ano, "Dia" fica indisponível. Passe o mouse pra ver os números; clique num período ou num status pra abrir a lista. O botão de tabela, ao lado de Mês, mostra os mesmos números em texto.</p>
       </section>
 
       @if (showOperation()) {
         <section>
           <h3 class="section-label mb-1">Filtros</h3>
-          <p class="small text-muted mb-0">Período, departamento, setor, prioridade e responsável ficam no endereço da página (dá pra compartilhar o link) e valem pras listas que os cards abrem. No escopo "Com filtros", valem também pros números (topo, Central de atenção e SLA)@if (flowFilteredAvailable()) { e pro gráfico por período}@else {; o gráfico por período continua o da empresa toda e passa a seguir os filtros em breve}.</p>
+          <p class="small text-muted mb-0">Período, departamento, setor, prioridade e responsável ficam no endereço da página (dá pra compartilhar o link) e valem pras listas que os cards abrem. No escopo "Com filtros", valem também pros números (topo, Central de atenção e SLA) e pro gráfico por período.</p>
         </section>
 
         <section>

@@ -7,7 +7,7 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketDashboardOverview } from '../entities/ticket-dashboard';
 import { TicketAverageTimes } from '../entities/ticket-average-times';
 import { TicketPriority } from '../entities/ticket-priority';
-import { DASHBOARD_FEATURES, DashboardFeatures, SessionService } from '../../shared';
+import { SessionService } from '../../shared';
 
 /** Agregado de exemplo, com um número diferente em cada campo. */
 const OVERVIEW: TicketDashboardOverview = {
@@ -27,19 +27,17 @@ const TIMES: TicketAverageTimes = {
 describe('TicketDashboardStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
   let permissions: Set<string>;
-  let features: DashboardFeatures;
 
   /**
-   * Cria o Store com o Data Service falso, as permissões e a flag do teste. Por padrão, com o volume
-   * do recorte ligado e o gráfico no escopo do recorte, pra exercitar todas as leituras.
+   * Cria o Store com o Data Service falso e as permissões do teste. Por padrão, com o gráfico no
+   * escopo do recorte, pra exercitar todas as leituras.
    */
   function createStore(chartScope: 'company' | 'filtered' = 'filtered') {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         { provide: TicketDataService, useValue: dataService },
-        { provide: SessionService, useValue: { userId: signal('u-me'), hasPermission: (code: string) => permissions.has(code) } },
-        { provide: DASHBOARD_FEATURES, useValue: features }
+        { provide: SessionService, useValue: { userId: signal('u-me'), hasPermission: (code: string) => permissions.has(code) } }
       ]
     });
     const store = TestBed.inject(TicketDashboardStore);
@@ -56,27 +54,24 @@ describe('TicketDashboardStore', () => {
     dataService.getTimes.and.returnValue(of(TIMES));
     dataService.getVolume.and.returnValue(of([{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]));
     permissions = new Set(['tickets:manage']);
-    features = { volumeResolved: true };
   });
 
-  describe('volumeResolved flag (DASHBOARD_FEATURES)', () => {
-    it('off, does not request the volume of the slice, even in "Com filtros"; the overview and the times do not depend on a flag', async () => {
-      features = { volumeResolved: false };
-      createStore('filtered');
-      await settle();
+  it('a 404 in the overview is a real error (not "em breve")', async () => {
+    dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+    const store = createStore();
+    await settle();
 
-      expect(dataService.getOverview).toHaveBeenCalledTimes(1);
-      expect(dataService.getTimes).toHaveBeenCalledTimes(1);
-      expect(dataService.getVolume).not.toHaveBeenCalled();
-    });
+    expect(store.overviewError()).toBeTruthy();
+  });
 
-    it('a 404 in the overview is a real error (not "em breve")', async () => {
-      dataService.getOverview.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
-      const store = createStore();
-      await settle();
+  it('in "Com filtros", requests the overview, the times and the volume of the slice together, with no flag', async () => {
+    const store = createStore('filtered');
+    store.setScope({ sectorIds: ['s1'] });
+    await settle();
 
-      expect(store.overviewError()).toBeTruthy();
-    });
+    expect(dataService.getOverview).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
+    expect(dataService.getTimes).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
+    expect(dataService.getVolume).toHaveBeenCalledWith('Day', jasmine.objectContaining({ sectorIds: ['s1'] }));
   });
 
   it('the volume of the slice is only requested in the "Com filtros" scope', async () => {

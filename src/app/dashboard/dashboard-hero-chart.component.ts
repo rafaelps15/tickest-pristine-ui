@@ -31,7 +31,7 @@ const COMPACT_QUERY = '(max-width: 575.98px)';
  * lê em dois segundos: a frase de destaque, a composição atual por status (barra empilhada com
  * números e percentuais) e o fluxo por período (criados e, com a spec 028, resolvidos), com
  * Dia/Semana/Mês, tabela acessível equivalente, drill-down por status e por período, e os estados
- * de cada parte (carregando, erro, vazio, primeiro uso, disponível em breve) independentes.
+ * de cada parte (carregando, erro, vazio, primeiro uso) independentes.
  * Componente de apresentação: recebe tudo por `input()`; a tela decide fontes e destinos.
  */
 @Component({
@@ -47,18 +47,8 @@ export class DashboardHeroChartComponent implements OnDestroy {
   /** Solta o ouvinte da largura da tela ao sair. */
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Escopo exibido: a empresa toda ou o recorte dos filtros. */
+  /** Escopo exibido (números e fluxo): a empresa toda ou o recorte dos filtros. */
   readonly scope = input<TicketDashboardChartScope>('company');
-  /**
-   * O fluxo segue o escopo. Em "Com filtros" sem o volume do recorte (spec 028), os números seguem os
-   * filtros e o fluxo continua o da empresa toda — o rodapé diz isso.
-   */
-  readonly flowFiltered = input(true);
-  /**
-   * A série "Resolvidos" pode aparecer (flag `volumeResolved`, spec 028 integrada). Desligada, o fluxo
-   * mostra só os criados, mesmo que a resposta traga `resolvedCount`.
-   */
-  readonly resolvedEnabled = input(true);
   /** Frase de destaque, ou null (sem amostra suficiente, nenhuma frase). */
   readonly insight = input<string | null>(null);
   /** Composição atual por status, ou null sem resposta. */
@@ -158,7 +148,7 @@ export class DashboardHeroChartComponent implements OnDestroy {
   protected readonly rangeLabel = computed(() => {
     const groupBy = this.groupBy();
     const range = this.range();
-    if (this.scope() === 'filtered' && this.flowFiltered() && range?.from && range.to) return `De ${formatIsoDate(range.from)} a ${formatIsoDate(range.to)}`;
+    if (this.scope() === 'filtered' && range?.from && range.to) return `De ${formatIsoDate(range.from)} a ${formatIsoDate(range.to)}`;
     const points = this.points().length || VOLUME_DEFAULT_POINTS[groupBy];
     switch (groupBy) {
       case 'Week': return `Últimas ${points} semanas`;
@@ -170,13 +160,10 @@ export class DashboardHeroChartComponent implements OnDestroy {
   /** Rótulos curtos dos períodos (eixo e tabela). */
   protected readonly periodLabels = computed(() => this.points().map(point => bucketShortLabel(point.periodStart, this.groupBy())));
 
-  /**
-   * O fluxo vira Criados x Resolvidos: com a série liberada ({@link resolvedEnabled}) e o back-end
-   * mandando os resolvidos por período (spec 028).
-   */
+  /** O fluxo vira Criados x Resolvidos quando o back-end manda os resolvidos por período (spec 028). */
   protected readonly hasResolved = computed(() => {
     const points = this.points();
-    return this.resolvedEnabled() && points.length > 0 && points.every(point => point.resolvedCount !== undefined);
+    return points.length > 0 && points.every(point => point.resolvedCount !== undefined);
   });
 
   /** Destinos de cada período, na ordem dos pontos (null quando não há drill-down). */

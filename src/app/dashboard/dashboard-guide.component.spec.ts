@@ -89,6 +89,24 @@ describe('DashboardGuideComponent', () => {
     expect(document.querySelector('[role="dialog"]')!.textContent).toContain('75% do prazo');
   });
 
+  it('explains the resolved series the chart draws to everyone, not only to those who handle the queue', async () => {
+    const { fixture, trigger } = await setup({ showMine: true });
+    trigger.click();
+    await fixture.whenStable();
+
+    expect(document.querySelector('[role="dialog"]')!.textContent).toContain('as resoluções do período');
+  });
+
+  it('for those who handle the queue, says the filters also apply to the chart by period, with no "em breve"', async () => {
+    const { fixture, trigger } = await setup({ showOperation: true });
+    trigger.click();
+    await fixture.whenStable();
+
+    const text = document.querySelector('[role="dialog"]')!.textContent;
+    expect(text).toContain('valem também pros números (topo, Central de atenção e SLA) e pro gráfico por período.');
+    expect(text).not.toContain('em breve');
+  });
+
   it('for those who open tickets, explains "Seus chamados" and that the list shows only their own', async () => {
     const { fixture, trigger } = await setup({ showMine: true });
     trigger.click();

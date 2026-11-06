@@ -35,8 +35,6 @@ export class DashboardGuideComponent {
   readonly showOperation = input(false);
   /** Mostra a seção "Seus chamados" — só pra quem abre chamados e não atende a fila. */
   readonly showMine = input(false);
-  /** O gráfico por período também segue os filtros (spec 028). */
-  readonly flowFilteredAvailable = input(false);
 
   /** O diálogo está aberto. */
   readonly open = signal(false);

@@ -4,15 +4,13 @@ import { DASHBOARD_INSIGHT_RULES, DashboardInsightRules } from './dashboard-insi
 
 /**
  * Estado de um widget do Início, decidido pelos sinais da fonte (nunca pelo texto da mensagem):
- * `unavailable` quando o back-end ainda não entrega a rota (flag desligada), `error` numa falha
- * real, `loading` sem nada pra mostrar ainda, `empty` com resposta sem dado e `ready` com dado.
+ * `error` numa falha real, `loading` sem nada pra mostrar ainda, `empty` com resposta sem dado e
+ * `ready` com dado.
  */
-export type DashboardWidgetState = 'unavailable' | 'error' | 'loading' | 'empty' | 'ready';
+export type DashboardWidgetState = 'error' | 'loading' | 'empty' | 'ready';
 
 /** Sinais de uma fonte de dados, como os stores expõem. */
 export interface DashboardWidgetSource {
-  /** A rota existe e pode ser pedida por quem está logado. */
-  available: boolean;
   /** A última leitura falhou. */
   failed: boolean;
   /** Já há resposta (numa recarga, a anterior continua valendo). */
@@ -21,9 +19,8 @@ export interface DashboardWidgetSource {
   empty?: boolean;
 }
 
-/** Estado do widget a partir da fonte: indisponível > erro > com dado (vazio ou não) > carregando. */
+/** Estado do widget a partir da fonte: erro > com dado (vazio ou não) > carregando. */
 export function widgetState(source: DashboardWidgetSource): DashboardWidgetState {
-  if (!source.available) return 'unavailable';
   if (source.failed) return 'error';
   if (source.hasValue) return source.empty ? 'empty' : 'ready';
   return 'loading';
@@ -265,18 +262,17 @@ function total(points: TicketVolumePoint[], pick: (point: TicketVolumePoint) => 
 
 /**
  * Frase de destaque acima do gráfico, por regras explícitas e testáveis (limiares em
- * {@link DASHBOARD_INSIGHT_RULES}). Hoje roda só a regra da **entrada de chamados** (criados na
- * janela contra a anterior), que não afirma nada sobre a fila. A regra de **fila** (entradas contra
- * resoluções) só roda com `withResolved` — a flag `volumeResolved` ligada (spec 028) e os resolvidos
- * na resposta. Abaixo da amostra mínima, ou sem pontos suficientes, devolve null — nenhuma frase é
- * melhor que uma vaga.
+ * {@link DASHBOARD_INSIGHT_RULES}). Com os resolvidos na resposta (spec 028), roda a regra de
+ * **fila** (entradas contra resoluções na mesma janela); sem eles, a da **entrada de chamados**
+ * (criados na janela contra a anterior), que não afirma nada sobre a fila. Abaixo da amostra
+ * mínima, ou sem pontos suficientes, devolve null — nenhuma frase é melhor que uma vaga.
  */
-export function volumeInsight(points: TicketVolumePoint[], groupBy: TicketVolumeGrouping, withResolved = false, rules: DashboardInsightRules = DASHBOARD_INSIGHT_RULES): string | null {
+export function volumeInsight(points: TicketVolumePoint[], groupBy: TicketVolumeGrouping, rules: DashboardInsightRules = DASHBOARD_INSIGHT_RULES): string | null {
   const windows = insightWindows(points, groupBy);
   if (!windows) return null;
   const created = total(windows.current, point => point.count);
 
-  if (withResolved && points.every(point => point.resolvedCount !== undefined)) {
+  if (points.every(point => point.resolvedCount !== undefined)) {
     const resolved = total(windows.current, point => point.resolvedCount ?? 0);
     if (created + resolved < rules.minimumSample) return null;
     const margin = 1 + rules.balancePercent / 100;

@@ -103,19 +103,6 @@ describe('presentation components of Início', () => {
       expect(chosen).toEqual(['Month']);
     });
 
-    it('each unavailable part becomes "em breve", with no skeleton and without repeating the "em breve" of the resolved ones in the footer', async () => {
-      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
-      fixture.componentRef.setInput('compositionState', 'unavailable');
-      fixture.componentRef.setInput('flowState', 'unavailable');
-      await fixture.whenStable();
-
-      const text = fixture.nativeElement.textContent;
-      expect(text).toContain('Situação atual dos chamados: disponível em breve.');
-      expect(text).toContain('Chamados por período: disponível em breve.');
-      expect(fixture.nativeElement.querySelector('.skeleton-block')).toBeNull();
-      expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('Resolvidos por período');
-    });
-
     it('loading: skeletons with the final height, announced to the screen reader', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       await fixture.whenStable();
@@ -137,18 +124,17 @@ describe('presentation components of Início', () => {
       expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('Resolvidos por período');
     });
 
-    it('with the resolved series turned off, shows only the created ones even if the response brings resolvedCount', async () => {
+    it('in "Com filtros", the footer says the flow follows the filters and shows the period of the selection', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('scope', 'filtered');
       fixture.componentRef.setInput('flowState', 'ready');
-      fixture.componentRef.setInput('resolvedEnabled', false);
+      fixture.componentRef.setInput('range', { from: '2026-10-01', to: '2026-10-28' });
       fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]);
       await fixture.whenStable();
-      fixture.componentInstance.toggleTable();
-      await fixture.whenStable();
 
-      const headers = Array.from(fixture.nativeElement.querySelectorAll('th[scope="col"]') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
-      expect(headers).not.toContain('Resolvidos');
-      expect(fixture.nativeElement.querySelector('caption').textContent).not.toContain('resolvidos');
+      const footnote = fixture.nativeElement.querySelector('.hero-footnote').textContent;
+      expect(footnote).toContain('Chamados com os filtros · De 01/10/2026 a 28/10/2026');
+      expect(footnote).not.toContain('o fluxo ainda é o da empresa toda');
     });
   });
 
@@ -211,7 +197,8 @@ describe('presentation components of Início', () => {
     it('the composition says it is unavailable, without a second alert', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('compositionState', 'error');
-      fixture.componentRef.setInput('flowState', 'unavailable');
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]);
       await fixture.whenStable();
 
       const composition = fixture.nativeElement.querySelector('.hero-composition') as HTMLElement;
@@ -318,8 +305,8 @@ describe('presentation components of Início', () => {
     });
   });
 
-  describe('DashboardHeroChartComponent — resolved series turned off, with the chart actually drawn', () => {
-    /** Três dias com poucos criados e muitos resolvidos (a escala denunciaria a série escondida). */
+  describe('DashboardHeroChartComponent — resolved series, with the chart actually drawn', () => {
+    /** Três dias com poucos criados e muitos resolvidos (a escala mostra a série dos resolvidos). */
     const points = [
       { periodStart: '2026-10-26', count: 2, resolvedCount: 40 },
       { periodStart: '2026-10-27', count: 3, resolvedCount: 50 },
@@ -327,11 +314,10 @@ describe('presentation components of Início', () => {
     ];
 
     /** Cria o gráfico na página e espera o Chart.js desenhar (o canvas está num `@defer (on idle)`). */
-    async function drawn(resolvedEnabled: boolean) {
+    async function drawn() {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       document.body.appendChild(fixture.nativeElement);
       fixture.componentRef.setInput('flowState', 'ready');
-      fixture.componentRef.setInput('resolvedEnabled', resolvedEnabled);
       fixture.componentRef.setInput('points', points);
       fixture.componentRef.setInput('bucketLink', (periodStart: string) => ({ route: '/tickets/monitorar', queryParams: { createdFrom: periodStart, createdTo: periodStart } }));
       for (let attempt = 0; attempt < 60 && !fixture.componentInstance['chart']; attempt++) {
@@ -345,34 +331,26 @@ describe('presentation components of Início', () => {
 
     afterEach(() => document.querySelectorAll('app-dashboard-hero-chart').forEach(element => element.remove()));
 
-    it('off: a single series, no legend, and the scale follows only the created ones', async () => {
-      const { chart } = await drawn(false);
-      expect(chart.data.datasets.map(dataset => dataset.label)).toEqual(['Criados']);
-      expect(chart.options.plugins?.legend?.display).toBeFalse();
-      expect(chart.scales['y'].max).toBeLessThan(10);
-    });
-
-    it('on: both series, with legend, and the scale covers the resolved ones (previous behavior)', async () => {
-      const { chart } = await drawn(true);
+    it('with the resolved ones in the response: both series, with legend, and the scale covers the resolved ones', async () => {
+      const { chart } = await drawn();
       expect(chart.data.datasets.map(dataset => dataset.label)).toEqual(['Criados', 'Resolvidos']);
       expect(chart.options.plugins?.legend?.display).toBeTrue();
       expect(chart.scales['y'].max).toBeGreaterThanOrEqual(50);
     });
 
-    it('off: Tab reaches the chart area, the arrows highlight only the created bar and the announcement does not mention resolved ones; Enter opens the list', async () => {
-      const { fixture, chart } = await drawn(false);
+    it('Tab reaches the chart area, the arrows highlight both bars of the period and the announcement says created and resolved; Enter opens the list', async () => {
+      const { fixture, chart } = await drawn();
       const area = fixture.nativeElement.querySelector('.chart-focus') as HTMLElement;
       expect(area.tabIndex).toBe(0);
-      expect(area.getAttribute('aria-label')).not.toContain('resolvidos');
+      expect(area.getAttribute('aria-label')).toContain('criados e resolvidos');
       area.focus();
       expect(document.activeElement).toBe(area);
 
       area.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
       await fixture.whenStable();
-      expect(chart.getActiveElements().map(element => element.datasetIndex)).toEqual([0]);
+      expect(chart.getActiveElements().map(element => element.datasetIndex)).toEqual([0, 1]);
       const announcement = Array.from(fixture.nativeElement.querySelectorAll('[aria-live="polite"]') as NodeListOf<HTMLElement>).map(el => el.textContent).join(' ');
-      expect(announcement).toContain('segunda, 26/10/2026: 2 chamados criados.');
-      expect(announcement).not.toContain('resolvido');
+      expect(announcement).toContain('segunda, 26/10/2026: 2 chamados criados, 40 resolvidos.');
 
       const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
       area.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));

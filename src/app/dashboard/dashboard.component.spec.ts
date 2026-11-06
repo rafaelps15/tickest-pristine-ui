@@ -5,7 +5,7 @@ import { DashboardComponent, countTrend, greetingForHour, slaRate } from './dash
 import { DASHBOARD_REFRESH_MS } from './dashboard-auto-refresh';
 import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAssignee, TicketAverageTimes, TicketDashboardOverview, TicketDashboardVolume, TicketDashboardSla, TicketDashboardAttention, TicketVolumeGrouping, TicketVolumePoint, TicketMonitorItem, TicketStatusCounts, TicketDashboardChartScope } from '../tickets';
 import { DepartmentsStore, Department } from '../departments';
-import { DASHBOARD_FEATURES, DashboardFeatures, SessionService, ToastService } from '../shared';
+import { SessionService, ToastService } from '../shared';
 
 /** 30 dias de volume, 10 criados por dia, terminando em 28/10/2026. */
 function thirtyDays(count = 10): TicketVolumePoint[] {
@@ -124,7 +124,6 @@ describe('DashboardComponent', () => {
   let hasPermission: jasmine.Spy;
   let currentUser: ReturnType<typeof signal<CurrentUserFake>>;
   let toastServiceFake: { show: jasmine.Spy };
-  let features: DashboardFeatures;
   /** Se a tela pediu o store de "Seus chamados" (ele busca sozinho ao nascer). */
   let myTicketsCreated: boolean;
 
@@ -142,7 +141,6 @@ describe('DashboardComponent', () => {
     hasPermission = jasmine.createSpy('hasPermission').and.returnValue(false);
     currentUser = signal<CurrentUserFake>({ firstName: 'Maria', roles: [{ name: 'Colaborador' }] });
     toastServiceFake = { show: jasmine.createSpy('show') };
-    features = { volumeResolved: false };
     departmentsFake = {
       departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's1', name: 'Helpdesk', description: null, activeTicketCount: 0 }, { id: 's2', name: 'Infra', description: null, activeTicketCount: 0 }] }]),
       listState: signal({ loading: false })
@@ -159,8 +157,7 @@ describe('DashboardComponent', () => {
         { provide: TicketAssigneesStore, useValue: assigneesFake },
         { provide: MyTicketsSummaryStore, useFactory: () => { myTicketsCreated = true; return myTicketsFake; } },
         { provide: SessionService, useValue: { hasPermission, currentUser, userId: signal<string | null>('u-me') } },
-        { provide: ToastService, useValue: toastServiceFake },
-        { provide: DASHBOARD_FEATURES, useFactory: () => features }
+        { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
   });
@@ -638,17 +635,7 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.hero-insight')).toBeNull();
     });
 
-    it('with volumeResolved off, the footer does not promise the resolved ones, even when the response includes them', async () => {
-      features.volumeResolved = false;
-      ticketsStoreFake.volume.set(thirtyDays().map(point => ({ ...point, resolvedCount: 2 })));
-      const fixture = await render();
-      const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
-      expect(footnote).toContain('Todos os chamados da empresa · Últimos 30 dias');
-      expect(footnote).not.toContain('Resolvidos por período');
-    });
-
-    it('with volumeResolved on and the back end still without the resolved ones, says once that they are coming soon, with no ghost series', async () => {
-      features.volumeResolved = true;
+    it('with the back end still without the resolved ones, says once that they are coming soon, with no ghost series', async () => {
       const fixture = await render();
       const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
       expect(footnote).toContain('Resolvidos por período e fila ao longo do tempo: disponível em breve.');
@@ -720,7 +707,7 @@ describe('DashboardComponent', () => {
       fixture.nativeElement.remove();
     });
 
-    describe('"Resolvidos" series via the volumeResolved flag (spec 028)', () => {
+    describe('"Resolvidos" series (spec 028)', () => {
       /** Abre a tela como atendente, com a resposta da empresa trazendo resolvedCount, e mostra a tabela. */
       async function tableHeaders(): Promise<(string | undefined)[]> {
         asAgent();
@@ -731,28 +718,20 @@ describe('DashboardComponent', () => {
         return Array.from(fixture.nativeElement.querySelectorAll('table th[scope="col"]') as NodeListOf<HTMLElement>).map(th => th.textContent?.trim());
       }
 
-      it('flag off: does not show the series, even with resolvedCount in the response', async () => {
-        features.volumeResolved = false;
-        expect(await tableHeaders()).not.toContain('Resolvidos');
-      });
-
-      it('flag on: shows the series, as before', async () => {
-        features.volumeResolved = true;
+      it('shows the series when the response brings resolvedCount, with no flag', async () => {
         expect(await tableHeaders()).toContain('Resolvidos');
       });
 
-      it('flag off: periods with no created tickets stay "vazio", even with resolved ones in the response', async () => {
-        features.volumeResolved = false;
-        ticketsStoreFake.volume.set(thirtyDays(0).map(point => ({ ...point, resolvedCount: 3 })));
-        const fixture = await render();
-        expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Nenhum chamado no período.');
-      });
-
-      it('flag on: resolved tickets in the period do not make the chart "vazio"', async () => {
-        features.volumeResolved = true;
+      it('resolved tickets in the period do not make the chart "vazio"', async () => {
         ticketsStoreFake.volume.set(thirtyDays(0).map(point => ({ ...point, resolvedCount: 3 })));
         const fixture = await render();
         expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).not.toContain('Nenhum chamado no período.');
+      });
+
+      it('the highlight sentence compares incoming and resolutions when the response brings them', async () => {
+        ticketsStoreFake.volume.set(thirtyDays().map(point => ({ ...point, resolvedCount: 15 })));
+        const fixture = await render();
+        expect(fixture.nativeElement.querySelector('.hero-insight')?.textContent).toContain('Mais chamados resolvidos do que abertos nos 7 dias até ontem.');
       });
     });
 
@@ -1064,7 +1043,7 @@ describe('DashboardComponent', () => {
         expect(await liveAfter(fixture)).toBe('');
       });
 
-      it('switching the scope via the buttons announces the summary immediately, even with no search (Com filtros without filters, without the selection volume)', async () => {
+      it('switching the scope via the buttons announces the summary as soon as nothing is loading, even when the switch starts no search', async () => {
         asAgent();
         const fixture = await render();
         expect(await liveAfter(fixture)).toBe('');
@@ -1129,7 +1108,6 @@ describe('DashboardComponent', () => {
 
     it('with filters in the URL, opens in the "Com filtros" scope, with the bar and the numbers of the selection', async () => {
       asAgent();
-      features.volumeResolved = true;
       operationFake.chartScope.set('filtered');
       await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
       const fixture = await render();
@@ -1158,16 +1136,40 @@ describe('DashboardComponent', () => {
       groups.forEach(group => expect(group.textContent).toContain('Com os filtros escolhidos acima.'));
     });
 
-    it('without the selection volume (volumeResolved off), the bar and the numbers follow the filters and the flow stays the company one', async () => {
+    it('in "Com filtros", the flow also follows the filters: the points, the footer and the grouping are those of the selection', async () => {
       asAgent();
       operationFake.chartScope.set('filtered');
       await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
       const fixture = await render();
 
-      expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1'] }));
-      expect(fixture.nativeElement.querySelector('app-dashboard-filter-bar')).not.toBeNull();
-      expect(kpiTexts(fixture.nativeElement)[3]).toContain('Total 10');
-      expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).toContain('o fluxo ainda é o da empresa toda');
+      expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).toContain('Chamados com os filtros');
+      expect(fixture.nativeElement.querySelector('.hero-footnote').textContent).not.toContain('o fluxo ainda é o da empresa toda');
+      (fixture.nativeElement.querySelector('button[aria-label="Ver como tabela"]') as HTMLButtonElement).click();
+      await fixture.whenStable();
+      const rows = Array.from(fixture.nativeElement.querySelectorAll('table tbody tr') as NodeListOf<HTMLElement>);
+      expect(rows.length).toBe(1);
+      expect(rows[0].textContent).toContain('27/10/2026');
+      expect(rows[0].querySelector('a')!.getAttribute('href')).toContain('sectorId=s1');
+
+      const week = Array.from(fixture.nativeElement.querySelectorAll('.hero-controls button') as NodeListOf<HTMLButtonElement>).find(b => b.textContent?.trim() === 'Semana')!;
+      week.click();
+      expect(operationFake.setGroupBy).toHaveBeenCalledWith('Week');
+      expect(ticketsStoreFake.setGroupBy).not.toHaveBeenCalled();
+    });
+
+    it('in "Com filtros", a flow error offers "Tentar novamente" on the volume of the selection, not on the company one', async () => {
+      asAgent();
+      operationFake.chartScope.set('filtered');
+      operationFake.trend.set([]);
+      operationFake.trendHasValue.set(false);
+      operationFake.trendError.set('Não foi possível carregar o volume de chamados.');
+      await TestBed.inject(Router).navigateByUrl('/?sectorId=s1');
+      const fixture = await render();
+      ticketsStoreFake.load.calls.reset();
+
+      (fixture.nativeElement.querySelector('.flow-area [role="alert"] button') as HTMLButtonElement).click();
+      expect(operationFake.reloadTrend).toHaveBeenCalled();
+      expect(ticketsStoreFake.load).not.toHaveBeenCalled();
     });
   });
 

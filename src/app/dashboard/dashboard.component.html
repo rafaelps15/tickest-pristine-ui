@@ -25,7 +25,7 @@
     <!-- A atualização (a cada 2 min) só diz "Atualizado agora"; trocar um filtro ou o escopo diz um resumo curto dos números novos. -->
     <span class="visually-hidden" aria-live="polite">{{ liveAnnouncement() }}</span>
   </div>
-  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" [flowFilteredAvailable]="flowFilteredAvailable()" />
+  <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" />
   @if (!isAdministrative() && canCreateTickets()) {
     <a pageActions class="btn btn-primary touch-cta" routerLink="/tickets/novo">
       <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
@@ -64,7 +64,7 @@
 <app-dashboard-kpi-strip class="d-block kpi-row" [kpis]="kpis()" [state]="countsState()" [errorText]="countsErrorText()" (retry)="reloadCounts()" />
 
 <app-dashboard-hero-chart class="d-block mb-4"
-                          [scope]="chartScope()" [flowFiltered]="flowScope() === 'filtered'" [resolvedEnabled]="features.volumeResolved"
+                          [scope]="chartScope()"
                           [insight]="insight()" [composition]="composition()" [compositionState]="countsState()" [statusLinks]="statusLinks()"
                           [points]="flowPoints()" [groupBy]="flowGroupBy()" [unavailableGroupings]="unavailableGroupings()" [flowState]="flowState()" [bucketLink]="bucketLink()"
                           [firstUse]="isFirstUse()" [canSetUpStructure]="canSetUpStructure()" [canCreateTickets]="canCreateTickets()" [range]="scope()"

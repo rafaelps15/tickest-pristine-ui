@@ -37,9 +37,6 @@
     <!-- Agora: quantos estão abertos, em andamento, resolvidos e fechados. -->
     <div class="hero-composition">
       @switch (compositionState()) {
-        @case ('unavailable') {
-          <app-dashboard-notice text="Situação atual dos chamados: disponível em breve." />
-        }
         @case ('error') {
           <!-- O aviso com "Tentar novamente" já está nos indicadores acima (a mesma fonte): aqui, só o estado, sem um segundo alerta. -->
           <p class="composition-unavailable mb-0">Situação atual indisponível. Use “Tentar novamente” nos indicadores acima.</p>
@@ -62,9 +59,6 @@
     <!-- Ao longo do tempo: criados (e resolvidos) por período. -->
     <div class="flow-area" [class.d-none]="showTable()">
       @switch (flowState()) {
-        @case ('unavailable') {
-          <app-dashboard-notice text="Chamados por período: disponível em breve." />
-        }
         @case ('error') {
           <!-- Erro de verdade, não o vazio "nenhum chamado" — que diria que a empresa não abriu chamados. -->
           <app-dashboard-notice kind="error" text="Não foi possível carregar os chamados por período." (retry)="retryFlow.emit()" />
@@ -133,9 +127,6 @@
           </thead>
           <tbody>
             @switch (flowState()) {
-              @case ('unavailable') {
-                <tr><td [attr.colspan]="tableColumns()" class="text-center py-4 text-muted">Chamados por período: disponível em breve.</td></tr>
-              }
               @case ('error') {
                 <tr><td [attr.colspan]="tableColumns()" class="text-center py-4">Não foi possível carregar os chamados por período.</td></tr>
               }
@@ -167,13 +158,13 @@
 
     <!-- O que o gráfico cobre e o que ainda não mostra, numa linha só, sem série fantasma. -->
     <p class="hero-footnote">
-      <span aria-live="polite">{{ scope() !== 'filtered' ? 'Todos os chamados da empresa' : flowFiltered() ? 'Chamados com os filtros' : 'Números com os filtros; o fluxo ainda é o da empresa toda' }} · {{ rangeLabel() }}</span>
+      <span aria-live="polite">{{ scope() !== 'filtered' ? 'Todos os chamados da empresa' : 'Chamados com os filtros' }} · {{ rangeLabel() }}</span>
       @if (average() !== null && flowState() === 'ready') {
         <!-- A legenda do que o gráfico desenha além das barras (a cor nunca é o único sinal). -->
         <span> · Tracejado: média dos períodos completos@if (hasWeekends()) {; faixas claras: sábados e domingos}</span>
       }
-      <!-- A nota provisória só com a série liberada (flag volumeResolved) e o back-end ainda sem os resolvidos; desligada, nada promete. -->
-      @if (resolvedEnabled() && !hasResolved() && flowState() !== 'unavailable') {
+      <!-- A nota provisória enquanto a resposta não traz os resolvidos por período. -->
+      @if (!hasResolved()) {
         <span> · Resolvidos por período e fila ao longo do tempo: disponível em breve.</span>
       }
     </p>

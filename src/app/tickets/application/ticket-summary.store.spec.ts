@@ -10,14 +10,13 @@ import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
-import { SessionService, DASHBOARD_FEATURES, DashboardFeatures } from '../../shared';
+import { SessionService } from '../../shared';
 import { TicketAssignee } from '../entities/ticket-assignee';
 
 describe('TicketSummaryStore', () => {
   let store: InstanceType<typeof TicketSummaryStore>;
   let dataService: jasmine.SpyObj<TicketDataService>;
   let sessionService: jasmine.SpyObj<SessionService>;
-  let features: DashboardFeatures;
 
   const statusCounts: TicketStatusCounts = {
     totalCount: 10, openCount: 3, inProgressCount: 2, resolvedCount: 4, closedCount: 1, canceledCount: 0
@@ -61,7 +60,6 @@ describe('TicketSummaryStore', () => {
 
     sessionService = jasmine.createSpyObj('SessionService', ['hasPermission']);
     sessionService.hasPermission.and.returnValue(true);
-    features = { volumeResolved: false };
 
     configure();
     store = await createStore();
@@ -74,8 +72,7 @@ describe('TicketSummaryStore', () => {
         provideZonelessChangeDetection(),
         TicketSummaryStore,
         { provide: TicketDataService, useValue: dataService },
-        { provide: SessionService, useValue: sessionService },
-        { provide: DASHBOARD_FEATURES, useValue: features }
+        { provide: SessionService, useValue: sessionService }
       ]
     });
   }
