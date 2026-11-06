@@ -247,7 +247,7 @@ describe('TicketDetailComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Atrasado há 3 horas');
     const dueValue = fixture.nativeElement.querySelector('dd.text-danger');
-    expect(dueValue).withContext('a linha de Prazo deve ficar vermelha quando o SLA está violado').toBeTruthy();
+    expect(dueValue).withContext('the Prazo line must turn red when the SLA is breached').toBeTruthy();
   });
 
   it('shows "vence em" and highlights in yellow when the SLA is at risk, with no highlight when it is on time', async () => {
@@ -269,7 +269,7 @@ describe('TicketDetailComponent', () => {
     await fixture.whenStable();
 
     // Escopado na linha "Prazo" do resumo do chamado — o painel de SLA abaixo tem sua própria
-    // urgência relativa por objetivo, independente deste campo (ver describe('painel de SLA')).
+    // urgência relativa por objetivo, independente deste campo (ver describe('SLA panel')).
     const dueText = fixture.nativeElement.querySelector('dl.max-w-700')?.textContent;
     expect(dueText).not.toContain('Vence em');
     expect(dueText).not.toContain('Atrasado há');
@@ -329,7 +329,7 @@ describe('TicketDetailComponent', () => {
 
     const uploadButton = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
       .find(b => b.textContent?.includes('Anexar arquivo'));
-    expect(uploadButton).withContext('o botão de upload deve ser um <button>, não um <label>').toBeTruthy();
+    expect(uploadButton).withContext('the upload button must be a <button>, not a <label>').toBeTruthy();
 
     const fileInput = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
     const clickSpy = spyOn(fileInput, 'click');
@@ -1315,7 +1315,7 @@ describe('TicketDetailComponent', () => {
 
         const badge = Array.from(fixture.nativeElement.querySelectorAll('.badge') as NodeListOf<HTMLElement>)
           .find(b => b.textContent?.trim() === label);
-        expect(badge).withContext(`estado ${state}`).toBeTruthy();
+        expect(badge).withContext(`state ${state}`).toBeTruthy();
         expect(badge?.classList).toContain(badgeClass);
       }
     });

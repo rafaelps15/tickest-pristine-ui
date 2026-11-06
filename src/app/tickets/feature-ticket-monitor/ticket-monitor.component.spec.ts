@@ -628,7 +628,7 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const assignButtons = fixture.nativeElement.querySelectorAll('button[aria-label^="Atribuir a mim:"]') as NodeListOf<HTMLButtonElement>;
-    expect(assignButtons.length).withContext('só o chamado t1 (ativo e sem responsável) deve ter o botão').toBe(1);
+    expect(assignButtons.length).withContext('only ticket t1 (active and without an assignee) must have the button').toBe(1);
 
     assignButtons[0].click();
     expect(storeFake.assignToMe).toHaveBeenCalledWith('t1', 'u-current', jasmine.any(Function));
@@ -996,7 +996,7 @@ describe('TicketMonitorComponent', () => {
     await fixture.whenStable();
 
     const buttons = fixture.nativeElement.querySelectorAll('button[aria-label*="responsável: "]') as NodeListOf<HTMLButtonElement>;
-    expect(buttons.length).withContext('só os chamados ativos (t1, t2) devem ter o botão').toBe(2);
+    expect(buttons.length).withContext('only the active tickets (t1, t2) must have the button').toBe(2);
   });
 
   it('does not show "Atribuir responsável" for someone with tickets:manage but without tickets:assign, but keeps "Atribuir a mim"', async () => {

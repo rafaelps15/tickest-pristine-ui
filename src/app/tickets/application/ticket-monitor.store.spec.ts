@@ -355,7 +355,7 @@ describe('TicketMonitorStore', () => {
     store.searchResponsibleCandidates('joão');
     TestBed.tick();
 
-    expect(first.observed).withContext('a primeira busca é cancelada').toBeFalse();
+    expect(first.observed).withContext('the first search is canceled').toBeFalse();
     second.next(assigneePage([candidate]));
     second.complete();
     first.next(assigneePage([late]));
