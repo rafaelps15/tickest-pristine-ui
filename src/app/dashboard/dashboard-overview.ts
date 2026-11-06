@@ -262,10 +262,11 @@ function total(points: TicketVolumePoint[], pick: (point: TicketVolumePoint) => 
 
 /**
  * Frase de destaque acima do gráfico, por regras explícitas e testáveis (limiares em
- * {@link DASHBOARD_INSIGHT_RULES}). Com os resolvidos na resposta (spec 028), roda a regra de
- * **fila** (entradas contra resoluções na mesma janela); sem eles, a da **entrada de chamados**
- * (criados na janela contra a anterior), que não afirma nada sobre a fila. Abaixo da amostra
- * mínima, ou sem pontos suficientes, devolve null — nenhuma frase é melhor que uma vaga.
+ * {@link DASHBOARD_INSIGHT_RULES}). Com os resolvidos na resposta (spec 028), compara **criados e
+ * resolvidos** na mesma janela; sem eles, a **entrada de chamados** (criados na janela contra a
+ * anterior). Nenhuma das duas fala da fila: criados × resolvidos não a reconstrói (cancelamentos e
+ * reaberturas também a mudam; a série dela é a spec 032). Abaixo da amostra mínima, ou sem pontos
+ * suficientes, devolve null — nenhuma frase é melhor que uma vaga.
  */
 export function volumeInsight(points: TicketVolumePoint[], groupBy: TicketVolumeGrouping, rules: DashboardInsightRules = DASHBOARD_INSIGHT_RULES): string | null {
   const windows = insightWindows(points, groupBy);
@@ -278,7 +279,7 @@ export function volumeInsight(points: TicketVolumePoint[], groupBy: TicketVolume
     const margin = 1 + rules.balancePercent / 100;
     if (resolved > created * margin) return `Mais chamados resolvidos do que abertos ${windows.currentLabel}.`;
     if (created > resolved * margin) return `Entraram mais chamados do que foram resolvidos ${windows.currentLabel}.`;
-    return `Fila estável: tantos chamados resolvidos quanto abertos ${windows.currentLabel}.`;
+    return `Tantos chamados resolvidos quanto abertos ${windows.currentLabel}.`;
   }
 
   const previous = total(windows.previous, point => point.count);

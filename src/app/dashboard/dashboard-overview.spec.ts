@@ -171,7 +171,18 @@ describe('dashboard-overview', () => {
       const created = Array(15).fill(10);
       expect(volumeInsight(days(created, Array(15).fill(12)), 'Day')).toBe('Mais chamados resolvidos do que abertos nos 7 dias até ontem.');
       expect(volumeInsight(days(created, Array(15).fill(8)), 'Day')).toBe('Entraram mais chamados do que foram resolvidos nos 7 dias até ontem.');
-      expect(volumeInsight(days(created, Array(15).fill(10.2)), 'Day')).toBe('Fila estável: tantos chamados resolvidos quanto abertos nos 7 dias até ontem.');
+      expect(volumeInsight(days(created, Array(15).fill(10.2)), 'Day')).toBe('Tantos chamados resolvidos quanto abertos nos 7 dias até ontem.');
+    });
+
+    it('incoming and resolutions in balance only describe the two numbers: no sentence deduces the queue from them (spec 032)', () => {
+      const created = Array(15).fill(10);
+      const balanced = volumeInsight(days(created, Array(15).fill(10)), 'Day');
+      expect(balanced).toBe('Tantos chamados resolvidos quanto abertos nos 7 dias até ontem.');
+      // Nenhum desfecho da comparação fala da fila: por dia, por semana e por mês, acima, abaixo e no equilíbrio.
+      const sentences = [12, 8, 10, 10.2].flatMap(resolved => (['Day', 'Week', 'Month'] as const)
+        .map(groupBy => volumeInsight(days(created, Array(15).fill(resolved)), groupBy)));
+      expect(sentences.every(sentence => sentence !== null)).toBeTrue();
+      sentences.forEach(sentence => expect(sentence).not.toMatch(/fila/i));
     });
 
     it('the thresholds come from a single place (changing the rule changes the sentence)', () => {

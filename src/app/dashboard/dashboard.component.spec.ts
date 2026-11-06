@@ -774,6 +774,14 @@ describe('DashboardComponent', () => {
         const fixture = await render();
         expect(fixture.nativeElement.querySelector('.hero-insight')?.textContent).toContain('Mais chamados resolvidos do que abertos nos 7 dias até ontem.');
       });
+
+      it('with incoming and resolutions in balance, the sentence describes the two numbers and says nothing about the queue', async () => {
+        ticketsStoreFake.volume.set(thirtyDays().map(point => ({ ...point, resolvedCount: 10 })));
+        const fixture = await render();
+        const insight = fixture.nativeElement.querySelector('.hero-insight')?.textContent?.trim();
+        expect(insight).toBe('Tantos chamados resolvidos quanto abertos nos 7 dias até ontem.');
+        expect(insight).not.toMatch(/fila/i);
+      });
     });
 
     it('for those who work the queue, Empresa and Com filtros appear above the numbers (outside the chart) and switch the scope', async () => {
