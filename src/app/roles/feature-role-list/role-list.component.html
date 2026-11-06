@@ -9,7 +9,7 @@
 
 <!-- Recarga que falhou com a lista já na tela: os dados continuam e o aviso é neutro (falha técnica não é risco). -->
 @if (store.listState().error && store.roles().length > 0) {
-  <div class="role-notice" role="alert">
+  <div class="load-error-notice role-notice" role="alert">
     <i class="bx bx-error-circle" aria-hidden="true"></i>
     <span>Não foi possível atualizar a lista de funções — mostrando a última carregada. {{ store.listState().error }}</span>
     <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" (click)="store.load()">Tentar novamente</button>
@@ -36,7 +36,7 @@
           <!-- Falha de carga não vira o vazio "nenhuma função": diz o que falhou e oferece de novo. -->
           <tr>
             <td colspan="3">
-              <div class="role-notice role-notice-inline" role="alert">
+              <div class="load-error-notice role-notice role-notice-inline" role="alert">
                 <i class="bx bx-error-circle" aria-hidden="true"></i>
                 <span>Não foi possível carregar as funções. {{ store.listState().error }}</span>
                 <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" (click)="store.load()">Tentar novamente</button>
@@ -119,7 +119,7 @@
       @if (store.permissionsState().loading && store.permissions().length === 0) {
         <app-loading-state label="Carregando permissões…" />
       } @else if (store.permissionsState().error && store.permissions().length === 0) {
-        <div class="role-notice role-notice-inline" role="alert">
+        <div class="load-error-notice role-notice role-notice-inline" role="alert">
           <i class="bx bx-error-circle" aria-hidden="true"></i>
           <span>Não foi possível carregar a lista de permissões. {{ store.permissionsState().error }}</span>
           <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" (click)="store.loadPermissions()">Tentar novamente</button>

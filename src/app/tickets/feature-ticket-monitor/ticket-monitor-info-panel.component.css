@@ -1,8 +1,0 @@
-/* Rótulo da seção "Descrição" do painel, mesmo type-scale das labels do Guia da Tela. */
-.info-list-title {
-  color: var(--tk-text-muted);
-  font-weight: 700;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}

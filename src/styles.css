@@ -196,11 +196,17 @@ body {
   display: none;
 }
 
-.page-title:focus {
+/*
+ * Títulos que recebem foco programático (tabindex="-1"): o da tela, ao navegar, e o do painel lateral
+ * "Informações do X", ao abrir. Sem anel no foco do script, mas visível se alguém navegar por eles com teclado.
+ */
+.page-title:focus,
+.info-panel-title:focus {
   outline: none;
 }
 
-.page-title:focus-visible {
+.page-title:focus-visible,
+.info-panel-title:focus-visible {
   outline: 2px solid var(--tk-primary);
   outline-offset: 2px;
   border-radius: var(--tk-radius-sm);
@@ -1178,16 +1184,7 @@ router-outlet + * {
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-/* Título recebe foco programático ao abrir o painel (tabindex="-1"): sem anel, mas ainda visível se alguém navegar por ele com teclado. */
-.info-panel-title:focus {
-  outline: none;
-}
-
-.info-panel-title:focus-visible {
-  outline: 2px solid var(--tk-primary);
-  outline-offset: 2px;
-  border-radius: var(--tk-radius-sm);
-}
+/* O foco do título do painel (tabindex="-1") é o mesmo do título da tela: ver `.page-title:focus-visible`. */
 
 /*
  * Lista de campos rótulo/valor do painel (E-mail, Funções, Solicitante, Prazo...). Rótulo no passo
@@ -1203,7 +1200,8 @@ router-outlet + * {
   margin: 0;
 }
 
-.info-list dt {
+.info-list dt,
+.info-list-title {
   color: var(--tk-text-muted);
   font-weight: 700;
   font-size: 0.72rem;
@@ -1295,6 +1293,23 @@ router-outlet + * {
 /* Nome ou descrição sem espaço (URL, sigla longa) quebra dentro do bloco em vez de alargar a página. */
 .text-wrap-anywhere {
   overflow-wrap: anywhere;
+}
+
+/*
+ * Falha de leitura de uma lista ou de um bloco, em tom neutro (texto secundário e "Tentar novamente"
+ * contornado), nunca o vermelho, que fica pro risco operacional (DESIGN.md). Departamentos e Funções.
+ */
+.load-error-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--tk-radius-md);
+  background-color: var(--tk-surface);
+  box-shadow: var(--tk-shadow-sm);
+  color: var(--tk-text-secondary);
 }
 
 /*

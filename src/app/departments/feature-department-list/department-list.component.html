@@ -18,7 +18,7 @@
   Erro de salvar fica no diálogo; de desativar, no card.
 -->
 @if (store.listState().error; as error) {
-  <div class="department-load-error" role="alert">
+  <div class="load-error-notice department-load-error" role="alert">
     <i class="bx bx-error-circle" aria-hidden="true"></i>
     <span>{{ error }}</span>
     <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" (click)="store.load()">Tentar novamente</button>

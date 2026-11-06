@@ -53,6 +53,7 @@ p.text-muted {
   background: linear-gradient(to right, var(--tk-primary-dark), var(--tk-primary));
 }
 
+/* Igual à do styles.css, mas precisa estar aqui: só ela vence o `:hover` deste arquivo, encapsulado, ao pressionar. */
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
 }
@@ -68,16 +69,13 @@ p.text-muted {
   border-right: none;
 }
 
-.input-group:focus-within .form-control,
-.input-group:focus-within .input-group-text {
-  border-color: var(--tk-focus-ring);
-}
+/* A borda na cor de foco do grupo com foco dentro vem da regra global de `.input-group:focus-within` (styles.css). */
 
 /*
  * Senha com "Mostrar senha" colado: o anel vai no grupo (regra global de `.input-group`, no styles.css),
- * não no campo, que aqui não tem borda do lado do botão. Esta regra tira o anel do campo, que a regra
- * acima (encapsulada, que vence a global) mantinha, e o deslocamento de 1px: dentro do grupo, ele separava
- * o campo do anel (um fio de fundo entre os dois embaixo).
+ * não no campo, que aqui não tem borda do lado do botão. Esta regra tira o anel do campo, que o
+ * `.form-control:focus` deste arquivo (encapsulado, que vence o global) mantinha, e o deslocamento de 1px:
+ * dentro do grupo, ele separava o campo do anel (um fio de fundo entre os dois embaixo).
  */
 .input-group .form-control:focus {
   box-shadow: none;
@@ -90,7 +88,11 @@ p.text-muted {
   border-color: var(--bs-form-invalid-border-color);
 }
 
-/* Em foco, o mesmo anel vermelho de 2px do resto do app (styles.css), também no campo dentro do grupo da senha. */
+/*
+ * Em foco, o mesmo anel vermelho de 2px do resto do app (styles.css), também no campo dentro do grupo da
+ * senha. Repete a regra global porque o `.form-control:focus` deste arquivo, encapsulado e com a mesma
+ * especificidade, vem depois e a venceria.
+ */
 .form-control.is-invalid:focus,
 .input-group .form-control.is-invalid:focus {
   border-color: var(--bs-form-invalid-border-color);

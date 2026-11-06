@@ -55,7 +55,6 @@ const openDialogs: DialogComponent[] = [];
   `,
   styles: `
     :host { display: contents; }
-    .min-w-0 { min-width: 0; }
     .dialog-body:empty { display: none; }
   `
 })

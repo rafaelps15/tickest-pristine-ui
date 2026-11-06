@@ -7,23 +7,7 @@
   min-width: 0;
 }
 
-/*
- * Falha de leitura: neutra (texto secundário + "Tentar novamente" contornado), nunca o vermelho,
- * que fica pro risco operacional (DESIGN.md, "Falha técnica é neutra").
- */
-.role-notice {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--tk-radius-md);
-  background-color: var(--tk-surface);
-  box-shadow: var(--tk-shadow-sm);
-  color: var(--tk-text-secondary);
-}
-
+/* Falha de leitura: a caixa neutra é a `.load-error-notice` do styles.css; aqui, o texto, o ícone e a versão sem caixa. */
 .role-notice > span {
   flex: 1 1 16rem;
   min-width: 0;

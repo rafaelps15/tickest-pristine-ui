@@ -22,7 +22,6 @@ import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
   selector: 'app-ticket-monitor-info-panel',
   imports: [RouterLink, NgClass, DateTimePipe, SidePanelDirective],
   templateUrl: './ticket-monitor-info-panel.component.html',
-  styleUrl: './ticket-monitor-info-panel.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketMonitorInfoPanelComponent {
