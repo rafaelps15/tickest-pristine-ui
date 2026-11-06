@@ -5,6 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { MainLayoutComponent, activeTicketsMenu } from './main-layout.component';
 import { SessionService } from '../../../services/session.service';
+import { FOCUSABLE_SELECTOR } from '../../../utils/focus-trap.util';
 
 /** Tela de teste com o título (h1) que recebe o foco depois de navegar pela gaveta. */
 @Component({ template: '<h1>Tela de teste</h1><button type="button">Ação</button>' })
@@ -185,7 +186,7 @@ describe('MainLayoutComponent', () => {
       const { fixture, menu, openButton } = await render();
       openButton.click();
       await fixture.whenStable();
-      const focusables = Array.from(menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'));
+      const focusables = Array.from(menu.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
 
@@ -205,7 +206,7 @@ describe('MainLayoutComponent', () => {
       const { fixture, menu, openButton } = await render();
       openButton.click();
       await fixture.whenStable();
-      const focusables = Array.from(menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'));
+      const focusables = Array.from(menu.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
 
       focusables[1].focus();
       const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });

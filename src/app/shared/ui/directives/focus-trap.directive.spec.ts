@@ -70,6 +70,15 @@ describe('FocusTrapDirective', () => {
     fixture.nativeElement.remove();
   });
 
+  it('with focus on the title (outside the controls), Tab goes to the first', async () => {
+    const { fixture, get } = await render();
+    get('title').focus();
+
+    expect(pressTab(get('title'))).toBeTrue();
+    expect(document.activeElement).toBe(get('first'));
+    fixture.nativeElement.remove();
+  });
+
   it('in the middle, Tab follows the normal path', async () => {
     const { fixture, get } = await render();
     get('middle').focus();

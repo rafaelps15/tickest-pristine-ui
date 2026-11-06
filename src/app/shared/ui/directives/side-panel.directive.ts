@@ -1,7 +1,6 @@
 import { Directive, ElementRef, HostListener, afterRenderEffect, inject, input, untracked } from '@angular/core';
 import { trapTabWithin } from '../../utils/focus-trap.util';
 
-
 /**
  * Painel lateral "Informações do X" (Usuários, Monitorar Tickets): região rotulada ao lado da
  * tabela em telas largas, diálogo modal de tela cheia abaixo de "lg". Cuida da parte de

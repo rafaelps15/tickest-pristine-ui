@@ -2,7 +2,6 @@ import { Component, ChangeDetectionStrategy, AfterViewInit, OnDestroy, ElementRe
 import { FocusTrapDirective } from '../directives/focus-trap.directive';
 import { FOCUSABLE_SELECTOR } from '../../utils/focus-trap.util';
 
-
 /** Contador pra gerar ids únicos do título (o `aria-labelledby` do diálogo aponta pra ele). */
 let nextDialogId = 0;
 
@@ -117,5 +116,4 @@ export class DialogComponent implements AfterViewInit, OnDestroy {
   onBackdropClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) this.requestClose();
   }
-
 }
