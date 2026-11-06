@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener, untracked, afterNextRender, Injector, DestroyRef } from '@angular/core';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { UsersStore } from '../application/users.store';
@@ -11,7 +11,7 @@ import { RolesStore } from '../../roles';
 import {
   SessionService, ConfirmDialogService, ToastService,
   visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
-  injectSidePanelOverlay, isControlInvalid, isEscapeFromNestedLayer
+  SEARCH_DEBOUNCE_MS, clampPageToTotal, injectSidePanelOverlay, isControlInvalid, isEscapeFromNestedLayer, syncQueryParamsToUrl
 } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
@@ -121,10 +121,8 @@ export class UserListComponent implements OnInit {
   private readonly confirmDialogService = inject(ConfirmDialogService);
   /** Toasts de confirmação, com "Desfazer"/"Reenviar convite". */
   private readonly toastService = inject(ToastService);
-  /** Rota atual, pra ler e gravar os filtros na query string. */
+  /** Rota atual, pra ler os filtros da query string (a gravação é do syncQueryParamsToUrl). */
   private readonly route = inject(ActivatedRoute);
-  /** Roteador, pra refletir os filtros na URL. */
-  private readonly router = inject(Router);
   /** Injector pro `afterNextRender` que devolve o foco depois que a tela redesenha. */
   private readonly injector = inject(Injector);
 
@@ -262,7 +260,7 @@ export class UserListComponent implements OnInit {
     // que voltava `?page=3` do link pra página 1 e disparava um GET a mais ao abrir a tela.
     toObservable(this.searchInput).pipe(
       skip(1),
-      debounceTime(300),
+      debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
       takeUntilDestroyed()
     ).subscribe(search => this.store.setSearch(search));
@@ -273,28 +271,14 @@ export class UserListComponent implements OnInit {
       this.selectedUserIds.set(new Set());
     });
 
-    // Toda mudança de filtro/página se reflete na URL, sem empilhar histórico a cada
-    // alternância — "Voltar" deve levar pra fora da tela, não filtro por filtro. Só navega
-    // quando o alvo realmente difere da URL atual — evita regravar (e reagir de novo) o mesmo
-    // estado que acabou de ser lido dela, ao inicializar. O termo de busca livre fica de fora
-    // de propósito: texto livre/dado pessoal não vai na query string (mesma regra já aplicada
-    // em Monitorar Chamados).
-    effect(() => {
-      const queryParams = { ...this.filtersToQueryParams(this.store.filters()), userId: this.infoPanelUserId() ?? null };
-      if (this.matchesCurrentUrl(queryParams)) return;
-
-      this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
-    });
+    // Toda mudança de filtro/página se reflete na URL, sem empilhar histórico e só quando difere
+    // da URL atual (syncQueryParamsToUrl). O termo de busca livre fica de fora de propósito: texto
+    // livre/dado pessoal não vai na query string (mesma regra já aplicada em Monitorar Chamados).
+    syncQueryParamsToUrl(() => ({ ...this.filtersToQueryParams(this.store.filters()), userId: this.infoPanelUserId() ?? null }));
 
     // Página alvo além do total (ex.: vinda de uma URL salva de quando havia mais resultados)
     // volta pra última página válida, em vez de mostrar uma tabela vazia.
-    effect(() => {
-      const totalPages = this.store.totalPages();
-      const currentPage = this.store.filters().page;
-      if (totalPages > 0 && currentPage > totalPages) {
-        this.store.goToPage(totalPages);
-      }
-    });
+    clampPageToTotal(this.store.totalPages, () => this.store.filters().page, page => this.store.goToPage(page));
 
     // Painel de alguém que saiu da lista (desativado com o filtro "Ativos", outra página…): fecha
     // de verdade — tira o `userId` da URL e devolve o foco, em vez de sumir sem aviso.
@@ -406,13 +390,6 @@ export class UserListComponent implements OnInit {
       page: filters.page === DEFAULT_PAGE ? null : filters.page,
       pageSize: filters.pageSize === DEFAULT_PAGE_SIZE ? null : filters.pageSize
     };
-  }
-
-  /** Compara o alvo com a query string atual, pra só navegar quando algo de fato mudou. */
-  private matchesCurrentUrl(target: Record<string, string | number | null>): boolean {
-    const current = this.route.snapshot.queryParamMap;
-    return Object.entries(target).every(([key, value]) =>
-      current.get(key) === (value === null ? null : String(value)));
   }
 
   /**

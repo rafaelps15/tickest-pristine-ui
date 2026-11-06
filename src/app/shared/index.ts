@@ -25,6 +25,8 @@ export * from './utils/resource-value.util';
 export * from './utils/cursor-page.util';
 export * from './utils/paged-response.util';
 export * from './utils/term-search-resource.util';
+export * from './utils/url-query-sync.util';
+export * from './utils/search-debounce.util';
 export * from './utils/iso-date.util';
 export * from './utils/date-time.util';
 export * from './utils/sla-duration.util';

@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, computed, input, output, signal } f
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { DialogComponent } from '../dialog/dialog.component';
+import { SEARCH_DEBOUNCE_MS } from '../../utils/search-debounce.util';
 
 /**
  * Responsável elegível que o diálogo lista: os campos de GET /tickets/assignees que ele mostra.
@@ -78,7 +79,7 @@ export class TicketAssignDialogComponent {
   constructor() {
     toObservable(this.searchText).pipe(
       skip(1),
-      debounceTime(300),
+      debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
       takeUntilDestroyed()
     ).subscribe(term => {

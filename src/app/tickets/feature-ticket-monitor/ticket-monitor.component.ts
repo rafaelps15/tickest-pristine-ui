@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, effect, signal, computed, HostListener, DestroyRef, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { TicketMonitorStore } from '../application/ticket-monitor.store';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
@@ -15,7 +15,10 @@ import { TicketAwaiting, TICKET_AWAITING_LABELS } from '../entities/ticket-await
 import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
 import { TicketAssigneesStore } from '../application/ticket-assignees.store';
 import { DepartmentsStore } from '../../departments';
-import { SessionService, ToastService, formatIsoDate, formatSlaDuration, injectSidePanelOverlay, isEscapeFromNestedLayer, isIsoDate } from '../../shared';
+import {
+  QueryParamsTarget, SEARCH_DEBOUNCE_MS, SessionService, ToastService, clampPageToTotal, formatIsoDate, formatSlaDuration, injectSidePanelOverlay,
+  isEscapeFromNestedLayer, isIsoDate, syncQueryParamsToUrl
+} from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { TicketMonitorGuideComponent } from './ticket-monitor-guide.component';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
@@ -83,7 +86,6 @@ export class TicketMonitorComponent implements OnInit {
   protected readonly sessionService = inject(SessionService);
   private readonly toastService = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
 
   /**
    * Ticket selecionado na tabela — estado de UI puro (não é parâmetro de busca da API, não entra
@@ -301,35 +303,21 @@ export class TicketMonitorComponent implements OnInit {
     // (characteristic do rxResource, que troca de observable a cada mudança de `ticketId`).
     effect(() => this.quickInfoStore.select(this.selectedTicketId()));
 
-    // Espera ~300ms após a última tecla antes de buscar por título, pra não buscar a cada
-    // letra digitada — mesmo padrão já usado no resto do app (ex.: busca de Usuários).
+    // Espera a pessoa parar de digitar antes de buscar por título, pra não buscar a cada letra
+    // digitada — a mesma espera de todas as buscas (SEARCH_DEBOUNCE_MS).
     toObservable(this.searchInput).pipe(
-      debounceTime(300),
+      debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
       takeUntilDestroyed()
     ).subscribe(search => this.store.setSearch(search));
 
-
     // Toda mudança de filtro/ordenação/página/seleção se reflete na URL (RF-28), sem empilhar
-    // histórico a cada alternância — "Voltar" deve levar pra fora da tela, não filtro por
-    // filtro. Só navega quando o alvo realmente difere da URL atual — evita regravar (e reagir
-    // de novo) o mesmo estado que acabou de ser lido dela, ao inicializar.
-    effect(() => {
-      const queryParams = { ...this.filtersToQueryParams(this.store.filters()), ticketId: this.selectedTicketId() ?? null };
-      if (this.matchesCurrentUrl(queryParams)) return;
-
-      this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
-    });
+    // histórico e só quando difere da URL atual (syncQueryParamsToUrl).
+    syncQueryParamsToUrl(() => ({ ...this.filtersToQueryParams(this.store.filters()), ticketId: this.selectedTicketId() ?? null }));
 
     // Página alvo além do total (ex.: vinda de uma URL salva de quando havia mais resultados)
     // volta pra última página válida, em vez de mostrar uma tabela vazia (EC-09).
-    effect(() => {
-      const totalPages = this.store.totalPages();
-      const currentPage = this.store.filters().page;
-      if (totalPages > 0 && currentPage > totalPages) {
-        this.store.goToPage(totalPages);
-      }
-    });
+    clampPageToTotal(this.store.totalPages, () => this.store.filters().page, page => this.store.goToPage(page));
   }
 
   readonly statusLabels = TICKET_STATUS_LABELS;
@@ -481,7 +469,7 @@ export class TicketMonitorComponent implements OnInit {
   }
 
   /** Converte os filtros atuais no formato aceito por `Router.navigate`, omitindo valores padrão pra manter a URL curta. */
-  private filtersToQueryParams(filters: TicketMonitorFilters): Record<string, string | number | string[] | null> {
+  private filtersToQueryParams(filters: TicketMonitorFilters): QueryParamsTarget {
     const isMe = !!filters.assignedToUserId && filters.assignedToUserId === this.sessionService.currentUser()?.id;
     return {
       status: filters.activeOnly ? null : filters.status ?? 'all',
@@ -498,14 +486,6 @@ export class TicketMonitorComponent implements OnInit {
       page: filters.page === DEFAULT_PAGE ? null : filters.page,
       pageSize: filters.pageSize === DEFAULT_PAGE_SIZE ? null : filters.pageSize
     };
-  }
-
-  /** Compara o alvo com a query string atual, pra só navegar quando algo de fato mudou. */
-  private matchesCurrentUrl(target: Record<string, string | number | string[] | null>): boolean {
-    const current = this.route.snapshot.queryParamMap;
-    return Object.entries(target).every(([key, value]) => Array.isArray(value)
-      ? current.getAll(key).join() === value.join()
-      : current.get(key) === (value === null ? null : String(value)));
   }
 
   /**

@@ -1,8 +1,8 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, ElementRef, Injector, DestroyRef, afterNextRender, viewChild } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, ElementRef, Injector, DestroyRef, afterNextRender, viewChild } from '@angular/core';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, filter, take } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { MyTicketsSummaryStore } from '../application/my-tickets-summary.store';
 import { currentTicketDue } from './ticket-list-due';
@@ -10,7 +10,7 @@ import { Ticket } from '../entities/ticket';
 import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS } from '../entities/ticket-status';
 import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
 import { TICKET_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
-import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
+import { ConfirmDialogService, SEARCH_DEBOUNCE_MS, SessionService, ToastService, syncQueryParamsToUrl } from '../../shared';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../application/ticket-cancel-window';
 import { canEditTicketDescription, canReopenTicket } from '../application/ticket-action-permissions';
 import { DepartmentsStore } from '../../departments';
@@ -69,7 +69,6 @@ export class TicketListComponent implements OnInit {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   /** Cabeçalho da tela — recebe o foco quando a linha de origem não existe mais. */
   private readonly pageHeader = viewChild(PageHeaderComponent);
@@ -149,19 +148,14 @@ export class TicketListComponent implements OnInit {
   constructor() {
     // Busca com debounce, como no Monitor: só pergunta à API quando a pessoa para de digitar.
     toObservable(this.searchInput).pipe(
-      debounceTime(300),
+      debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
       takeUntilDestroyed()
     ).subscribe(search => this.store.setSearch(search));
 
-    // Filtro e busca aplicados vão pra URL (sem empilhar histórico a cada tecla), pra o link e o
-    // "voltar" do navegador reabrirem a tela no mesmo recorte.
-    effect(() => {
-      const queryParams = this.filtersToQueryParams();
-      const current = this.route.snapshot.queryParamMap;
-      if ((current.get('status') ?? null) === queryParams.status && (current.get('q') ?? null) === queryParams.q) return;
-      this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
-    });
+    // Filtro e busca aplicados vão pra URL (sem empilhar histórico a cada tecla e só quando mudam), pra o
+    // link e o "voltar" do navegador reabrirem a tela no mesmo recorte.
+    syncQueryParamsToUrl(() => this.filtersToQueryParams());
 
     // O relógio do "atualizado há X" só roda no navegador (o prerender do servidor não pode ficar preso num intervalo).
     afterNextRender(() => {

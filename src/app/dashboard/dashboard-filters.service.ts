@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { DashboardFilters, dashboardFiltersToQueryParams, hasDashboardFilters, parseDashboardFilters } from './dashboard-filters';
+import { queryParamsMatch } from '../shared';
 
 /**
  * Filtros do Início com a URL como fonte da verdade: lê a query string (inclusive voltar/avançar
@@ -35,10 +36,7 @@ export class DashboardFiltersService {
   /** Grava os filtros na URL, mantendo os outros parâmetros da tela; só navega se algo mudou. */
   private navigate(filters: DashboardFilters): void {
     const queryParams = dashboardFiltersToQueryParams(filters);
-    const current = this.route.snapshot.queryParamMap;
-    const unchanged = Object.entries(queryParams).every(([key, value]) =>
-      current.get(key) === (value === null ? null : String(value)));
-    if (unchanged) return;
+    if (queryParamsMatch(this.route.snapshot.queryParamMap, queryParams)) return;
     this.router.navigate([], { relativeTo: this.route, queryParams, queryParamsHandling: 'merge' });
   }
 }

@@ -4,7 +4,7 @@ import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { DepartmentsStore } from '../application/departments.store';
 import { Department, DepartmentSector } from '../entities/department';
-import { ConfirmDialogService, SessionService, ToastService, isControlInvalid } from '../../shared';
+import { ConfirmDialogService, SEARCH_DEBOUNCE_MS, SessionService, ToastService, isControlInvalid } from '../../shared';
 import { UserSummary } from '../../users';
 import { DepartmentGuideComponent } from './department-guide.component';
 import { DepartmentInsightsComponent, DepartmentIssue } from './department-insights.component';
@@ -212,9 +212,9 @@ export class DepartmentListComponent implements OnInit {
 
   /** Liga a busca de responsável com debounce e a saída automática do filtro de problema. */
   constructor() {
-    // Espera ~300ms após a última tecla antes de buscar, pra não buscar a cada letra digitada.
+    // Espera a pessoa parar de digitar antes de buscar (SEARCH_DEBOUNCE_MS), pra não buscar a cada letra digitada.
     toObservable(this.responsibleSearchInput).pipe(
-      debounceTime(300),
+      debounceTime(SEARCH_DEBOUNCE_MS),
       distinctUntilChanged(),
       takeUntilDestroyed()
     ).subscribe(search => this.store.searchResponsibleCandidates(search));
