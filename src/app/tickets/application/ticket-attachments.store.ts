@@ -10,17 +10,34 @@ import { CursorPage, extractErrorMessage, formatFileSize, valueOf } from '../../
 /** Página vazia, usada antes de um ticket ser definido. */
 const EMPTY_PAGE: CursorPage<TicketAttachment> = { items: [], nextCursorDate: null, nextCursorId: null, hasNextPage: false };
 
+/** Tipo sem os parâmetros e em minúsculas, como o back-end compara: "Text/Plain; charset=utf-8" é "text/plain". */
+function mediaTypeOf(contentType: string): string {
+  return contentType.split(';', 1)[0].trim().toLowerCase();
+}
+
+/** Extensão do nome do arquivo com o ponto, em minúsculas, como o `Path.GetExtension` do back-end; vazia sem ponto ou com o ponto no fim. */
+function extensionOf(fileName: string): string {
+  const dot = fileName.lastIndexOf('.');
+  return dot >= 0 && dot < fileName.length - 1 ? fileName.slice(dot).toLowerCase() : '';
+}
+
 /**
- * Motivo pelo qual a política do back-end recusaria o arquivo, ou `null` se ele passa. A quantidade e a soma
- * por chamado só são conferidas com todos os anexos carregados (`complete`); com páginas por carregar, o
- * back-end confere e devolve o motivo.
+ * Motivo pelo qual a política do back-end recusaria o arquivo, ou `null` se ele passa. Confere na ordem do
+ * `TicketAttachment.Create` do back-end: o tipo (sem parâmetros e sem diferenciar maiúsculas), a extensão do nome
+ * entre as do tipo, o tamanho e, por fim, a quantidade e a soma por chamado. Essas duas só são conferidas com todos
+ * os anexos carregados (`complete`); com páginas por carregar, o back-end confere e devolve o motivo.
  */
 export function attachmentPolicyViolation(file: File, policy: TicketAttachmentPolicy, current: TicketAttachment[], complete: boolean): string | null {
+  const mediaType = mediaTypeOf(file.type);
+  const allowedType = policy.allowedTypes.find(type => type.contentType.toLowerCase() === mediaType);
+  if (!allowedType) {
+    return `O tipo de arquivo "${file.type || 'desconhecido'}" não é suportado.`;
+  }
+  if (!allowedType.extensions.some(extension => extension.toLowerCase() === extensionOf(file.name))) {
+    return `A extensão do arquivo não corresponde ao tipo "${file.type}". Para esse tipo, use ${allowedType.extensions.join(' ou ')}.`;
+  }
   if (file.size > policy.maxFileSizeBytes) {
     return `O arquivo excede o tamanho máximo permitido de ${formatFileSize(policy.maxFileSizeBytes)}.`;
-  }
-  if (!policy.allowedTypes.some(type => type.contentType === file.type)) {
-    return `O tipo de arquivo "${file.type || 'desconhecido'}" não é suportado.`;
   }
   if (!complete) return null;
   if (current.length >= policy.maxAttachmentsPerTicket) {

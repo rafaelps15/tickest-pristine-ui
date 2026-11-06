@@ -192,6 +192,31 @@ describe('TicketAttachmentsStore', () => {
       expect(store.validationError()).toBe('O tipo de arquivo "application/x-msdownload" não é suportado.');
     });
 
+    it('refuses a file of an accepted type whose name lacks one of the extensions of that type in the policy, like the back end', () => {
+      store.uploadIfValid(fileOf(10, 'application/pdf', 'nota.pdf.exe'));
+      store.uploadIfValid(fileOf(10, 'application/pdf', 'nota'));
+
+      expect(dataService.upload).not.toHaveBeenCalled();
+      expect(store.validationError()).toBe('A extensão do arquivo não corresponde ao tipo "application/pdf". Para esse tipo, use .pdf.');
+    });
+
+    it('compares the type without its parameters and the extension without case, as the back end normalizes them', () => {
+      const withParameters = fileOf(10, 'Application/PDF; charset=binary', 'nota.pdf');
+      const upperCaseExtension = fileOf(10, 'image/png', 'FOTO.PNG');
+      store.uploadIfValid(withParameters);
+      store.uploadIfValid(upperCaseExtension);
+
+      expect(dataService.upload.calls.allArgs()).toEqual([['t1', withParameters], ['t1', upperCaseExtension]]);
+      expect(store.validationError()).toBeNull();
+    });
+
+    it('checks the type and the extension before the size, in the order of the back end', () => {
+      store.uploadIfValid(fileOf(policy.maxFileSizeBytes + 1, 'image/png', 'foto.pdf'));
+
+      expect(dataService.upload).not.toHaveBeenCalled();
+      expect(store.validationError()).toBe('A extensão do arquivo não corresponde ao tipo "image/png". Para esse tipo, use .png.');
+    });
+
     it('refuses when the ticket already has the maximum number of attachments', async () => {
       const full = Array.from({ length: policy.maxAttachmentsPerTicket }, (_, index) => ({ ...attachment, id: `a${index}` }));
       dataService.getAll.and.returnValue(of(pageOf(full)));
