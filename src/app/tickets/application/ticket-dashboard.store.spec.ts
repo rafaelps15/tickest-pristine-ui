@@ -312,4 +312,23 @@ describe('TicketDashboardStore', () => {
     expect(store.trend()).toEqual([]);
     expect(store.overviewError()).toBeNull();
   });
+
+  it('"Tentar novamente" of the chart (reloadTrend) recovers only the volume of the slice, without redoing the other reads', async () => {
+    const points = [{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }];
+    dataService.getVolume.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    const store = createStore();
+    await settle();
+    expect(store.trendError()).toBeTruthy();
+    const overviewCalls = dataService.getOverview.calls.count();
+    const timesCalls = dataService.getTimes.calls.count();
+
+    dataService.getVolume.and.returnValue(of(points));
+    store.reloadTrend();
+    await settle();
+
+    expect(store.trendError()).toBeNull();
+    expect(store.trend()).toEqual(points);
+    expect(dataService.getOverview.calls.count()).toBe(overviewCalls);
+    expect(dataService.getTimes.calls.count()).toBe(timesCalls);
+  });
 });

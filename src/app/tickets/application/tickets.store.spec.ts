@@ -244,6 +244,33 @@ describe('TicketsStore', () => {
     expect(store.mutationError()).toBeNull();
   });
 
+  it('loadForCurrentUser reloads the current page and discards the error of the last mutation', async () => {
+    dataService.reopen.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+    store.reopen('t1', null);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.mutationError()).toBe('Erro ao reabrir o chamado');
+
+    store.loadForCurrentUser();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.mutationError()).toBeNull();
+    expect(dataService.getMine.calls.allArgs()).toEqual([[1, 20, TicketStatusGroup.Active, ''], [1, 20, TicketStatusGroup.Active, '']]);
+  });
+
+  it('"Tentar novamente" (loadForCurrentUser) recovers the list after a read failure', async () => {
+    dataService.getMine.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.loadError()).toBe('Erro ao carregar chamados');
+
+    dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 1)));
+    store.loadForCurrentUser();
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.loadError()).toBeNull();
+    expect(store.tickets()).toEqual([ticket]);
+  });
+
   it('starts on "Em aberto" and with no search, and goes back to the first page when the group or the search changes', async () => {
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 45)));
     await TestBed.inject(ApplicationRef).whenStable();

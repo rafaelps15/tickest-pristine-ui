@@ -6,6 +6,7 @@ import { TicketMonitorStore } from './ticket-monitor.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketDashboardOverview } from '../entities/ticket-dashboard';
+import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -236,6 +237,22 @@ describe('TicketMonitorStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getAll).toHaveBeenCalledWith(jasmine.objectContaining({ pageSize: 50, page: 1 }));
+  });
+
+  it('restores all the filters of the URL at once, replacing the default ones and keeping the exact page', async () => {
+    const fromUrl: TicketMonitorFilters = {
+      status: TicketStatus.InProgress, priority: TicketPriority.High, sectorIds: ['s1'], search: 'impressora',
+      sort: TicketSortOrder.Newest, page: 3, pageSize: 50
+    };
+    dataService.getAll.and.returnValue(of(pageOf([ticket], 3, 120, 50)));
+
+    store.hydrateFiltersFromUrl(fromUrl);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.filters()).toEqual(fromUrl);
+    expect(dataService.getAll.calls.mostRecent().args).toEqual([fromUrl]);
+    expect(store.currentPage()).toBe(3);
+    expect(dataService.getOverview.calls.mostRecent().args).toEqual([jasmine.objectContaining({ sectorIds: ['s1'], priority: TicketPriority.High })]);
   });
 
   it('assigns the ticket to the given user and reloads the listing', async () => {

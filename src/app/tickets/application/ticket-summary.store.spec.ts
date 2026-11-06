@@ -387,6 +387,23 @@ describe('TicketSummaryStore', () => {
       store.clearAssignError();
       expect(store.assignError()).toBeNull();
     });
+
+    it('on opening or closing the dialog, resetAssignment clears the search, the candidates and the assignment error', async () => {
+      dataService.getAssignees.and.returnValue(of(assigneePage([candidate])));
+      dataService.assignTicket.and.returnValue(throwError(() => new HttpErrorResponse({ status: 409 })));
+      store.searchAssignees('ana');
+      store.assignResponsible('t1', 'u9');
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(store.assigneeCandidates()).toEqual([candidate]);
+      expect(store.assignError()).toBeTruthy();
+
+      store.resetAssignment();
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.assigneeSearchTerm()).toBe('');
+      expect(store.assigneeCandidates()).toEqual([]);
+      expect(store.assignError()).toBeNull();
+    });
   });
 
   describe('without the tickets:manage permission', () => {
