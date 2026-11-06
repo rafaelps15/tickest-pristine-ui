@@ -34,16 +34,39 @@ describe('AppComponent', () => {
     });
   });
 
+  /** Host do aviso de nova tentativa, que fica sempre no DOM. */
+  function notice(fixture: { nativeElement: HTMLElement }): HTMLElement {
+    return fixture.nativeElement.querySelector('app-session-retry-notice') as HTMLElement;
+  }
+
+  /** Região viva do aviso, que existe antes do texto para o leitor de tela anunciar. */
+  function liveRegion(fixture: { nativeElement: HTMLElement }): HTMLElement | null {
+    return fixture.nativeElement.querySelector('app-session-retry-notice [role="status"]');
+  }
+
   it('shows the retry notice while the navigation waits for the user to load', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     TestBed.inject(Router).navigateByUrl('/espera');
     retrying.set(true);
     await settle(fixture);
 
-    const notice = fixture.nativeElement.querySelector('app-session-retry-notice') as HTMLElement;
-    expect(notice).toBeTruthy();
-    expect(notice.getAttribute('role')).toBe('status');
-    expect(notice.textContent).toContain('Conectando ao servidor');
+    expect(notice(fixture).classList).toContain('is-active');
+    expect(liveRegion(fixture)?.textContent).toContain('Conectando ao servidor');
+  });
+
+  it('announces the notice in a live region that was already in the DOM before', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    await fixture.whenStable();
+    const region = liveRegion(fixture);
+    expect(region).toBeTruthy();
+    expect(region?.textContent?.trim()).toBe('');
+
+    TestBed.inject(Router).navigateByUrl('/espera');
+    retrying.set(true);
+    await settle(fixture);
+
+    expect(liveRegion(fixture)).toBe(region);
+    expect(region?.textContent).toContain('Conectando ao servidor');
   });
 
   it('hides the notice when the navigation ends', async () => {
@@ -51,14 +74,15 @@ describe('AppComponent', () => {
     const navigation = TestBed.inject(Router).navigateByUrl('/espera');
     retrying.set(true);
     await settle(fixture);
-    expect(fixture.nativeElement.querySelector('app-session-retry-notice')).toBeTruthy();
+    expect(notice(fixture).classList).toContain('is-active');
 
     guardResult.next(true);
     guardResult.complete();
     await navigation;
     await settle(fixture);
 
-    expect(fixture.nativeElement.querySelector('app-session-retry-notice')).toBeNull();
+    expect(notice(fixture).classList).not.toContain('is-active');
+    expect(liveRegion(fixture)?.textContent?.trim()).toBe('');
   });
 
   it('does not show the notice on a background retry, with no pending navigation', async () => {
@@ -66,6 +90,7 @@ describe('AppComponent', () => {
     retrying.set(true);
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('app-session-retry-notice')).toBeNull();
+    expect(notice(fixture).classList).not.toContain('is-active');
+    expect(liveRegion(fixture)?.textContent?.trim()).toBe('');
   });
 });

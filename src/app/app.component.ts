@@ -17,9 +17,7 @@ import { CurrentUserService } from './shared/services/current-user.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <router-outlet />
-    @if (navigating() && currentUserService.retryingFirstLoad()) {
-      <app-session-retry-notice />
-    }
+    <app-session-retry-notice [active]="navigating() && currentUserService.retryingFirstLoad()" />
     <app-confirm-dialog />
     <app-toast-container />
   `
