@@ -143,26 +143,15 @@ export class DashboardComponent implements OnInit {
   /** Quem atende a fila (`tickets:manage`): vê filtros, Central de atenção e Alertas de SLA. */
   protected readonly showOperation = computed(() => this.sessionService.hasPermission('tickets:manage'));
 
-  /** Pode abrir chamados (`tickets:create`): decide os atalhos para "Novo Chamado". */
+  /** Pode abrir chamados (`tickets:create`): decide os atalhos para "Novo Chamado", em qualquer papel. */
   protected readonly canCreateTickets = computed(() => this.sessionService.hasPermission('tickets:create'));
 
-  /** Pode ver os próprios chamados (`tickets:view-own`): decide os atalhos para "Meus Chamados". */
+  /** Pode ver os próprios chamados (`tickets:view-own`): decide os atalhos e os links para Meus Chamados, em qualquer papel. */
   protected readonly canViewOwnTickets = computed(() => this.sessionService.hasPermission('tickets:view-own'));
 
   /** Mostra "Seus chamados": pra quem abre chamados e não atende a fila (quem atende tem os atalhos da fila). */
   protected readonly showMyTickets = computed(() =>
       this.sessionService.hasPermission('tickets:view-own') && !this.sessionService.hasPermission('tickets:manage'));
-
-  /**
-   * Indica papel administrativo (hoje só Administrador — Atendente tem `tickets:manage`, mas
-   * nenhuma permissão de usuários/roles/estrutura). Administrador não abre nem atende chamados
-   * operacionalmente, então "Novo Chamado"/"Meus Chamados" não se aplicam a esse papel.
-   */
-  protected readonly isAdministrative = computed(() =>
-      this.sessionService.hasPermission('users:read') ||
-      this.sessionService.hasPermission('roles:manage') ||
-      this.sessionService.hasPermission('departments:manage') ||
-      this.sessionService.hasPermission('sectors:manage'));
 
   /** Quem pode cadastrar a estrutura (departamentos/setores) — no primeiro uso, é o passo que vem antes de qualquer ticket. */
   protected readonly canSetUpStructure = computed(() =>
@@ -301,13 +290,15 @@ export class DashboardComponent implements OnInit {
 
   /**
    * Destino de um número: quem atende a fila vai pro Monitorar com os filtros da URL e o filtro do
-   * número; os demais vão pra Meus Chamados, que mostra só os próprios — com o aviso de quantos
-   * deles a pessoa vê, quando é menos que o número da empresa.
+   * número; quem vê os próprios chamados (`tickets:view-own`) vai pra Meus Chamados, que mostra só os
+   * próprios — com o aviso de quantos deles a pessoa vê, quando é menos que o número da empresa. Sem
+   * nenhuma das duas permissões, o número não leva a lista nenhuma (null).
    */
-  private link(monitorExtra: Params, mineParams: Params, own: number | null, company: number | null): DashboardLink {
+  private link(monitorExtra: Params, mineParams: Params, own: number | null, company: number | null): DashboardLink | null {
     if (this.showOperation()) {
       return { route: '/tickets/monitorar', queryParams: toMonitorQueryParams(this.scope() ?? {}, monitorExtra) };
     }
+    if (!this.canViewOwnTickets()) return null;
     return { route: '/tickets', queryParams: mineParams, note: company === null ? null : accessNote(own, company) };
   }
 
@@ -446,7 +437,7 @@ export class DashboardComponent implements OnInit {
   protected readonly hasSecondaryRow = computed(() =>
       this.showOperation() || this.showMyTickets() || this.adminLinks().length > 0);
 
-  /** Atalhos da fila (Atribuídos a mim e, pra quem também abre chamados, Meus Chamados): só pra quem atende. */
+  /** Atalhos da fila (Atribuídos a mim e, com `tickets:view-own`, Meus Chamados): só pra quem atende. */
   protected readonly showQuickActions = computed(() => this.showOperation());
 
   /** Atalhos de administração, pra quem administra sem atender a fila (o Início dele não fica vazio). */

@@ -1374,6 +1374,21 @@ describe('DashboardComponent', () => {
       expect(link.closest('.kpi-card')?.textContent).toContain('Você tem acesso a 3 dos 5 chamados');
       expect(kpiLink(fixture.nativeElement, 'Resolvidos').getAttribute('href')).toBe('/tickets?status=finished');
     });
+
+    it('without tickets:view-own, no number leads to /tickets: the indicators and the composition bar have no link', async () => {
+      for (const permissions of [['tickets:create'], ['users:read', 'departments:manage']]) {
+        hasPermission.and.callFake((code: string) => permissions.includes(code));
+        const fixture = await render();
+        const who = permissions.join(', ');
+
+        const hrefs = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(a => a.getAttribute('href') ?? '');
+        expect(hrefs.filter(href => href === '/tickets' || href.startsWith('/tickets?'))).withContext(who).toEqual([]);
+        expect(fixture.nativeElement.querySelectorAll('.kpi-card a').length).withContext(who).toBe(0);
+        expect(fixture.nativeElement.querySelectorAll('.composition-segment a').length).withContext(who).toBe(0);
+        // Os números continuam na tela; só não levam a uma lista que a pessoa não pode abrir.
+        expect(kpiTexts(fixture.nativeElement)[0]).withContext(who).toContain('Total 12');
+      }
+    });
   });
 
   describe('your tickets', () => {
@@ -1444,7 +1459,7 @@ describe('DashboardComponent', () => {
   });
 
   describe('Ações rápidas', () => {
-    it('shows Novo Chamado, Meus Chamados and Atribuídos a mim to those who work the queue without being administrative', async () => {
+    it('shows Novo Chamado, Meus Chamados and Atribuídos a mim to whoever works the queue with tickets:create and tickets:view-own', async () => {
       asAgent();
       const fixture = await render();
       const links = Array.from(fixture.nativeElement.querySelectorAll('.quick-link') as NodeListOf<HTMLElement>).map(a => a.textContent ?? '');
@@ -1467,7 +1482,18 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Atribuídos a mim');
     });
 
-    it('an administrative user who works the queue sees "Atribuídos a mim", without Novo Chamado or Meus Chamados', async () => {
+    it('the seed Administrador (every permission) sees "Novo Chamado" in the header and "Meus Chamados" with "Atribuídos a mim" in the Ações rápidas: the shortcuts follow the permissions, not a deduced profile', async () => {
+      hasPermission.and.returnValue(true);
+      const fixture = await render();
+
+      const newTicket = fixture.nativeElement.querySelector('app-page-header a[href="/tickets/novo"]') as HTMLAnchorElement | null;
+      expect(newTicket?.textContent).toContain('Novo Chamado');
+      const links = Array.from(fixture.nativeElement.querySelectorAll('.quick-link') as NodeListOf<HTMLAnchorElement>);
+      expect(links.find(a => a.textContent?.includes('Meus Chamados'))?.getAttribute('href')).toBe('/tickets');
+      expect(links.some(a => a.textContent?.includes('Atribuídos a mim'))).toBeTrue();
+    });
+
+    it('an administrative user who works the queue without tickets:create and tickets:view-own sees only "Atribuídos a mim"', async () => {
       hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'tickets:manage');
       const fixture = await render();
       const text = fixture.nativeElement.textContent;

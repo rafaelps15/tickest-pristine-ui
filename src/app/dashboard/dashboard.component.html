@@ -26,7 +26,8 @@
     <span class="visually-hidden" aria-live="polite">{{ liveAnnouncement() }}</span>
   </div>
   <app-dashboard-guide pageActions [showOperation]="showOperation()" [showMine]="showMyTickets()" />
-  @if (!isAdministrative() && canCreateTickets()) {
+  <!-- Os atalhos seguem as permissões, em qualquer papel, e não um perfil deduzido (decisão de 2026-11-05). -->
+  @if (canCreateTickets()) {
     <a pageActions class="btn btn-primary touch-cta" routerLink="/tickets/novo">
       <i class="bx bx-plus me-1" aria-hidden="true"></i> Novo Chamado
     </a>
@@ -180,7 +181,7 @@
       <section class="card p-3" aria-labelledby="quickActionsTitle">
           <h2 id="quickActionsTitle" class="h5 card-title fw-bold mb-2">Ações rápidas</h2>
           <ul class="list-unstyled mb-0 quick-links">
-            @if (!isAdministrative() && canViewOwnTickets()) {
+            @if (canViewOwnTickets()) {
               <li>
                 <a class="quick-link" routerLink="/tickets">
                   <span class="badge bg-label-info rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-receipt fs-5"></i></span>
