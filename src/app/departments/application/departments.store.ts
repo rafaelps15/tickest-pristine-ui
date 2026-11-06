@@ -36,11 +36,15 @@ export const DepartmentsStore = signalStore(
     responsibleSearchTerm: null as string | null
   }),
   withProps(() => ({
+    /** Acesso HTTP aos departamentos (listagem, criação, atualização e desativação). */
     _departmentDataService: inject(DepartmentDataService),
+    /** Acesso HTTP aos setores (criação, atualização e desativação). */
     _sectorDataService: inject(SectorDataService),
+    /** Acesso HTTP aos usuários, pra busca de candidato a responsável (GET /users). */
     _userDataService: inject(UserDataService)
   })),
   withProps((store) => ({
+    /** Departamentos com os setores aninhados (GET /departments), recarregados depois de cada mutação. */
     _listResource: rxResource({ stream: () => store._departmentDataService.getAll() }),
     /** Usuários ativos candidatos a responsável pelo termo (GET /users): um termo novo cancela a busca anterior. */
     _responsibleSearchResource: termSearchResource(store.responsibleSearchTerm, term =>
