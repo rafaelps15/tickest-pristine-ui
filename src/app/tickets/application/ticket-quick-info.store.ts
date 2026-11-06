@@ -3,7 +3,8 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage, valueOf } from '../../shared';
+import { ticketReadErrorMessage } from './ticket-read-error';
+import { valueOf } from '../../shared';
 
 /**
  * Store do painel "Informações do Ticket" de Monitorar Tickets: busca só a descrição completa do
@@ -36,10 +37,7 @@ export const TicketQuickInfoStore = signalStore(
       const resourceError = store._detailResource.error() as HttpErrorResponse | undefined;
       return {
         loading: store._detailResource.isLoading(),
-        error: resourceError ? extractErrorMessage(resourceError, {
-          403: 'Você não tem acesso a este chamado.',
-          404: 'Não encontramos esse chamado — ele pode ter sido removido.'
-        }, 'Erro ao carregar os detalhes do chamado') : null
+        error: resourceError ? ticketReadErrorMessage(resourceError, 'Erro ao carregar os detalhes do chamado') : null
       };
     })
   })),

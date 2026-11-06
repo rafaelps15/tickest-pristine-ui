@@ -8,6 +8,7 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSla } from '../entities/ticket-sla';
 import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
 import { updateWithFreshState } from './ticket-fresh-update';
+import { ticketReadErrorMessage } from './ticket-read-error';
 import { extractErrorMessage, valueOf } from '../../shared';
 
 /**
@@ -57,12 +58,7 @@ export const TicketDetailStore = signalStore(
       const resourceError = store._detailResource.error() as HttpErrorResponse | undefined;
       return {
         loading: store._detailResource.isLoading(),
-        error: resourceError
-          ? extractErrorMessage(resourceError, {
-              403: 'Você não tem acesso a este chamado.',
-              404: 'Não encontramos esse chamado — ele pode ter sido removido.'
-            }, 'Erro ao carregar o chamado')
-          : null
+        error: resourceError ? ticketReadErrorMessage(resourceError, 'Erro ao carregar o chamado') : null
       };
     }),
     /** Candidatos a responsável da última busca (vazio sem busca, durante a busca ou na falha). */
