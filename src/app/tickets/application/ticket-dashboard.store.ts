@@ -8,6 +8,7 @@ import { TicketDashboardOverview, TicketDashboardScope } from '../entities/ticke
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketAverageTimes } from '../entities/ticket-average-times';
 import { SessionService, extractErrorMessage, isoRangeDays, previousIsoRange, todayInSaoPaulo } from '../../shared';
+import { dashboardScopeFilters, sameDashboardScope } from './ticket-dashboard-scope';
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
 function widgetError(error: unknown, fallback: string): string | null {
@@ -37,12 +38,6 @@ function volumeGroupingsThatFit(scope: TicketDashboardScope): TicketVolumeGroupi
 function fittingGrouping(groupBy: TicketVolumeGrouping, scope: TicketDashboardScope): TicketVolumeGrouping {
   const fits = volumeGroupingsThatFit(scope);
   return fits.includes(groupBy) ? groupBy : fits[0];
-}
-
-/** Se dois recortes pedem exatamente os mesmos chamados (a ordem dos setores importa pouco, mas vem estável da barra). */
-function sameScope(a: TicketDashboardScope, b: TicketDashboardScope): boolean {
-  return a.priority === b.priority && a.assignee === b.assignee && a.assignedToUserId === b.assignedToUserId
-    && a.from === b.from && a.to === b.to && (a.sectorIds ?? []).join() === (b.sectorIds ?? []).join();
 }
 
 /** Escopo do gráfico principal do Início: a empresa toda ou o recorte dos filtros. */
@@ -76,18 +71,10 @@ export const TicketDashboardStore = signalStore(
   withProps((store) => {
     /**
      * Recorte em filtros da API, sem o período (cada rota aplica o período a uma data diferente);
-     * `null` quando o recorte não tem como ter chamados ("meus" sem usuário logado).
+     * `null` quando o recorte não tem como ter chamados ("meus" sem usuário logado). A conversão é
+     * a mesma dos Alertas de SLA ({@link dashboardScopeFilters}).
      */
-    const base = (): TicketStatsQuery | null => {
-      const scope = store.scope();
-      const query: TicketStatsQuery = { sectorIds: scope.sectorIds, priority: scope.priority };
-      if (scope.assignee === 'none') return { ...query, unassignedOnly: true };
-      if (scope.assignee === 'me') {
-        const userId = store._session.userId();
-        return userId ? { ...query, assignedToUserId: userId } : null;
-      }
-      return scope.assignedToUserId ? { ...query, assignedToUserId: scope.assignedToUserId } : query;
-    };
+    const base = (): TicketStatsQuery | null => dashboardScopeFilters(store.scope(), () => store._session.userId());
 
     /** Só pergunta à API com a permissão de ver a fila e um recorte possível — sem isso, o resource fica parado. */
     const allowed = () => store._session.hasPermission('tickets:manage') && !store.scopeHeld();
@@ -207,7 +194,7 @@ export const TicketDashboardStore = signalStore(
     /** Troca o recorte de todos os widgets (vindo dos filtros da URL); recorte igual não refaz nada. */
     setScope(scope: TicketDashboardScope): void {
       if (store.scopeHeld()) patchState(store, { scopeHeld: false });
-      if (sameScope(store.scope(), scope)) return;
+      if (sameDashboardScope(store.scope(), scope)) return;
       patchState(store, { scope: { ...scope } });
     },
 

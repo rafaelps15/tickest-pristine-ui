@@ -12,23 +12,20 @@ import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, SessionService, valueOf } from '../../shared';
 import { TicketAssignee } from '../entities/ticket-assignee';
 import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
+import { dashboardScopeFilters, sameDashboardScope } from './ticket-dashboard-scope';
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
 const CRITICAL_TICKETS_LIMIT = 5;
 
 /**
- * Recorte dos Alertas de SLA nos filtros da listagem (GET /tickets, spec 025): setores, prioridade,
- * responsável e período de abertura — o mesmo recorte do agregado da operação, pra lista bater com o
- * "Atrasados" do topo. "Meus" vira o id de quem está logado; sem ele, null (a lista não é pedida).
+ * Recorte dos Alertas de SLA nos filtros da listagem (GET /tickets, spec 025): o recorte do agregado
+ * da operação ({@link dashboardScopeFilters}: setores, prioridade e responsável) e o período de
+ * abertura, como no agregado, pra lista bater com o "Atrasados" do topo. Null quando o recorte não
+ * tem como ter chamados ("meus" sem usuário logado): a lista não é pedida.
  */
 function criticalFilters(scope: TicketDashboardScope, userId: () => string | null | undefined): Partial<TicketMonitorFilters> | null {
-  const filters: Partial<TicketMonitorFilters> = { sectorIds: scope.sectorIds, priority: scope.priority, createdFrom: scope.from, createdTo: scope.to };
-  if (scope.assignee === 'none') return { ...filters, unassignedOnly: true };
-  if (scope.assignee === 'me') {
-    const id = userId();
-    return id ? { ...filters, assignedToUserId: id } : null;
-  }
-  return scope.assignedToUserId ? { ...filters, assignedToUserId: scope.assignedToUserId } : filters;
+  const filters = dashboardScopeFilters(scope, userId);
+  return filters ? { ...filters, createdFrom: scope.from, createdTo: scope.to } : null;
 }
 
 /** Vagas reservadas pros vencidos na lista — as outras ficam pros em risco (se houver), ainda salváveis. */
@@ -256,10 +253,10 @@ export const TicketSummaryStore = signalStore(
       patchState(store, { groupBy });
     },
 
-    /** Troca o recorte dos Alertas de SLA (vazio = empresa toda); recorte igual não refaz a busca. */
+    /** Troca o recorte dos Alertas de SLA (vazio = empresa toda); recorte igual, pela mesma regra do agregado, não refaz a busca. */
     setCriticalScope(scope: TicketDashboardScope): void {
       if (store.criticalScopeHeld()) patchState(store, { criticalScopeHeld: false });
-      if (JSON.stringify(scope) === JSON.stringify(store.criticalScope())) return;
+      if (sameDashboardScope(scope, store.criticalScope())) return;
       patchState(store, { criticalScope: scope });
     },
 
