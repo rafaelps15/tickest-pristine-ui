@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { TicketAttachmentsStore } from './ticket-attachments.store';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
 import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
 import { CursorPage } from '../../shared';
+import { environment } from '../../../environments/environment';
 
 describe('TicketAttachmentsStore', () => {
   const attachment: TicketAttachment = {
@@ -75,6 +77,78 @@ describe('TicketAttachmentsStore', () => {
 
   it('does not call the API before a ticket is set', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
+  });
+
+  it('requests the attachments again when the same ticket is opened again', async () => {
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll.calls.allArgs()).toEqual([['t1'], ['t1']]);
+  });
+
+  it('retries the read of the same ticket after a failure ("Tentar novamente") and shows the attachments', async () => {
+    dataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.listState().error).toBe('Erro ao carregar anexos');
+
+    dataService.getAll.and.returnValue(of(pageOf([attachment])));
+    store.loadForTicket('t1');
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getAll).toHaveBeenCalledTimes(2);
+    expect(store.listState().error).toBeNull();
+    expect(store.attachments()).toEqual([attachment]);
+  });
+
+  describe('with the real TicketAttachmentDataService (A-48)', () => {
+    const listUrl = `${environment.apiUrl}/tickets/t1/attachments`;
+    let realStore: InstanceType<typeof TicketAttachmentsStore>;
+    let http: HttpTestingController;
+
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(), TicketAttachmentsStore]
+      });
+      realStore = TestBed.inject(TicketAttachmentsStore);
+      http = TestBed.inject(HttpTestingController);
+
+      realStore.loadForTicket('t1');
+      TestBed.tick();
+      http.expectOne({ method: 'GET', url: `${environment.apiUrl}/ticket-attachments/policy` }).flush(policy);
+    });
+
+    afterEach(() => http.verify());
+
+    it('reopening the same ticket sends the GET of its attachments again', async () => {
+      http.expectOne({ method: 'GET', url: listUrl }).flush(pageOf([attachment]));
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      realStore.loadForTicket('t1');
+      TestBed.tick();
+
+      http.expectOne({ method: 'GET', url: listUrl }).flush(pageOf([attachment]));
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(realStore.attachments()).toEqual([attachment]);
+    });
+
+    it('"Tentar novamente" after a failure sends the GET again and shows the attachments', async () => {
+      http.expectOne({ method: 'GET', url: listUrl }).flush(null, { status: 500, statusText: 'Server Error' });
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(realStore.listState().error).toBe('Erro ao carregar anexos');
+
+      realStore.loadForTicket('t1');
+      TestBed.tick();
+
+      http.expectOne({ method: 'GET', url: listUrl }).flush(pageOf([attachment]));
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(realStore.listState().error).toBeNull();
+      expect(realStore.attachments()).toEqual([attachment]);
+    });
   });
 
   describe('opening another ticket (the store is root)', () => {

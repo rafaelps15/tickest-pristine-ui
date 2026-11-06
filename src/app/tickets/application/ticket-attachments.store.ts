@@ -117,12 +117,17 @@ export const TicketAttachmentsStore = signalStore(
     return { _reloadFirstPage: reloadFirstPage };
   }),
   withMethods((store) => ({
-    /** Define o ticket cujos anexos devem ser carregados (dispara o resource) e limpa os erros do chamado anterior. */
+    /**
+     * Define o ticket cujos anexos devem ser carregados (dispara o resource) e limpa os erros do chamado anterior.
+     * Com o mesmo ticket ("Tentar novamente", reabrir a tela), recarrega a primeira página.
+     */
     loadForTicket(ticketId: string): void {
-      patchState(store, {
-        ticketId, mutationError: null, validationError: null, uploadError: null, downloadError: null,
-        olderAttachments: [], lastPage: null
-      });
+      patchState(store, { mutationError: null, validationError: null, uploadError: null, downloadError: null });
+      if (store.ticketId() === ticketId) {
+        store._reloadFirstPage();
+        return;
+      }
+      patchState(store, { ticketId, olderAttachments: [], lastPage: null });
     },
 
     /** Carrega a próxima página de anexos (mais antigos) e acrescenta à lista já exibida. */
