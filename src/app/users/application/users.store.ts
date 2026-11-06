@@ -6,7 +6,7 @@ import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } fro
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { AuthDataService, CreateUserData, SessionService, extractErrorMessage, valueOf } from '../../shared';
+import { AuthDataService, CreateUserData, SessionService, TICKETS_MANAGE_PERMISSION, extractErrorMessage, valueOf } from '../../shared';
 
 /** Filtros e paginação padrão: todos os status, primeira página, 20 itens por página. */
 const DEFAULT_FILTERS: UserFilters = { status: 'All', page: 1, pageSize: 20 };
@@ -118,7 +118,7 @@ export const UsersStore = signalStore(
      * `tickets:manage`, que o GET /tickets exige, devolve `null` sem consultar (o 403 releria a sessão à toa).
      */
     countOpenAssignedTickets(userId: string, onDone: (count: number | null) => void): void {
-      if (!store._sessionService.hasPermission('tickets:manage')) {
+      if (!store._sessionService.hasPermission(TICKETS_MANAGE_PERMISSION)) {
         onDone(null);
         return;
       }
@@ -141,7 +141,7 @@ export const UsersStore = signalStore(
      * devolve `null` sem consultar, como a contagem de uma pessoa só.
      */
     countOpenAssignedTicketsMany(userIds: string[], onDone: (result: { tickets: number; people: number } | null) => void): void {
-      if (!store._sessionService.hasPermission('tickets:manage')) {
+      if (!store._sessionService.hasPermission(TICKETS_MANAGE_PERMISSION)) {
         onDone(null);
         return;
       }

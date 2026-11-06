@@ -7,7 +7,7 @@ import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketDashboardOverview, TicketDashboardScope } from '../entities/ticket-dashboard';
 import { TicketVolumeGrouping } from '../entities/ticket-volume';
 import { TicketAverageTimes } from '../entities/ticket-average-times';
-import { SessionService, extractErrorMessage, isoRangeDays, previousIsoRange, todayInSaoPaulo } from '../../shared';
+import { SessionService, TICKETS_MANAGE_PERMISSION, extractErrorMessage, isoRangeDays, previousIsoRange, todayInSaoPaulo } from '../../shared';
 import { dashboardScopeFilters, sameDashboardScope } from './ticket-dashboard-scope';
 
 /** Mensagem de erro de leitura de um widget, com o texto da API quando ela manda. */
@@ -77,7 +77,7 @@ export const TicketDashboardStore = signalStore(
     const base = (): TicketStatsQuery | null => dashboardScopeFilters(store.scope(), () => store._session.userId());
 
     /** Só pergunta à API com a permissão de ver a fila e um recorte possível — sem isso, o resource fica parado. */
-    const allowed = () => store._session.hasPermission('tickets:manage') && !store.scopeHeld();
+    const allowed = () => store._session.hasPermission(TICKETS_MANAGE_PERMISSION) && !store.scopeHeld();
 
     return {
       // Volume, SLA e atenção contam os chamados abertos no período.

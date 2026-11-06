@@ -22,7 +22,7 @@ import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.com
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../../shared/ui/stat-card/stat-card.component';
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
-import { canAssignTicketToOthers, canAssignTicketToSelf } from '../ui/ticket-action-permissions';
+import { canAssignTicketToOthers, canAssignTicketToSelf } from '../application/ticket-action-permissions';
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';

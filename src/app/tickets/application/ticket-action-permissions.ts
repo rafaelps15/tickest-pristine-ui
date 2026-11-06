@@ -1,7 +1,5 @@
 import { TicketStatus, TICKET_ACTIVE_STATUSES } from '../entities/ticket-status';
-
-/** Quem atende a fila: edita, muda status e assume qualquer chamado, e reabre os chamados de outras pessoas. */
-export const TICKETS_MANAGE_PERMISSION = 'tickets:manage';
+import { TICKETS_MANAGE_PERMISSION } from '../../shared';
 
 /** Dono pode editar a descrição do próprio chamado. */
 export const TICKETS_UPDATE_OWN_PERMISSION = 'tickets:update-own';

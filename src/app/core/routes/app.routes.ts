@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from '../../shared/guards/auth.guard';
 import { permissionGuard } from '../../shared/guards/permission.guard';
 import { pendingPasswordChangeGuard } from '../../shared/guards/pending-password-change.guard';
+import { TICKETS_MANAGE_PERMISSION } from '../../shared/entities/permission-codes';
 
 /** Definição de rotas do sistema. */
 export const routes: Routes = [
@@ -65,7 +66,7 @@ export const routes: Routes = [
         // Precisa vir antes de 'tickets/:id' — senão o router casaria "monitorar" como se fosse um id.
         path: 'tickets/monitorar',
         canActivate: [permissionGuard],
-        data: { requiredPermission: 'tickets:manage' },
+        data: { requiredPermission: TICKETS_MANAGE_PERMISSION },
         loadComponent: () => import('../../tickets/feature-ticket-monitor/ticket-monitor.component')
           .then(m => m.TicketMonitorComponent)
       },

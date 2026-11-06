@@ -1,13 +1,13 @@
 import { Component, afterNextRender, inject, Injector, OnInit, ChangeDetectionStrategy, signal, computed, effect, linkedSignal, untracked, DestroyRef, DOCUMENT } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
-import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketSlaStatus, TicketPriority, TicketStatusCounts, TicketDashboardChartScope, TicketDashboardScope } from '../tickets';
+import { MyTicketsSummaryStore, TicketSummaryStore, TicketDashboardStore, TicketAssigneesStore, TicketAwaiting, TicketMonitorItem, TicketVolumePoint, TicketVolumeGrouping, TicketSlaStatus, TicketPriority, TicketStatusCounts, TicketDashboardChartScope, TicketDashboardScope, TICKETS_ASSIGN_PERMISSION } from '../tickets';
 import { DepartmentsStore } from '../departments';
 import { DashboardFiltersService } from './dashboard-filters.service';
 import { DashboardFilters, dashboardFilterChips, resolveDashboardScope, toMonitorQueryParams } from './dashboard-filters';
 import { DashboardTimesComponent } from './dashboard-times.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
 import { DashboardMetric, DashboardMetricGroupComponent, DashboardMetricLead } from './dashboard-metric-group.component';
-import { SessionService, ToastService, todayInSaoPaulo } from '../shared';
+import { SessionService, TICKETS_MANAGE_PERMISSION, ToastService, todayInSaoPaulo } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { DashboardHeroChartComponent } from './dashboard-hero-chart.component';
@@ -89,12 +89,16 @@ export class DashboardComponent implements OnInit {
   protected readonly store = inject(TicketSummaryStore);
   /** Usuário logado e permissões (já carregados: o guard de autenticação espera o GET /users/me). */
   protected readonly sessionService = inject(SessionService);
+  /** Permissão de atender a fila, que o template confere. */
+  protected readonly ticketsManagePermission = TICKETS_MANAGE_PERMISSION;
+  /** Permissão de atribuir o chamado a outra pessoa, que o template confere. */
+  protected readonly ticketsAssignPermission = TICKETS_ASSIGN_PERMISSION;
   /**
    * Resumo dos chamados que o próprio usuário abriu ("Seus chamados" e o aviso "Você tem acesso a X
    * dos Y") — só criado pra quem não atende a fila: o store busca sozinho ao nascer, e o atendente não
    * usa esses números aqui (o pedido seria à toa). Null pra quem atende a fila.
    */
-  protected readonly myTickets = this.sessionService.hasPermission('tickets:manage') ? null : inject(Injector).get(MyTicketsSummaryStore);
+  protected readonly myTickets = this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION) ? null : inject(Injector).get(MyTicketsSummaryStore);
   /** Widgets operacionais (agregado, tempos, volume do recorte) pra quem atende a fila. */
   protected readonly operation = inject(TicketDashboardStore);
   /** Filtros com a URL como fonte da verdade. */
@@ -141,7 +145,7 @@ export class DashboardComponent implements OnInit {
   protected readonly greeting = greetingForHour(new Date().getHours());
 
   /** Quem atende a fila (`tickets:manage`): vê filtros, Central de atenção e Alertas de SLA. */
-  protected readonly showOperation = computed(() => this.sessionService.hasPermission('tickets:manage'));
+  protected readonly showOperation = computed(() => this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION));
 
   /** Pode abrir chamados (`tickets:create`): decide os atalhos para "Novo Chamado", em qualquer papel. */
   protected readonly canCreateTickets = computed(() => this.sessionService.hasPermission('tickets:create'));
@@ -151,7 +155,7 @@ export class DashboardComponent implements OnInit {
 
   /** Mostra "Seus chamados": pra quem abre chamados e não atende a fila (quem atende tem os atalhos da fila). */
   protected readonly showMyTickets = computed(() =>
-      this.sessionService.hasPermission('tickets:view-own') && !this.sessionService.hasPermission('tickets:manage'));
+      this.sessionService.hasPermission('tickets:view-own') && !this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION));
 
   /** Quem pode cadastrar a estrutura (departamentos/setores) — no primeiro uso, é o passo que vem antes de qualquer ticket. */
   protected readonly canSetUpStructure = computed(() =>

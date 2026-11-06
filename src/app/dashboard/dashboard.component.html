@@ -84,8 +84,8 @@
                               [clockOffsetMs]="store.clockOffsetMs()"
                               [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
                               [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
-                              [canAssign]="sessionService.hasPermission('tickets:assign')"
-                              [canAssignToMe]="sessionService.hasPermission('tickets:manage')"
+                              [canAssign]="sessionService.hasPermission(ticketsAssignPermission)"
+                              [canAssignToMe]="sessionService.hasPermission(ticketsManagePermission)"
                               [assigningToMe]="store.assigning()" [assignToMeError]="assigningTicket() ? null : store.assignError()"
                               (refresh)="store.reloadCritical()" (assign)="onAssign($event)" (assignToMe)="onAssignToMe($event)" />
     </div>
@@ -195,7 +195,7 @@
             }
 
             <!-- A fila pessoal de quem atende: os chamados que estão com ele. -->
-            @if (sessionService.hasPermission('tickets:manage')) {
+            @if (sessionService.hasPermission(ticketsManagePermission)) {
               <li>
                 <a class="quick-link" routerLink="/tickets/monitorar" [queryParams]="{ assignedToMe: true }">
                   <span class="badge bg-label-primary rounded-circle icon-tile icon-tile-sm" aria-hidden="true"><i class="bx bx-user-check fs-5"></i></span>

@@ -15,7 +15,7 @@ import {
   TicketSla, TicketSlaObjective, TICKET_SLA_METRIC_LABELS, TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS
 } from '../entities/ticket-sla';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
-import { ConfirmDialogService, SessionService, ToastService, formatFileSize, saveFile } from '../../shared';
+import { ConfirmDialogService, SessionService, TICKETS_MANAGE_PERMISSION, ToastService, formatFileSize, saveFile } from '../../shared';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
@@ -23,8 +23,8 @@ import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.com
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS } from '../ui/ticket-badge-classes';
-import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
-import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
+import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../application/ticket-cancel-window';
+import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescription, canReopenTicket } from '../application/ticket-action-permissions';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
@@ -207,12 +207,12 @@ export class TicketDetailComponent implements OnInit {
 
   /** Quem enviou o anexo, ou quem administra chamados, pode excluí-lo (mesma regra do back-end). */
   protected canDeleteAttachment(attachment: TicketAttachment): boolean {
-    return attachment.uploadedByUserId === this.sessionService.userId() || this.sessionService.hasPermission('tickets:manage');
+    return attachment.uploadedByUserId === this.sessionService.userId() || this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION);
   }
 
   /** Quem escreveu a mensagem, ou quem administra chamados, pode excluí-la. */
   protected canDeleteMessage(message: TicketMessage): boolean {
-    return message.authorUserId === this.sessionService.userId() || this.sessionService.hasPermission('tickets:manage');
+    return message.authorUserId === this.sessionService.userId() || this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION);
   }
 
   /**
@@ -426,7 +426,7 @@ export class TicketDetailComponent implements OnInit {
 
   /** Indica se o botão "Remover responsável" deve aparecer: só pra quem administra, com o chamado ativo e com responsável atual. */
   canRemoveAssignee(status: TicketStatus, assignedToName: string | null): boolean {
-    return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(status) && assignedToName !== null;
+    return this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION) && TICKET_ACTIVE_STATUSES.has(status) && assignedToName !== null;
   }
 
   /** Confirma e remove o responsável atual do ticket, recarregando o detalhe e o histórico em caso de sucesso. */
@@ -448,7 +448,7 @@ export class TicketDetailComponent implements OnInit {
 
   /** Indica se os botões de transição de status devem aparecer: só pra quem administra chamados. */
   protected canChangeStatus(): boolean {
-    return this.sessionService.hasPermission('tickets:manage');
+    return this.sessionService.hasPermission(TICKETS_MANAGE_PERMISSION);
   }
 
   /**

@@ -11,8 +11,8 @@ import { TicketStatus, TICKET_ACTIVE_STATUSES, TICKET_STATUS_LABELS } from '../e
 import { TicketStatusGroup, TICKET_STATUS_GROUP_URL_VALUES } from '../entities/ticket-status-group';
 import { TICKET_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
 import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
-import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
-import { canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
+import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../application/ticket-cancel-window';
+import { canEditTicketDescription, canReopenTicket } from '../application/ticket-action-permissions';
 import { DepartmentsStore } from '../../departments';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';

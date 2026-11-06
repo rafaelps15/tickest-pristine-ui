@@ -22,13 +22,13 @@
   <!-- Administração -->
   @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:read') ||
        sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage') ||
-       sessionService.hasPermission('tickets:manage')) {
+       sessionService.hasPermission(ticketsManagePermission)) {
     <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Administração</span>
     </li>
   }
 
-  @if (sessionService.hasPermission('tickets:manage')) {
+  @if (sessionService.hasPermission(ticketsManagePermission)) {
     <li class="menu-item" [class.active]="activeTicketsItem() === 'monitor'">
       <a routerLink="/tickets/monitorar" class="menu-link" [attr.aria-current]="activeTicketsItem() === 'monitor' ? 'page' : null">
         <i class="menu-icon tf-icons bx bx-list-check"></i>

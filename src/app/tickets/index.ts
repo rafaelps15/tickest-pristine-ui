@@ -32,3 +32,5 @@ export * from './application/ticket-attachments.store';
 export * from './application/ticket-history.store';
 export * from './application/ticket-messages.store';
 export * from './application/ticket-monitor.store';
+export * from './application/ticket-action-permissions';
+export * from './application/ticket-cancel-window';

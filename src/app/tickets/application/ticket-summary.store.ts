@@ -9,7 +9,7 @@ import { TicketMonitorFilters } from '../entities/ticket-monitor-filters';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage, SessionService, valueOf } from '../../shared';
+import { extractErrorMessage, SessionService, TICKETS_MANAGE_PERMISSION, valueOf } from '../../shared';
 import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
 import { dashboardScopeFilters, sameDashboardScope } from './ticket-dashboard-scope';
 
@@ -61,7 +61,7 @@ export const TicketSummaryStore = signalStore(
       // Quem atende a fila já recebe os totais da empresa no agregado da operação (spec 026, escopo
       // vazio): não pede a mesma conta duas vezes a cada atualização.
       _statusCountsResource: rxResource({
-        params: () => (store._sessionService.hasPermission('tickets:manage') ? undefined : true),
+        params: () => (store._sessionService.hasPermission(TICKETS_MANAGE_PERMISSION) ? undefined : true),
         stream: () => store._ticketDataService.getStatusCounts()
       }),
       _volumeResource: rxResource({
@@ -75,7 +75,7 @@ export const TicketSummaryStore = signalStore(
        * `rxResource` nem chamar a API (evita um 403 certo pra Solicitante).
        */
       _criticalTicketsResource: rxResource({
-        params: () => (store._sessionService.hasPermission('tickets:manage') && !store.criticalScopeHeld()
+        params: () => (store._sessionService.hasPermission(TICKETS_MANAGE_PERMISSION) && !store.criticalScopeHeld()
           ? criticalFilters(store.criticalScope(), () => store._sessionService.userId()) ?? undefined
           : undefined),
         // Vencidos (Breached) e em risco (AtRisk) — o filtro da API aceita um status por vez. Antes só

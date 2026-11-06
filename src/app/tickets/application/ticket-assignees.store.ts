@@ -3,7 +3,7 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { SessionService, extractErrorMessage } from '../../shared';
+import { SessionService, TICKETS_MANAGE_PERMISSION, extractErrorMessage } from '../../shared';
 
 /**
  * Store dos responsáveis elegíveis (GET /tickets/assignees) pros filtros de responsável do Início
@@ -18,7 +18,7 @@ export const TicketAssigneesStore = signalStore(
   })),
   withProps((store) => ({
     _listResource: rxResource({
-      params: () => (store._session.hasPermission('tickets:manage') ? true : undefined),
+      params: () => (store._session.hasPermission(TICKETS_MANAGE_PERMISSION) ? true : undefined),
       stream: () => store._ticketDataService.getAssignees()
     })
   })),
