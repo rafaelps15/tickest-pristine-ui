@@ -14,6 +14,7 @@ const INVALID_ACTIVATION_TOKEN = 'Users.InvalidActivationToken';
  */
 export const ActivateAccountStore = signalStore(
   withState({
+    /** Ativação da conta em andamento. */
     loading: false,
     /** A senha foi definida e a conta está pronta pro login. */
     activated: false,
@@ -23,6 +24,7 @@ export const ActivateAccountStore = signalStore(
     error: null as string | null
   }),
   withProps(() => ({
+    /** Acesso HTTP à ativação da conta (POST /users/activation). */
     _authDataService: inject(AuthDataService)
   })),
   withMethods((store) => ({

@@ -14,7 +14,9 @@ import { ACCOUNT_DEACTIVATED_LOGIN_REASON } from '../utils/account-deactivated.u
   styleUrls: ['../ui/auth-form.css']
 })
 export class LoginComponent {
+  /** Construtor do formulário de login. */
   private readonly fb = inject(FormBuilder);
+  /** Store da sessão: envio do login, carregamento e mensagem de erro. */
   protected readonly store = inject(LoginStore);
   /** Rota atual, de onde vem o motivo do fim da sessão anterior. */
   private readonly route = inject(ActivatedRoute);

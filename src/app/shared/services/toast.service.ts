@@ -30,7 +30,9 @@ const AUTO_DISMISS_WITH_ACTION_MS = 8000;
  */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
+  /** Toasts ativos (gravável), expostos em {@link toasts}. */
   private readonly _toasts = signal<ToastMessage[]>([]);
+  /** Último id gerado; cada toast novo recebe o seguinte. */
   private nextId = 0;
 
   /** Toasts ativos no momento, na ordem em que apareceram. */

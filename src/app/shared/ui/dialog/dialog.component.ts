@@ -58,6 +58,7 @@ const openDialogs: DialogComponent[] = [];
   `
 })
 export class DialogComponent implements AfterViewInit, OnDestroy {
+  /** Documento, pra travar a rolagem da página e guardar o foco de antes de abrir. */
   private readonly document = inject(DOCUMENT);
 
   /** Título do diálogo (vira o nome acessível dele). */

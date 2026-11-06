@@ -16,11 +16,16 @@ function base64UrlDecode(segment: string): string {
 /** Serviço de gestão de sessão. */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
+  /** Chave do access token no localStorage. */
   private readonly ACCESS_TOKEN_KEY = 'auth_token';
+  /** Chave do refresh token no localStorage. */
   private readonly REFRESH_TOKEN_KEY = 'refresh_token';
 
+  /** Access token atual (gravável), começando pelo do localStorage. */
   private _token = signal<string | null>(this.getStoredValue(this.ACCESS_TOKEN_KEY));
+  /** Refresh token atual (gravável), começando pelo do localStorage. */
   private _refreshToken = signal<string | null>(this.getStoredValue(this.REFRESH_TOKEN_KEY));
+  /** Usuário logado (gravável), carregado por GET /users/me. */
   private _currentUser = signal<CurrentUser | null>(null);
 
   /** Access token atual (somente leitura). */
@@ -59,6 +64,7 @@ export class SessionService {
     return typeof claim === 'string' ? claim : null;
   });
 
+  /** Escuta o evento `storage` pra aplicar nesta aba a sessão renovada ou encerrada em outra. */
   constructor() {
     // Outra aba renovou ou encerrou a sessão: sem isso, esta aba reenviaria o refresh token já trocado e o
     // back-end trataria como reuso, revogando todas as sessões do usuário.
@@ -135,6 +141,7 @@ export class SessionService {
     return typeof saved === 'string' ? saved : null;
   }
 
+  /** Decodifica o payload do JWT, ou devolve `null` se o token estiver malformado. */
   private decodeToken(token: string): JwtPayload | null {
     const payload = token.split('.')[1];
     if (!payload) {

@@ -12,7 +12,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP aos endpoints de autenticação/identidade (login, registro, renovação de token). */
 @Injectable({ providedIn: 'root' })
 export class AuthDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** Base dos endpoints de autenticação na API (/users). */
   private readonly apiUrl = `${environment.apiUrl}/users`;
 
   /** Autentica com email/senha e retorna os tokens de acesso (POST /users/login). */

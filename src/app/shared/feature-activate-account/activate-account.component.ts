@@ -31,9 +31,13 @@ function readTokenFromFragment(fragment: string | null): string | null {
   styleUrls: ['../ui/auth-form.css']
 })
 export class ActivateAccountComponent implements OnInit {
+  /** Construtor do formulário da nova senha. */
   private readonly fb = inject(FormBuilder);
+  /** Rota atual, de onde vem o token do convite (fragmento da URL). */
   private readonly route = inject(ActivatedRoute);
+  /** Router, pra tirar o token da barra de endereço. */
   private readonly router = inject(Router);
+  /** Store da ativação: envio, link inválido e erro. */
   protected readonly store = inject(ActivateAccountStore);
 
   /** Token do convite, lido uma vez do fragmento e tirado da barra de endereço. */

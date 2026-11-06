@@ -41,11 +41,13 @@ import { DialogComponent } from '../dialog/dialog.component';
   `
 })
 export class ConfirmDialogComponent {
+  /** Serviço que guarda o pedido de confirmação atual e recebe a resposta. */
   private readonly confirmDialogService = inject(ConfirmDialogService);
 
   /** Pedido de confirmação atual, vindo do serviço. */
   protected readonly options = this.confirmDialogService.options;
 
+  /** Cancela o pedido aberto quando uma navegação começa. */
   constructor() {
     // Montado fora do router-outlet, o modal sobreviveria à troca de tela: confirmar ali executaria a ação da tela anterior.
     inject(Router).events.pipe(

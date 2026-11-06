@@ -20,9 +20,13 @@ export const SessionRecoveryStore = signalStore(
     failedAttempts: 0
   }),
   withProps(() => ({
+    /** Sessão atual: diz se há o que recuperar e é apagada quando a API a recusa. */
     _session: inject(SessionService),
+    /** Nova tentativa de carregar o usuário logado (GET /users/me). */
     _currentUserService: inject(CurrentUserService),
+    /** Store da sessão, que faz o logout de {@link signOut}. */
     _loginStore: inject(LoginStore),
+    /** Router: volta à rota de origem ou vai pro login. */
     _router: inject(Router)
   })),
   withMethods((store) => ({

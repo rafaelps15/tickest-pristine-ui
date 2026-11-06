@@ -25,6 +25,7 @@ import { trapTabWithin } from '../../utils/focus-trap.util';
   }
 })
 export class SidePanelDirective {
+  /** Elemento do painel: onde o Tab fica preso e onde está o título. */
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   /** Chave do item exibido (ex.: id do usuário/ticket) — no modo modal, mudar a chave move o foco pro título. */
@@ -32,6 +33,7 @@ export class SidePanelDirective {
   /** Se o painel está no modo overlay de tela cheia: vira diálogo modal e prende o Tab dentro dele. */
   readonly sidePanelModal = input(false);
 
+  /** No modo modal, foca o título ao abrir o painel e a cada troca de item. */
   constructor() {
     afterRenderEffect(() => {
       this.appSidePanel();

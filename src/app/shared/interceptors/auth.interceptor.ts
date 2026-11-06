@@ -8,6 +8,7 @@ import { catchError, switchMap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { ACCOUNT_DEACTIVATED_LOGIN_REASON } from '../utils/account-deactivated.util';
 
+/** Endpoints de autenticação: neles, um 401 não tenta renovar o token e um 403 não relê o usuário. */
 const AUTH_ENDPOINTS = ['/users/login', '/users/login/new-password', '/users/refresh-token', '/users/logout'];
 
 /** Interceptor para injeção do token JWT, renovação automática em 401 e tratamento de erros de autorização. */

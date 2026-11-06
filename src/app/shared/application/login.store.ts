@@ -37,9 +37,13 @@ export const LoginStore = signalStore(
     pendingCredentials: null as LoginCredentials | null
   }),
   withProps(() => ({
+    /** Acesso HTTP ao login, à troca da senha provisória e ao logout. */
     _authDataService: inject(AuthDataService),
+    /** Sessão onde os tokens do login são gravados e de onde o logout os apaga. */
     _session: inject(SessionService),
+    /** Carga do usuário logado (GET /users/me), que fecha o início da sessão. */
     _currentUserService: inject(CurrentUserService),
+    /** Router: leva ao dashboard, ao primeiro acesso, à sessão indisponível ou de volta ao login. */
     _router: inject(Router)
   })),
   withComputed((store) => ({

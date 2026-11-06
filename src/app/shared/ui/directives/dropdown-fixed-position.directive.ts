@@ -14,6 +14,7 @@ declare const bootstrap: {
   selector: '[appDropdownFixedPosition]'
 })
 export class DropdownFixedPositionDirective implements AfterViewInit, OnDestroy {
+  /** Gatilho do dropdown, onde o Dropdown do Bootstrap é criado. */
   private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
   /** Dropdown do Bootstrap criado para o elemento, ou `null` sem o Bootstrap carregado. */
   private dropdown: { dispose(): void } | null = null;

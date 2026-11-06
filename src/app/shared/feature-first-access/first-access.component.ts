@@ -15,7 +15,9 @@ import { isControlInvalid } from '../utils/form-field.util';
   styleUrls: ['../ui/auth-form.css']
 })
 export class FirstAccessComponent {
+  /** Construtor do formulário da nova senha. */
   private readonly fb = inject(FormBuilder);
+  /** Store da sessão: credenciais pendentes e troca da senha provisória. */
   protected readonly store = inject(LoginStore);
 
   /** Controla se os campos de senha são exibidos em texto claro. */

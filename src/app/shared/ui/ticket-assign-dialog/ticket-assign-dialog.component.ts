@@ -76,6 +76,7 @@ export class TicketAssignDialogComponent {
     return candidate ? candidate.fullName : null;
   });
 
+  /** Emite a busca digitada, com debounce, e volta o foco pro primeiro candidato. */
   constructor() {
     toObservable(this.searchText).pipe(
       skip(1),

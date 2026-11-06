@@ -25,7 +25,9 @@ export interface ConfirmDialogOptions {
  */
 @Injectable({ providedIn: 'root' })
 export class ConfirmDialogService {
+  /** Pedido de confirmação aberto (gravável), exposto em {@link options}. */
   private readonly _options = signal<ConfirmDialogOptions | null>(null);
+  /** Resposta pendente do pedido aberto, ou `null` sem pedido. */
   private resultSubject: Subject<boolean> | null = null;
 
   /** Opções do pedido de confirmação atual, ou `null` quando não há nenhum aberto. */

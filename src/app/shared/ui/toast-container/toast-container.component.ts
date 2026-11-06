@@ -26,5 +26,6 @@ import { ToastService } from '../../services/toast.service';
   `
 })
 export class ToastContainerComponent {
+  /** Serviço dos toasts: a lista ativa e as ações de fechar e de rodar a ação de cada um. */
   protected readonly toastService = inject(ToastService);
 }

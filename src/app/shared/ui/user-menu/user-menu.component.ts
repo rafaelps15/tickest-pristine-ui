@@ -18,7 +18,9 @@ import { DropdownFixedPositionDirective } from '../directives/dropdown-fixed-pos
   styleUrl: './user-menu.component.css'
 })
 export class UserMenuComponent {
+  /** Sessão: usuário logado, de onde vêm o nome, as iniciais e o e-mail do menu. */
   protected readonly sessionService = inject(SessionService);
+  /** Store da sessão, que faz o logout. */
   private readonly loginStore = inject(LoginStore);
 
   /** Nome exibido no menu — nome e sobrenome do usuário logado, com um rótulo genérico até o perfil carregar. */
