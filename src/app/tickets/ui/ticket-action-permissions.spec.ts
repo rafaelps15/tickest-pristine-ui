@@ -1,5 +1,5 @@
 import { TicketStatus } from '../entities/ticket-status';
-import { canAssignTicketToOthers, canEditTicketDescription, canReopenTicket } from './ticket-action-permissions';
+import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescription, canReopenTicket } from './ticket-action-permissions';
 
 /** Monta a consulta de permissão a partir dos códigos que o usuário tem. */
 function having(...codes: string[]): (code: string) => boolean {
@@ -47,6 +47,19 @@ describe('ticket-action-permissions', () => {
       expect(canAssignTicketToOthers(TicketStatus.Open, having('tickets:manage'))).toBeFalse();
       expect(canAssignTicketToOthers(TicketStatus.Open, having('tickets:assign'))).toBeFalse();
       expect(canAssignTicketToOthers(TicketStatus.Resolved, having('tickets:manage', 'tickets:assign'))).toBeFalse();
+    });
+  });
+
+  describe('canAssignTicketToSelf', () => {
+    it('allows whoever has tickets:manage, even without tickets:assign, on an active ticket without assignee', () => {
+      expect(canAssignTicketToSelf(TicketStatus.Open, null, having('tickets:manage'))).toBeTrue();
+      expect(canAssignTicketToSelf(TicketStatus.InProgress, null, having('tickets:manage', 'tickets:assign'))).toBeTrue();
+    });
+
+    it('rejects without tickets:manage, on a ticket that already has an assignee, or on an inactive ticket', () => {
+      expect(canAssignTicketToSelf(TicketStatus.Open, null, having('tickets:assign'))).toBeFalse();
+      expect(canAssignTicketToSelf(TicketStatus.Open, 'u2', having('tickets:manage'))).toBeFalse();
+      expect(canAssignTicketToSelf(TicketStatus.Resolved, null, having('tickets:manage'))).toBeFalse();
     });
   });
 });

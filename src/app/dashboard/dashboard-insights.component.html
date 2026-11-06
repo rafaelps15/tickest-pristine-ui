@@ -71,6 +71,8 @@
 
     @if (hasAlerts()) {
       <div class="sla-band-list mt-3 mt-lg-0">
+        <!-- A região viva existe sempre e só o texto muda: criada junto com o texto, o leitor de tela não anuncia. -->
+        <p class="small text-danger" [class.mb-0]="!assignToMeError()" [class.mb-2]="!!assignToMeError()" role="alert">{{ assignToMeError() }}</p>
         <ul class="list-unstyled mb-0 critical-ticket-list">
           @for (item of items(); track item.ticket.id) {
             <li class="critical-ticket-item">
@@ -101,6 +103,12 @@
                 <button type="button" class="btn btn-sm btn-outline-primary critical-ticket-assign"
                         [attr.aria-label]="'Atribuir responsável ao chamado ' + item.ticket.title" (click)="assign.emit(item.ticket)">
                   Atribuir
+                </button>
+              } @else if (!item.ticket.assignedToName && canAssignToMe()) {
+                <!-- Sem tickets:assign, quem atende a fila só pode se tornar o responsável. -->
+                <button type="button" class="btn btn-sm btn-outline-primary critical-ticket-assign" [disabled]="assigningToMe()"
+                        [attr.aria-label]="'Atribuir a mim o chamado ' + item.ticket.title" (click)="assignToMe.emit(item.ticket)">
+                  Atribuir a mim
                 </button>
               }
             </li>

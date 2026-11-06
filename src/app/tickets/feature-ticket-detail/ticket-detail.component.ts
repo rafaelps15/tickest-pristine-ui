@@ -25,7 +25,7 @@ import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.com
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
-import { canAssignTicketToOthers, canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
+import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
 
 
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
@@ -408,6 +408,22 @@ export class TicketDetailComponent implements OnInit {
    */
   canAssignTicket(status: TicketStatus): boolean {
     return canAssignTicketToOthers(status, code => this.sessionService.hasPermission(code));
+  }
+
+  /** Indica se "Atribuir a mim" deve aparecer: `tickets:manage`, com o chamado ativo e sem responsável (o mesmo do Monitor). */
+  canAssignToMe(t: TicketDetail): boolean {
+    return canAssignTicketToSelf(t.status, t.assignedToUserId, code => this.sessionService.hasPermission(code));
+  }
+
+  /** Torna o usuário logado responsável pelo chamado; o erro aparece no aviso do detalhe. */
+  onAssignToMe(): void {
+    const userId = this.sessionService.userId();
+    if (!userId) return;
+
+    this.detailStore.assignTicket(this.ticketId, userId, () => {
+      this.toastService.show('Chamado atribuído a você.');
+      this.historyStore.reload();
+    });
   }
 
   /** Indica se o botão "Remover responsável" deve aparecer: só pra quem administra, com o chamado ativo e com responsável atual. */

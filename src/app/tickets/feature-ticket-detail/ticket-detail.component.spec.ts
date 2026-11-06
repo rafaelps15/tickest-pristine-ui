@@ -606,6 +606,46 @@ describe('TicketDetailComponent', () => {
       expect(findAssignButton(fixture)).toBeFalsy();
     });
 
+    /** Botão "Atribuir a mim", ou undefined quando não aparece. */
+    function findAssignToMeButton(fixture: ReturnType<typeof TestBed.createComponent<TicketDetailComponent>>): HTMLButtonElement | undefined {
+      return Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find(b => b.textContent?.includes('Atribuir a mim'));
+    }
+
+    it('the seed Atendente (tickets:manage without tickets:assign) sees "Atribuir a mim" and takes the ticket for themselves', async () => {
+      sessionServiceFake.hasPermission.and.callFake((code: string) =>
+        ['tickets:create', 'tickets:view-own', 'tickets:update-own', 'tickets:reopen-own', 'tickets:manage'].includes(code));
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToUserId: null, assignedToName: null });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findAssignButton(fixture)).toBeUndefined();
+      findAssignToMeButton(fixture)!.click();
+      expect(detailStoreFake.assignTicket).toHaveBeenCalledWith('t1', 'viewer-1', jasmine.any(Function));
+
+      detailStoreFake.assignTicket.calls.mostRecent().args[2]();
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado atribuído a você.');
+      expect(historyStoreFake.reload).toHaveBeenCalled();
+    });
+
+    it('does not offer "Atribuir a mim" on a ticket that already has an assignee, on an inactive one, or without tickets:manage', async () => {
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress, assignedToUserId: 'u2', assignedToName: 'Maria Souza' });
+      const assigned = TestBed.createComponent(TicketDetailComponent);
+      await assigned.whenStable();
+      expect(findAssignToMeButton(assigned)).toBeUndefined();
+
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved, assignedToUserId: null, assignedToName: null });
+      const resolved = TestBed.createComponent(TicketDetailComponent);
+      await resolved.whenStable();
+      expect(findAssignToMeButton(resolved)).toBeUndefined();
+
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToUserId: null, assignedToName: null });
+      const withoutManage = TestBed.createComponent(TicketDetailComponent);
+      await withoutManage.whenStable();
+      expect(findAssignToMeButton(withoutManage)).toBeUndefined();
+    });
+
     it('shows "Atribuir responsável" when the ticket is active and has no assignee', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open, assignedToName: null });
       const fixture = TestBed.createComponent(TicketDetailComponent);

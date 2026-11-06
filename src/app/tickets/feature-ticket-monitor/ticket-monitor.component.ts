@@ -21,7 +21,7 @@ import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.com
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { StatCardComponent, StatTone } from '../../shared/ui/stat-card/stat-card.component';
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
-import { canAssignTicketToOthers } from '../ui/ticket-action-permissions';
+import { canAssignTicketToOthers, canAssignTicketToSelf } from '../ui/ticket-action-permissions';
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
@@ -572,7 +572,7 @@ export class TicketMonitorComponent implements OnInit {
 
   /** Indica se o botão "Atribuir a mim" deve aparecer: chamado ativo, sem responsável, pra quem administra a fila. */
   canAssignToMe(ticket: TicketMonitorItem): boolean {
-    return this.sessionService.hasPermission('tickets:manage') && TICKET_ACTIVE_STATUSES.has(ticket.status) && ticket.assignedToUserId === null;
+    return canAssignTicketToSelf(ticket.status, ticket.assignedToUserId, code => this.sessionService.hasPermission(code));
   }
 
   /** Atribui o chamado ao usuário logado, direto na linha da tabela. */

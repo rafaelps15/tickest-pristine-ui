@@ -110,6 +110,47 @@ describe('DashboardInsightsComponent', () => {
     expect(assign).toHaveBeenCalledWith(orphan);
   });
 
+  it('to whoever works the queue without tickets:assign, offers "Atribuir a mim" on alerts without an assignee and emits the ticket', async () => {
+    const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [ticket, orphan]);
+    fixture.componentRef.setInput('canAssign', false);
+    fixture.componentRef.setInput('canAssignToMe', true);
+    const assignToMe = jasmine.createSpy('assignToMe');
+    fixture.componentInstance.assignToMe.subscribe(assignToMe);
+    await fixture.whenStable();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.critical-ticket-assign') as NodeListOf<HTMLButtonElement>;
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent?.trim()).toBe('Atribuir a mim');
+    expect(buttons[0].getAttribute('aria-label')).toBe('Atribuir a mim o chamado Sem dono');
+    expect(fixture.nativeElement.querySelector('button[aria-label^="Atribuir responsável"]')).toBeNull();
+
+    buttons[0].click();
+    expect(assignToMe).toHaveBeenCalledWith(orphan);
+
+    fixture.componentRef.setInput('assigningToMe', true);
+    await fixture.whenStable();
+    expect(buttons[0].disabled).toBeTrue();
+  });
+
+  it('says the failure of "Atribuir a mim" in a live region that already exists, changing only its text', async () => {
+    const orphan = { ...ticket, id: 't2', title: 'Sem dono', assignedToUserId: null, assignedToName: null };
+    const fixture = TestBed.createComponent(DashboardInsightsComponent);
+    fixture.componentRef.setInput('criticalTickets', [orphan]);
+    fixture.componentRef.setInput('canAssign', false);
+    fixture.componentRef.setInput('canAssignToMe', true);
+    await fixture.whenStable();
+
+    const region = fixture.nativeElement.querySelector('.sla-band-list [role="alert"]') as HTMLElement;
+    expect(region.textContent?.trim()).toBe('');
+
+    fixture.componentRef.setInput('assignToMeError', 'Você não tem permissão para atribuir o responsável deste chamado.');
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.sla-band-list [role="alert"]')).toBe(region);
+    expect(region.textContent).toContain('Você não tem permissão para atribuir o responsável deste chamado.');
+  });
+
   it('marks each ticket as "Atrasado" or "Em risco" with text, not only with color', async () => {
     const inTwoHours = new Date(Date.now() + 2 * 3_600_000).toISOString();
     const fixture = TestBed.createComponent(DashboardInsightsComponent);

@@ -768,4 +768,15 @@ export class DashboardComponent implements OnInit {
     this.assigningTicket.set(null);
     this.store.resetAssignment();
   }
+
+  /**
+   * "Atribuir a mim" de um alerta de SLA sem responsável (quem atende a fila sem `tickets:assign`): torna o usuário
+   * logado o responsável, sem diálogo; a falha aparece na lista dos Alertas, e os alertas recarregam no store.
+   */
+  onAssignToMe(ticket: TicketMonitorItem): void {
+    const userId = this.sessionService.userId();
+    if (!userId) return;
+
+    this.store.assignResponsible(ticket.id, userId, () => this.toastService.show('Chamado atribuído a você.'));
+  }
 }

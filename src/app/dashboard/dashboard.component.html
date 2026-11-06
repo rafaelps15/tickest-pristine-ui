@@ -84,7 +84,9 @@
                               [loading]="store.criticalTicketsLoading()" [error]="store.criticalTicketsError()"
                               [loadedAtMs]="store.criticalTicketsLoadedAtMs()" [refreshing]="store.criticalTicketsRefreshing()"
                               [canAssign]="sessionService.hasPermission('tickets:assign')"
-                              (refresh)="store.reloadCritical()" (assign)="onAssign($event)" />
+                              [canAssignToMe]="sessionService.hasPermission('tickets:manage')"
+                              [assigningToMe]="store.assigning()" [assignToMeError]="assigningTicket() ? null : store.assignError()"
+                              (refresh)="store.reloadCritical()" (assign)="onAssign($event)" (assignToMe)="onAssignToMe($event)" />
     </div>
     <div class="col-12 col-lg-5 order-lg-1">
       <!-- O erro do agregado aparece uma vez só, na faixa do topo (com o "Tentar novamente"); a Central e o SLA só remetem a ele. -->

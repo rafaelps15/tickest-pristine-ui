@@ -158,7 +158,7 @@ describe('DashboardComponent', () => {
         { provide: DepartmentsStore, useValue: departmentsFake },
         { provide: TicketAssigneesStore, useValue: assigneesFake },
         { provide: MyTicketsSummaryStore, useFactory: () => { myTicketsCreated = true; return myTicketsFake; } },
-        { provide: SessionService, useValue: { hasPermission, currentUser } },
+        { provide: SessionService, useValue: { hasPermission, currentUser, userId: signal<string | null>('u-me') } },
         { provide: ToastService, useValue: toastServiceFake },
         { provide: DASHBOARD_FEATURES, useFactory: () => features }
       ]
@@ -1471,6 +1471,29 @@ describe('DashboardComponent', () => {
       const fixture = await render();
 
       expect(fixture.nativeElement.querySelector('button[aria-label="Atribuir responsável ao chamado VPN caindo"]')).toBeNull();
+    });
+
+    it('the seed Atendente, without tickets:assign, sees "Atribuir a mim" and takes the ticket for themselves', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTickets.set([unassigned]);
+      const fixture = await render();
+
+      (fixture.nativeElement.querySelector('button[aria-label="Atribuir a mim o chamado VPN caindo"]') as HTMLButtonElement).click();
+      expect(ticketsStoreFake.assignResponsible).toHaveBeenCalledWith('t7', 'u-me', jasmine.any(Function));
+      expect(fixture.nativeElement.querySelector('app-ticket-assign-dialog')).toBeNull();
+
+      ticketsStoreFake.assignResponsible.calls.mostRecent().args[2]();
+      expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado atribuído a você.');
+    });
+
+    it('shows the failure of "Atribuir a mim" in the Alertas, and not the one of the dialog', async () => {
+      asAgent();
+      ticketsStoreFake.criticalTickets.set([unassigned]);
+      ticketsStoreFake.assignError.set('Você não tem permissão para atribuir o responsável deste chamado.');
+      const fixture = await render();
+
+      expect(fixture.nativeElement.querySelector('app-dashboard-insights [role="alert"]')?.textContent)
+        .toContain('Você não tem permissão para atribuir o responsável deste chamado.');
     });
 
     it('opens the assignment dialog with the search cleared', async () => {

@@ -36,3 +36,14 @@ export function canAssignTicketToOthers(status: TicketStatus, hasPermission: Has
     && hasPermission(TICKETS_MANAGE_PERMISSION)
     && hasPermission(TICKETS_ASSIGN_PERMISSION);
 }
+
+/**
+ * "Atribuir a mim": o endpoint de atribuição exige só `tickets:manage` quando o responsável é quem chama
+ * (`AssignTicketCommandHandler` só pede `tickets:assign` para outra pessoa), com o chamado ativo. Só sem
+ * responsável: assumir o de outra pessoa vai exigir `tickets:assign` (decisão 2 de 05/11, LAC-9).
+ */
+export function canAssignTicketToSelf(status: TicketStatus, assignedToUserId: string | null, hasPermission: HasPermission): boolean {
+  return TICKET_ACTIVE_STATUSES.has(status)
+    && assignedToUserId === null
+    && hasPermission(TICKETS_MANAGE_PERMISSION);
+}

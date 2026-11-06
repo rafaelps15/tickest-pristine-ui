@@ -69,11 +69,22 @@ export class DashboardInsightsComponent {
 
   /** Se "Atribuir" aparece nos alertas sem responsável: a API exige `tickets:assign` pra atribuir a outra pessoa. */
   readonly canAssign = input(true);
+  /**
+   * Se "Atribuir a mim" aparece nos alertas sem responsável, no lugar de "Atribuir", pra quem atende a fila sem
+   * `tickets:assign`: a API aceita que a pessoa se torne responsável só com `tickets:manage`.
+   */
+  readonly canAssignToMe = input(false);
+  /** Um "Atribuir a mim" está em andamento: o botão fica desabilitado até a resposta. */
+  readonly assigningToMe = input(false);
+  /** Falha do último "Atribuir a mim", dita na região viva da lista (vazia quando não há). */
+  readonly assignToMeError = input<string | null>(null);
 
   /** Pede pra recarregar só os alertas ("Atualizar", "Tentar novamente" ou volta pra aba depois de um tempo). */
   readonly refresh = output<void>();
   /** Pede pra atribuir um responsável ao chamado de um alerta sem dono — quem usa abre o diálogo de atribuição. */
   readonly assign = output<TicketMonitorItem>();
+  /** Pede pra tornar quem está logado responsável pelo chamado de um alerta sem dono. */
+  readonly assignToMe = output<TicketMonitorItem>();
 
   /** Enum exposto ao template, pra montar o filtro da fila nos totais. */
   protected readonly TicketSlaStatus = TicketSlaStatus;

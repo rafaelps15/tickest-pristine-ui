@@ -77,6 +77,15 @@
             <dt>Responsável</dt>
             <dd class="d-flex align-items-center gap-2 flex-wrap">
               {{ t.assignedToName ?? 'Ainda não atribuído' }}
+              <!-- Quem atende a fila assume o chamado sem responsável, mesmo sem tickets:assign (que só é exigida para outra pessoa). -->
+              @if (canAssignToMe(t)) {
+                <button type="button" class="btn btn-link btn-sm p-0 tap-target" [disabled]="detailStore.assigningTicket()" (click)="onAssignToMe()">
+                  @if (detailStore.assigningTicket()) {
+                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                  }
+                  Atribuir a mim
+                </button>
+              }
               @if (canAssignTicket(t.status)) {
                 <button type="button" class="btn btn-link btn-sm p-0 tap-target" (click)="onOpenAssignModal()">
                   {{ t.assignedToName ? 'Alterar responsável' : 'Atribuir responsável' }}
