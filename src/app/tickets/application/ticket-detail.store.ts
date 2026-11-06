@@ -6,8 +6,7 @@ import { finalize } from 'rxjs';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSla } from '../entities/ticket-sla';
-import { TicketAssignee } from '../entities/ticket-assignee';
-import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
+import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
 import { updateWithFreshState } from './ticket-fresh-update';
 import { extractErrorMessage, valueOf } from '../../shared';
 
@@ -34,9 +33,8 @@ export const TicketDetailStore = signalStore(
      */
     _slaOverride: null as TicketSla | null,
     slaError: null as string | null,
-    assigneeCandidates: [] as TicketAssignee[],
-    searchingAssignees: false,
-    assigneeSearchError: null as string | null
+    /** Termo da busca de candidatos a responsável (vazio = sem busca). */
+    assigneeSearchTerm: ''
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService)
@@ -45,7 +43,9 @@ export const TicketDetailStore = signalStore(
     _detailResource: rxResource({
       params: () => store.ticketId(),
       stream: ({ params }) => store._ticketDataService.getById(params)
-    })
+    }),
+    /** Candidatos a responsável pelo termo: um termo novo cancela a busca anterior. */
+    _assigneeSearchResource: eligibleAssigneesResource(store._ticketDataService, store.assigneeSearchTerm)
   })),
   withComputed((store) => ({
     /** Detalhe do ticket atual, ou indefinido enquanto carrega ou quando houve erro. */
@@ -64,6 +64,15 @@ export const TicketDetailStore = signalStore(
             }, 'Erro ao carregar o chamado')
           : null
       };
+    }),
+    /** Candidatos a responsável da última busca (vazio sem busca, durante a busca ou na falha). */
+    assigneeCandidates: computed(() => valueOf(store._assigneeSearchResource) ?? []),
+    /** A busca de candidatos a responsável está em andamento. */
+    searchingAssignees: computed(() => store._assigneeSearchResource.isLoading()),
+    /** Falha da busca de candidatos a responsável, ou `null`. */
+    assigneeSearchError: computed(() => {
+      const error = store._assigneeSearchResource.error() as HttpErrorResponse | undefined;
+      return error ? assigneeSearchErrorMessage(error) : null;
     })
   })),
   withMethods((store) => ({
@@ -134,31 +143,16 @@ export const TicketDetailStore = signalStore(
 
     /**
      * Busca candidatos a responsável pelo nome (GET /tickets/assignees): só quem a atribuição aceita
-     * (ativo com `tickets:manage`, a mesma regra do back-end) e sem exigir `users:read`.
+     * (ativo com `tickets:manage`, a mesma regra do back-end) e sem exigir `users:read`. Um termo novo
+     * cancela a busca anterior; vazio não busca.
      */
     searchAssignees(search: string): void {
-      const trimmed = search.trim();
-      if (!trimmed) {
-        patchState(store, { assigneeCandidates: [], searchingAssignees: false, assigneeSearchError: null });
-        return;
-      }
-
-      patchState(store, { searchingAssignees: true, assigneeSearchError: null });
-
-      searchEligibleAssignees(store._ticketDataService, trimmed).pipe(
-        finalize(() => patchState(store, { searchingAssignees: false }))
-      ).subscribe({
-        next: (candidates) => patchState(store, { assigneeCandidates: candidates }),
-        error: (err: HttpErrorResponse) => patchState(store, {
-          assigneeCandidates: [],
-          assigneeSearchError: assigneeSearchErrorMessage(err)
-        })
-      });
+      patchState(store, { assigneeSearchTerm: search.trim() });
     },
 
-    /** Limpa os resultados da busca de candidatos a responsável — ex.: ao abrir o modal de atribuição. */
+    /** Limpa a busca de candidatos a responsável — ex.: ao abrir o modal de atribuição. */
     clearAssigneeSearch(): void {
-      patchState(store, { assigneeCandidates: [], assigneeSearchError: null });
+      patchState(store, { assigneeSearchTerm: '' });
     },
 
     /**

@@ -1,14 +1,14 @@
-import { signalStore, withState, withProps, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
+import { signalStore, withState, withProps, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { finalize, map } from 'rxjs';
 import { Department, DepartmentData } from '../entities/department';
 import { CreateSectorData, UpdateSectorData } from '../entities/sector';
 import { DepartmentDataService } from '../infrastructure/department.data.service';
 import { SectorDataService } from '../infrastructure/sector.data.service';
-import { extractErrorMessage, valueOf } from '../../shared';
-import { UserDataService, UserSummary } from '../../users';
+import { extractErrorMessage, termSearchResource, valueOf } from '../../shared';
+import { UserDataService } from '../../users';
 
 /**
  * Store de departamentos e dos setores dentro deles: listagem (GET /departments, com os setores aninhados)
@@ -29,27 +29,22 @@ export const DepartmentsStore = signalStore(
      * onde a ação partiu, em vez do alerta da página.
      */
     deactivateError: null as { targetId: string; message: string } | null,
-    /** Candidatos a responsável encontrados na busca do formulário de departamento. */
-    responsibleCandidates: [] as UserSummary[],
-    /** Em voo uma busca de candidatos a responsável. */
-    searchingResponsible: false,
-    /** Falha da última busca de candidatos a responsável, ou `null`. */
-    responsibleSearchError: null as string | null,
     /**
-     * Termo da última busca de responsável já respondida: enquanto ele difere do que está digitado, a
-     * tela trata como "buscando" — senão o "Nenhum usuário encontrado" piscava durante o debounce.
+     * Termo da última busca de responsável pedida (`null` = sem busca): enquanto ele difere do que está
+     * digitado, a tela trata como "buscando" — senão o "Nenhum usuário encontrado" piscava durante o debounce.
      */
     responsibleSearchTerm: null as string | null
   }),
   withProps(() => ({
     _departmentDataService: inject(DepartmentDataService),
     _sectorDataService: inject(SectorDataService),
-    _userDataService: inject(UserDataService),
-    /** Termos da busca de responsável; cada termo novo cancela a requisição anterior (`switchMap`). */
-    _responsibleSearch: new Subject<string>()
+    _userDataService: inject(UserDataService)
   })),
   withProps((store) => ({
-    _listResource: rxResource({ stream: () => store._departmentDataService.getAll() })
+    _listResource: rxResource({ stream: () => store._departmentDataService.getAll() }),
+    /** Usuários ativos candidatos a responsável pelo termo (GET /users): um termo novo cancela a busca anterior. */
+    _responsibleSearchResource: termSearchResource(store.responsibleSearchTerm, term =>
+      store._userDataService.getAll({ status: 'Active', search: term, page: 1, pageSize: 8 }).pipe(map(page => page.items)))
   })),
   withComputed((store) => ({
     /** Departamentos carregados, já com os setores (vazio enquanto carrega ou se a carga falhou). */
@@ -65,6 +60,15 @@ export const DepartmentsStore = signalStore(
         loading: store._listResource.isLoading(),
         error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar departamentos') : null
       };
+    }),
+    /** Candidatos a responsável da última busca (vazio sem busca, durante a busca ou na falha). */
+    responsibleCandidates: computed(() => valueOf(store._responsibleSearchResource) ?? []),
+    /** Em voo uma busca de candidatos a responsável. */
+    searchingResponsible: computed(() => store._responsibleSearchResource.isLoading()),
+    /** Falha da última busca de candidatos a responsável, ou `null`. */
+    responsibleSearchError: computed(() => {
+      const error = store._responsibleSearchResource.error() as HttpErrorResponse | undefined;
+      return error ? extractErrorMessage(error, {}, 'Erro ao buscar usuários') : null;
     })
   })),
   withMethods((store) => ({
@@ -117,19 +121,12 @@ export const DepartmentsStore = signalStore(
      * sobrescreve mais a da busca atual.
      */
     searchResponsibleCandidates(search: string): void {
-      const trimmed = search.trim();
-      if (!trimmed) {
-        patchState(store, { responsibleCandidates: [], searchingResponsible: false, responsibleSearchError: null, responsibleSearchTerm: null });
-      } else {
-        patchState(store, { searchingResponsible: true, responsibleSearchError: null });
-      }
-      store._responsibleSearch.next(trimmed);
+      patchState(store, { responsibleSearchTerm: search.trim() || null });
     },
 
     /** Limpa a busca e os candidatos a responsável (ex.: ao fechar/reabrir o modal de departamento). */
     clearResponsibleSearch(): void {
-      store._responsibleSearch.next('');
-      patchState(store, { responsibleCandidates: [], searchingResponsible: false, responsibleSearchError: null, responsibleSearchTerm: null });
+      patchState(store, { responsibleSearchTerm: null });
     },
 
     /**
@@ -224,25 +221,5 @@ export const DepartmentsStore = signalStore(
     clearDeactivateError(): void {
       patchState(store, { deactivateError: null });
     }
-  })),
-  withHooks({
-    /** Liga a busca de responsável: um termo por vez, o vazio só cancela a anterior. */
-    onInit(store) {
-      store._responsibleSearch.pipe(
-        switchMap(term => !term ? EMPTY : store._userDataService.getAll({ status: 'Active', search: term, page: 1, pageSize: 8 }).pipe(
-          tap(page => patchState(store, { responsibleCandidates: page.items, searchingResponsible: false, responsibleSearchTerm: term })),
-          catchError((err: HttpErrorResponse) => {
-            patchState(store, {
-              responsibleCandidates: [],
-              searchingResponsible: false,
-              responsibleSearchTerm: term,
-              responsibleSearchError: extractErrorMessage(err, {}, 'Erro ao buscar usuários')
-            });
-            return EMPTY;
-          })
-        )),
-        takeUntilDestroyed()
-      ).subscribe();
-    }
-  })
+  }))
 );

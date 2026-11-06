@@ -229,34 +229,41 @@ describe('DepartmentsStore', () => {
     userDataService.getAll.and.returnValue(of(pageOf([candidate])));
 
     store.searchResponsibleCandidates('carlos');
+    await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.getAll).toHaveBeenCalledWith({ status: 'Active', search: 'carlos', page: 1, pageSize: 8 });
     expect(store.responsibleCandidates()).toEqual([candidate]);
+    expect(store.searchingResponsible()).toBeFalse();
   });
 
-  it('clears the candidates when the assignee search becomes empty, without calling the API', () => {
+  it('clears the candidates when the assignee search becomes empty, without calling the API', async () => {
     userDataService.getAll.and.returnValue(of(pageOf([candidate])));
     store.searchResponsibleCandidates('carlos');
+    await TestBed.inject(ApplicationRef).whenStable();
     userDataService.getAll.calls.reset();
 
     store.searchResponsibleCandidates('   ');
+    await TestBed.inject(ApplicationRef).whenStable();
 
     expect(userDataService.getAll).not.toHaveBeenCalled();
     expect(store.responsibleCandidates()).toEqual([]);
   });
 
-  it('exposes the error message when the assignee search fails', () => {
+  it('exposes the error message when the assignee search fails', async () => {
     userDataService.getAll.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
     store.searchResponsibleCandidates('carlos');
+    await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.responsibleSearchError()).toBe('Erro ao buscar usuários');
     expect(store.responsibleCandidates()).toEqual([]);
+    expect(store.searchingResponsible()).toBeFalse();
   });
 
-  it('clears the assignee search and candidates', () => {
+  it('clears the assignee search and candidates', async () => {
     userDataService.getAll.and.returnValue(of(pageOf([candidate])));
     store.searchResponsibleCandidates('carlos');
+    await TestBed.inject(ApplicationRef).whenStable();
 
     store.clearResponsibleSearch();
 
@@ -264,14 +271,19 @@ describe('DepartmentsStore', () => {
     expect(store.responsibleSearchError()).toBeNull();
   });
 
-  it('a new assignee search cancels the previous one: the old, slow response does not overwrite the current one', () => {
+  it('a new assignee search cancels the previous one: the old, slow response does not overwrite the current one', async () => {
     const slow = new Subject<PagedResponse<UserSummary>>();
     const other: UserSummary = { ...candidate, id: 'u-2', firstName: 'Carla' };
     userDataService.getAll.and.returnValues(slow, of(pageOf([other])));
 
     store.searchResponsibleCandidates('car');
+    TestBed.tick();
     expect(store.searchingResponsible()).toBeTrue();
+    expect(slow.observed).toBeTrue();
+
     store.searchResponsibleCandidates('carla');
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(slow.observed).toBeFalse();
     slow.next(pageOf([candidate]));
 
     expect(store.responsibleCandidates()).toEqual([other]);
@@ -279,7 +291,7 @@ describe('DepartmentsStore', () => {
     expect(store.searchingResponsible()).toBeFalse();
   });
 
-  it('keeps the term of the last answered search, and clears it when the search becomes empty', () => {
+  it('keeps the term of the last search requested, and clears it when the search becomes empty', () => {
     userDataService.getAll.and.returnValue(of(pageOf([])));
 
     store.searchResponsibleCandidates(' carlos ');

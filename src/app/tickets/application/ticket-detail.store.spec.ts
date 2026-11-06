@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { TicketDetailStore } from './ticket-detail.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketDetail } from '../entities/ticket';
@@ -12,6 +12,13 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { TicketAssignee } from '../entities/ticket-assignee';
 import { environment } from '../../../environments/environment';
+import { PagedResponse } from '../../shared';
+
+/** Página de candidatos a responsável como GET /tickets/assignees devolve. */
+function assigneePage(items: TicketAssignee[]): PagedResponse<TicketAssignee> {
+  return { items, page: 1, pageSize: 8, totalCount: items.length, totalPages: 1, hasPreviousPage: false, hasNextPage: false };
+}
+
 
 /** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
 const FAR_FUTURE = '2999-01-01T00:00:00Z';
@@ -511,6 +518,29 @@ describe('TicketDetailStore', () => {
       expect(store.assigneeCandidates()).toEqual([]);
       expect(store.assigneeSearchError()).toBeNull();
     });
+
+    it('cancels the previous search when another one starts: only the response of the last term is shown', async () => {
+      const first = new Subject<PagedResponse<TicketAssignee>>();
+      const second = new Subject<PagedResponse<TicketAssignee>>();
+      const late: TicketAssignee = { ...candidate, id: 'u-late', fullName: 'Joana Dias' };
+      dataService.getAssignees.and.returnValues(first, second);
+
+      store.searchAssignees('jo');
+      TestBed.tick();
+      expect(store.searchingAssignees()).toBeTrue();
+      store.searchAssignees('joão');
+      TestBed.tick();
+
+      expect(first.observed).withContext('a primeira busca é cancelada').toBeFalse();
+      second.next(assigneePage([candidate]));
+      second.complete();
+      first.next(assigneePage([late]));
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.assigneeCandidates()).toEqual([candidate]);
+      expect(store.searchingAssignees()).toBeFalse();
+      expect(dataService.getAssignees.calls.allArgs()).toEqual([['jo', undefined, 1, 8], ['joão', undefined, 1, 8]]);
+    });
   });
 
   it('clearMutationError() clears the error from a previous mutation', async () => {
@@ -561,5 +591,37 @@ describe('TicketDetailStore with the real TicketDataService (DIV-3)', () => {
     http.expectOne({ method: 'GET', url }).flush(null, { status: 500, statusText: 'Server Error' });
     http.expectNone({ method: 'PUT', url });
     expect(store.mutationError()).toBe('Erro ao mudar o status do chamado.');
+  });
+});
+
+describe('TicketDetailStore with the real TicketDataService (C-14)', () => {
+  const assigneesUrl = `${environment.apiUrl}/tickets/assignees`;
+  const candidate: TicketAssignee = { id: 'u2', fullName: 'João Pedro', sectorId: 's1', sectorName: 'Suporte' };
+  let store: InstanceType<typeof TicketDetailStore>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(), TicketDetailStore]
+    });
+    store = TestBed.inject(TicketDetailStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('a second search for assignees cancels the request of the first one', async () => {
+    store.searchAssignees('jo');
+    TestBed.tick();
+    const first = http.expectOne(request => request.url === assigneesUrl && request.params.get('search') === 'jo');
+
+    store.searchAssignees('joão');
+    TestBed.tick();
+    const second = http.expectOne(request => request.url === assigneesUrl && request.params.get('search') === 'joão');
+
+    expect(first.cancelled).toBeTrue();
+    second.flush(assigneePage([candidate]));
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(store.assigneeCandidates()).toEqual([candidate]);
   });
 });

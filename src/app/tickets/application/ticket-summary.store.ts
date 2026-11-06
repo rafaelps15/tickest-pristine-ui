@@ -10,8 +10,7 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, SessionService, valueOf } from '../../shared';
-import { TicketAssignee } from '../entities/ticket-assignee';
-import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
+import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
 import { dashboardScopeFilters, sameDashboardScope } from './ticket-dashboard-scope';
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
@@ -45,12 +44,8 @@ export const TicketSummaryStore = signalStore(
     criticalScope: {} as TicketDashboardScope,
     /** A tela ainda não sabe o recorte dos Alertas (departamento da URL esperando a lista): a busca fica parada. */
     criticalScopeHeld: false,
-    /** Candidatos a responsável do diálogo "Atribuir" dos Alertas de SLA. */
-    assigneeCandidates: [] as TicketAssignee[],
-    /** Buscando candidatos a responsável. */
-    searchingAssignees: false,
-    /** Erro da busca de candidatos a responsável. */
-    assigneeSearchError: null as string | null,
+    /** Termo da busca de candidatos do diálogo "Atribuir" dos Alertas de SLA (vazio = sem busca). */
+    assigneeSearchTerm: '',
     /** Atribuindo o responsável escolhido (trava o botão de confirmar contra clique duplo). */
     assigning: false,
     /** Erro da última tentativa de atribuir — mostrado dentro do diálogo, que continua aberto. */
@@ -92,7 +87,9 @@ export const TicketSummaryStore = signalStore(
           atRisk: store._ticketDataService.getAll({ ...params, slaStatus: TicketSlaStatus.AtRisk, sort: TicketSortOrder.DueDate, page: 1, pageSize: CRITICAL_TICKETS_LIMIT }),
           slaSummary: store._ticketDataService.getSlaSummary()
         }).pipe(map(result => ({ ...result, receivedAtMs: Date.now() })))
-      })
+      }),
+      /** Candidatos a responsável pelo termo do diálogo "Atribuir": um termo novo cancela a busca anterior. */
+      _assigneeSearchResource: eligibleAssigneesResource(store._ticketDataService, store.assigneeSearchTerm)
     };
   }),
   withComputed((store) => ({
@@ -122,6 +119,15 @@ export const TicketSummaryStore = signalStore(
         : volumeError
           ? extractErrorMessage(volumeError, {}, 'Erro ao carregar o volume de chamados')
           : null;
+    }),
+    /** Candidatos a responsável da última busca do diálogo "Atribuir" (vazio sem busca, durante a busca ou na falha). */
+    assigneeCandidates: computed(() => valueOf(store._assigneeSearchResource) ?? []),
+    /** A busca de candidatos a responsável está em andamento. */
+    searchingAssignees: computed(() => store._assigneeSearchResource.isLoading()),
+    /** Falha da busca de candidatos a responsável, ou `null`. */
+    assigneeSearchError: computed(() => {
+      const error = store._assigneeSearchResource.error() as HttpErrorResponse | undefined;
+      return error ? assigneeSearchErrorMessage(error) : null;
     })
   })),
   withComputed((store) => ({
@@ -191,30 +197,15 @@ export const TicketSummaryStore = signalStore(
     /**
      * Busca candidatos a responsável pelo nome (GET /tickets/assignees), pro diálogo "Atribuir" dos
      * Alertas de SLA: só quem a atribuição aceita (ativo com `tickets:manage`), sem exigir `users:read`.
+     * Um termo novo cancela a busca anterior; vazio não busca.
      */
     searchAssignees(search: string): void {
-      const trimmed = search.trim();
-      if (!trimmed) {
-        patchState(store, { assigneeCandidates: [], searchingAssignees: false, assigneeSearchError: null });
-        return;
-      }
-
-      patchState(store, { searchingAssignees: true, assigneeSearchError: null });
-
-      searchEligibleAssignees(store._ticketDataService, trimmed).pipe(
-        finalize(() => patchState(store, { searchingAssignees: false }))
-      ).subscribe({
-        next: (candidates) => patchState(store, { assigneeCandidates: candidates }),
-        error: (err: HttpErrorResponse) => patchState(store, {
-          assigneeCandidates: [],
-          assigneeSearchError: assigneeSearchErrorMessage(err)
-        })
-      });
+      patchState(store, { assigneeSearchTerm: search.trim() });
     },
 
     /** Limpa a busca e o erro do diálogo "Atribuir" — ao abrir ou fechar. */
     resetAssignment(): void {
-      patchState(store, { assigneeCandidates: [], assigneeSearchError: null, assignError: null });
+      patchState(store, { assigneeSearchTerm: '', assignError: null });
     },
 
     /** Limpa só o erro de atribuição — quando a pessoa escolhe outro candidato depois de uma falha. */

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NEVER, of, throwError } from 'rxjs';
+import { NEVER, of, throwError, Subject } from 'rxjs';
 import { TicketSummaryStore } from './ticket-summary.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketStatusCounts } from '../entities/ticket-status-counts';
@@ -10,8 +10,14 @@ import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
-import { SessionService } from '../../shared';
+import { PagedResponse, SessionService } from '../../shared';
 import { TicketAssignee } from '../entities/ticket-assignee';
+
+/** Página de candidatos a responsável como GET /tickets/assignees devolve. */
+function assigneePage(items: TicketAssignee[]): PagedResponse<TicketAssignee> {
+  return { items, page: 1, pageSize: 8, totalCount: items.length, totalPages: 1, hasPreviousPage: false, hasNextPage: false };
+}
+
 
 describe('TicketSummaryStore', () => {
   let store: InstanceType<typeof TicketSummaryStore>;
@@ -326,6 +332,29 @@ describe('TicketSummaryStore', () => {
 
       expect(store.assigneeSearchError()).toBe('Você não tem permissão para buscar responsáveis.');
       expect(store.assigneeCandidates()).toEqual([]);
+    });
+
+    it('cancels the previous search when another one starts: only the response of the last term is shown', async () => {
+      const first = new Subject<PagedResponse<TicketAssignee>>();
+      const second = new Subject<PagedResponse<TicketAssignee>>();
+      const late: TicketAssignee = { ...candidate, id: 'u-late', fullName: 'Joana Dias' };
+      dataService.getAssignees.and.returnValues(first, second);
+
+      store.searchAssignees('jo');
+      TestBed.tick();
+      expect(store.searchingAssignees()).toBeTrue();
+      store.searchAssignees('joão');
+      TestBed.tick();
+
+      expect(first.observed).withContext('a primeira busca é cancelada').toBeFalse();
+      second.next(assigneePage([candidate]));
+      second.complete();
+      first.next(assigneePage([late]));
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.assigneeCandidates()).toEqual([candidate]);
+      expect(store.searchingAssignees()).toBeFalse();
+      expect(dataService.getAssignees.calls.allArgs()).toEqual([['jo', undefined, 1, 8], ['joão', undefined, 1, 8]]);
     });
 
     it('assigns, reloads only the alerts and calls onSuccess', async () => {

@@ -13,8 +13,7 @@ import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, valueOf } from '../../shared';
-import { TicketAssignee } from '../entities/ticket-assignee';
-import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
+import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
 
 /**
  * Filtros e paginação padrão: a fila de trabalho — só os ativos (Aberto + Em andamento), o prazo
@@ -39,10 +38,8 @@ export const TicketMonitorStore = signalStore(
     mutationError: null as string | null,
     /** Se a atribuição de um responsável escolhido no modal "Atribuir responsável" está em andamento. */
     assigningResponsible: false,
-    /** Candidatos a responsável encontrados na busca do modal "Atribuir responsável". */
-    responsibleCandidates: [] as TicketAssignee[],
-    searchingResponsibleCandidates: false,
-    responsibleSearchError: null as string | null,
+    /** Termo da busca de candidatos do modal "Atribuir responsável" (vazio = sem busca). */
+    responsibleSearchTerm: '',
     /** Hora (ms, relógio do navegador) em que a última página da lista chegou — "Atualizado às" da tela; null antes da primeira. */
     listLoadedAtMs: null as number | null
   }),
@@ -84,7 +81,9 @@ export const TicketMonitorStore = signalStore(
           serverNowUtc: overview.serverNowUtc,
           receivedAtMs: Date.now()
         })))
-      })
+      }),
+      /** Candidatos a responsável pelo termo do modal: um termo novo cancela a busca anterior. */
+      _responsibleSearchResource: eligibleAssigneesResource(store._ticketDataService, store.responsibleSearchTerm)
     };
   }),
   withComputed((store) => ({
@@ -118,6 +117,15 @@ export const TicketMonitorStore = signalStore(
         loading: store._slaSummaryResource.isLoading(),
         error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar o resumo de SLA') : null
       };
+    }),
+    /** Candidatos a responsável da última busca do modal (vazio sem busca, durante a busca ou na falha). */
+    responsibleCandidates: computed(() => valueOf(store._responsibleSearchResource) ?? []),
+    /** A busca de candidatos do modal está em andamento. */
+    searchingResponsibleCandidates: computed(() => store._responsibleSearchResource.isLoading()),
+    /** Falha da busca de candidatos do modal, ou `null`. */
+    responsibleSearchError: computed(() => {
+      const error = store._responsibleSearchResource.error() as HttpErrorResponse | undefined;
+      return error ? assigneeSearchErrorMessage(error) : null;
     })
   })),
   withComputed((store) => ({
@@ -271,30 +279,15 @@ export const TicketMonitorStore = signalStore(
     /**
      * Busca candidatos a responsável pelo nome (GET /tickets/assignees), pro modal "Atribuir
      * responsável": só quem a atribuição aceita (ativo com `tickets:manage`), sem exigir `users:read`.
+     * Um termo novo cancela a busca anterior; vazio não busca.
      */
     searchResponsibleCandidates(search: string): void {
-      const trimmed = search.trim();
-      if (!trimmed) {
-        patchState(store, { responsibleCandidates: [], searchingResponsibleCandidates: false, responsibleSearchError: null });
-        return;
-      }
-
-      patchState(store, { searchingResponsibleCandidates: true, responsibleSearchError: null });
-
-      searchEligibleAssignees(store._ticketDataService, trimmed).pipe(
-        finalize(() => patchState(store, { searchingResponsibleCandidates: false }))
-      ).subscribe({
-        next: (candidates) => patchState(store, { responsibleCandidates: candidates }),
-        error: (err: HttpErrorResponse) => patchState(store, {
-          responsibleCandidates: [],
-          responsibleSearchError: assigneeSearchErrorMessage(err)
-        })
-      });
+      patchState(store, { responsibleSearchTerm: search.trim() });
     },
 
-    /** Limpa os resultados da busca de candidatos a responsável — ex.: ao abrir ou fechar o modal "Atribuir responsável". */
+    /** Limpa a busca de candidatos a responsável — ex.: ao abrir ou fechar o modal "Atribuir responsável". */
     clearResponsibleSearch(): void {
-      patchState(store, { responsibleCandidates: [], responsibleSearchError: null });
+      patchState(store, { responsibleSearchTerm: '' });
     },
 
     /** Atribui o candidato escolhido no modal "Atribuir responsável" e recarrega a listagem em caso de sucesso. */

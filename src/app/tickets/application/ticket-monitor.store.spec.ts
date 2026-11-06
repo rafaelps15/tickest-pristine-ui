@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, throwError, Subject } from 'rxjs';
 import { TicketMonitorStore } from './ticket-monitor.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { TicketAwaiting } from '../entities/ticket-awaiting';
@@ -14,6 +14,12 @@ import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { PagedResponse } from '../../shared';
 import { TicketAssignee } from '../entities/ticket-assignee';
+
+/** Página de candidatos a responsável como GET /tickets/assignees devolve. */
+function assigneePage(items: TicketAssignee[]): PagedResponse<TicketAssignee> {
+  return { items, page: 1, pageSize: 8, totalCount: items.length, totalPages: 1, hasPreviousPage: false, hasNextPage: false };
+}
+
 
 describe('TicketMonitorStore', () => {
   const ticket: TicketMonitorItem = {
@@ -318,6 +324,29 @@ describe('TicketMonitorStore', () => {
 
     expect(store.responsibleCandidates()).toEqual([]);
     expect(store.responsibleSearchError()).toBeNull();
+  });
+
+  it('cancels the previous search when another one starts: only the response of the last term is shown', async () => {
+    const first = new Subject<PagedResponse<TicketAssignee>>();
+    const second = new Subject<PagedResponse<TicketAssignee>>();
+    const late: TicketAssignee = { ...candidate, id: 'u-late', fullName: 'Joana Dias' };
+    dataService.getAssignees.and.returnValues(first, second);
+
+    store.searchResponsibleCandidates('jo');
+    TestBed.tick();
+    expect(store.searchingResponsibleCandidates()).toBeTrue();
+    store.searchResponsibleCandidates('joão');
+    TestBed.tick();
+
+    expect(first.observed).withContext('a primeira busca é cancelada').toBeFalse();
+    second.next(assigneePage([candidate]));
+    second.complete();
+    first.next(assigneePage([late]));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.responsibleCandidates()).toEqual([candidate]);
+    expect(store.searchingResponsibleCandidates()).toBeFalse();
+    expect(dataService.getAssignees.calls.allArgs()).toEqual([['jo', undefined, 1, 8], ['joão', undefined, 1, 8]]);
   });
 
   it('assigns the chosen assignee, reloads the listing and calls onSuccess', async () => {
