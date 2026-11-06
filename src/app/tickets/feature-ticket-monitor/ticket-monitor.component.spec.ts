@@ -82,7 +82,8 @@ describe('TicketMonitorComponent', () => {
     return {
       ticket: signal<TicketDetail | undefined>(undefined),
       state: signal({ loading: false, error: null as string | null }),
-      select: jasmine.createSpy('select')
+      select: jasmine.createSpy('select'),
+      reload: jasmine.createSpy('reload')
     };
   }
 
@@ -498,6 +499,23 @@ describe('TicketMonitorComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-ticket-monitor-info-panel')).toBeTruthy();
     expect(quickInfoStoreFake.select).toHaveBeenCalledWith('t1');
+  });
+
+  it('passes the description and its failure from the TicketQuickInfoStore to the panel, and the panel retry goes back to the store', async () => {
+    quickInfoStoreFake.ticket.set({ description: 'Fumaça saindo da impressora.' } as TicketDetail);
+    const fixture = TestBed.createComponent(TicketMonitorComponent);
+    await fixture.whenStable();
+    (fixture.nativeElement.querySelector('tbody tr.ticket-row') as HTMLTableRowElement).click();
+    await fixture.whenStable();
+    const panel = () => fixture.nativeElement.querySelector('app-ticket-monitor-info-panel') as HTMLElement;
+    expect(panel().textContent).toContain('Fumaça saindo da impressora.');
+
+    quickInfoStoreFake.state.set({ loading: false, error: 'Erro ao carregar os detalhes do chamado' });
+    await fixture.whenStable();
+    expect(panel().textContent).toContain('Erro ao carregar os detalhes do chamado');
+    (Array.from(panel().querySelectorAll('button')).find(button => button.textContent?.includes('Tentar novamente')) as HTMLButtonElement).click();
+
+    expect(quickInfoStoreFake.reload).toHaveBeenCalled();
   });
 
   it('does not show the panel when the selected ticket is no longer in the current page/filter', async () => {

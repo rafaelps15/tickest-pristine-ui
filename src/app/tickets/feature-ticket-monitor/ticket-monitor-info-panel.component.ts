@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, inject, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
@@ -7,16 +7,15 @@ import { TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
 import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS } from '../entities/ticket-sla-status';
 import { TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
 import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
-import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
 import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
 
 /**
  * Painel "Informações do Ticket" de Monitorar Tickets: mostra na hora os dados que já vieram na
- * linha selecionada da tabela (via `ticket`) e busca só a descrição completa
- * (`TicketQuickInfoStore`), sem bloquear o resto do painel enquanto ela carrega. Link pra tela de
+ * linha selecionada da tabela (via `ticket`) e a descrição completa que a tela busca (pela
+ * `TicketQuickInfoStore`), sem bloquear o resto do painel enquanto ela carrega. Link pra tela de
  * detalhe completo (RF-29a). Quem decide qual ticket mostrar e aciona a busca é o componente pai
- * (`TicketMonitorComponent`) — este painel só exibe o que recebe e o que a própria busca devolve.
+ * (`TicketMonitorComponent`) — este painel só exibe o que recebe e avisa a tela pelos outputs.
  */
 @Component({
   selector: 'app-ticket-monitor-info-panel',
@@ -49,8 +48,14 @@ export class TicketMonitorInfoPanelComponent {
   readonly assignToMeClick = output<void>();
   /** Atalho do painel: abrir o diálogo "Atribuir responsável". */
   readonly assignResponsibleClick = output<void>();
-
-  protected readonly quickInfoStore = inject(TicketQuickInfoStore);
+  /** Descrição completa do chamado, buscada pela tela (`undefined` enquanto não chega). */
+  readonly description = input<string | undefined>(undefined);
+  /** A descrição completa está carregando. */
+  readonly descriptionLoading = input(false);
+  /** Falha da busca da descrição completa, ou `null`. */
+  readonly descriptionError = input<string | null>(null);
+  /** Pedido de buscar a descrição de novo ("Tentar novamente" depois de uma falha). */
+  readonly descriptionRetry = output<void>();
 
   protected readonly statusLabels = TICKET_STATUS_LABELS;
   protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;

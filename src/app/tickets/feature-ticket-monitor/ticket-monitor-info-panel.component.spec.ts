@@ -3,7 +3,6 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { TicketMonitorInfoPanelComponent } from './ticket-monitor-info-panel.component';
 import { TicketAwaiting } from '../entities/ticket-awaiting';
-import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TicketDetail } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -24,6 +23,7 @@ describe('TicketMonitorInfoPanelComponent', () => {
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
 
+  /** O que a tela passa ao painel a partir da TicketQuickInfoStore: a descrição, o estado da busca e o "Tentar novamente". */
   let quickInfoStoreFake: { ticket: ReturnType<typeof signal<TicketDetail | undefined>>; state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>; reload: jasmine.Spy };
 
   beforeEach(async () => {
@@ -37,15 +37,19 @@ describe('TicketMonitorInfoPanelComponent', () => {
       imports: [TicketMonitorInfoPanelComponent],
       providers: [
         provideZonelessChangeDetection(),
-        provideRouter([]),
-        { provide: TicketQuickInfoStore, useValue: quickInfoStoreFake }
+        provideRouter([])
       ]
     }).compileComponents();
   });
 
+  /** Cria o painel ligado como a tela liga: os inputs da descrição vêm da Store, e o "Tentar novamente" volta a ela. */
   function createFixture() {
     const fixture = TestBed.createComponent(TicketMonitorInfoPanelComponent);
     fixture.componentRef.setInput('ticket', ticket);
+    fixture.componentRef.setInput('description', quickInfoStoreFake.ticket()?.description);
+    fixture.componentRef.setInput('descriptionLoading', quickInfoStoreFake.state().loading);
+    fixture.componentRef.setInput('descriptionError', quickInfoStoreFake.state().error);
+    fixture.componentInstance.descriptionRetry.subscribe(() => quickInfoStoreFake.reload());
     return fixture;
   }
 

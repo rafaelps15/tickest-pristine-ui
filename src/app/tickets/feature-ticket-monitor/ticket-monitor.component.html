@@ -387,6 +387,8 @@
                                      [canAssignToMe]="canAssignToMe(ticket)" [canAssignResponsible]="canAssignResponsible(ticket)"
                                      [dueRelative]="dueRelative(ticket)" [overdue]="isOverdue(ticket)"
                                      [assigningToMe]="store.assigningToMeIds().includes(ticket.id)"
+                                     [description]="quickInfoStore.ticket()?.description" [descriptionLoading]="quickInfoStore.state().loading"
+                                     [descriptionError]="quickInfoStore.state().error" (descriptionRetry)="quickInfoStore.reload()"
                                      (closeRequested)="closeInfoPanel()" (assignToMeClick)="onAssignToMe(ticket.id)"
                                      (assignResponsibleClick)="onOpenAssignResponsibleModal(ticket.id)" />
     </div>

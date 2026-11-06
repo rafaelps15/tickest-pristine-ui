@@ -57,16 +57,16 @@
 
     <div class="mb-3">
       <div class="info-list-title mb-1">Descrição</div>
-      @if (quickInfoStore.state().loading) {
+      @if (descriptionLoading()) {
         <span class="d-inline-flex align-items-center gap-2 text-muted small" role="status"><span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>Carregando descrição…</span>
-      } @else if (quickInfoStore.state().error) {
+      } @else if (descriptionError()) {
         <!-- Falha técnica é neutra (DESIGN.md), com o caminho de volta. -->
         <p class="text-secondary small d-flex flex-wrap align-items-center gap-2 mb-0">
-          <span>{{ quickInfoStore.state().error }}</span>
-          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="quickInfoStore.reload()">Tentar novamente</button>
+          <span>{{ descriptionError() }}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="descriptionRetry.emit()">Tentar novamente</button>
         </p>
       } @else {
-        <p class="small mb-0">{{ quickInfoStore.ticket()?.description }}</p>
+        <p class="small mb-0">{{ description() }}</p>
       }
     </div>
 
