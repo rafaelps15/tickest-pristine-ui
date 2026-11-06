@@ -20,7 +20,7 @@
   }
 
   <!-- Administração -->
-  @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:manage') ||
+  @if (sessionService.hasPermission('users:read') || sessionService.hasPermission('roles:read') ||
        sessionService.hasPermission('departments:manage') || sessionService.hasPermission('sectors:manage') ||
        sessionService.hasPermission('tickets:manage')) {
     <li class="menu-header small text-uppercase">
@@ -46,7 +46,7 @@
     </li>
   }
 
-  @if (sessionService.hasPermission('roles:manage')) {
+  @if (sessionService.hasPermission('roles:read')) {
     <li class="menu-item" routerLinkActive="active">
       <a routerLink="/roles" class="menu-link">
         <i class="menu-icon tf-icons bx bx-shield-quarter"></i>

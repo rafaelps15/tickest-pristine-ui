@@ -463,7 +463,7 @@ export class DashboardComponent implements OnInit {
     const can = (code: string) => this.sessionService.hasPermission(code);
     const links: DashboardAdminLink[] = [];
     if (can('users:read')) links.push({ route: '/usuarios', label: 'Usuários', hint: 'Quem usa o Tickest, convites e acessos', icon: 'bx-group' });
-    if (can('roles:manage')) links.push({ route: '/roles', label: 'Funções', hint: 'O que cada função pode fazer', icon: 'bx-shield-quarter' });
+    if (can('roles:read')) links.push({ route: '/roles', label: 'Funções', hint: 'O que cada função pode fazer', icon: 'bx-shield-quarter' });
     if (can('departments:manage') || can('sectors:manage')) links.push({ route: '/departamentos', label: 'Departamentos e setores', hint: 'Quem atende cada tipo de pedido', icon: 'bx-sitemap' });
     return links;
   });

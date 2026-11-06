@@ -5,7 +5,7 @@ import { RoleListComponent } from './role-list.component';
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
-import { ConfirmDialogService, ToastService } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 
 
 describe('RoleListComponent', () => {
@@ -42,12 +42,15 @@ describe('RoleListComponent', () => {
   let storeFake: ReturnType<typeof createStoreFake>;
   let confirmDialogServiceFake: jasmine.SpyObj<ConfirmDialogService>;
   let toastServiceFake: jasmine.SpyObj<ToastService>;
+  /** Sessão falsa: por padrão, quem usa a tela tem todas as permissões (consulta e gestão de funções). */
+  let sessionServiceFake: { hasPermission: jasmine.Spy };
 
   beforeEach(async () => {
     storeFake = createStoreFake();
     confirmDialogServiceFake = jasmine.createSpyObj('ConfirmDialogService', ['confirm']);
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     toastServiceFake = jasmine.createSpyObj('ToastService', ['show']);
+    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
 
     await TestBed.configureTestingModule({
       imports: [RoleListComponent],
@@ -55,7 +58,8 @@ describe('RoleListComponent', () => {
         provideZonelessChangeDetection(),
         { provide: RolesStore, useValue: storeFake },
         { provide: ConfirmDialogService, useValue: confirmDialogServiceFake },
-        { provide: ToastService, useValue: toastServiceFake }
+        { provide: ToastService, useValue: toastServiceFake },
+        { provide: SessionService, useValue: sessionServiceFake }
       ]
     }).compileComponents();
   });
@@ -102,6 +106,40 @@ describe('RoleListComponent', () => {
     fixture.componentInstance.togglePermission('users:read', false);
     fixture.componentInstance.onAssignPermissionsSubmit();
     expect(storeFake.assignPermissions).not.toHaveBeenCalled();
+  });
+
+  it('with only roles:read, offers "Ver permissões" on every role and opens the dialog read-only, without saving', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'roles:read');
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    const labels = Array.from(fixture.nativeElement.querySelectorAll('tbody .dropdown-item') as NodeListOf<HTMLButtonElement>)
+      .map(button => button.textContent?.trim());
+    expect(labels).toEqual(['Ver permissões', 'Ver permissões']);
+    expect(fixture.nativeElement.querySelector('app-page-header')?.textContent).toContain('Aqui você consulta as permissões');
+
+    fixture.componentInstance.openPermissionsModal(agentRole);
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#rolePermissionsModal') as HTMLElement;
+    expect(modal.textContent).toContain('Você pode consultar as permissões das funções, mas não alterá-las.');
+    const inputs = Array.from(modal.querySelectorAll('.permission-option input') as NodeListOf<HTMLInputElement>);
+    expect(inputs.length).toBeGreaterThan(0);
+    expect(inputs.every(input => input.disabled)).toBeTrue();
+    expect(modal.querySelector('.permission-group-all')).toBeNull();
+    expect(modal.querySelector('.modal-footer .btn-primary')).toBeNull();
+
+    fixture.componentInstance.togglePermission('tickets:create', true);
+    fixture.componentInstance.onAssignPermissionsSubmit();
+    expect(storeFake.assignPermissions).not.toHaveBeenCalled();
+  });
+
+  it('with roles:manage, offers "Editar permissões" and says the screen adjusts them', async () => {
+    const fixture = TestBed.createComponent(RoleListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('app-page-header')?.textContent).toContain('Aqui você ajusta as permissões');
+    expect(fixture.nativeElement.textContent).toContain('Editar permissões');
   });
 
   it('shows the friendly name of the permissions instead of the code', async () => {

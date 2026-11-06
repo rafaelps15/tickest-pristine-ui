@@ -1,5 +1,5 @@
 <app-page-header title="Funções"
-                 subtitle="Cada função reúne permissões e define o que quem a recebe pode ver e fazer no sistema. Aqui você ajusta as permissões de cada uma."
+                 [subtitle]="subtitle()"
                  [crumbs]="[{ label: 'Administração' }]" />
 
 <app-role-guide />
@@ -81,7 +81,7 @@
                 <app-row-actions [label]="'Ações para a função ' + role.name" [rowKey]="role.name">
                   <li>
                     <button type="button" class="dropdown-item" (click)="openPermissionsModal(role)">
-                      @if (role.isAdministrator) {
+                      @if (role.isAdministrator || !canManageRoles()) {
                         <i class="bx bx-show me-2" aria-hidden="true"></i>Ver permissões
                       } @else {
                         <i class="bx bx-lock-alt me-2" aria-hidden="true"></i>Editar permissões
@@ -103,9 +103,13 @@
             [busy]="store.assigningPermissions()" (closed)="requestClosePermissions()">
   <div dialogContent class="dialog-content">
     <div class="modal-body">
-      @if (permissionsReadOnly()) {
+      @if (selectedRole()?.isAdministrator) {
         <p class="small text-secondary mb-3">
           <i class="bx bx-info-circle me-1" aria-hidden="true"></i>As permissões do Administrador são gerenciadas pelo sistema: dá pra consultar aqui, não alterar.
+        </p>
+      } @else if (permissionsReadOnly()) {
+        <p class="small text-secondary mb-3">
+          <i class="bx bx-info-circle me-1" aria-hidden="true"></i>Você pode consultar as permissões das funções, mas não alterá-las.
         </p>
       }
       @if (store.assignPermissionsError()) {

@@ -61,7 +61,7 @@ describe('SideMenuNavComponent', () => {
   });
 
   it('shows the administration header and every admin item, in order, when all permissions are granted', async () => {
-    const root = await render(['tickets:view-own', 'tickets:manage', 'users:read', 'roles:manage', 'departments:manage']);
+    const root = await render(['tickets:view-own', 'tickets:manage', 'users:read', 'roles:read', 'departments:manage']);
 
     expect(root.textContent).toContain('Administração');
     expect(itemLabels(root)).toEqual(['Início', 'Meus Chamados', 'Monitorar Chamados', 'Usuários', 'Funções', 'Departamentos e setores']);
@@ -70,7 +70,7 @@ describe('SideMenuNavComponent', () => {
   const onePermissionCases = [
     { permission: 'tickets:manage', label: 'Monitorar Chamados' },
     { permission: 'users:read', label: 'Usuários' },
-    { permission: 'roles:manage', label: 'Funções' },
+    { permission: 'roles:read', label: 'Funções' },
     { permission: 'departments:manage', label: 'Departamentos e setores' },
     { permission: 'sectors:manage', label: 'Departamentos e setores' }
   ];
@@ -84,8 +84,15 @@ describe('SideMenuNavComponent', () => {
     });
   }
 
+  it('does not show "Funções", nor the administration header, to someone with roles:manage but without roles:read: GET /roles would refuse', async () => {
+    const root = await render(['tickets:view-own', 'roles:manage']);
+
+    expect(linkOf(root, 'Funções')).toBeNull();
+    expect(root.textContent).not.toContain('Administração');
+  });
+
   it('points each item to its route', async () => {
-    const root = await render(['tickets:view-own', 'tickets:manage', 'users:read', 'roles:manage', 'departments:manage']);
+    const root = await render(['tickets:view-own', 'tickets:manage', 'users:read', 'roles:read', 'departments:manage']);
 
     expect(linkOf(root, 'Início')?.getAttribute('href')).toBe('/dashboard');
     expect(linkOf(root, 'Meus Chamados')?.getAttribute('href')).toBe('/tickets');

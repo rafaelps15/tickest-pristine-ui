@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed } 
 import { RolesStore } from '../application/roles.store';
 import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
-import { ConfirmDialogService, ToastService } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService } from '../../shared';
 import { RoleGuideComponent } from './role-guide.component';
 import { RoleInsightsComponent } from './role-insights.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
@@ -17,8 +17,8 @@ const MAX_VISIBLE_PERMISSION_BADGES = 2;
 export type PermissionGroupSelection = 'all' | 'some' | 'none';
 
 /**
- * Tela administrativa das funções (RBAC): consulta e ajuste das permissões de cada uma. As funções
- * vêm do catálogo fixo do back-end — não há criar, renomear nem excluir por aqui.
+ * Tela administrativa das funções (RBAC): consulta (`roles:read`, que a rota exige) e ajuste (`roles:manage`) das
+ * permissões de cada uma. As funções vêm do catálogo fixo do back-end — não há criar, renomear nem excluir por aqui.
  */
 @Component({
   selector: 'app-role-list',
@@ -31,6 +31,15 @@ export class RoleListComponent implements OnInit {
   protected readonly store = inject(RolesStore);
   private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly toastService = inject(ToastService);
+  /** Sessão atual, pras permissões de quem usa a tela. */
+  private readonly sessionService = inject(SessionService);
+
+  /** Pode alterar as permissões das funções (`roles:manage`, que o PUT exige); sem ela, a tela é só de consulta. */
+  protected readonly canManageRoles = computed(() => this.sessionService.hasPermission('roles:manage'));
+
+  /** Subtítulo do cabeçalho: diz se a tela ajusta ou só consulta as permissões, conforme {@link canManageRoles}. */
+  protected readonly subtitle = computed(() =>
+    `Cada função reúne permissões e define o que quem a recebe pode ver e fazer no sistema. Aqui você ${this.canManageRoles() ? 'ajusta' : 'consulta'} as permissões de cada uma.`);
 
   /** Diálogo aberto agora (renderizado com `@if`, via `<app-dialog>`), ou `null`. */
   protected readonly openDialog = signal<'permissions' | null>(null);
@@ -41,8 +50,11 @@ export class RoleListComponent implements OnInit {
   /** Conjunto de códigos de permissão marcados no diálogo de permissões. */
   readonly selectedPermissionCodes = signal<Set<string>>(new Set());
 
-  /** A função aberta é a de Administrador: as permissões dela são do sistema e o diálogo só mostra. */
-  readonly permissionsReadOnly = computed(() => !!this.selectedRole()?.isAdministrator);
+  /**
+   * O diálogo só mostra: a função aberta é a de Administrador, cujas permissões são do sistema, ou quem usa a tela
+   * não tem `roles:manage`.
+   */
+  readonly permissionsReadOnly = computed(() => !this.canManageRoles() || !!this.selectedRole()?.isAdministrator);
 
   /** Códigos marcados no diálogo que a função ainda não tem. */
   readonly addedPermissionCodes = computed(() => {
@@ -108,7 +120,7 @@ export class RoleListComponent implements OnInit {
     });
   }
 
-  /** Abre o diálogo de permissões pré-marcando as que a função já tem (só leitura para o Administrador). */
+  /** Abre o diálogo de permissões pré-marcando as que a função já tem (só leitura para o Administrador ou sem `roles:manage`). */
   openPermissionsModal(role: Role): void {
     this.store.clearAssignPermissionsError();
     this.selectedRole.set(role);

@@ -96,9 +96,10 @@ export const routes: Routes = [
       // Setores ficam dentro da tela de departamentos; mantém o endereço antigo funcionando.
       { path: 'setores', redirectTo: 'departamentos', pathMatch: 'full' },
       {
+        // GET /roles exige roles:read: quem só tem roles:manage abriria uma tela que daria 403. A edição pede roles:manage.
         path: 'roles',
         canActivate: [permissionGuard],
-        data: { requiredPermission: 'roles:manage' },
+        data: { requiredPermission: 'roles:read' },
         loadComponent: () => import('../../roles/feature-role-list/role-list.component')
           .then(m => m.RoleListComponent)
       },

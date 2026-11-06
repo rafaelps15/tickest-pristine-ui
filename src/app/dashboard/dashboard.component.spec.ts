@@ -1259,6 +1259,18 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.freshness')).not.toBeNull();
     });
 
+    it('the Funções shortcut follows roles:read, the permission of the screen: shown with it, not with only roles:manage', async () => {
+      hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'roles:read');
+      const withRead = await render();
+      const links = Array.from(withRead.nativeElement.querySelectorAll('section[aria-labelledby="adminTitle"] a') as NodeListOf<HTMLAnchorElement>)
+        .map(a => a.getAttribute('href'));
+      expect(links).toEqual(['/usuarios', '/roles']);
+
+      hasPermission.and.callFake((code: string) => code === 'users:read' || code === 'roles:manage');
+      const withManageOnly = await render();
+      expect(withManageOnly.nativeElement.querySelector('section[aria-labelledby="adminTitle"] a[href="/roles"]')).toBeNull();
+    });
+
     it('with no role at all on the screen (no queue, no own tickets, no administration), it takes up no space', async () => {
       hasPermission.and.returnValue(false);
       const fixture = await render();

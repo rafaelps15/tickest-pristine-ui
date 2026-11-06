@@ -21,4 +21,11 @@ describe('app routes', () => {
     expect(route?.canActivate).toContain(permissionGuard);
     expect(route?.data?.['requiredPermission']).toBe('tickets:create');
   });
+
+  it('"Funções" (/roles) requires roles:read, the permission of GET /roles, and not roles:manage', () => {
+    const route = findRoute('roles');
+
+    expect(route?.canActivate).toContain(permissionGuard);
+    expect(route?.data?.['requiredPermission']).toBe('roles:read');
+  });
 });
