@@ -358,6 +358,67 @@ describe('RoleListComponent', () => {
     expect(fixture.componentInstance.groupSelection(ticketPermissions)).toBe('none');
   });
 
+  describe('administrative permissions the session does not have (PrivilegeEscalationGuard of the back end)', () => {
+    /** Permissão administrativa de chamados, no mesmo grupo de duas que não são. */
+    const assign: Permission = { code: 'tickets:assign', name: 'Atribuir chamados', description: 'Define outra pessoa como responsável', group: 'Chamados', isAdministrative: true };
+    const ticketGroup = [...ticketPermissions, assign];
+
+    beforeEach(() => {
+      // Gerencia funções e atende a fila, mas não tem "Ver usuários" nem "Atribuir chamados".
+      sessionServiceFake.hasPermission.and.callFake((code: string) =>
+        code === 'roles:read' || code === 'roles:manage' || code === 'tickets:manage');
+      storeFake.permissions.set([...permissions, assign]);
+      storeFake.permissionGroups.set([{ title: 'Chamados', permissions: ticketGroup }, { title: 'Usuários', permissions: [permissions[2]] }]);
+    });
+
+    it('keeps the box in the saved state, unchecked or checked, disabled and saying why', async () => {
+      const fixture = TestBed.createComponent(RoleListComponent);
+      fixture.componentInstance.openPermissionsModal(agentRole);
+      await fixture.whenStable();
+
+      const box = (code: string) => fixture.nativeElement.querySelector(`[id="perm-${code}"]`) as HTMLInputElement;
+      expect(box('users:read').disabled).toBeTrue();
+      expect(box('users:read').checked).toBeFalse();
+      expect(box('users:read').getAttribute('aria-describedby')).toContain('perm-lock-users:read');
+      expect(fixture.nativeElement.querySelector('[id="perm-lock-users:read"]')?.textContent).toContain('Só quem tem esta permissão pode concedê-la ou removê-la.');
+      expect(box('tickets:create').disabled).toBeFalse();
+      expect(fixture.nativeElement.querySelector('[id="perm-lock-tickets:create"]')).toBeNull();
+
+      fixture.componentInstance.openPermissionsModal(supervisorRole);
+      await fixture.whenStable();
+      expect(box('users:read').disabled).toBeTrue();
+      expect(box('users:read').checked).toBeTrue();
+    });
+
+    it('neither the box nor "Todas" grant it, and the submission sends only what the session may change', async () => {
+      const fixture = TestBed.createComponent(RoleListComponent);
+      fixture.componentInstance.openPermissionsModal(agentRole);
+      await fixture.whenStable();
+
+      fixture.componentInstance.togglePermission('tickets:assign', true);
+      fixture.componentInstance.toggleGroup(ticketGroup, true);
+      expect(fixture.componentInstance.isChecked('tickets:assign')).toBeFalse();
+      expect(fixture.componentInstance.isChecked('tickets:create')).toBeTrue();
+      expect(fixture.componentInstance.groupSelection(ticketGroup)).toBe('all');
+
+      fixture.componentInstance.onAssignPermissionsSubmit();
+      expect(storeFake.assignPermissions).toHaveBeenCalledWith('Agent', ['tickets:manage', 'tickets:create'], jasmine.any(Function));
+    });
+
+    it('nor remove it, when the role already has it', async () => {
+      const fixture = TestBed.createComponent(RoleListComponent);
+      fixture.componentInstance.openPermissionsModal(supervisorRole);
+      await fixture.whenStable();
+
+      fixture.componentInstance.togglePermission('users:read', false);
+      fixture.componentInstance.togglePermission('tickets:create', true);
+      fixture.componentInstance.onAssignPermissionsSubmit();
+
+      expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
+      expect(storeFake.assignPermissions).toHaveBeenCalledWith('Supervisor', ['tickets:manage', 'users:read', 'tickets:create'], jasmine.any(Function));
+    });
+  });
+
   it('in the permissions dialog with no catalog, shows the error with "Tentar novamente" and locks "Salvar"', async () => {
     storeFake.permissions.set([]);
     storeFake.permissionGroups.set([]);

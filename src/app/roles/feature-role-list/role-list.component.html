@@ -130,7 +130,8 @@
         @for (group of store.permissionGroups(); track group.title) {
           <fieldset class="permission-group">
             <legend class="section-label">{{ group.title }}</legend>
-            @if (!permissionsReadOnly() && group.permissions.length > 1) {
+            <!-- O "Todas" só mexe nas permissões que a sessão pode mudar: as administrativas que ela não tem ficam travadas. -->
+            @if (!permissionsReadOnly() && changeablePermissions(group.permissions).length > 1) {
               <div class="form-check permission-group-all">
                 <input class="form-check-input" type="checkbox" [id]="'perm-group-' + $index"
                        [checked]="groupSelection(group.permissions) === 'all'"
@@ -138,17 +139,18 @@
                        (change)="toggleGroup(group.permissions, $any($event.target).checked)" />
                 <label class="form-check-label small" [for]="'perm-group-' + $index">
                   Todas<span class="visually-hidden"> de {{ group.title }}</span>
-                  <span class="text-secondary">({{ groupCheckedCount(group.permissions) }} de {{ group.permissions.length }})</span>
+                  <span class="text-secondary">({{ groupCheckedCount(group.permissions) }} de {{ changeablePermissions(group.permissions).length }})</span>
                 </label>
               </div>
             }
             <div class="row g-2 permission-group-items">
               @for (permission of group.permissions; track permission.code) {
                 <div class="col-12 col-md-6">
+                  @let locked = !permissionsReadOnly() && isPermissionLocked(permission);
                   <div class="form-check permission-option" [class.is-changed]="isPermissionChanged(permission.code)">
                     <input class="form-check-input" type="checkbox" [id]="'perm-' + permission.code"
-                           [checked]="isChecked(permission.code)" [disabled]="permissionsReadOnly()"
-                           [attr.aria-describedby]="'perm-desc-' + permission.code"
+                           [checked]="isChecked(permission.code)" [disabled]="permissionsReadOnly() || locked"
+                           [attr.aria-describedby]="'perm-desc-' + permission.code + (locked ? ' perm-lock-' + permission.code : '')"
                            (change)="togglePermission(permission.code, $any($event.target).checked)" />
                     <label class="form-check-label" [for]="'perm-' + permission.code">
                       {{ permission.name }}
@@ -160,6 +162,11 @@
                       }
                     </label>
                     <div class="text-secondary small" [id]="'perm-desc-' + permission.code">{{ permission.description }}</div>
+                    @if (locked) {
+                      <div class="text-secondary small" [id]="'perm-lock-' + permission.code">
+                        <i class="bx bx-lock-alt me-1" aria-hidden="true"></i>Só quem tem esta permissão pode concedê-la ou removê-la.
+                      </div>
+                    }
                   </div>
                 </div>
               }

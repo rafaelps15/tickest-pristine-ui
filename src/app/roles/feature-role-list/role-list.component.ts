@@ -156,8 +156,24 @@ export class RoleListComponent implements OnInit {
     return this.isChecked(code) !== (this.selectedRole()?.permissionCodes.includes(code) ?? false);
   }
 
-  /** Marca ou desmarca um código de permissão no diálogo de permissões. */
+  /**
+   * Permissão administrativa que a sessão não tem: o back-end recusa concedê-la ou removê-la
+   * (`PrivilegeEscalationGuard`), então a caixa fica travada no que está salvo.
+   */
+  isPermissionLocked(permission: Permission): boolean {
+    return permission.isAdministrative && !this.sessionService.hasPermission(permission.code);
+  }
+
+  /** Permissões do grupo que a sessão pode marcar e desmarcar — as que o "Todas" do grupo controla. */
+  changeablePermissions(permissions: Permission[]): Permission[] {
+    return permissions.filter(permission => !this.isPermissionLocked(permission));
+  }
+
+  /** Marca ou desmarca um código de permissão no diálogo de permissões; uma permissão travada não muda. */
   togglePermission(code: string, checked: boolean): void {
+    const permission = this.store.permissions().find(candidate => candidate.code === code);
+    if (permission && this.isPermissionLocked(permission)) return;
+
     this.selectedPermissionCodes.update(current => {
       const next = new Set(current);
       if (checked) next.add(code); else next.delete(code);
@@ -165,23 +181,23 @@ export class RoleListComponent implements OnInit {
     });
   }
 
-  /** Quantas permissões de um grupo estão marcadas no diálogo. */
+  /** Quantas permissões de um grupo, entre as que a sessão pode mudar, estão marcadas no diálogo. */
   groupCheckedCount(permissions: Permission[]): number {
-    return permissions.filter(permission => this.isChecked(permission.code)).length;
+    return this.changeablePermissions(permissions).filter(permission => this.isChecked(permission.code)).length;
   }
 
-  /** Situação da caixa "Todas" de um grupo: todas, algumas (indeterminada) ou nenhuma marcada. */
+  /** Situação da caixa "Todas" de um grupo, entre as que a sessão pode mudar: todas, algumas (indeterminada) ou nenhuma marcada. */
   groupSelection(permissions: Permission[]): PermissionGroupSelection {
     const checked = this.groupCheckedCount(permissions);
     if (checked === 0) return 'none';
-    return checked === permissions.length ? 'all' : 'some';
+    return checked === this.changeablePermissions(permissions).length ? 'all' : 'some';
   }
 
-  /** Marca ou desmarca de uma vez todas as permissões de um grupo. */
+  /** Marca ou desmarca de uma vez as permissões de um grupo que a sessão pode mudar; as travadas ficam como estão. */
   toggleGroup(permissions: Permission[], checked: boolean): void {
     this.selectedPermissionCodes.update(current => {
       const next = new Set(current);
-      for (const permission of permissions) {
+      for (const permission of this.changeablePermissions(permissions)) {
         if (checked) next.add(permission.code); else next.delete(permission.code);
       }
       return next;
