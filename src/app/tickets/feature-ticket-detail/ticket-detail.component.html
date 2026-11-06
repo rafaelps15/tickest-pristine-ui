@@ -278,7 +278,7 @@
                   </div>
                 </div>
                 <div class="d-flex gap-1 flex-shrink-0">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="store.download(attachment)">
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-icon rounded-circle" [disabled]="store.downloading()" [attr.aria-label]="'Baixar ' + attachment.fileName" (click)="onDownloadAttachment(attachment)">
                     <i class="bx bx-download" aria-hidden="true"></i>
                   </button>
                   @if (canDeleteAttachment(attachment)) {

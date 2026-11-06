@@ -169,21 +169,14 @@ export const TicketAttachmentsStore = signalStore(
       });
     },
 
-    /** Baixa um anexo e dispara o download no navegador. */
-    download(attachment: TicketAttachment): void {
+    /** Baixa um anexo e entrega o arquivo a `onDownloaded` — quem chama dispara o download no navegador. */
+    download(attachmentId: string, onDownloaded: (file: Blob) => void): void {
       patchState(store, { downloading: true, downloadError: null });
 
-      store._ticketAttachmentDataService.download(attachment.id).pipe(
+      store._ticketAttachmentDataService.download(attachmentId).pipe(
         finalize(() => patchState(store, { downloading: false }))
       ).subscribe({
-        next: (blob) => {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = attachment.fileName;
-          link.click();
-          URL.revokeObjectURL(url);
-        },
+        next: (file) => onDownloaded(file),
         error: (err: HttpErrorResponse) => {
           // 404 aqui é de propósito: o back-end não distingue "não existe" de "sem acesso", pra não revelar a um usuário sem permissão que o anexo existe.
           patchState(store, {

@@ -353,6 +353,33 @@ describe('TicketDetailComponent', () => {
     expect(deleteButton).toBeTruthy();
   });
 
+  it('downloads through the store by the attachment id and saves the received file with the attachment name', async () => {
+    const fixture = TestBed.createComponent(TicketDetailComponent);
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('button[aria-label="Baixar foto.png"]') as HTMLButtonElement).click();
+
+    expect(attachmentsStoreFake.download).toHaveBeenCalledOnceWith('a1', jasmine.any(Function));
+    const onDownloaded = attachmentsStoreFake.download.calls.mostRecent().args[1] as (file: Blob) => void;
+    const file = new Blob(['x'], { type: 'image/png' });
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
+    const link = document.createElement('a');
+    spyOn(link, 'click');
+    spyOn(document, 'createElement').and.returnValue(link);
+
+    // Relógio falso: a revogação da URL, adiada pelo utilitário, não fica pendente depois do teste.
+    jasmine.clock().install();
+    try {
+      onDownloaded(file);
+    } finally {
+      jasmine.clock().uninstall();
+    }
+
+    expect(URL.createObjectURL).toHaveBeenCalledOnceWith(file);
+    expect(link.download).toBe('foto.png');
+    expect(link.click).toHaveBeenCalled();
+  });
+
   it('hands the chosen file to the store, which checks the policy before uploading', async () => {
     const fixture = TestBed.createComponent(TicketDetailComponent);
     await fixture.whenStable();

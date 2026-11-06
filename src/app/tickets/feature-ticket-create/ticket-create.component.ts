@@ -1,6 +1,6 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, computed, DestroyRef } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
@@ -21,6 +21,7 @@ export class TicketCreateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly store = inject(TicketsStore);
   protected readonly departmentsStore = inject(DepartmentsStore);
 
@@ -56,10 +57,11 @@ export class TicketCreateComponent implements OnInit {
     return department?.sectors ?? [];
   });
 
+  /** Carrega os departamentos e liga o setor ao departamento escolhido, até a tela ser destruída. */
   ngOnInit(): void {
     this.departmentsStore.load();
 
-    this.form.controls.departmentId.valueChanges.subscribe(departmentId => {
+    this.form.controls.departmentId.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(departmentId => {
       this.form.controls.sectorId.reset('');
       if (departmentId) {
         this.form.controls.sectorId.enable();

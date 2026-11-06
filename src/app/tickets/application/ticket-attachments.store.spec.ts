@@ -279,38 +279,38 @@ describe('TicketAttachmentsStore', () => {
     expect(withoutPolicy.validationError()).toBeNull();
   });
 
-  it('downloads the attachment and triggers the download in the browser', async () => {
+  it('downloads the attachment and hands the file to the caller, without touching the DOM', async () => {
     const blob = new Blob(['conteúdo'], { type: 'application/pdf' });
     dataService.download.and.returnValue(of(blob));
-    spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
-    spyOn(URL, 'revokeObjectURL');
-    const link = document.createElement('a');
-    spyOn(link, 'click');
-    spyOn(document, 'createElement').and.returnValue(link);
+    spyOn(URL, 'createObjectURL');
+    spyOn(document, 'createElement').and.callThrough();
+    const onDownloaded = jasmine.createSpy('onDownloaded');
 
-    store.download(attachment);
+    store.download('a1', onDownloaded);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.download).toHaveBeenCalledWith('a1');
-    expect(link.download).toBe('nota-fiscal.pdf');
-    expect(link.click).toHaveBeenCalled();
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake-url');
+    expect(onDownloaded).toHaveBeenCalledOnceWith(blob);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(document.createElement).not.toHaveBeenCalledWith('a');
     expect(store.downloading()).toBeFalse();
   });
 
-  it('exposes a "não encontrado ou sem acesso" message when the download fails with 404', async () => {
+  it('exposes a "não encontrado ou sem acesso" message when the download fails with 404, without handing a file', async () => {
     dataService.download.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+    const onDownloaded = jasmine.createSpy('onDownloaded');
 
-    store.download(attachment);
+    store.download('a1', onDownloaded);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.downloadError()).toBe('Anexo não encontrado ou sem acesso.');
+    expect(onDownloaded).not.toHaveBeenCalled();
   });
 
   it('exposes a generic message when the download fails for another reason', async () => {
     dataService.download.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-    store.download(attachment);
+    store.download('a1', jasmine.createSpy('onDownloaded'));
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.downloadError()).toBe('Erro ao baixar o anexo.');

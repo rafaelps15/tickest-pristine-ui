@@ -22,4 +22,5 @@ export * from './utils/resource-value.util';
 export * from './utils/iso-date.util';
 export * from './utils/sla-duration.util';
 export * from './utils/file-size.util';
+export * from './utils/file-download.util';
 export * from './utils/focus-trap.util';

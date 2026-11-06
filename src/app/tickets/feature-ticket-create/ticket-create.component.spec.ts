@@ -87,6 +87,17 @@ describe('TicketCreateComponent', () => {
     expect(component.availableSectors()).toEqual(informationTechnology.sectors);
   });
 
+  it('stops tying the sector to the department once the screen is destroyed', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+    const form = fixture.componentInstance.form;
+
+    fixture.destroy();
+    form.controls.departmentId.setValue('dep-1');
+
+    expect(form.controls.sectorId.disabled).toBeTrue();
+  });
+
   it('shows a spinner in the Departamento field while the list loads', async () => {
     departmentsStoreFake.listState.set({ loading: true, error: null });
     const fixture = TestBed.createComponent(TicketCreateComponent);

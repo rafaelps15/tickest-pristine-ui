@@ -17,7 +17,7 @@ import {
   TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS
 } from '../entities/ticket-sla';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
-import { ConfirmDialogService, SessionService, ToastService, formatFileSize } from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService, formatFileSize, saveFile } from '../../shared';
 import { TicketEditDialogComponent } from '../ui/ticket-edit-dialog/ticket-edit-dialog.component';
 import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-reopen-dialog.component';
 import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
@@ -576,6 +576,11 @@ export class TicketDetailComponent implements OnInit {
     if (!file) return;
 
     this.store.uploadIfValid(file, () => this.toastService.show('Anexo enviado.'));
+  }
+
+  /** Baixa o anexo pelo Store e, com o arquivo recebido, dispara o download no navegador. */
+  onDownloadAttachment(attachment: TicketAttachment): void {
+    this.store.download(attachment.id, file => saveFile(file, attachment.fileName));
   }
 
   /** Confirma e exclui o anexo selecionado. */
