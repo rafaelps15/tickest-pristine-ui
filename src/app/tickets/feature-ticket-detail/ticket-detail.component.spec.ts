@@ -8,7 +8,7 @@ import { TicketAttachmentsStore } from '../application/ticket-attachments.store'
 import { TicketHistoryStore } from '../application/ticket-history.store';
 import { TicketMessagesStore } from '../application/ticket-messages.store';
 import { TicketDetail } from '../entities/ticket';
-import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
+import { TicketAttachment } from '../entities/ticket-attachment';
 import { TicketMessage } from '../entities/ticket-message';
 import { TicketHistoryAction, TicketHistoryEntry } from '../entities/ticket-history';
 import { TicketPriority } from '../entities/ticket-priority';
@@ -22,12 +22,6 @@ import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialo
 
 /** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
 const FAR_FUTURE = '2999-01-01T00:00:00Z';
-
-/** Política de anexos como o back-end devolve (10 MB, PDF e PNG). */
-const ATTACHMENT_POLICY: TicketAttachmentPolicy = {
-  maxFileSizeBytes: 10_485_760, maxAttachmentsPerTicket: 20, maxTotalBytesPerTicket: 104_857_600,
-  allowedTypes: [{ contentType: 'application/pdf', extensions: ['.pdf'] }, { contentType: 'image/png', extensions: ['.png'] }]
-};
 
 describe('TicketDetailComponent', () => {
   /** Objetivo de SLA "em branco", pra só sobrescrever os campos que cada cenário de teste precisa. */
@@ -118,7 +112,6 @@ describe('TicketDetailComponent', () => {
   function createAttachmentsStoreFake() {
     return {
       attachments: signal<TicketAttachment[]>([attachment]),
-      policy: signal<TicketAttachmentPolicy | null>(ATTACHMENT_POLICY),
       hasMore: signal(false),
       loadingMore: signal(false),
       loadMoreError: signal<string | null>(null),
