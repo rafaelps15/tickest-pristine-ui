@@ -9,6 +9,7 @@ import { TicketSla } from '../entities/ticket-sla';
 import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
 import { updateWithFreshState } from './ticket-fresh-update';
 import { ticketReadErrorMessage } from './ticket-read-error';
+import { assignResponsibleErrorMessage } from './ticket-assign-error';
 import { extractErrorMessage, valueOf } from '../../shared';
 
 /**
@@ -260,11 +261,7 @@ export const TicketDetailStore = signalStore(
           patchState(store, {
             mutationError: candidateNotEligible
               ? `${extractErrorMessage(err, {}, 'Esse usuário não pode ser responsável.')} Escolha outro usuário na lista.`
-              : extractErrorMessage(err, {
-                  403: 'Você não tem permissão para atribuir o responsável deste chamado.',
-                  404: 'Chamado ou usuário não encontrado.',
-                  409: 'Não foi possível atribuir o responsável — tente novamente.'
-                }, 'Erro ao atribuir o responsável.')
+              : assignResponsibleErrorMessage(err, { 409: 'Não foi possível atribuir o responsável — tente novamente.' })
           });
         }
       });

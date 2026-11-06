@@ -16,7 +16,7 @@ import { TicketStatusCounts } from '../entities/ticket-status-counts';
 import { OwnTicketCount } from '../entities/own-ticket-count';
 import { TicketVolumeGrouping, TicketVolumePoint } from '../entities/ticket-volume';
 import { TicketHistoryEntry } from '../entities/ticket-history';
-import { CursorPage, PageCursor, PagedResponse } from '../../shared';
+import { CursorPage, PageCursor, PagedResponse, cursorPageParams } from '../../shared';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -94,18 +94,7 @@ export class TicketDataService {
    * página anterior, devolve a seguinte.
    */
   getHistory(ticketId: string, cursor?: PageCursor, pageSize?: number): Observable<CursorPage<TicketHistoryEntry>> {
-    let params = new HttpParams();
-
-    if (cursor) {
-      params = params
-        .set('cursorDate', cursor.cursorDate)
-        .set('cursorId', cursor.cursorId);
-    }
-    if (pageSize) {
-      params = params.set('pageSize', pageSize);
-    }
-
-    return this.http.get<CursorPage<TicketHistoryEntry>>(`${this.apiUrl}/${ticketId}/history`, { params });
+    return this.http.get<CursorPage<TicketHistoryEntry>>(`${this.apiUrl}/${ticketId}/history`, { params: cursorPageParams(cursor, pageSize) });
   }
 
   /**

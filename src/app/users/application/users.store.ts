@@ -6,7 +6,7 @@ import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } fro
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { AuthDataService, CreateUserData, SessionService, TICKETS_MANAGE_PERMISSION, extractErrorMessage, valueOf } from '../../shared';
+import { AuthDataService, CreateUserData, SessionService, TICKETS_MANAGE_PERMISSION, extractErrorMessage, pagedResponseSignals, valueOf } from '../../shared';
 
 /** Filtros e paginação padrão: todos os status, primeira página, 20 itens por página. */
 const DEFAULT_FILTERS: UserFilters = { status: 'All', page: 1, pageSize: 20 };
@@ -86,31 +86,26 @@ export const UsersStore = signalStore(
       };
     })
   })),
-  withComputed((store) => ({
-    /** Usuários da página atual, com as funções de cada um ordenadas alfabeticamente para exibição consistente na tela. */
-    users: computed(() => (store.usersPage()?.items ?? []).map(user => ({
-      ...user,
-      roles: [...user.roles].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-    }))),
-    /** Página atual (1-based). */
-    currentPage: computed(() => store.usersPage()?.page ?? store.filters().page),
-    /** Itens por página efetivamente aplicados pela API. */
-    pageSize: computed(() => store.usersPage()?.pageSize ?? store.filters().pageSize),
-    /** Total de usuários que batem com os filtros atuais (todas as páginas). */
-    total: computed(() => store.usersPage()?.totalCount ?? 0),
-    /** Total de páginas disponíveis com os filtros atuais. */
-    totalPages: computed(() => store.usersPage()?.totalPages ?? 0),
-    /** Indica se existe uma página anterior à atual. */
-    hasPreviousPage: computed(() => store.usersPage()?.hasPreviousPage ?? false),
-    /** Indica se existe uma página seguinte à atual. */
-    hasNextPage: computed(() => store.usersPage()?.hasNextPage ?? false),
-    /** Totais da empresa por situação (`null` enquanto não há resposta, inclusive em erro). */
-    statusCounts: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value() : null),
-    /** Os totais do Resumo estão carregando pela primeira vez. */
-    summaryLoading: computed(() => store._summaryResource.isLoading() && !store._summaryResource.hasValue()),
-    /** Os totais do Resumo falharam. */
-    summaryFailed: computed(() => !!store._summaryResource.error())
-  })),
+  withComputed((store) => {
+    // Página, totais e vizinhas da listagem com os filtros atuais; o tamanho da página sai como `pageSize`.
+    const { currentPageSize, ...pagination } = pagedResponseSignals(store.usersPage, () => store.filters().page, () => store.filters().pageSize);
+    return {
+      /** Usuários da página atual, com as funções de cada um ordenadas alfabeticamente para exibição consistente na tela. */
+      users: computed(() => (store.usersPage()?.items ?? []).map(user => ({
+        ...user,
+        roles: [...user.roles].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+      }))),
+      ...pagination,
+      /** Itens por página efetivamente aplicados pela API. */
+      pageSize: currentPageSize,
+      /** Totais da empresa por situação (`null` enquanto não há resposta, inclusive em erro). */
+      statusCounts: computed(() => store._summaryResource.hasValue() ? store._summaryResource.value() : null),
+      /** Os totais do Resumo estão carregando pela primeira vez. */
+      summaryLoading: computed(() => store._summaryResource.isLoading() && !store._summaryResource.hasValue()),
+      /** Os totais do Resumo falharam. */
+      summaryFailed: computed(() => !!store._summaryResource.error())
+    };
+  }),
   withMethods((store) => ({
     /**
      * Conta os chamados em aberto atribuídos ao usuário, pra confirmação de desativação avisar.

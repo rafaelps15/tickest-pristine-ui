@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
-import { CursorPage, PageCursor } from '../../shared';
+import { CursorPage, PageCursor, cursorPageParams } from '../../shared';
 import { environment } from '../../../environments/environment';
 
 /** Acesso HTTP aos anexos de ticket (listagem, upload, download e exclusão). */
@@ -16,18 +16,7 @@ export class TicketAttachmentDataService {
    * Sem cursor, devolve a primeira página; com o cursor da página anterior, devolve a seguinte.
    */
   getAll(ticketId: string, cursor?: PageCursor, pageSize?: number): Observable<CursorPage<TicketAttachment>> {
-    let params = new HttpParams();
-
-    if (cursor) {
-      params = params
-        .set('cursorDate', cursor.cursorDate)
-        .set('cursorId', cursor.cursorId);
-    }
-    if (pageSize) {
-      params = params.set('pageSize', pageSize);
-    }
-
-    return this.http.get<CursorPage<TicketAttachment>>(`${this.apiUrl}/tickets/${ticketId}/attachments`, { params });
+    return this.http.get<CursorPage<TicketAttachment>>(`${this.apiUrl}/tickets/${ticketId}/attachments`, { params: cursorPageParams(cursor, pageSize) });
   }
 
   /** Busca os limites e os tipos aceitos nos anexos (GET /ticket-attachments/policy). */

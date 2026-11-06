@@ -12,8 +12,9 @@ import { TicketAwaiting } from '../entities/ticket-awaiting';
 import { TicketStatsQuery } from '../entities/ticket-stats-query';
 import { TicketSlaSummary } from '../entities/ticket-sla-summary';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { extractErrorMessage, valueOf } from '../../shared';
+import { extractErrorMessage, pagedResponseSignals, valueOf } from '../../shared';
 import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
+import { TICKET_ASSIGN_CONFLICT_MESSAGE, assignResponsibleErrorMessage } from './ticket-assign-error';
 
 /**
  * Filtros e paginação padrão: a fila de trabalho — só os ativos (Aberto + Em andamento), o prazo
@@ -128,20 +129,8 @@ export const TicketMonitorStore = signalStore(
       return error ? assigneeSearchErrorMessage(error) : null;
     })
   })),
-  withComputed((store) => ({
-    /** Página atual (1-based). */
-    currentPage: computed(() => store.ticketsPage()?.page ?? store.filters().page),
-    /** Itens por página efetivamente aplicados pela API. */
-    currentPageSize: computed(() => store.ticketsPage()?.pageSize ?? store.filters().pageSize),
-    /** Total de tickets que batem com os filtros atuais (todas as páginas). */
-    total: computed(() => store.ticketsPage()?.totalCount ?? 0),
-    /** Total de páginas disponíveis com os filtros atuais. */
-    totalPages: computed(() => store.ticketsPage()?.totalPages ?? 0),
-    /** Indica se existe uma página anterior à atual. */
-    hasPreviousPage: computed(() => store.ticketsPage()?.hasPreviousPage ?? false),
-    /** Indica se existe uma página seguinte à atual. */
-    hasNextPage: computed(() => store.ticketsPage()?.hasNextPage ?? false)
-  })),
+  // Página, tamanho, totais e vizinhas da listagem com os filtros atuais.
+  withComputed((store) => pagedResponseSignals(store.ticketsPage, () => store.filters().page, () => store.filters().pageSize)),
   withMethods((store) => ({
     /** Recarrega a página atual com os filtros atuais. */
     load(): void {
@@ -269,7 +258,7 @@ export const TicketMonitorStore = signalStore(
             mutationError: extractErrorMessage(err, {
               403: 'Você não tem permissão pra ser responsável por este chamado.',
               404: 'Chamado não encontrado.',
-              409: 'Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.'
+              409: TICKET_ASSIGN_CONFLICT_MESSAGE
             }, 'Erro ao atribuir o chamado a você.')
           });
         }
@@ -303,11 +292,7 @@ export const TicketMonitorStore = signalStore(
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
-            mutationError: extractErrorMessage(err, {
-              403: 'Você não tem permissão para atribuir o responsável deste chamado.',
-              404: 'Chamado ou usuário não encontrado.',
-              409: 'Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.'
-            }, 'Erro ao atribuir o responsável.')
+            mutationError: assignResponsibleErrorMessage(err)
           });
         }
       });

@@ -7,7 +7,7 @@ import { Ticket, UpdateTicketData } from '../entities/ticket';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { updateWithFreshState } from './ticket-fresh-update';
-import { SessionService, extractErrorMessage } from '../../shared';
+import { SessionService, extractErrorMessage, pagedResponseSignals } from '../../shared';
 
 /** Tamanho padrão da página de "Meus Tickets", o mesmo padrão do back-end. */
 export const TICKETS_PAGE_SIZE = 20;
@@ -60,20 +60,8 @@ export const TicketsStore = signalStore(
     /** Estado da leitura da listagem: carregamento e erro de leitura (o de mutação fica em `mutationError`). */
     state: computed(() => ({ loading: store._listResource.isLoading(), error: store.loadError() }))
   })),
-  withComputed((store) => ({
-    /** Página atual (1-based). */
-    currentPage: computed(() => store.ticketsPage()?.page ?? store.page()),
-    /** Itens por página efetivamente aplicados pela API. */
-    currentPageSize: computed(() => store.ticketsPage()?.pageSize ?? store.pageSize()),
-    /** Total de tickets do usuário logado (todas as páginas). */
-    total: computed(() => store.ticketsPage()?.totalCount ?? 0),
-    /** Total de páginas disponíveis. */
-    totalPages: computed(() => store.ticketsPage()?.totalPages ?? 0),
-    /** Indica se existe uma página anterior à atual. */
-    hasPreviousPage: computed(() => store.ticketsPage()?.hasPreviousPage ?? false),
-    /** Indica se existe uma página seguinte à atual. */
-    hasNextPage: computed(() => store.ticketsPage()?.hasNextPage ?? false)
-  })),
+  // Página, tamanho, totais e vizinhas da listagem (o total é o dos chamados do usuário logado, em todas as páginas).
+  withComputed((store) => pagedResponseSignals(store.ticketsPage, store.page, store.pageSize)),
   withMethods((store) => ({
     /** Vai para a página informada (ignora páginas fora do intervalo). */
     goToPage(page: number): void {

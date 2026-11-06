@@ -1,14 +1,12 @@
-import { signalStore, withState, withProps, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { signalStore, withState, withProps, withComputed, withMethods, withFeature, patchState } from '@ngrx/signals';
 import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { finalize, of } from 'rxjs';
+import { finalize } from 'rxjs';
 import { TicketAttachment, TicketAttachmentPolicy } from '../entities/ticket-attachment';
 import { TicketAttachmentDataService } from '../infrastructure/ticket-attachment.data.service';
-import { CursorPage, extractErrorMessage, formatFileSize, valueOf } from '../../shared';
-
-/** Página vazia, usada antes de um ticket ser definido. */
-const EMPTY_PAGE: CursorPage<TicketAttachment> = { items: [], nextCursorDate: null, nextCursorId: null, hasNextPage: false };
+import { withTicketCursorPages } from './ticket-cursor-pages';
+import { extractErrorMessage, formatFileSize, valueOf } from '../../shared';
 
 /** Tipo sem os parâmetros e em minúsculas, como o back-end compara: "Text/Plain; charset=utf-8" é "text/plain". */
 function mediaTypeOf(contentType: string): string {
@@ -51,13 +49,12 @@ export function attachmentPolicyViolation(file: File, policy: TicketAttachmentPo
 }
 
 /**
- * Store dos anexos de um ticket: listagem paginada por cursor ("carregar mais"), upload, download e exclusão.
- * O resource traz a primeira página; as seguintes são acumuladas em {@link olderAttachments}.
+ * Store dos anexos de um ticket: listagem paginada por cursor ("carregar mais", {@link withTicketCursorPages}),
+ * upload, download e exclusão.
  */
 export const TicketAttachmentsStore = signalStore(
   { providedIn: 'root' },
   withState({
-    ticketId: undefined as string | undefined,
     /** Falha da última exclusão de anexo (a da leitura vem do resource, em {@link listState}). */
     mutationError: null as string | null,
     uploading: false,
@@ -66,60 +63,37 @@ export const TicketAttachmentsStore = signalStore(
     validationError: null as string | null,
     downloading: false,
     downloadError: null as string | null,
-    deleting: false,
-    /** Anexos das páginas carregadas depois da primeira, na ordem em que chegaram. */
-    olderAttachments: [] as TicketAttachment[],
-    /** Última página carregada por "carregar mais" (nula enquanto só a primeira foi carregada). */
-    lastPage: null as CursorPage<TicketAttachment> | null,
-    loadingMore: false,
-    /** Falha do último "carregar mais", que é de leitura: não vai para {@link mutationError}. */
-    loadMoreError: null as string | null
+    deleting: false
   }),
   withProps(() => ({
     _ticketAttachmentDataService: inject(TicketAttachmentDataService)
   })),
+  withFeature((store) => withTicketCursorPages<TicketAttachment>(
+    (...page) => store._ticketAttachmentDataService.getAll(...page),
+    {
+      readError: 'Erro ao carregar anexos',
+      readStatusMessages: { 403: 'Você não tem permissão para ver os anexos deste chamado.' },
+      loadMoreError: 'Erro ao carregar mais anexos'
+    }
+  )),
   withProps((store) => ({
-    _listResource: rxResource({
-      params: () => store.ticketId(),
-      stream: ({ params }) => params !== undefined
-        ? store._ticketAttachmentDataService.getAll(params)
-        : of(EMPTY_PAGE)
-    }),
     _policyResource: rxResource({ stream: () => store._ticketAttachmentDataService.getPolicy() })
   })),
   withComputed((store) => ({
     /** Limites e tipos aceitos nos anexos, vindos do back-end; `null` enquanto carrega ou se a leitura falhar. */
     policy: computed(() => valueOf(store._policyResource) ?? null),
     /** Anexos já carregados do ticket atual, do mais novo para o mais antigo (ordem aplicada pelo back-end). */
-    attachments: computed(() => [...(valueOf(store._listResource)?.items ?? []), ...store.olderAttachments()]),
-    /** Página de onde sai o cursor da próxima: a última carregada por "carregar mais" ou, antes disso, a primeira. */
-    currentPage: computed(() => store.lastPage() ?? valueOf(store._listResource)),
+    attachments: computed(() => store._items()),
     /** Estado da leitura da primeira página: carregamento e erro de leitura, sem os erros das ações. */
-    listState: computed(() => {
-      const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
-      return {
-        loading: store._listResource.isLoading(),
-        error: resourceError
-          ? extractErrorMessage(resourceError, {
-              403: 'Você não tem permissão para ver os anexos deste chamado.'
-            }, 'Erro ao carregar anexos')
-          : null
-      };
-    })
+    listState: computed(() => store._listState())
   })),
-  withComputed((store) => ({
-    /** Indica se ainda há anexos mais antigos para carregar. */
-    hasMore: computed(() => store.currentPage()?.hasNextPage ?? false)
+  withMethods((store) => ({
+    /** Volta para a primeira página e tira a falha do "carregar mais" anterior (depois de enviar ou excluir). */
+    _reloadListAfterChange(): void {
+      patchState(store, { loadMoreError: null });
+      store._reloadFirstPage();
+    }
   })),
-  withMethods((store) => {
-    /** Volta para a primeira página: descarta as páginas acumuladas (e a falha de carregá-las) e recarrega o resource. */
-    const reloadFirstPage = () => {
-      patchState(store, { olderAttachments: [], lastPage: null, loadMoreError: null });
-      store._listResource.reload();
-    };
-
-    return { _reloadFirstPage: reloadFirstPage };
-  }),
   withMethods((store) => ({
     /**
      * Define o ticket cujos anexos devem ser carregados (dispara o resource) e limpa os erros do chamado anterior.
@@ -127,34 +101,7 @@ export const TicketAttachmentsStore = signalStore(
      */
     loadForTicket(ticketId: string): void {
       patchState(store, { mutationError: null, validationError: null, uploadError: null, downloadError: null, loadMoreError: null });
-      if (store.ticketId() === ticketId) {
-        store._reloadFirstPage();
-        return;
-      }
-      patchState(store, { ticketId, olderAttachments: [], lastPage: null });
-    },
-
-    /** Carrega a próxima página de anexos (mais antigos) e acrescenta à lista já exibida. */
-    loadMore(): void {
-      const ticketId = store.ticketId();
-      const page = store.currentPage();
-      if (!ticketId || !page?.hasNextPage || !page.nextCursorDate || !page.nextCursorId || store.loadingMore()) return;
-
-      patchState(store, { loadingMore: true, loadMoreError: null });
-
-      store._ticketAttachmentDataService.getAll(ticketId, { cursorDate: page.nextCursorDate, cursorId: page.nextCursorId }).pipe(
-        finalize(() => patchState(store, { loadingMore: false }))
-      ).subscribe({
-        next: (nextPage) => {
-          patchState(store, {
-            olderAttachments: [...store.olderAttachments(), ...nextPage.items],
-            lastPage: nextPage
-          });
-        },
-        error: (err: HttpErrorResponse) => {
-          patchState(store, { loadMoreError: extractErrorMessage(err, {}, 'Erro ao carregar mais anexos') });
-        }
-      });
+      store._loadTicket(ticketId);
     },
 
     /** Envia um novo anexo e recarrega a listagem em caso de sucesso. */
@@ -168,7 +115,7 @@ export const TicketAttachmentsStore = signalStore(
         finalize(() => patchState(store, { uploading: false }))
       ).subscribe({
         next: () => {
-          store._reloadFirstPage();
+          store._reloadListAfterChange();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {
@@ -212,7 +159,7 @@ export const TicketAttachmentsStore = signalStore(
       ).subscribe({
         next: () => {
           patchState(store, { mutationError: null, validationError: null, uploadError: null });
-          store._reloadFirstPage();
+          store._reloadListAfterChange();
           onSuccess?.();
         },
         error: (err: HttpErrorResponse) => {

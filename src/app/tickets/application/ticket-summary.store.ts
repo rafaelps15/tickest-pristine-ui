@@ -11,6 +11,7 @@ import { TicketSortOrder } from '../entities/ticket-sort-order';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { extractErrorMessage, SessionService, TICKETS_MANAGE_PERMISSION, valueOf } from '../../shared';
 import { assigneeSearchErrorMessage, eligibleAssigneesResource } from './ticket-assignee-search';
+import { assignResponsibleErrorMessage } from './ticket-assign-error';
 import { dashboardScopeFilters, sameDashboardScope } from './ticket-dashboard-scope';
 
 /** Quantos chamados críticos de SLA (vencidos + em risco) o card "Alertas de SLA" lista. */
@@ -229,11 +230,7 @@ export const TicketSummaryStore = signalStore(
         },
         error: (err: HttpErrorResponse) => {
           patchState(store, {
-            assignError: extractErrorMessage(err, {
-              403: 'Você não tem permissão para atribuir o responsável deste chamado.',
-              404: 'Chamado ou usuário não encontrado.',
-              409: 'Não foi possível atribuir — o chamado pode já ter outro responsável ou ter mudado de status. Tente novamente.'
-            }, 'Erro ao atribuir o responsável.')
+            assignError: assignResponsibleErrorMessage(err)
           });
         }
       });
