@@ -124,7 +124,7 @@ export interface DashboardKpi {
     }
 
     .kpi-linked:focus-within {
-      outline: 2px solid var(--tk-primary);
+      outline: 2px solid var(--tk-focus-ring);
       outline-offset: 2px;
     }
 

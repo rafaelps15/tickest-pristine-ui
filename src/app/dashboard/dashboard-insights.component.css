@@ -72,7 +72,7 @@
 
 .sla-total:focus-visible,
 .critical-ticket-link:focus-visible {
-  outline: 2px solid var(--tk-primary);
+  outline: 2px solid var(--tk-focus-ring);
 }
 
 .sla-total:focus-visible {
