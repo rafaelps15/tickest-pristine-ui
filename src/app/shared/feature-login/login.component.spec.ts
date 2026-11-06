@@ -10,6 +10,7 @@ describe('LoginComponent', () => {
     return {
       error: signal<string | null>(null),
       loading: signal(false),
+      retryingSession: signal(false),
       login: jasmine.createSpy('login')
     };
   }
@@ -86,6 +87,31 @@ describe('LoginComponent', () => {
     expect(fixture.nativeElement.querySelector('.spinner-border')).toBeTruthy();
   });
 
+  it('keeps the status region in the DOM, empty, before any retry', async () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    await fixture.whenStable();
+
+    const region = fixture.nativeElement.querySelector('.auth-retry-status') as HTMLElement;
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent?.trim()).toBe('');
+  });
+
+  it('announces the retry in the same status region and keeps the button disabled while the session start is retried', async () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    await fixture.whenStable();
+    const region = fixture.nativeElement.querySelector('.auth-retry-status') as HTMLElement;
+
+    storeFake.loading.set(true);
+    storeFake.retryingSession.set(true);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.auth-retry-status')).toBe(region);
+    expect(region.textContent).toContain('Tentando de novo');
+    const button = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeTrue();
+    expect(button.textContent).toContain('Conectando ao servidor');
+  });
+
   it('shows the store error message when present', async () => {
     storeFake.error.set('E-mail ou senha incorretos.');
     const fixture = TestBed.createComponent(LoginComponent);
@@ -124,7 +150,7 @@ describe('LoginComponent — session ended by a deactivated account', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({ motivo: 'conta-desativada' }) } } }
       ]
     })
-      .overrideProvider(LoginStore, { useValue: { error: signal<string | null>(null), loading: signal(false), login: jasmine.createSpy('login') } })
+      .overrideProvider(LoginStore, { useValue: { error: signal<string | null>(null), loading: signal(false), retryingSession: signal(false), login: jasmine.createSpy('login') } })
       .compileComponents();
   });
 

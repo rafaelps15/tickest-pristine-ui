@@ -1,5 +1,5 @@
-import { signalStore, withState, withProps, withMethods, patchState } from '@ngrx/signals';
-import { inject } from '@angular/core';
+import { signalStore, withState, withProps, withComputed, withMethods, patchState } from '@ngrx/signals';
+import { computed, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -29,7 +29,7 @@ function hasErrorCode(err: HttpErrorResponse, status: number, code: string): boo
 export const LoginStore = signalStore(
   { providedIn: 'root' },
   withState({
-    /** Login ou troca da senha provisória em andamento. */
+    /** Login ou troca da senha provisória em andamento, até o início da sessão terminar (usuário carregado ou desistência). */
     loading: false,
     /** Mensagem de falha mostrada no formulário, ou `null`. */
     error: null as string | null,
@@ -42,15 +42,25 @@ export const LoginStore = signalStore(
     _currentUserService: inject(CurrentUserService),
     _router: inject(Router)
   })),
+  withComputed((store) => ({
+    /**
+     * O início da sessão espera uma nova tentativa da primeira carga do usuário (GET /users/me falhou por rede,
+     * 429 ou 5xx): o formulário avisa e o botão segue desabilitado.
+     */
+    retryingSession: computed(() => store.loading() && store._currentUserService.retryingFirstLoad())
+  })),
   withMethods((store) => {
     /**
      * Salva os tokens, carrega o usuário logado e só então navega para o dashboard. Falha passageira vai pra
      * tela de sessão indisponível (a sessão acabou de ser criada e continua válida); recusa limpa a sessão e
-     * fica no login com a mensagem.
+     * fica no login com a mensagem. O `loading` só termina aqui, com o resultado da carga: durante as novas
+     * tentativas, o botão não volta a aceitar envio.
      */
     const startSession = (tokens: AccessTokens): void => {
       store._session.saveSession(tokens);
-      store._currentUserService.load().subscribe(result => {
+      store._currentUserService.load().pipe(
+        finalize(() => patchState(store, { loading: false }))
+      ).subscribe(result => {
         if (result.status === 'loaded') {
           store._router.navigate(['/dashboard']);
           return;
@@ -67,15 +77,20 @@ export const LoginStore = signalStore(
     };
 
     return {
-      /** Autentica com as credenciais informadas; com senha provisória, leva para a tela de primeiro acesso. */
+      /**
+       * Autentica com as credenciais informadas; com senha provisória, leva para a tela de primeiro acesso.
+       * Ignora um novo envio enquanto o login ou o início da sessão ainda está em andamento, para não abrir
+       * uma segunda sessão no servidor.
+       */
       login(credentials: LoginCredentials): void {
+        if (store.loading()) return;
         patchState(store, { loading: true, error: null, pendingCredentials: null });
 
-        store._authDataService.login(credentials).pipe(
-          finalize(() => patchState(store, { loading: false }))
-        ).subscribe({
+        store._authDataService.login(credentials).subscribe({
           next: (tokens) => startSession(tokens),
           error: (err: HttpErrorResponse) => {
+            patchState(store, { loading: false });
+
             if (hasErrorCode(err, 403, PASSWORD_CHANGE_REQUIRED)) {
               patchState(store, { pendingCredentials: credentials });
               store._router.navigate(['/primeiro-acesso']);
@@ -97,8 +112,12 @@ export const LoginStore = signalStore(
         });
       },
 
-      /** Troca a senha provisória pela nova e, com sucesso, já inicia a sessão. */
+      /**
+       * Troca a senha provisória pela nova e, com sucesso, já inicia a sessão. Ignora um novo envio enquanto a
+       * troca ou o início da sessão ainda está em andamento.
+       */
       changeRequiredPassword(newPassword: string): void {
+        if (store.loading()) return;
         const pending = store.pendingCredentials();
 
         if (!pending) {
@@ -112,14 +131,14 @@ export const LoginStore = signalStore(
           email: pending.email,
           currentPassword: pending.password,
           newPassword
-        }).pipe(
-          finalize(() => patchState(store, { loading: false }))
-        ).subscribe({
+        }).subscribe({
           next: (tokens) => {
             patchState(store, { pendingCredentials: null });
             startSession(tokens);
           },
           error: (err: HttpErrorResponse) => {
+            patchState(store, { loading: false });
+
             if (hasErrorCode(err, 409, PASSWORD_CHANGE_NOT_REQUIRED)) {
               patchState(store, {
                 pendingCredentials: null,

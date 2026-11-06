@@ -14,6 +14,7 @@ describe('FirstAccessComponent', () => {
       pendingCredentials: signal<LoginCredentials | null>(pending),
       error: signal<string | null>(null),
       loading: signal(false),
+      retryingSession: signal(false),
       changeRequiredPassword: jasmine.createSpy('changeRequiredPassword'),
       cancelPasswordChange: jasmine.createSpy('cancelPasswordChange')
     };
@@ -90,6 +91,23 @@ describe('FirstAccessComponent', () => {
 
     const button = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(button.disabled).toBeTrue();
+  });
+
+  it('announces the retry in a status region that already existed and keeps the button disabled while the session start is retried', async () => {
+    const fixture = TestBed.createComponent(FirstAccessComponent);
+    await fixture.whenStable();
+    const region = fixture.nativeElement.querySelector('.auth-retry-status') as HTMLElement;
+    expect(region.getAttribute('role')).toBe('status');
+    expect(region.textContent?.trim()).toBe('');
+
+    storeFake.loading.set(true);
+    storeFake.retryingSession.set(true);
+    fixture.detectChanges();
+
+    expect(region.textContent).toContain('Tentando de novo');
+    const button = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(button.disabled).toBeTrue();
+    expect(button.textContent).toContain('Conectando ao servidor');
   });
 
   it('the save button is not disabled because of an invalid form, only during loading', async () => {

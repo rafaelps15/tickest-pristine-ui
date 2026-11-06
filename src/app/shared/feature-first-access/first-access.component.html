@@ -81,6 +81,13 @@
     </div>
   }
 
+  <!-- A região viva existe sempre e só o conteúdo muda: criada junto com o texto, o leitor de tela não anuncia. -->
+  <div class="auth-retry-status" role="status">
+    @if (store.retryingSession()) {
+      <p class="small text-muted text-center mb-3">A primeira tentativa falhou. Tentando de novo, isso pode levar alguns segundos.</p>
+    }
+  </div>
+
   <button
     class="btn btn-primary btn-lg w-100 py-3 fw-bold"
     type="submit"
@@ -88,7 +95,7 @@
   >
     @if (store.loading()) {
       <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-      Salvando…
+      {{ store.retryingSession() ? 'Conectando ao servidor…' : 'Salvando…' }}
     } @else {
       Salvar e entrar
     }

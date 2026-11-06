@@ -1,18 +1,22 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { Router, UrlTree } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { LoginStore } from './login.store';
 import { AuthDataService } from '../infrastructure/auth.data.service';
 import { SessionService } from '../services/session.service';
 import { CurrentUserService } from '../services/current-user.service';
 import { AccessTokens } from '../entities/access-tokens';
 import { LoginCredentials } from '../entities/login-credentials';
+import { CurrentUser, CurrentUserLoadResult } from '../entities/current-user';
 
 describe('LoginStore', () => {
   const credentials: LoginCredentials = { email: 'admin@empresa.com', password: 'Provisoria@1' };
   const tokens: AccessTokens = { accessToken: 'access-token', refreshToken: 'refresh-token' };
+  /** Primeira carga do usuário em nova tentativa, controlada pelo teste. */
+  const retryingFirstLoad = signal(false);
 
   let store: InstanceType<typeof LoginStore>;
   let dataService: jasmine.SpyObj<AuthDataService>;
@@ -21,9 +25,10 @@ describe('LoginStore', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
+    retryingFirstLoad.set(false);
     dataService = jasmine.createSpyObj('AuthDataService', ['login', 'changeRequiredPassword', 'logout']);
     session = jasmine.createSpyObj('SessionService', ['saveSession', 'refreshToken', 'clearSession']);
-    currentUserService = jasmine.createSpyObj('CurrentUserService', ['load']);
+    currentUserService = jasmine.createSpyObj('CurrentUserService', ['load'], { retryingFirstLoad });
     currentUserService.load.and.returnValue(of({ status: 'loaded' as const }));
     router = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl', 'createUrlTree']);
 
@@ -86,6 +91,53 @@ describe('LoginStore', () => {
     expect(store.error()).toBe('Não foi possível carregar seus dados de acesso. Entre novamente.');
   });
 
+  it('keeps loading until the logged-in user loads, so the button stays disabled during the retries', () => {
+    const load = new Subject<CurrentUserLoadResult>();
+    currentUserService.load.and.returnValue(load);
+    dataService.login.and.returnValue(of(tokens));
+
+    store.login(credentials);
+    expect(store.loading()).toBeTrue();
+
+    load.next({ status: 'loaded' });
+    load.complete();
+    expect(store.loading()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+  });
+
+  it('ignores a second login while the first one is still starting the session', () => {
+    currentUserService.load.and.returnValue(new Subject<CurrentUserLoadResult>());
+    dataService.login.and.returnValue(of(tokens));
+
+    store.login(credentials);
+    store.login(credentials);
+
+    expect(dataService.login).toHaveBeenCalledTimes(1);
+    expect(session.saveSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes the retry of the session start only while the login is in progress', () => {
+    currentUserService.load.and.returnValue(new Subject<CurrentUserLoadResult>());
+    dataService.login.and.returnValue(of(tokens));
+    retryingFirstLoad.set(true);
+    expect(store.retryingSession()).toBeFalse();
+
+    store.login(credentials);
+    expect(store.retryingSession()).toBeTrue();
+
+    retryingFirstLoad.set(false);
+    expect(store.retryingSession()).toBeFalse();
+  });
+
+  it('releases loading when the login is rejected', () => {
+    dataService.login.and.returnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
+
+    store.login(credentials);
+
+    expect(store.loading()).toBeFalse();
+    expect(currentUserService.load).not.toHaveBeenCalled();
+  });
+
   it('should keep the credentials and go to first access when the password is temporary', () => {
     loginWithProvisionalPassword();
 
@@ -139,6 +191,22 @@ describe('LoginStore', () => {
     expect(store.pendingCredentials()).toBeNull();
     expect(session.saveSession).toHaveBeenCalledWith(tokens);
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+  });
+
+  it('keeps loading after changing the temporary password until the user loads, and ignores a second change meanwhile', () => {
+    loginWithProvisionalPassword();
+    const load = new Subject<CurrentUserLoadResult>();
+    currentUserService.load.and.returnValue(load);
+    dataService.changeRequiredPassword.and.returnValue(of(tokens));
+
+    store.changeRequiredPassword('NovaSenha#2');
+    store.changeRequiredPassword('NovaSenha#2');
+    expect(store.loading()).toBeTrue();
+    expect(dataService.changeRequiredPassword).toHaveBeenCalledTimes(1);
+
+    load.next({ status: 'loaded' });
+    load.complete();
+    expect(store.loading()).toBeFalse();
   });
 
   it('should show the API message and keep the credentials when the new password is rejected', () => {
@@ -214,5 +282,67 @@ describe('LoginStore', () => {
     expect(dataService.logout).not.toHaveBeenCalled();
     expect(session.clearSession).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
+  });
+});
+
+describe('LoginStore — new click during the retries of GET /users/me', () => {
+  const credentials: LoginCredentials = { email: 'admin@empresa.com', password: 'Senha@123' };
+  const tokens: AccessTokens = { accessToken: 'access-token', refreshToken: 'refresh-token' };
+  /** Usuário da sessão, gravado pelo CurrentUserService de verdade. */
+  const currentUser = signal<CurrentUser | null>(null);
+
+  let store: InstanceType<typeof LoginStore>;
+  let httpMock: HttpTestingController;
+  let router: jasmine.SpyObj<Router>;
+
+  beforeEach(() => {
+    jasmine.clock().install();
+    currentUser.set(null);
+    router = jasmine.createSpyObj('Router', ['navigate', 'navigateByUrl', 'createUrlTree']);
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        LoginStore,
+        {
+          provide: SessionService,
+          useValue: {
+            saveSession: jasmine.createSpy('saveSession'),
+            clearSession: jasmine.createSpy('clearSession'),
+            currentUser,
+            setCurrentUser: (user: CurrentUser) => currentUser.set(user)
+          }
+        },
+        { provide: Router, useValue: router }
+      ]
+    });
+    store = TestBed.inject(LoginStore);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    jasmine.clock().uninstall();
+  });
+
+  it('does not send a second POST users/login when the button is clicked again while GET /users/me is retried', () => {
+    store.login(credentials);
+    httpMock.expectOne(req => req.method === 'POST' && req.url.endsWith('/users/login')).flush(tokens);
+    httpMock.expectOne(req => req.url.endsWith('/users/me')).flush(null, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(store.loading()).toBeTrue();
+    expect(store.retryingSession()).toBeTrue();
+
+    store.login(credentials);
+    httpMock.expectNone(req => req.url.endsWith('/users/login'));
+
+    jasmine.clock().tick(1000);
+    httpMock.expectOne(req => req.url.endsWith('/users/me')).flush({ id: 'user-1' });
+
+    expect(store.loading()).toBeFalse();
+    expect(store.retryingSession()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 });
