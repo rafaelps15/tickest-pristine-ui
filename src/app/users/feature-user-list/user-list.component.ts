@@ -416,12 +416,17 @@ export class UserListComponent implements OnInit {
       current.get(key) === (value === null ? null : String(value)));
   }
 
-  /** Prepara o modal de criação: limpa o estado anterior e pré-marca as funções padrão (`isDefault`). */
+  /**
+   * Prepara o modal de criação: limpa o estado anterior e pré-marca as funções padrão (`isDefault`) — só para
+   * quem pode atribuí-las (`users:assign-roles`); sem a permissão, o modal não oferece funções.
+   */
   openCreateModal(): void {
     this.openDialog.set('create');
     this.store.resetState();
     this.createAnnouncement.set('');
-    this.createRoleNames.set(new Set(this.rolesStore.roles().filter(role => role.isDefault).map(role => role.name)));
+    this.createRoleNames.set(this.canAssignRoles()
+      ? new Set(this.rolesStore.roles().filter(role => role.isDefault).map(role => role.name))
+      : new Set());
   }
 
   /** Marca ou desmarca uma função no modal de criação. */
@@ -429,7 +434,10 @@ export class UserListComponent implements OnInit {
     this.createRoleNames.update(current => toggleInSet(current, roleName, checked));
   }
 
-  /** Valida e envia o cadastro; `another` mantém o modal aberto pra cadastrar o próximo ("Convidar e cadastrar outro"). */
+  /**
+   * Valida e envia o cadastro; `another` mantém o modal aberto pra cadastrar o próximo ("Convidar e cadastrar outro").
+   * Sem `users:assign-roles`, vai sem funções: só o cadastro, sem a atribuição que o back-end recusaria.
+   */
   onCreateSubmit(another = false): void {
     if (this.createForm.invalid) {
       this.createForm.markAllAsTouched();
@@ -443,7 +451,7 @@ export class UserListComponent implements OnInit {
       firstName: raw.firstName!.trim(),
       lastName: raw.lastName!.trim(),
       email: raw.email!.trim()
-    }, Array.from(this.createRoleNames()));
+    }, this.canAssignRoles() ? Array.from(this.createRoleNames()) : []);
   }
 
   /** Leva o foco ao primeiro campo inválido do formulário — quem envia pelo teclado não precisa procurar o erro. */

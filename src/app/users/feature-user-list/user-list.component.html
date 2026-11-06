@@ -387,30 +387,33 @@
           </p>
         </div>
       </div>
-      <fieldset class="mt-4">
-        <legend class="form-label mb-2">Funções</legend>
-        @for (role of rolesStore.roles(); track role.name; let index = $index) {
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" [id]="'create-role-' + index"
-                   [checked]="createRoleNames().has(role.name)"
-                   (change)="toggleCreateRole(role.name, $any($event.target).checked)" />
-            <label class="form-check-label" [for]="'create-role-' + index">
-              {{ role.name }}
-              @if (isAdminRole(role.name)) {
-                <span class="badge bg-label-primary ms-1">Administrador</span>
-              }
-              <span class="d-block small text-muted">{{ role.permissionCodes.length === 1 ? '1 permissão' : role.permissionCodes.length + ' permissões' }}</span>
-            </label>
-          </div>
-        } @empty {
-          <p class="text-muted small mb-0">Nenhuma função cadastrada ainda. Dá pra atribuir depois, em "Atribuir funções".</p>
-        }
-        @if (rolesStore.roles().length > 0 && createRoleNames().size === 0) {
-          <div class="alert alert-warning border-0 py-2 small mt-2 mb-0" role="status">
-            Sem nenhuma função, a pessoa entra no sistema mas não consegue fazer nada.
-          </div>
-        }
-      </fieldset>
+      <!-- A escolha de funções vira um PUT /users/{id}/roles, que exige users:assign-roles: sem ela, o cadastro vai sem funções. -->
+      @if (canAssignRoles()) {
+        <fieldset class="mt-4">
+          <legend class="form-label mb-2">Funções</legend>
+          @for (role of rolesStore.roles(); track role.name; let index = $index) {
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" [id]="'create-role-' + index"
+                     [checked]="createRoleNames().has(role.name)"
+                     (change)="toggleCreateRole(role.name, $any($event.target).checked)" />
+              <label class="form-check-label" [for]="'create-role-' + index">
+                {{ role.name }}
+                @if (isAdminRole(role.name)) {
+                  <span class="badge bg-label-primary ms-1">Administrador</span>
+                }
+                <span class="d-block small text-muted">{{ role.permissionCodes.length === 1 ? '1 permissão' : role.permissionCodes.length + ' permissões' }}</span>
+              </label>
+            </div>
+          } @empty {
+            <p class="text-muted small mb-0">Nenhuma função cadastrada ainda. Dá pra atribuir depois, em "Atribuir funções".</p>
+          }
+          @if (rolesStore.roles().length > 0 && createRoleNames().size === 0) {
+            <div class="alert alert-warning border-0 py-2 small mt-2 mb-0" role="status">
+              Sem nenhuma função, a pessoa entra no sistema mas não consegue fazer nada.
+            </div>
+          }
+        </fieldset>
+      }
       <div class="visually-hidden" aria-live="polite">{{ createAnnouncement() }}</div>
     </div>
     <div class="modal-footer">

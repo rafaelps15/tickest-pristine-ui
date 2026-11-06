@@ -956,6 +956,39 @@ describe('UserListComponent', () => {
     expect(usersStoreFake.createUser).toHaveBeenCalledWith(jasmine.any(Object), ['Requester', 'Agent']);
   });
 
+  it('without users:assign-roles, the registration does not offer the roles and goes without them, in a single call', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code !== 'users:assign-roles');
+    rolesStoreFake.roles.set([role, { name: 'Requester', permissionCodes: ['tickets:create'], isDefault: true, isAdministrator: false }]);
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#userCreateModal') as HTMLElement;
+    expect(modal).not.toBeNull();
+    expect(modal.querySelector('[id^="create-role-"]')).toBeNull();
+    expect(modal.textContent).not.toContain('Funções');
+    expect(fixture.componentInstance.createRoleNames().size).toBe(0);
+
+    fixture.componentInstance.createForm.setValue({ firstName: 'Ana', lastName: 'Costa', email: 'ana@empresa.com' });
+    fixture.componentInstance.onCreateSubmit();
+
+    expect(usersStoreFake.createUser).toHaveBeenCalledOnceWith(jasmine.any(Object), []);
+  });
+
+  it('with users:assign-roles, the registration offers the roles to choose', async () => {
+    const fixture = TestBed.createComponent(UserListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openCreateModal();
+    await fixture.whenStable();
+
+    const modal = fixture.nativeElement.querySelector('#userCreateModal') as HTMLElement;
+    expect(modal.querySelector('#create-role-0')).not.toBeNull();
+    expect(modal.textContent).toContain('Funções');
+  });
+
   it('"Criar e cadastrar outro" keeps the modal open, clears the form, keeps the roles and returns focus to Nome', async () => {
     const fixture = TestBed.createComponent(UserListComponent);
     document.body.appendChild(fixture.nativeElement);
