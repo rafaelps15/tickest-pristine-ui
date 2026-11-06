@@ -21,11 +21,15 @@ export const RolesStore = signalStore(
     assigningPermissions: false
   }),
   withProps(() => ({
+    /** Acesso HTTP às roles (listagem e atribuição de permissões). */
     _roleDataService: inject(RoleDataService),
+    /** Acesso HTTP ao catálogo de permissões (GET /permissions). */
     _permissionDataService: inject(PermissionDataService)
   })),
   withProps((store) => ({
+    /** Roles cadastradas (GET /roles), recarregadas depois de cada atribuição de permissões. */
     _listResource: rxResource({ stream: () => store._roleDataService.getAll() }),
+    /** Catálogo de permissões disponíveis (GET /permissions). */
     _permissionsResource: rxResource({ stream: () => store._permissionDataService.getAll() })
   })),
   withComputed((store) => ({

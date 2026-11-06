@@ -7,7 +7,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP às roles (RBAC: Users -> Roles -> Permissions). */
 @Injectable({ providedIn: 'root' })
 export class RoleDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** URL base do recurso na API (/roles). */
   private readonly apiUrl = `${environment.apiUrl}/roles`;
 
   /** Lista todas as roles (GET /roles). */

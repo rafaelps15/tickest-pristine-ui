@@ -28,8 +28,11 @@ export type PermissionGroupSelection = 'all' | 'some' | 'none';
   styleUrl: './role-list.component.css'
 })
 export class RoleListComponent implements OnInit {
+  /** Store das funções: listagem, catálogo de permissões e atribuição. */
   protected readonly store = inject(RolesStore);
+  /** Diálogo de confirmação do sistema: descartar alterações, remover permissão administrativa ou salvar sem nenhuma permissão. */
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  /** Toast que confirma as permissões salvas. */
   private readonly toastService = inject(ToastService);
   /** Sessão atual, pras permissões de quem usa a tela. */
   private readonly sessionService = inject(SessionService);

@@ -7,7 +7,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP ao catálogo de permissões disponíveis no sistema (nome, descrição e grupo; suporte à gestão de roles). */
 @Injectable({ providedIn: 'root' })
 export class PermissionDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** URL base do recurso na API (/permissions). */
   private readonly apiUrl = `${environment.apiUrl}/permissions`;
 
   /** Lista o catálogo completo de permissões disponíveis (GET /permissions). */
