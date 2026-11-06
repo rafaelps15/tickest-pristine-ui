@@ -292,7 +292,6 @@ describe('TicketsStore', () => {
     store.setSearch('  impressora  ');
     await TestBed.inject(ApplicationRef).whenStable();
     expect(dataService.getMine.calls.mostRecent().args).toEqual([1, 20, null, 'impressora']);
-    expect(store.isFiltered()).toBeTrue();
   });
 
   it('does not search again when the group or the term do not change', async () => {

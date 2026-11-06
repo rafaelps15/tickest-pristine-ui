@@ -73,8 +73,6 @@ export const TicketsStore = signalStore(
     ticketsPage: computed(() => store._listPage()),
     /** Tickets da página atual, do que teve atividade mais recente para o mais antigo. */
     tickets: computed(() => store._listPage()?.items ?? ([] as Ticket[])),
-    /** Indica se algum filtro (grupo diferente de "todos" ou busca) está aplicado. */
-    isFiltered: computed(() => store.statusGroup() !== null || store.search().trim() !== ''),
     /**
      * Se a pessoa tem algum chamado, filtrado ou não: `true` com a lista não vazia; com a lista
      * filtrada vazia, a resposta da sondagem; `null` enquanto ainda não dá pra saber.
@@ -94,11 +92,10 @@ export const TicketsStore = signalStore(
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados') : null;
     }),
-    /** Estado agregado da listagem: dados, carregamento e erro (de leitura ou de mutação). */
+    /** Estado agregado da listagem: carregamento e erro (de leitura ou de mutação). */
     state: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
-        data: store._listPage()?.items ?? ([] as Ticket[]),
         loading: store._listResource.isLoading(),
         error: store.mutationError() ?? (resourceError
           ? extractErrorMessage(resourceError, {}, 'Erro ao carregar chamados')

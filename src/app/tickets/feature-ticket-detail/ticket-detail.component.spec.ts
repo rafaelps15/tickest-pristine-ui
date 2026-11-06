@@ -85,7 +85,6 @@ describe('TicketDetailComponent', () => {
       updatingDescription: signal(false),
       reopening: signal(false),
       sla: signal<TicketSla | null>(sla),
-      slaRefreshing: signal(false),
       slaError: signal<string | null>(null),
       refreshSla: jasmine.createSpy('refreshSla'),
       assigneeCandidates: signal<TicketAssignee[]>([]),
@@ -155,7 +154,6 @@ describe('TicketDetailComponent', () => {
       post: jasmine.createSpy('post'),
       editMessage: jasmine.createSpy('editMessage'),
       deleteMessage: jasmine.createSpy('deleteMessage'),
-      clearPostError: jasmine.createSpy('clearPostError'),
       clearMutationError: jasmine.createSpy('clearMutationError')
     };
   }

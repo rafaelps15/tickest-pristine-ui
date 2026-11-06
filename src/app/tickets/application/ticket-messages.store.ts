@@ -174,11 +174,6 @@ export const TicketMessagesStore = signalStore(
       });
     },
 
-    /** Limpa o erro de publicação — ex.: ao digitar de novo depois de uma falha. */
-    clearPostError(): void {
-      patchState(store, { postError: null });
-    },
-
     /** Limpa o erro de edição/exclusão de uma mensagem. */
     clearMutationError(): void {
       patchState(store, { mutationError: null });

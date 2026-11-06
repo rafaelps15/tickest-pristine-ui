@@ -1,6 +1,6 @@
 import { Directive, ElementRef, AfterViewInit, inject } from '@angular/core';
 
-/** Bootstrap é carregado via CDN (script global em index.html) — ver o mesmo padrão em main-layout.component.ts. */
+/** Bootstrap é carregado via CDN (script global em index.html). */
 declare const bootstrap: {
   Dropdown: new (element: Element, options?: Record<string, unknown>) => unknown;
 };
@@ -8,8 +8,7 @@ declare const bootstrap: {
 /**
  * Força o dropdown do Bootstrap a se posicionar com estratégia `fixed` (relativa à viewport).
  * Sem isso, um dropdown dentro de um container com `overflow` (ex.: `.table-responsive`) fica
- * cortado pelo scroll do container — mesmo problema e correção já usados no dropdown do perfil
- * em `MainLayoutComponent`, extraído aqui como diretiva para reaproveitar em qualquer tabela.
+ * cortado pelo scroll do container. Usada pelo menu do usuário e pelas ações da linha das tabelas.
  */
 @Directive({
   selector: '[appDropdownFixedPosition]'

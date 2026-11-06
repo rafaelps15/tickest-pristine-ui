@@ -102,16 +102,6 @@ describe('TicketMessagesStore', () => {
       expect(store.postError()).toBe('Você não tem permissão para enviar mensagens neste chamado.');
       expect(store.posting()).toBeFalse();
     });
-
-    it('clearPostError() clears the error from a previous attempt', async () => {
-      dataService.post.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
-      store.post('t1', 'Resolvido, pode confirmar.');
-      await TestBed.inject(ApplicationRef).whenStable();
-
-      store.clearPostError();
-
-      expect(store.postError()).toBeNull();
-    });
   });
 
   describe('editMessage', () => {

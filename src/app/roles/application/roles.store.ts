@@ -3,7 +3,6 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
-import { Role } from '../entities/role';
 import { Permission } from '../entities/permission';
 import { RoleDataService } from '../infrastructure/role.data.service';
 import { PermissionDataService } from '../infrastructure/permission.data.service';
@@ -18,8 +17,6 @@ export const RolesStore = signalStore(
   withState({
     /** Erro de atribuição de permissões — exibido dentro do modal "Permissões", não na página. */
     assignPermissionsError: null as string | null,
-    /** Erro ao carregar o catálogo de permissões (GET /permissions). */
-    permissionsLoadError: null as string | null,
     /** Em voo uma atribuição de permissões (PUT /roles/{roleName}/permissions) — evita duplo submit. */
     assigningPermissions: false
   }),
@@ -34,26 +31,22 @@ export const RolesStore = signalStore(
   withComputed((store) => ({
     /** Roles carregadas (GET /roles), usadas tanto na tela de roles quanto no checklist de atribuição de usuários. */
     roles: computed(() => valueOf(store._listResource) ?? []),
-    /** Estado agregado da listagem de roles (dados, carregamento e erro de carregamento — não de mutação). */
+    /** Estado agregado da listagem de roles (carregamento e erro de carregamento — não de mutação). */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {
-        data: valueOf(store._listResource) ?? ([] as Role[]),
         loading: store._listResource.isLoading(),
         error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar funções') : null
       };
     }),
     /** Catálogo de permissões disponíveis no sistema, com nome/descrição/grupo (GET /permissions). */
     permissions: computed(() => valueOf(store._permissionsResource) ?? []),
-    /** Estado agregado do catálogo de permissões (dados, carregamento e erro). */
+    /** Estado agregado do catálogo de permissões (carregamento e erro). */
     permissionsState: computed(() => {
       const resourceError = store._permissionsResource.error() as HttpErrorResponse | undefined;
       return {
-        data: valueOf(store._permissionsResource) ?? ([] as Permission[]),
         loading: store._permissionsResource.isLoading(),
-        error: store.permissionsLoadError() ?? (resourceError
-          ? extractErrorMessage(resourceError, {}, 'Erro ao carregar permissões')
-          : null)
+        error: resourceError ? extractErrorMessage(resourceError, {}, 'Erro ao carregar permissões') : null
       };
     })
   })),
@@ -89,7 +82,6 @@ export const RolesStore = signalStore(
 
     /** Recarrega os códigos de permissão disponíveis (GET /permissions). */
     loadPermissions(): void {
-      patchState(store, { permissionsLoadError: null });
       store._permissionsResource.reload();
     },
 

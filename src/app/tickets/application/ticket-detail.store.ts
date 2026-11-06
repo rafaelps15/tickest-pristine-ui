@@ -33,7 +33,6 @@ export const TicketDetailStore = signalStore(
      * este override pra não mostrar um SLA desatualizado por engano.
      */
     _slaOverride: null as TicketSla | null,
-    slaRefreshing: false,
     slaError: null as string | null,
     assigneeCandidates: [] as TicketAssignee[],
     searchingAssignees: false,
@@ -88,11 +87,9 @@ export const TicketDetailStore = signalStore(
       const ticketId = store.ticketId();
       if (!ticketId) return;
 
-      patchState(store, { slaRefreshing: true, slaError: null });
+      patchState(store, { slaError: null });
 
-      store._ticketDataService.getSla(ticketId).pipe(
-        finalize(() => patchState(store, { slaRefreshing: false }))
-      ).subscribe({
+      store._ticketDataService.getSla(ticketId).subscribe({
         next: (sla) => patchState(store, { _slaOverride: sla }),
         error: (err: HttpErrorResponse) => {
           patchState(store, {

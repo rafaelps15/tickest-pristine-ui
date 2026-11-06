@@ -447,7 +447,6 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.slaError()).toBe('Erro ao atualizar o SLA.');
-      expect(store.slaRefreshing()).toBeFalse();
       expect(store.sla()).toEqual(sla);
     });
 

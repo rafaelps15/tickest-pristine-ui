@@ -329,9 +329,6 @@ export class TicketMonitorComponent implements OnInit {
     });
   }
 
-  /** Exposto pro template clicar nos cards de resumo de SLA e filtrar a tabela pelo mesmo valor. */
-  protected readonly TicketSlaStatus = TicketSlaStatus;
-
   readonly statusLabels = TICKET_STATUS_LABELS;
   readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
   readonly priorityLabels = TICKET_PRIORITY_LABELS;
