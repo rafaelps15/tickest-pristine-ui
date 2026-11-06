@@ -246,8 +246,8 @@ describe('TicketDetailComponent', () => {
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Atrasado há 3 horas');
-    const prazoDd = fixture.nativeElement.querySelector('dd.text-danger');
-    expect(prazoDd).withContext('a linha de Prazo deve ficar vermelha quando o SLA está violado').toBeTruthy();
+    const dueValue = fixture.nativeElement.querySelector('dd.text-danger');
+    expect(dueValue).withContext('a linha de Prazo deve ficar vermelha quando o SLA está violado').toBeTruthy();
   });
 
   it('shows "vence em" and highlights in yellow when the SLA is at risk, with no highlight when it is on time', async () => {
@@ -270,9 +270,9 @@ describe('TicketDetailComponent', () => {
 
     // Escopado na linha "Prazo" do resumo do chamado — o painel de SLA abaixo tem sua própria
     // urgência relativa por objetivo, independente deste campo (ver describe('painel de SLA')).
-    const prazoText = fixture.nativeElement.querySelector('dl.max-w-700')?.textContent;
-    expect(prazoText).not.toContain('Vence em');
-    expect(prazoText).not.toContain('Atrasado há');
+    const dueText = fixture.nativeElement.querySelector('dl.max-w-700')?.textContent;
+    expect(dueText).not.toContain('Vence em');
+    expect(dueText).not.toContain('Atrasado há');
   });
 
   it('shows "Resolvido em" when the ticket has a resolution date', async () => {
@@ -1229,11 +1229,11 @@ describe('TicketDetailComponent', () => {
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
-      const prazoLines = Array.from(fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLElement>)
+      const dueLines = Array.from(fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLElement>)
         .filter(p => p.textContent?.trim().startsWith('Prazo:'));
-      expect(prazoLines.length).toBe(2);
-      expect(prazoLines[0].classList).toContain('text-danger');
-      expect(prazoLines[1].classList).toContain('text-warning');
+      expect(dueLines.length).toBe(2);
+      expect(dueLines[0].classList).toContain('text-danger');
+      expect(dueLines[1].classList).toContain('text-warning');
     });
 
     it('shows both cards (Primeira resposta and Resolução) for a new ticket', async () => {
