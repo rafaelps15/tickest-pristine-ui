@@ -3,7 +3,7 @@ import { inject, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
-import { CreateTicketData, Ticket, UpdateTicketData } from '../entities/ticket';
+import { Ticket, UpdateTicketData } from '../entities/ticket';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
 import { updateWithFreshState } from './ticket-fresh-update';
@@ -12,7 +12,7 @@ import { SessionService, extractErrorMessage } from '../../shared';
 /** Tamanho padrão da página de "Meus Tickets", o mesmo padrão do back-end. */
 export const TICKETS_PAGE_SIZE = 20;
 
-/** Store de tickets do usuário logado: listagem paginada, criação, atualização e reabertura. */
+/** Store de tickets do usuário logado: listagem paginada, atualização e reabertura (a criação é da `TicketCreateStore`). */
 export const TicketsStore = signalStore(
   { providedIn: 'root' },
   withState({
@@ -24,9 +24,7 @@ export const TicketsStore = signalStore(
     /** Trecho do título buscado (vazio = sem busca). */
     search: '',
     /** Ids de tickets com edição, cancelamento ou reabertura em andamento — trava o botão da linha e evita duplo-envio. */
-    pendingTicketIds: [] as string[],
-    /** Criação de ticket em andamento — trava o botão de envio e evita duplo-envio. */
-    creating: false
+    pendingTicketIds: [] as string[]
   }),
   withProps(() => ({
     _ticketDataService: inject(TicketDataService),
@@ -111,27 +109,6 @@ export const TicketsStore = signalStore(
     loadForCurrentUser(): void {
       patchState(store, { mutationError: null });
       store._listResource.reload();
-    },
-
-    /**
-     * Cria um novo ticket e recarrega a listagem na primeira página (onde o ticket novo aparece) em caso de
-     * sucesso. Marca `creating` durante a chamada, pra travar o botão de envio e evitar duplo-envio.
-     */
-    create(data: CreateTicketData, onSuccess?: () => void): void {
-      patchState(store, { mutationError: null, creating: true });
-
-      store._ticketDataService.create(data).pipe(
-        finalize(() => patchState(store, { creating: false }))
-      ).subscribe({
-        next: () => {
-          patchState(store, { page: 1 });
-          store._listResource.reload();
-          onSuccess?.();
-        },
-        error: (err: HttpErrorResponse) => {
-          patchState(store, { mutationError: extractErrorMessage(err, {}, 'Erro ao abrir o chamado') });
-        }
-      });
     },
 
     /**

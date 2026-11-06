@@ -1,11 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter, Router } from '@angular/router';
 import { TicketCreateComponent } from './ticket-create.component';
+import { TicketCreateStore } from '../application/ticket-create.store';
 import { TicketsStore } from '../application/tickets.store';
 import { TicketPriority } from '../entities/ticket-priority';
 import { Department, DepartmentsStore } from '../../departments';
-import { ToastService } from '../../shared';
+import { SessionService, ToastService } from '../../shared';
+import { environment } from '../../../environments/environment';
 
 describe('TicketCreateComponent', () => {
   const informationTechnology: Department = {
@@ -23,12 +27,15 @@ describe('TicketCreateComponent', () => {
     sectors: []
   };
 
-  let ticketsStoreFake: {
-    state: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>;
+  let createStoreFake: {
     mutationError: ReturnType<typeof signal<string | null>>;
     creating: ReturnType<typeof signal<boolean>>;
     create: jasmine.Spy;
+    clearMutationError: jasmine.Spy;
   };
+  /** Lista de "Meus Chamados": a tela só a usa depois de criar, para voltar à primeira página. */
+  let ticketsStoreFake: { goToPage: jasmine.Spy };
+  let sessionServiceFake: { hasPermission: jasmine.Spy };
   let departmentsStoreFake: {
     departments: ReturnType<typeof signal<Department[]>>;
     listState: ReturnType<typeof signal<{ loading: boolean; error: string | null }>>;
@@ -37,12 +44,14 @@ describe('TicketCreateComponent', () => {
   let toastServiceFake: { show: jasmine.Spy };
 
   beforeEach(async () => {
-    ticketsStoreFake = {
-      state: signal({ loading: false, error: null }),
+    createStoreFake = {
       mutationError: signal<string | null>(null),
       creating: signal(false),
-      create: jasmine.createSpy('create')
+      create: jasmine.createSpy('create'),
+      clearMutationError: jasmine.createSpy('clearMutationError')
     };
+    ticketsStoreFake = { goToPage: jasmine.createSpy('goToPage') };
+    sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
     departmentsStoreFake = {
       departments: signal<Department[]>([informationTechnology, departmentWithoutSectors]),
       listState: signal({ loading: false, error: null }),
@@ -55,8 +64,10 @@ describe('TicketCreateComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter([]),
+        { provide: TicketCreateStore, useValue: createStoreFake },
         { provide: TicketsStore, useValue: ticketsStoreFake },
         { provide: DepartmentsStore, useValue: departmentsStoreFake },
+        { provide: SessionService, useValue: sessionServiceFake },
         { provide: ToastService, useValue: toastServiceFake }
       ]
     }).compileComponents();
@@ -67,6 +78,13 @@ describe('TicketCreateComponent', () => {
     await fixture.whenStable();
 
     expect(departmentsStoreFake.load).toHaveBeenCalled();
+  });
+
+  it('discards the submit error of a previous visit when the screen opens', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    expect(createStoreFake.clearMutationError).toHaveBeenCalled();
   });
 
   it('only offers departments that have sectors', async () => {
@@ -174,7 +192,7 @@ describe('TicketCreateComponent', () => {
     component.onSubmit();
     fixture.detectChanges();
 
-    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(createStoreFake.create).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('#ticketTitleError')?.textContent).toContain('O título é obrigatório.');
   });
 
@@ -190,7 +208,7 @@ describe('TicketCreateComponent', () => {
     component.onSubmit();
     fixture.detectChanges();
 
-    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(createStoreFake.create).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('#ticketDescriptionError')?.textContent)
       .toContain('A descrição deve ter pelo menos 10 caracteres.');
   });
@@ -206,7 +224,7 @@ describe('TicketCreateComponent', () => {
     component.form.controls.sectorId.setValue('sec-1');
     component.onSubmit();
 
-    expect(ticketsStoreFake.create).toHaveBeenCalledWith({
+    expect(createStoreFake.create).toHaveBeenCalledWith({
       title: 'Impressora não funciona',
       description: 'A impressora do 2º andar não imprime nada.',
       priority: TicketPriority.Medium,
@@ -221,7 +239,7 @@ describe('TicketCreateComponent', () => {
 
     component.onSubmit();
 
-    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(createStoreFake.create).not.toHaveBeenCalled();
     expect(component.form.controls.title.touched).toBeTrue();
     expect(component.form.controls.departmentId.touched).toBeTrue();
   });
@@ -237,7 +255,7 @@ describe('TicketCreateComponent', () => {
     component.form.controls.sectorId.setValue('sec-1');
     component.onSubmit();
 
-    expect(ticketsStoreFake.create).toHaveBeenCalledWith({
+    expect(createStoreFake.create).toHaveBeenCalledWith({
       title: 'Impressora não funciona',
       description: 'A impressora do 2º andar não imprime nada.',
       priority: TicketPriority.Medium,
@@ -245,7 +263,8 @@ describe('TicketCreateComponent', () => {
     }, jasmine.any(Function));
   });
 
-  it('shows a success toast when the ticket is opened', async () => {
+  /** Preenche o formulário válido, envia e devolve o callback de sucesso passado ao Store. */
+  async function submitValidForm(): Promise<() => void> {
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
     const component = fixture.componentInstance;
@@ -256,10 +275,31 @@ describe('TicketCreateComponent', () => {
     component.form.controls.sectorId.setValue('sec-1');
     component.onSubmit();
 
-    const onSuccess = ticketsStoreFake.create.calls.mostRecent().args[1];
+    return createStoreFake.create.calls.mostRecent().args[1];
+  }
+
+  it('after opening the ticket, with tickets:view-own, shows the success notice and goes to Meus Chamados on the first page', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:create' || code === 'tickets:view-own');
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const onSuccess = await submitValidForm();
+
     onSuccess();
 
     expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado aberto com sucesso.');
+    expect(ticketsStoreFake.goToPage).toHaveBeenCalledOnceWith(1);
+    expect(navigate).toHaveBeenCalledOnceWith(['/tickets']);
+  });
+
+  it('after opening the ticket, without tickets:view-own, shows the success notice and goes to Início, without touching the list', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:create');
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const onSuccess = await submitValidForm();
+
+    onSuccess();
+
+    expect(toastServiceFake.show).toHaveBeenCalledWith('Chamado aberto com sucesso.');
+    expect(navigate).toHaveBeenCalledOnceWith(['/dashboard']);
+    expect(ticketsStoreFake.goToPage).not.toHaveBeenCalled();
   });
 
   it('leaves submit enabled with the empty form and, on submit, shows the errors without opening the ticket', async () => {
@@ -272,7 +312,7 @@ describe('TicketCreateComponent', () => {
     submitButton.click();
     await fixture.whenStable();
 
-    expect(ticketsStoreFake.create).not.toHaveBeenCalled();
+    expect(createStoreFake.create).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('O título é obrigatório.');
     expect(fixture.nativeElement.textContent).toContain('A descrição é obrigatória.');
     expect(fixture.nativeElement.textContent).toContain('Selecione o departamento.');
@@ -294,7 +334,7 @@ describe('TicketCreateComponent', () => {
   });
 
   it('disables and shows a spinner on the submit button while the ticket is being created', async () => {
-    ticketsStoreFake.creating.set(true);
+    createStoreFake.creating.set(true);
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
@@ -315,17 +355,8 @@ describe('TicketCreateComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Escolha um departamento primeiro.');
   });
 
-  it('does not show a failure to read the list of tickets as a submit error', async () => {
-    ticketsStoreFake.state.set({ loading: false, error: 'Erro ao carregar chamados' });
-    const fixture = TestBed.createComponent(TicketCreateComponent);
-    await fixture.whenStable();
-
-    expect(fixture.nativeElement.textContent).not.toContain('Erro ao carregar chamados');
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
-  });
-
   it('shows the submit error right above the submit button, as an alert', async () => {
-    ticketsStoreFake.mutationError.set('O setor escolhido não atende mais chamados.');
+    createStoreFake.mutationError.set('O setor escolhido não atende mais chamados.');
     const fixture = TestBed.createComponent(TicketCreateComponent);
     await fixture.whenStable();
 
@@ -334,5 +365,39 @@ describe('TicketCreateComponent', () => {
     expect(alert.textContent).toContain('O setor escolhido não atende mais chamados.');
     expect(alert.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(alert.nextElementSibling).toBe(submit.parentElement);
+  });
+});
+
+describe('TicketCreateComponent with the real stores and TicketDataService (A-47)', () => {
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [TicketCreateComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        // Logado só com tickets:create: a lista dele (GET /tickets/mine) seria recusada pela API.
+        { provide: SessionService, useValue: { userId: signal('u1'), hasPermission: (code: string) => code === 'tickets:create' } },
+        {
+          provide: DepartmentsStore,
+          useValue: { departments: signal<Department[]>([]), listState: signal({ loading: false, error: null }), load: jasmine.createSpy('load') }
+        },
+        { provide: ToastService, useValue: { show: jasmine.createSpy('show') } }
+      ]
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('opening /tickets/novo does not request the list of tickets (GET /tickets/mine)', async () => {
+    const fixture = TestBed.createComponent(TicketCreateComponent);
+    await fixture.whenStable();
+
+    http.expectNone(request => request.url === `${environment.apiUrl}/tickets/mine`);
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 });

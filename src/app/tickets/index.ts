@@ -22,6 +22,7 @@ export * from './infrastructure/ticket.data.service';
 export * from './infrastructure/ticket-attachment.data.service';
 export * from './infrastructure/ticket-message.data.service';
 export * from './application/tickets.store';
+export * from './application/ticket-create.store';
 export * from './application/ticket-summary.store';
 export * from './application/my-tickets-summary.store';
 export * from './application/ticket-dashboard.store';

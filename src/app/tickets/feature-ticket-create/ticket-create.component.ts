@@ -1,11 +1,12 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, computed, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy, computed, DestroyRef, Injector } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
+import { TicketCreateStore } from '../application/ticket-create.store';
 import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
-import { ToastService, trimmed } from '../../shared';
+import { SessionService, ToastService, trimmed } from '../../shared';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { TicketCreateGuideComponent } from './ticket-create-guide.component';
 
@@ -21,8 +22,11 @@ export class TicketCreateComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
+  private readonly sessionService = inject(SessionService);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly store = inject(TicketsStore);
+  /** Injector da tela: a lista de "Meus Chamados" só é obtida depois de criar, nunca ao abrir a tela. */
+  private readonly injector = inject(Injector);
+  protected readonly store = inject(TicketCreateStore);
   protected readonly departmentsStore = inject(DepartmentsStore);
 
   readonly priorities = [
@@ -57,8 +61,9 @@ export class TicketCreateComponent implements OnInit {
     return department?.sectors ?? [];
   });
 
-  /** Carrega os departamentos e liga o setor ao departamento escolhido, até a tela ser destruída. */
+  /** Descarta o erro de um envio anterior, carrega os departamentos e liga o setor ao departamento escolhido. */
   ngOnInit(): void {
+    this.store.clearMutationError();
     this.departmentsStore.load();
 
     this.form.controls.departmentId.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(departmentId => {
@@ -95,7 +100,22 @@ export class TicketCreateComponent implements OnInit {
       sectorId: raw.sectorId!
     }, () => {
       this.toastService.show('Chamado aberto com sucesso.');
-      this.router.navigate(['/tickets']);
+      this.goToNextScreen();
     });
+  }
+
+  /**
+   * Depois de criar: "Meus Chamados" na primeira página, onde o chamado novo aparece, para quem tem
+   * `tickets:view-own`; sem ela, o Início (a rota da lista exige a permissão).
+   */
+  private goToNextScreen(): void {
+    if (!this.sessionService.hasPermission('tickets:view-own')) {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+    // A lista é da raiz e guarda a página em que estava. Obtida só agora: criá-la ao abrir a tela
+    // dispararia o GET /tickets/mine, que a criação não usa.
+    this.injector.get(TicketsStore).goToPage(1);
+    this.router.navigate(['/tickets']);
   }
 }

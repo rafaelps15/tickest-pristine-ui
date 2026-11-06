@@ -46,7 +46,7 @@ describe('TicketsStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'getById', 'create', 'update', 'reopen']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'getById', 'update', 'reopen']);
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 1)));
     dataService.getById.and.returnValue(of(freshTicket));
 
@@ -99,59 +99,6 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(dataService.getMine).toHaveBeenCalledWith(1, 50, TicketStatusGroup.Active, '');
-  });
-
-  it('creates a ticket, goes back to the first page and reloads the listing', async () => {
-    dataService.create.and.returnValue(of('t2'));
-    const onSuccess = jasmine.createSpy('onSuccess');
-    await TestBed.inject(ApplicationRef).whenStable();
-    store.goToPage(1);
-
-    store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' }, onSuccess);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(dataService.create).toHaveBeenCalledWith({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
-    expect(onSuccess).toHaveBeenCalled();
-    expect(store.mutationError()).toBeNull();
-  });
-
-  it('sets creating during the creation, and releases it when done', async () => {
-    const subject = new Subject<string>();
-    dataService.create.and.returnValue(subject);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
-    expect(store.creating()).toBeTrue();
-
-    subject.next('t2');
-    subject.complete();
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.creating()).toBeFalse();
-  });
-
-  it('releases creating even when the creation fails', async () => {
-    const subject = new Subject<string>();
-    dataService.create.and.returnValue(subject);
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
-    expect(store.creating()).toBeTrue();
-
-    subject.error(new HttpErrorResponse({ status: 500 }));
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.creating()).toBeFalse();
-  });
-
-  it('exposes an error message when the creation fails', async () => {
-    dataService.create.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    store.create({ title: 'Impressora', description: 'Não liga', priority: TicketPriority.High, sectorId: 's1' });
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.mutationError()).toBe('Erro ao abrir o chamado');
   });
 
   it('updates the description with the status of the ticket re-read just before the PUT, and reloads the listing', async () => {
