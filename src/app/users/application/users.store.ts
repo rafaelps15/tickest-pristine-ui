@@ -95,6 +95,7 @@ export const UsersStore = signalStore(
         ...user,
         roles: [...user.roles].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
       }))),
+      /** Página atual, total, páginas e vizinhas da listagem (pagedResponseSignals). */
       ...pagination,
       /** Itens por página efetivamente aplicados pela API. */
       pageSize: currentPageSize,

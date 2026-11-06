@@ -34,11 +34,13 @@ export function withTicketCursorPages<T>(fetchPage: TicketPageFetch<T>, messages
 
   return signalStoreFeature(
     withState({
+      /** Chamado da listagem; `undefined` até a tela definir um. */
       ticketId: undefined as string | undefined,
       /** Itens das páginas carregadas depois da primeira, na ordem em que chegaram. */
       _olderItems: [] as T[],
       /** Última página carregada por "carregar mais" (nula enquanto só a primeira foi carregada). */
       _lastPage: null as CursorPage<T> | null,
+      /** Uma página do "carregar mais" está a caminho. */
       loadingMore: false,
       /** Falha do último "carregar mais", que é de leitura: não se mistura aos erros das ações. */
       loadMoreError: null as string | null
