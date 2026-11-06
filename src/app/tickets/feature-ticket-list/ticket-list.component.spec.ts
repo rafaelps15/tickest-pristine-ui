@@ -42,14 +42,16 @@ describe('TicketListComponent', () => {
     id: 't1', title: 'Impressora não funciona', description: 'A impressora do 3º andar não imprime.',
     priority: TicketPriority.High, status: TicketStatus.Open, openedByUserId: 'u1', assignedToUserId: null,
     assignedToName: null, sectorId: 's1', sectorName: 'Helpdesk', createdAtUtc: '2026-01-01T12:00:00Z',
-    dueAtUtc: '2026-01-02T12:00:00Z', slaStatus: TicketSlaStatus.OnTime, lastActivityAtUtc: '2026-01-01T12:00:00Z',
+    dueAtUtc: '2026-01-02T12:00:00Z', slaStatus: TicketSlaStatus.OnTime,
+    currentDueAtUtc: '2026-01-02T12:00:00Z', currentSlaStatus: TicketSlaStatus.OnTime, lastActivityAtUtc: '2026-01-01T12:00:00Z',
     canCancel: true, ownerCancelDeadlineUtc: minutesFromNow(8)
   };
   const resolvedTicket: Ticket = {
     id: 't2', title: 'Monitor com defeito', description: 'Tela piscando.',
     priority: TicketPriority.Low, status: TicketStatus.Resolved, openedByUserId: 'u1', assignedToUserId: 'u2',
     assignedToName: 'Ana Souza', sectorId: 's2', sectorName: 'Infraestrutura', createdAtUtc: '2026-01-02T12:00:00Z',
-    dueAtUtc: '2026-01-03T12:00:00Z', slaStatus: TicketSlaStatus.Met, lastActivityAtUtc: '2026-01-02T15:00:00Z',
+    dueAtUtc: '2026-01-03T12:00:00Z', slaStatus: TicketSlaStatus.Met,
+    currentDueAtUtc: '2026-01-03T12:00:00Z', currentSlaStatus: TicketSlaStatus.Met, lastActivityAtUtc: '2026-01-02T15:00:00Z',
     canCancel: false, ownerCancelDeadlineUtc: '2026-01-02T12:15:00Z'
   };
 
@@ -156,17 +158,6 @@ describe('TicketListComponent', () => {
     expect(due.querySelector('.due-danger, .due')?.classList).toContain('due-danger');
     expect(due.querySelector('.due-date')?.textContent).toContain('05/01/2026');
     expect(due.querySelector('.due-date')?.textContent).toContain('venceu em');
-  });
-
-  it('in a reopened ticket without the new due date in the list, does not show the "Resolvido" of the closed cycle', async () => {
-    storeFake.tickets.set([{ ...resolvedTicket, status: TicketStatus.Open, slaStatus: TicketSlaStatus.Missed }]);
-    const fixture = TestBed.createComponent(TicketListComponent);
-    await fixture.whenStable();
-
-    const due = fixture.nativeElement.querySelector('td[data-label="Prazo"]') as HTMLElement;
-    expect(due.textContent).toContain('Reaberto: prazo novo no chamado');
-    expect(due.textContent).not.toContain('Resolvido');
-    expect(due.querySelector('.due-date')).toBeNull();
   });
 
   it('says "Sem responsável" (and not "Aguardando atendimento") on a closed ticket that nobody took', async () => {
@@ -726,9 +717,9 @@ describe('TicketListComponent', () => {
 
   it('shows the due date "Perto de vencer" and "Atrasado" with an attention tone, and "Sem prazo" without a date', async () => {
     storeFake.tickets.set([
-      { ...openTicket, id: 'a', slaStatus: TicketSlaStatus.AtRisk },
-      { ...openTicket, id: 'b', slaStatus: TicketSlaStatus.Breached },
-      { ...resolvedTicket, id: 'c', slaStatus: TicketSlaStatus.NotApplicable }
+      { ...openTicket, id: 'a', slaStatus: TicketSlaStatus.AtRisk, currentSlaStatus: TicketSlaStatus.AtRisk },
+      { ...openTicket, id: 'b', slaStatus: TicketSlaStatus.Breached, currentSlaStatus: TicketSlaStatus.Breached },
+      { ...resolvedTicket, id: 'c', slaStatus: TicketSlaStatus.NotApplicable, currentSlaStatus: TicketSlaStatus.NotApplicable }
     ]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -744,9 +735,9 @@ describe('TicketListComponent', () => {
 
   it('on an overdue ticket, offers "Cobrar no chamado" leading to the ticket itself, and only on the overdue one', async () => {
     storeFake.tickets.set([
-      { ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached },
-      { ...openTicket, id: 'em-risco', slaStatus: TicketSlaStatus.AtRisk },
-      { ...resolvedTicket, id: 'resolvido', slaStatus: TicketSlaStatus.Missed }
+      { ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached, currentSlaStatus: TicketSlaStatus.Breached },
+      { ...openTicket, id: 'em-risco', slaStatus: TicketSlaStatus.AtRisk, currentSlaStatus: TicketSlaStatus.AtRisk },
+      { ...resolvedTicket, id: 'resolvido', slaStatus: TicketSlaStatus.Missed, currentSlaStatus: TicketSlaStatus.Missed }
     ]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -759,7 +750,7 @@ describe('TicketListComponent', () => {
   });
 
   it('clicking "Cobrar no chamado" navigates to the ticket detail', async () => {
-    storeFake.tickets.set([{ ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached }]);
+    storeFake.tickets.set([{ ...openTicket, id: 'atrasado', slaStatus: TicketSlaStatus.Breached, currentSlaStatus: TicketSlaStatus.Breached }]);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
     const router = TestBed.inject(Router);

@@ -17,6 +17,7 @@ describe('TicketsStore', () => {
     priority: TicketPriority.Medium, status: TicketStatus.Open,
     openedByUserId: 'u1', assignedToUserId: null, assignedToName: null, sectorId: 's1', sectorName: 'Helpdesk',
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaStatus: TicketSlaStatus.OnTime,
+    currentDueAtUtc: '2026-01-02T12:00:00Z', currentSlaStatus: TicketSlaStatus.OnTime,
     lastActivityAtUtc: '2026-01-01T12:00:00Z', canCancel: true, ownerCancelDeadlineUtc: '2026-01-01T12:15:00Z'
   };
 

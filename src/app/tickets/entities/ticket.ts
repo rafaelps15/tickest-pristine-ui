@@ -23,10 +23,10 @@ export interface Ticket {
   dueAtUtc: string;
   /** Situação do chamado em relação ao prazo do primeiro ciclo, pela mesma regra do Monitor. */
   slaStatus: TicketSlaStatus;
-  /** Prazo do ciclo de resolução vigente (UTC): o novo, depois de reabrir (spec 024; ausente enquanto o back-end não manda). */
-  currentDueAtUtc?: string;
-  /** Situação do ciclo de resolução vigente (spec 024; ausente enquanto o back-end não manda). */
-  currentSlaStatus?: TicketSlaStatus;
+  /** Prazo do ciclo de resolução vigente (UTC): o novo, depois de reabrir (spec 024; o back-end sempre manda). */
+  currentDueAtUtc: string;
+  /** Situação do ciclo de resolução vigente (spec 024; o back-end sempre manda). */
+  currentSlaStatus: TicketSlaStatus;
   /** Data da ação mais recente registrada no histórico do chamado (UTC). */
   lastActivityAtUtc: string;
   /** Se quem está logado pode cancelar agora (dono na janela de 15 min, ou `tickets:cancel`). */
