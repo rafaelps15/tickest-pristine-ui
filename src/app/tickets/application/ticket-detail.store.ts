@@ -8,6 +8,7 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSla } from '../entities/ticket-sla';
 import { TicketAssignee } from '../entities/ticket-assignee';
 import { assigneeSearchErrorMessage, searchEligibleAssignees } from './ticket-assignee-search';
+import { updateWithFreshState } from './ticket-fresh-update';
 import { extractErrorMessage, valueOf } from '../../shared';
 
 /**
@@ -166,15 +167,15 @@ export const TicketDetailStore = signalStore(
     /**
      * Muda o status do ticket e recarrega o detalhe em caso de sucesso. Fechar vai pela rota própria
      * (POST /tickets/{id}/close), porque o PUT recusa o status Fechado; as demais transições vão pelo
-     * PUT /tickets/{id}, que exige descrição + status juntos — por isso recebe a descrição atual, sem
-     * oferecer edição aqui. Exige a permissão `tickets:manage`.
+     * PUT /tickets/{id}, que exige descrição + status juntos — a descrição vem do chamado relido logo
+     * antes ({@link updateWithFreshState}), e não da tela. Exige a permissão `tickets:manage`.
      */
-    updateStatus(ticketId: string, status: TicketStatus, currentDescription: string, onSuccess?: () => void): void {
+    updateStatus(ticketId: string, status: TicketStatus, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, updatingStatus: true, _slaOverride: null });
 
       const request = status === TicketStatus.Closed
         ? store._ticketDataService.close(ticketId)
-        : store._ticketDataService.update(ticketId, { description: currentDescription, status });
+        : updateWithFreshState(store._ticketDataService, ticketId, { status });
 
       request.pipe(
         finalize(() => patchState(store, { updatingStatus: false }))
@@ -196,14 +197,15 @@ export const TicketDetailStore = signalStore(
     },
 
     /**
-     * Atualiza a descrição do ticket mantendo o status atual (PUT /tickets/{id}, que exige os
-     * dois campos juntos) e recarrega o detalhe em caso de sucesso. Exige ser quem abriu o chamado
-     * (permissão `tickets:update-own`) ou ter `tickets:manage`.
+     * Atualiza a descrição do ticket mantendo o status (PUT /tickets/{id}, que exige os dois campos
+     * juntos — o status vem do chamado relido logo antes, {@link updateWithFreshState}) e recarrega o
+     * detalhe em caso de sucesso. Exige ser quem abriu o chamado (permissão `tickets:update-own`) ou ter
+     * `tickets:manage`.
      */
-    updateDescription(ticketId: string, description: string, currentStatus: TicketStatus, onSuccess?: () => void): void {
+    updateDescription(ticketId: string, description: string, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, updatingDescription: true });
 
-      store._ticketDataService.update(ticketId, { description, status: currentStatus }).pipe(
+      updateWithFreshState(store._ticketDataService, ticketId, { description }).pipe(
         finalize(() => patchState(store, { updatingDescription: false }))
       ).subscribe({
         next: () => {

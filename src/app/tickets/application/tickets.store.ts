@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { CreateTicketData, Ticket, UpdateTicketData } from '../entities/ticket';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
+import { updateWithFreshState } from './ticket-fresh-update';
 import { SessionService, extractErrorMessage } from '../../shared';
 
 /** Tamanho padrão da página de "Meus Tickets", o mesmo padrão do back-end. */
@@ -178,14 +179,15 @@ export const TicketsStore = signalStore(
     },
 
     /**
-     * Atualiza a descrição e/ou o status de um ticket ativo (editar o texto, ou cancelar) e
-     * recarrega a listagem em caso de sucesso. Marca o id como pendente durante a chamada, pra
-     * travar os botões da linha e evitar duplo-envio.
+     * Atualiza a descrição ou o status de um ticket ativo (editar o texto, ou cancelar) e recarrega a
+     * listagem em caso de sucesso. Recebe só o que muda: o resto do corpo do PUT vem do chamado relido
+     * logo antes ({@link updateWithFreshState}), e não do lido na tela. Marca o id como pendente
+     * durante a chamada, pra travar os botões da linha e evitar duplo-envio.
      */
-    update(ticketId: string, data: UpdateTicketData, onSuccess?: () => void): void {
+    update(ticketId: string, changes: Partial<UpdateTicketData>, onSuccess?: () => void): void {
       patchState(store, { mutationError: null, pendingTicketIds: [...store.pendingTicketIds(), ticketId] });
 
-      store._ticketDataService.update(ticketId, data).pipe(
+      updateWithFreshState(store._ticketDataService, ticketId, changes).pipe(
         finalize(() => patchState(store, {
           pendingTicketIds: store.pendingTicketIds().filter(id => id !== ticketId)
         }))

@@ -397,14 +397,14 @@ describe('TicketListComponent', () => {
     expect(fixture.componentInstance.editingTicket()).toBeNull();
   });
 
-  it('saves the description edited in the modal keeping the current status, and closes the edit on success', async () => {
+  it('saves the description edited in the modal, leaving the rest to the ticket re-read by the store, and closes the edit on success', async () => {
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     fixture.componentInstance.onStartEdit(openTicket);
     fixture.componentInstance.onEditSave('Descrição corrigida com mais detalhes.');
 
-    expect(storeFake.update).toHaveBeenCalledWith('t1', { description: 'Descrição corrigida com mais detalhes.', status: TicketStatus.Open }, jasmine.any(Function));
+    expect(storeFake.update).toHaveBeenCalledWith('t1', { description: 'Descrição corrigida com mais detalhes.' }, jasmine.any(Function));
 
     storeFake.update.calls.mostRecent().args[2]();
     expect(fixture.componentInstance.editingTicket()).toBeNull();
@@ -421,7 +421,7 @@ describe('TicketListComponent', () => {
     expect(fixture.nativeElement.querySelector('app-ticket-edit-dialog')).not.toBeNull();
   });
 
-  it('cancels the ticket when confirmed, preserving the current description, and says where it went', async () => {
+  it('cancels the ticket when confirmed, sending only the new status (the store re-reads the description), and says where it went', async () => {
     confirmDialogServiceFake.confirm.and.returnValue(of(true));
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -430,7 +430,7 @@ describe('TicketListComponent', () => {
 
     // "Voltar" em vez de "Cancelar" ao lado de "Cancelar chamado", pra não ficar ambíguo.
     expect(confirmDialogServiceFake.confirm).toHaveBeenCalledWith(jasmine.objectContaining({ confirmLabel: 'Cancelar chamado', cancelLabel: 'Voltar' }));
-    expect(storeFake.update).toHaveBeenCalledWith('t1', { description: openTicket.description, status: TicketStatus.Canceled }, jasmine.any(Function));
+    expect(storeFake.update).toHaveBeenCalledWith('t1', { status: TicketStatus.Canceled }, jasmine.any(Function));
 
     // Na aba "Em aberto" o chamado cancelado some da lista: o toast diz onde ele está agora.
     storeFake.update.calls.mostRecent().args[2]();

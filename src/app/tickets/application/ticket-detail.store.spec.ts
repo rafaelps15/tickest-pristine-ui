@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { TicketDetailStore } from './ticket-detail.store';
@@ -10,6 +11,7 @@ import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketSla, TicketSlaMetric, TicketSlaObjectiveState } from '../entities/ticket-sla';
 import { TicketAssignee } from '../entities/ticket-assignee';
+import { environment } from '../../../environments/environment';
 
 /** Prazo do dono ainda aberto (o relógio dos testes nunca chega lá). */
 const FAR_FUTURE = '2999-01-01T00:00:00Z';
@@ -240,11 +242,12 @@ describe('TicketDetailStore', () => {
     it('changes the status, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
-      store.updateStatus('t1', TicketStatus.InProgress, 'Não imprime.', onSuccess);
+      store.updateStatus('t1', TicketStatus.InProgress, onSuccess);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Não imprime.', status: TicketStatus.InProgress });
-      expect(dataService.getById).toHaveBeenCalledTimes(2);
+      // A carga, a releitura logo antes do PUT e a recarga depois dele.
+      expect(dataService.getById).toHaveBeenCalledTimes(3);
       expect(onSuccess).toHaveBeenCalled();
       expect(store.mutationError()).toBeNull();
     });
@@ -252,7 +255,7 @@ describe('TicketDetailStore', () => {
     it('closes through POST close, without the PUT, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
-      store.updateStatus('t1', TicketStatus.Closed, 'Não imprime.', onSuccess);
+      store.updateStatus('t1', TicketStatus.Closed, onSuccess);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(dataService.close).toHaveBeenCalledOnceWith('t1');
@@ -263,7 +266,7 @@ describe('TicketDetailStore', () => {
 
     for (const status of [TicketStatus.InProgress, TicketStatus.Resolved, TicketStatus.Canceled]) {
       it(`keeps the status ${status} on the PUT, without the close route`, async () => {
-        store.updateStatus('t1', status, 'Não imprime.');
+        store.updateStatus('t1', status);
         await TestBed.inject(ApplicationRef).whenStable();
 
         expect(dataService.update).toHaveBeenCalledOnceWith('t1', { description: 'Não imprime.', status });
@@ -274,7 +277,7 @@ describe('TicketDetailStore', () => {
     it('exposes the permission message when closing is refused (403)', async () => {
       dataService.close.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
-      store.updateStatus('t1', TicketStatus.Closed, 'Não imprime.');
+      store.updateStatus('t1', TicketStatus.Closed);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.mutationError()).toBe('Você não tem permissão para mudar o status deste chamado.');
@@ -284,16 +287,36 @@ describe('TicketDetailStore', () => {
     it('exposes a specific message when permission is missing (403)', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
-      store.updateStatus('t1', TicketStatus.Resolved, 'Não imprime.');
+      store.updateStatus('t1', TicketStatus.Resolved);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.mutationError()).toBe('Você não tem permissão para mudar o status deste chamado.');
     });
 
+    it('cancels with the description re-read just before the PUT, not the one loaded on the screen (DIV-3)', async () => {
+      dataService.getById.and.returnValue(of({ ...ticket, description: 'Descrição mudada por outra pessoa depois da carga.' }));
+
+      store.updateStatus('t1', TicketStatus.Canceled);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.update).toHaveBeenCalledOnceWith('t1', { description: 'Descrição mudada por outra pessoa depois da carga.', status: TicketStatus.Canceled });
+    });
+
+    it('does not send the PUT when the re-read fails, and shows the error', async () => {
+      dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+
+      store.updateStatus('t1', TicketStatus.Canceled);
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.update).not.toHaveBeenCalled();
+      expect(store.mutationError()).toBe('Chamado não encontrado — ele pode ter sido removido.');
+      expect(store.updatingStatus()).toBeFalse();
+    });
+
     it('sets updatingStatus back to false after the error', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-      store.updateStatus('t1', TicketStatus.Resolved, 'Não imprime.');
+      store.updateStatus('t1', TicketStatus.Resolved);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.updatingStatus()).toBeFalse();
@@ -309,11 +332,12 @@ describe('TicketDetailStore', () => {
     it('updates the description keeping the status, reloads the detail and calls onSuccess', async () => {
       const onSuccess = jasmine.createSpy('onSuccess');
 
-      store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open, onSuccess);
+      store.updateDescription('t1', 'Descrição corrigida.', onSuccess);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Descrição corrigida.', status: TicketStatus.Open });
-      expect(dataService.getById).toHaveBeenCalledTimes(2);
+      // A carga, a releitura logo antes do PUT e a recarga depois dele.
+      expect(dataService.getById).toHaveBeenCalledTimes(3);
       expect(onSuccess).toHaveBeenCalled();
       expect(store.mutationError()).toBeNull();
     });
@@ -321,16 +345,36 @@ describe('TicketDetailStore', () => {
     it('exposes a specific message when permission is missing (403)', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
 
-      store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open);
+      store.updateDescription('t1', 'Descrição corrigida.');
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.mutationError()).toBe('Você não tem permissão para editar este chamado.');
     });
 
+    it('keeps the status re-read just before the PUT, not the one loaded on the screen (DIV-3)', async () => {
+      dataService.getById.and.returnValue(of({ ...ticket, status: TicketStatus.InProgress }));
+
+      store.updateDescription('t1', 'Descrição corrigida.');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.update).toHaveBeenCalledOnceWith('t1', { description: 'Descrição corrigida.', status: TicketStatus.InProgress });
+    });
+
+    it('does not send the PUT when the re-read fails, and shows the error', async () => {
+      dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+      store.updateDescription('t1', 'Descrição corrigida.');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(dataService.update).not.toHaveBeenCalled();
+      expect(store.mutationError()).toBe('Você não tem permissão para editar este chamado.');
+      expect(store.updatingDescription()).toBeFalse();
+    });
+
     it('sets updatingDescription back to false after the error', async () => {
       dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
 
-      store.updateDescription('t1', 'Descrição corrigida.', TicketStatus.Open);
+      store.updateDescription('t1', 'Descrição corrigida.');
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.updatingDescription()).toBeFalse();
@@ -413,7 +457,7 @@ describe('TicketDetailStore', () => {
       await TestBed.inject(ApplicationRef).whenStable();
       expect(store.sla()).toEqual(refreshedSla);
 
-      store.updateStatus('t1', TicketStatus.InProgress, 'Não imprime.');
+      store.updateStatus('t1', TicketStatus.InProgress);
       await TestBed.inject(ApplicationRef).whenStable();
 
       expect(store.sla()).toEqual(sla);
@@ -481,5 +525,42 @@ describe('TicketDetailStore', () => {
     store.clearMutationError();
 
     expect(store.mutationError()).toBeNull();
+  });
+});
+
+describe('TicketDetailStore with the real TicketDataService (DIV-3)', () => {
+  const url = `${environment.apiUrl}/tickets/t1`;
+  let store: InstanceType<typeof TicketDetailStore>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(), TicketDetailStore]
+    });
+    store = TestBed.inject(TicketDetailStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('cancelling in the detail re-reads the ticket just before the PUT and sends the re-read description', () => {
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.updateStatus('t1', TicketStatus.Canceled, onSuccess);
+
+    http.expectNone({ method: 'PUT', url });
+    http.expectOne({ method: 'GET', url }).flush({ id: 't1', description: 'Descrição mudada por outra pessoa depois da carga.', status: TicketStatus.Open });
+    const put = http.expectOne({ method: 'PUT', url });
+    expect(put.request.body).toEqual({ description: 'Descrição mudada por outra pessoa depois da carga.', status: TicketStatus.Canceled });
+    put.flush(null);
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('when the re-read fails, sends no PUT and shows the error', () => {
+    store.updateStatus('t1', TicketStatus.Canceled);
+
+    http.expectOne({ method: 'GET', url }).flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectNone({ method: 'PUT', url });
+    expect(store.mutationError()).toBe('Erro ao mudar o status do chamado.');
   });
 });

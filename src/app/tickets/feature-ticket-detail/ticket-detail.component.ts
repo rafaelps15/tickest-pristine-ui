@@ -390,12 +390,11 @@ export class TicketDetailComponent implements OnInit {
     this.editingTicket.set(null);
   }
 
-  /** Salva a descrição editada no modal, mantendo o status atual do ticket. */
+  /** Salva a descrição editada no modal; o status vai como está no chamado relido pelo Store. */
   onEditSave(description: string): void {
-    const t = this.editingTicket();
-    if (!t) return;
+    if (!this.editingTicket()) return;
 
-    this.detailStore.updateDescription(this.ticketId, description, t.status, () => {
+    this.detailStore.updateDescription(this.ticketId, description, () => {
       this.toastService.show('Descrição atualizada.');
       this.editingTicket.set(null);
       this.historyStore.reload();
@@ -473,7 +472,7 @@ export class TicketDetailComponent implements OnInit {
    * transições são progressões de rotina do fluxo de atendimento e não pedem confirmação —
    * mesmo critério já usado em Atribuir (sem confirmação) vs. Excluir (com confirmação).
    */
-  protected onChangeStatus(newStatus: TicketStatus, currentDescription: string): void {
+  protected onChangeStatus(newStatus: TicketStatus): void {
     if (newStatus === TicketStatus.Canceled) {
       this.confirmDialogService.confirm({
         title: 'Cancelar este chamado?',
@@ -483,12 +482,12 @@ export class TicketDetailComponent implements OnInit {
         cancelLabel: 'Voltar',
         variant: 'danger'
       }).subscribe(confirmed => {
-        if (confirmed) this.submitStatusChange(newStatus, currentDescription);
+        if (confirmed) this.submitStatusChange(newStatus);
       });
       return;
     }
 
-    this.submitStatusChange(newStatus, currentDescription);
+    this.submitStatusChange(newStatus);
   }
 
   /**
@@ -497,10 +496,10 @@ export class TicketDetailComponent implements OnInit {
    */
   protected readonly pendingStatus = signal<TicketStatus | null>(null);
 
-  /** Envia a troca de status e, em caso de sucesso, avisa por toast e recarrega o histórico. */
-  private submitStatusChange(newStatus: TicketStatus, currentDescription: string): void {
+  /** Envia a troca de status (o Store relê o chamado antes do PUT) e, em caso de sucesso, avisa por toast e recarrega o histórico. */
+  private submitStatusChange(newStatus: TicketStatus): void {
     this.pendingStatus.set(newStatus);
-    this.detailStore.updateStatus(this.ticketId, newStatus, currentDescription, () => {
+    this.detailStore.updateStatus(this.ticketId, newStatus, () => {
       this.toastService.show(this.statusChangeToastMessage(newStatus));
       this.historyStore.reload();
     });

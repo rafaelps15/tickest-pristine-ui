@@ -332,18 +332,18 @@ export class TicketListComponent implements OnInit {
     if (ticket) this.focusRowActions(ticket.id);
   }
 
-  /** Salva a descrição editada no modal, mantendo o status atual do ticket. */
+  /** Salva a descrição editada no modal; o status vai como está no chamado relido pelo Store. */
   onEditSave(description: string): void {
     const ticket = this.editingTicket();
     if (!ticket) return;
 
-    this.store.update(ticket.id, { description, status: ticket.status }, () => {
+    this.store.update(ticket.id, { description }, () => {
       this.toastService.show('Descrição atualizada.');
       this.onEditClosed();
     });
   }
 
-  /** Confirma e cancela o ticket selecionado, preservando a descrição atual. */
+  /** Confirma e cancela o ticket selecionado; a descrição vai como está no chamado relido pelo Store. */
   onCancelTicket(ticket: Ticket): void {
     this.confirmDialogService.confirm({
       title: `Cancelar o chamado "${ticket.title}"?`,
@@ -357,7 +357,7 @@ export class TicketListComponent implements OnInit {
       if (!confirmed) return;
 
       const leavesGroup = this.store.statusGroup() === TicketStatusGroup.Active;
-      this.store.update(ticket.id, { description: ticket.description, status: TicketStatus.Canceled }, () => {
+      this.store.update(ticket.id, { status: TicketStatus.Canceled }, () => {
         this.toastService.show(leavesGroup ? 'Chamado cancelado — agora está em Encerrados.' : 'Chamado cancelado.');
         this.afterRowMutation(ticket.id);
       });

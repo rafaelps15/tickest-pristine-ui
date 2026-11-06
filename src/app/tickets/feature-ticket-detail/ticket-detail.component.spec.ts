@@ -810,7 +810,7 @@ describe('TicketDetailComponent', () => {
       findButton(fixture, 'Iniciar atendimento')!.click();
 
       expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
-      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.InProgress, ticket.description, jasmine.any(Function));
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.InProgress, jasmine.any(Function));
     });
 
     it('changes the status without confirmation for "Marcar como resolvido"', async () => {
@@ -821,7 +821,7 @@ describe('TicketDetailComponent', () => {
       findButton(fixture, 'Marcar como resolvido')!.click();
 
       expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
-      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Resolved, ticket.description, jasmine.any(Function));
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Resolved, jasmine.any(Function));
     });
 
     it('asks the store to close a Resolvido ticket with "Fechar chamado", without confirmation', async () => {
@@ -832,7 +832,7 @@ describe('TicketDetailComponent', () => {
       findButton(fixture, 'Fechar chamado')!.click();
 
       expect(confirmDialogServiceFake.confirm).not.toHaveBeenCalled();
-      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Closed, ticket.description, jasmine.any(Function));
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Closed, jasmine.any(Function));
     });
 
     it('asks for confirmation before cancelling, and cancels when confirmed', async () => {
@@ -844,7 +844,7 @@ describe('TicketDetailComponent', () => {
       findButton(fixture, 'Cancelar chamado')!.click();
 
       expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
-      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, ticket.description, jasmine.any(Function));
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, jasmine.any(Function));
     });
 
     it('does not cancel when the confirmation is denied', async () => {
@@ -860,7 +860,7 @@ describe('TicketDetailComponent', () => {
 
     it('shows a toast and reloads the history when the status change succeeds', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.InProgress });
-      detailStoreFake.updateStatus.and.callFake((_id: string, _status: TicketStatus, _desc: string, onSuccess?: () => void) => onSuccess?.());
+      detailStoreFake.updateStatus.and.callFake((_id: string, _status: TicketStatus, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -1028,7 +1028,7 @@ describe('TicketDetailComponent', () => {
       sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:update-own');
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       detailStoreFake.updateDescription.and.callFake(
-        (_id: string, _desc: string, _status: TicketStatus, onSuccess?: () => void) => onSuccess?.());
+        (_id: string, _desc: string, onSuccess?: () => void) => onSuccess?.());
       const fixture = TestBed.createComponent(TicketDetailComponent);
       await fixture.whenStable();
 
@@ -1038,7 +1038,7 @@ describe('TicketDetailComponent', () => {
 
       fixture.componentInstance.onEditSave('Descrição corrigida com mais detalhes.');
 
-      expect(detailStoreFake.updateDescription).toHaveBeenCalledWith('t1', 'Descrição corrigida com mais detalhes.', TicketStatus.Open, jasmine.any(Function));
+      expect(detailStoreFake.updateDescription).toHaveBeenCalledWith('t1', 'Descrição corrigida com mais detalhes.', jasmine.any(Function));
       expect(toastServiceFake.show).toHaveBeenCalledWith('Descrição atualizada.');
       expect(historyStoreFake.reload).toHaveBeenCalled();
       expect(fixture.componentInstance.editingTicket()).toBeNull();
@@ -1059,7 +1059,7 @@ describe('TicketDetailComponent', () => {
 
       cancelButton!.click();
       expect(confirmDialogServiceFake.confirm).toHaveBeenCalled();
-      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, ticket.description, jasmine.any(Function));
+      expect(detailStoreFake.updateStatus).toHaveBeenCalledWith('t1', TicketStatus.Canceled, jasmine.any(Function));
     });
 
     it('does not duplicate the "Cancelar chamado" button for those who already manage tickets (it already comes from the status transitions)', async () => {

@@ -1,15 +1,27 @@
 import { TestBed } from '@angular/core/testing';
 import { ApplicationRef, provideZonelessChangeDetection, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError, Subject } from 'rxjs';
 import { TicketsStore } from './tickets.store';
 import { TicketDataService } from '../infrastructure/ticket.data.service';
-import { Ticket } from '../entities/ticket';
+import { Ticket, TicketDetail } from '../entities/ticket';
 import { TicketPriority } from '../entities/ticket-priority';
 import { TicketStatus } from '../entities/ticket-status';
 import { TicketSlaStatus } from '../entities/ticket-sla-status';
 import { TicketStatusGroup } from '../entities/ticket-status-group';
 import { PagedResponse, SessionService } from '../../shared';
+import { environment } from '../../../environments/environment';
+
+/** O chamado t1 relido pelo GET /tickets/{id}: alguém mudou a descrição depois que a lista carregou. */
+const freshTicket: TicketDetail = {
+  id: 't1', title: 'Impressora não funciona', description: 'Descrição mudada por outra pessoa depois da carga.',
+  priority: TicketPriority.Medium, status: TicketStatus.Open,
+  openedByUserId: 'u1', openedByName: 'Maria Souza', assignedToUserId: null, assignedToName: null, sectorId: 's1', sectorName: 'Helpdesk',
+  createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z', resolvedAtUtc: null,
+  slaStatus: TicketSlaStatus.OnTime, canCancel: true, ownerCancelDeadlineUtc: '2026-01-01T12:15:00Z',
+  sla: { serverNowUtc: '2026-01-01T12:05:00Z', plan: { policyId: 'p1', policyName: 'Padrão', policyVersion: 1, calendarId: 'c1', calendarName: 'Expediente', isLegacy: false }, objectives: [] }
+};
 
 describe('TicketsStore', () => {
   const ticket: Ticket = {
@@ -34,8 +46,9 @@ describe('TicketsStore', () => {
   let dataService: jasmine.SpyObj<TicketDataService>;
 
   beforeEach(() => {
-    dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'create', 'update', 'reopen']);
+    dataService = jasmine.createSpyObj('TicketDataService', ['getMine', 'getById', 'create', 'update', 'reopen']);
     dataService.getMine.and.returnValue(of(pageOf([ticket], 1, 1)));
+    dataService.getById.and.returnValue(of(freshTicket));
 
     TestBed.configureTestingModule({
       providers: [
@@ -141,14 +154,15 @@ describe('TicketsStore', () => {
     expect(store.state().error).toBe('Erro ao abrir o chamado');
   });
 
-  it('updates a ticket and reloads the listing', async () => {
+  it('updates the description with the status of the ticket re-read just before the PUT, and reloads the listing', async () => {
     dataService.update.and.returnValue(of(undefined));
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.update('t1', { description: 'Atualizado', status: TicketStatus.InProgress });
+    store.update('t1', { description: 'Atualizado' });
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Atualizado', status: TicketStatus.InProgress });
+    expect(dataService.getById).toHaveBeenCalledOnceWith('t1');
+    expect(dataService.update).toHaveBeenCalledWith('t1', { description: 'Atualizado', status: TicketStatus.Open });
     expect(dataService.getMine).toHaveBeenCalledTimes(2);
     expect(store.state().error).toBeNull();
   });
@@ -157,10 +171,33 @@ describe('TicketsStore', () => {
     dataService.update.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.update('t1', { description: 'Atualizado', status: TicketStatus.InProgress });
+    store.update('t1', { description: 'Atualizado' });
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.state().error).toBe('Erro ao atualizar o chamado');
+  });
+
+  it('cancels with the description re-read just before the PUT, not the one loaded on the screen (DIV-3)', async () => {
+    dataService.update.and.returnValue(of(undefined));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.update('t1', { status: TicketStatus.Canceled });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.getById).toHaveBeenCalledBefore(dataService.update);
+    expect(dataService.update).toHaveBeenCalledOnceWith('t1', { description: freshTicket.description, status: TicketStatus.Canceled });
+  });
+
+  it('does not send the PUT when the re-read fails, shows the error and releases the row', async () => {
+    dataService.getById.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.update('t1', { status: TicketStatus.Canceled });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(dataService.update).not.toHaveBeenCalled();
+    expect(store.state().error).toBe('Chamado não encontrado — ele pode ter sido removido.');
+    expect(store.pendingTicketIds()).toEqual([]);
   });
 
   it('calls onSuccess when a ticket is updated successfully', async () => {
@@ -168,7 +205,7 @@ describe('TicketsStore', () => {
     const onSuccess = jasmine.createSpy('onSuccess');
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.update('t1', { description: 'Atualizado', status: TicketStatus.Canceled }, onSuccess);
+    store.update('t1', { status: TicketStatus.Canceled }, onSuccess);
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(onSuccess).toHaveBeenCalled();
@@ -179,7 +216,7 @@ describe('TicketsStore', () => {
     dataService.update.and.returnValue(subject);
     await TestBed.inject(ApplicationRef).whenStable();
 
-    store.update('t1', { description: 'Atualizado', status: TicketStatus.Canceled });
+    store.update('t1', { status: TicketStatus.Canceled });
     expect(store.pendingTicketIds()).toEqual(['t1']);
 
     subject.next();
@@ -336,5 +373,49 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.mutationError()).toBe('Você não tem permissão para reabrir este chamado.');
+  });
+});
+
+describe('TicketsStore with the real TicketDataService (DIV-3)', () => {
+  const url = `${environment.apiUrl}/tickets/t1`;
+  let store: InstanceType<typeof TicketsStore>;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        TicketsStore,
+        // Sem usuário na sessão, a lista não carrega: só as requisições do cancelar passam pelo HttpTestingController.
+        { provide: SessionService, useValue: { userId: signal<string | null>(null) } }
+      ]
+    });
+    store = TestBed.inject(TicketsStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('cancelling in Meus Chamados re-reads the ticket just before the PUT and sends the re-read description', () => {
+    const onSuccess = jasmine.createSpy('onSuccess');
+
+    store.update('t1', { status: TicketStatus.Canceled }, onSuccess);
+
+    http.expectNone({ method: 'PUT', url });
+    http.expectOne({ method: 'GET', url }).flush(freshTicket);
+    const put = http.expectOne({ method: 'PUT', url });
+    expect(put.request.body).toEqual({ description: freshTicket.description, status: TicketStatus.Canceled });
+    put.flush(null);
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('when the re-read fails, sends no PUT and shows the error', () => {
+    store.update('t1', { status: TicketStatus.Canceled });
+
+    http.expectOne({ method: 'GET', url }).flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectNone({ method: 'PUT', url });
+    expect(store.state().error).toBe('Erro ao atualizar o chamado');
   });
 });
