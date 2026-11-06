@@ -77,6 +77,35 @@ describe('TicketAttachmentsStore', () => {
     expect(dataService.getAll).not.toHaveBeenCalled();
   });
 
+  describe('opening another ticket (the store is root)', () => {
+    beforeEach(async () => {
+      store.loadForTicket('t1');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+
+    it('does not carry the upload error of the previous ticket over to the next one', async () => {
+      dataService.upload.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+      store.upload(new File(['x'], 'arquivo.pdf', { type: 'application/pdf' }));
+      expect(store.uploadError()).toBe('Você não tem permissão para anexar arquivos a este chamado.');
+
+      store.loadForTicket('t2');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.uploadError()).toBeNull();
+    });
+
+    it('does not carry the download error of the previous ticket over to the next one', async () => {
+      dataService.download.and.returnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+      store.download('a1', jasmine.createSpy('onDownloaded'));
+      expect(store.downloadError()).toBe('Anexo não encontrado ou sem acesso.');
+
+      store.loadForTicket('t2');
+      await TestBed.inject(ApplicationRef).whenStable();
+
+      expect(store.downloadError()).toBeNull();
+    });
+  });
+
   it('loads the next page by cursor and appends the attachments to those already shown', async () => {
     const older: TicketAttachment = { ...attachment, id: 'a0', fileName: 'antigo.pdf', uploadedAtUtc: '2025-12-01T12:00:00Z' };
     dataService.getAll.and.returnValues(of(pageOf([attachment], true)), of(pageOf([older])));
