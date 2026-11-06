@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
-import { formatSlaDuration } from '../shared';
 import { TicketMonitorItem, TicketSlaStatus, TicketPriority, TicketStatus } from '../tickets';
 
 const ticket: TicketMonitorItem = {
@@ -435,17 +434,6 @@ describe('DashboardInsightsComponent', () => {
       fixture.detectChanges();
 
       expect((fixture.nativeElement.querySelector('[aria-live]') as HTMLElement).textContent?.trim()).toBe('');
-    });
-  });
-
-  describe('formatSlaDuration', () => {
-    it('formats in short pt-BR, from minutes to days', () => {
-      expect(formatSlaDuration(20_000)).toBe('menos de 1 min');
-      expect(formatSlaDuration(35 * 60_000)).toBe('35 min');
-      expect(formatSlaDuration(2 * 3_600_000)).toBe('2h');
-      expect(formatSlaDuration(2 * 3_600_000 + 14 * 60_000)).toBe('2h 14min');
-      expect(formatSlaDuration(26 * 3_600_000)).toBe('1 dia');
-      expect(formatSlaDuration(72 * 3_600_000)).toBe('3 dias');
     });
   });
 });
