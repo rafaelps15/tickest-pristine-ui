@@ -545,9 +545,7 @@ body {
 
 /* Campo com erro em foco: engrossa a borda vermelha (o erro continua à vista), no lugar do anel vermelho de 25% do Bootstrap. */
 .form-control.is-invalid:focus,
-.form-select.is-invalid:focus,
-.was-validated .form-control:invalid:focus,
-.was-validated .form-select:invalid:focus {
+.form-select.is-invalid:focus {
   border-color: var(--bs-form-invalid-border-color);
   /* 2px: a borda vermelha já existe sem foco, então a única mudança visível no foco é este anel. */
   box-shadow: 0 0 0 2px var(--bs-form-invalid-border-color);
@@ -689,7 +687,7 @@ body {
  * Ícone centralizado num quadrado/círculo de fundo suave (junto com `.badge.bg-label-*` e
  * `.rounded`/`.rounded-circle`): ícone dos KPIs, das Ações Rápidas, do primeiro uso e do "Fila em
  * dia" do Dashboard. Antes eram 4 blocos de CSS iguais, só com o tamanho diferente (extract,
- * 2026-10-27). Tamanho padrão 2,5rem; modificadores -sm/-lg/-xl.
+ * 2026-10-27). Tamanho padrão 2,5rem; modificadores -sm/-lg.
  */
 .icon-tile {
   display: flex;
@@ -708,11 +706,6 @@ body {
 .icon-tile-lg {
   width: 3rem;
   height: 3rem;
-}
-
-.icon-tile-xl {
-  width: 4rem;
-  height: 4rem;
 }
 
 /*
@@ -944,8 +937,8 @@ body {
 }
 
 /*
- * Utilitários de cor .text-primary/.border-primary do Bootstrap vêm com !important — sem essa
- * sobrescrita, qualquer `class="text-primary"`/`class="border-primary"` do template renderiza no
+ * O utilitário de cor .text-primary do Bootstrap vem com !important — sem essa
+ * sobrescrita, qualquer `class="text-primary"` do template renderiza no
  * azul padrão do Bootstrap (--bs-primary), não no índigo da marca, porque nenhuma regra sem
  * !important consegue vencer um utilitário. Achado em 2026-10-24 ao investigar por que o wordmark
  * do login nunca tinha ficado índigo. `.spinner-border.text-primary` abaixo era o único caso já
@@ -953,10 +946,6 @@ body {
  */
 .text-primary {
   color: var(--tk-primary) !important;
-}
-
-.border-primary {
-  border-color: var(--tk-primary) !important;
 }
 
 /* Spinners no tom da marca */
