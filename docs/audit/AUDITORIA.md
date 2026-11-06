@@ -10,8 +10,8 @@
 | Responsável | Rafael Santos |
 | Front (`tickest-pristine-front`) | `main` = `origin/main` = `333f4c2` desde 05/11, às 16:58: fast-forward da `main` local de `82c7462` para `333f4c2` às 16:58:43 e push `5cd3dce..333f4c2` às 16:58:53, com a E-01 e a E-12 integradas sobre o PR #5 (`5cd3dce`). As branches da E-01 e da E-12 foram excluídas, e o worktree `wt-e01`, removido (§11). Às 22:18, a `main` e a `origin/main` seguiam em `333f4c2` |
 | Working tree do front nesta redação | O working tree principal está na branch `fix/SPEC-049-fe0-front-alignment` (`4b7b0de`, local e remota), da outra sessão, com a edição dela no `CLAUDE.md` e neste documento. Até as 22:18 de 05/11, a outra sessão não tinha commitado, e a edição seguia igual à cópia das 19:08, que esta redação assume: o merge de três vias com a `main` deu 3 conflitos neste documento, resolvidos aqui, e nenhum no `CLAUDE.md` |
-| Atualizações de 05/11 | Na FE-0 (PR #5, `4b7b0de`, merge `5cd3dce`), pela edição da outra sessão: o A-22 e o que depende dele (DIV-5 e a pendência 7 do §6), o nome do guard no A-21 e as DIV-1 e DIV-4, resolvidas. Na redação da E-12: a D-SF5, a E-01 e a E-12 (§1, §3, §6, §7, §9 e §11), na `origin/main` desde as 16:58. Depois, o registro do merge e do push (§11). A reauditoria de 05/11 entra num registro seguinte |
-| Back (`tickest-pristine`) | Conferido na `origin/main` `ef1c981` (merge do PR #57, 2026-10-31 00:36) durante a auditoria de 31/10. Em 04/11, a `origin/main` do back está em `e5d8a38`, 45 commits depois (§12) |
+| Atualizações de 05/11 | Na FE-0 (PR #5, `4b7b0de`, merge `5cd3dce`), pela edição da outra sessão: o A-22 e o que depende dele (DIV-5 e a pendência 7 do §6), o nome do guard no A-21 e as DIV-1 e DIV-4, resolvidas. Na redação da E-12: a D-SF5, a E-01 e a E-12 (§1, §3, §6, §7, §9 e §11), na `origin/main` desde as 16:58. Depois, o registro do merge e do push (§11) e a reauditoria de 05/11, com os estados conferidos, os achados novos, o plano e as decisões de 05/11 (§16) |
+| Back (`tickest-pristine`) | Conferido na `origin/main` `ef1c981` (merge do PR #57, 2026-10-31 00:36) durante a auditoria de 31/10. Em 04/11, a `origin/main` do back estava em `e5d8a38`, 45 commits depois. Na reauditoria de 05/11, `251da97` (merge do PR #71, G1 da spec 049, às 17:11), em cópia fixa (§12; §16.1) |
 | Documentos de origem | `docs/audit/FRONTEND_AUDIT.md` ("FA", Anexo A) e `docs/audit/FINAL_ACCEPTANCE_AUDIT.md` ("FI", Anexo B), no commit `7fe3bec` |
 
 **Como ler**
@@ -21,10 +21,13 @@
 - `FA:n` e `FI:n` apontam a linha `n` do arquivo original. É a mesma linha `n` contada a partir do
   marcador de início de cada anexo.
 - Caminhos do front partem de `src/app/`, salvo os da raiz (`src/styles.css`, `src/environments/`,
-  `server.ts`). Linhas do front são do `7fe3bec`, salvo indicação; até o `82c7462`, o código de
-  `src/` não mudou depois desse commit. O PR #5, a E-01 e a E-12 mudam `src/` (§1).
-- Arquivos de código do back aparecem pelo nome, com linhas do commit `ef1c981`, salvo indicação.
-  As specs 044 a 049 do back não são versionadas: foram lidas no working tree do back em 04/11.
+  `src/index.html`). O `server.ts` saiu com o SSR no `06f537b` (E-12) e só aparece como histórico.
+  Linhas do front são do `7fe3bec`, salvo indicação; até o `82c7462`, o código de `src/` não mudou
+  depois desse commit. O PR #5, a E-01 e a E-12 mudam `src/` (§1). As linhas do §16 são do `333f4c2`.
+- Arquivos de código do back aparecem pelo nome, com linhas do commit `ef1c981`, salvo indicação;
+  no §16, do `251da97`. As specs 044 a 048 do back não são versionadas: foram lidas no working tree
+  do back em 04/11 e copiadas de novo em 05/11 (§16.1). A 049 está versionada desde o `bcf0356`
+  (PR #71).
 - **Gravidade** (FA:8-10): Crítica (segurança, perda de sessão ou dado); Alta (contrato quebrado ou
   recurso que não funciona); Média (divergência de regra visível ao usuário ou violação de limite de
   módulo); Baixa (duplicação ou risco futuro sem efeito hoje). "—" quer dizer que o original não dá
@@ -44,10 +47,14 @@
   - A-, R-, C-, 6.3 e BR-001 não foram renumerados. O back cita A-06, A-08, A-12, A-22, A-23, A-24,
     A-27 e A-30 (specs 046 a 049).
   - Apelidos: BR-001 = A-05; P-2 = A-45; P-3 = A-46 (FA:403).
-  - Achados novos do front começam em A-47, R-08 e C-13. Este documento não criou nenhum.
+  - Achados novos do front começam em A-47, R-08 e C-13. A reauditoria de 05/11 criou A-47 a A-59,
+    R-08 a R-10 e C-13 a C-41 (§16).
   - Outras séries: N- (conferência de 31/10, §7); DIV-, LAC-, DOC- e BK- (auditoria geral de 31/10,
-    §8); E- (etapas do plano de 31/10); L- (etapas da limpeza de 04/11); D-SF (decisões sobre o
-    SPEC-TICKEST-FRONT); FE- (achados do front na spec 049 do back).
+    §8; os de 05/11, DIV-11 a DIV-15, LAC-16 e LAC-17, DOC-11 a DOC-43 e BK-6 a BK-30, no §16);
+    BA- (arquitetura e código do back, criada em 05/11, §16.3); E- (etapas do plano de 31/10, com
+    E-16 a E-25 acrescentadas em 05/11, §16.7); L- (etapas da limpeza de 04/11); D-SF (decisões
+    sobre o SPEC-TICKEST-FRONT); FE- (achados do front na spec 049 do back). Os IDs provisórios da
+    reauditoria (T-DOC, T-FEA, T-BEA, T-SEP, T-ETP e T-SPC) aparecem só na coluna Origem do §16.
   - O `SPEC-TICKEST.md` do back tem uma série própria A-n (ex.: A-6, A-11 e A-12 em
     `SPEC-TICKEST.md:62,67,68`), sem relação com este catálogo.
 
@@ -69,8 +76,9 @@
 - **Publicado no push de 04/11, às 22:59:** o `cli.analytics` como `false` (`2ccf5d5`) e o registro da
   integração (`82c7462`).
 - **Na `origin/main` desde 05/11, às 00:50 (merge do PR #5, `5cd3dce`):** a FE-0 da spec 049 do back
-  (`4b7b0de`), feita por outra sessão. Neste documento, o PR #5 mudou só o A-21, o A-22, o DIV-5 e a
-  pendência 7 (§6, item 31).
+  (`4b7b0de`), feita por outra sessão. Neste documento, o PR #5 mudou o A-21, o A-22, o DIV-5, a
+  pendência 7 e as DIV-1 e DIV-4; as outras tarefas foram conferidas na reauditoria de 05/11 (§6,
+  item 31; §16.2).
 - **Na `origin/main` desde 05/11, às 16:58 (fast-forward da `main` para o `333f4c2` e push; §11), a
   E-01 e a E-12, rebaseadas sobre o `5cd3dce`:**
   - E-01: os defeitos conhecidos (C-09, A-42, R-07, A-33, N-3, N-6 e N-1) e a spec do
@@ -86,26 +94,38 @@
 - **Números da E-12 (`2647ab3`) e da ponta `333f4c2`, hoje a `main` e a `origin/main`:** 1456
   testes; build inicial de 433,61 kB, 0 avisos; lint sem erros; `npm audit` das dependências de
   produção sem vulnerabilidades (§3).
+- **Números do back na reauditoria de 05/11 (`251da97`):** build sem aviso; 940 testes unitários e
+  134 de arquitetura passando, executados numa cópia; 674 de integração, declarados pela 049 (§16.1).
 - **Mantidos com justificativa:** A-12 a A-21, A-31, C-05 e o breakpoint repetido do C-07 (§5).
 - **Pendentes (§6):**
   - com o back: A-23 (spec 046), A-24 (047), A-30 (048) e a volta da cor da função (A-05/BR-001,
-    spec 044), todas em descoberta;
-  - com Rafael Santos: A-27 (pendente de propósito), C-01, o `.impeccable/design.json` (sem
-    regenerar por enquanto) e, depois de o back atualizar as referências, a exclusão dos originais de
-    `docs/audit`;
+    spec 044), todas em descoberta; as DECs das 046 a 048 foram decididas em 05/11 (§16.8), e o texto e
+    a implementação no back dependem de autorização;
+  - com Rafael Santos: a URL de produção do A-27 (pendente de propósito; a topologia, mesma origem com
+    proxy em `/api`, foi decidida em 05/11). Também decididos em 05/11 (§16.8): a exceção do C-01 entra
+    nas skills (E-07), o `.impeccable/design.json` fica sem regenerar e os originais de `docs/audit` só
+    saem depois de o back atualizar as referências; segue aberta a decisão 12 (conferência de
+    permissão por recurso, no back);
   - D-SF5 definida em 04/11 (§9); E-01 e E-12 rebaseadas sobre o PR #5 e na `origin/main` desde
     05/11, às 16:58 (§6, itens 8, 10 e 21 a 24). Restam da E-12 a guarda de plataforma do
-    `TicketMonitorComponent` (item 25) e a URL de produção do A-27 (item 5);
-  - a reavaliar: as evidências do back que não existem mais em `ef1c981` (N-7). O A-22 foi corrigido em
-    05/11, na `origin/main` pelo PR #5 (§5).
+    `TicketMonitorComponent` (item 25; mais quatro no `SessionService`, C-31), a URL de produção do
+    A-27 (item 5) e a CSP (A-56, §16.3);
+  - reconferidas em 05/11 no `251da97`: as evidências do back que não existem mais desde o `ef1c981`
+    (N-7); os substitutos registrados conferem (§7). O A-22 foi corrigido em 05/11, na `origin/main`
+    pelo PR #5 (§5).
 - **Abertos da auditoria geral de 31/10 (§8):**
   - dez divergências front/back; das duas de gravidade Alto, resta a DIV-3 (o PUT reenvia descrição e
-    status lidos): a DIV-1 ("Fechar chamado" sempre falha), a DIV-4 e a DIV-5 foram resolvidas em 05/11
-    pelo PR #5;
-  - quinze lacunas para specs novas no back;
+    status lidos): a DIV-1 ("Fechar chamado" sempre falha), a DIV-4, a DIV-5 e a DIV-10 foram resolvidas
+    em 05/11 pelo PR #5, e a DIV-9 em parte. A DIV-2 foi decidida em 05/11: vale o código do back, e o
+    front corrige na E-02 (§16.8);
+  - quinze lacunas para specs novas no back; a LAC-11 foi entregue no back pela G1 da 049, e faltam o
+    front e o cabeçalho no CORS (LAC-16);
   - problemas de documentação no front e no modelo de specs do back.
 - **Falha de processo (§13):** a E-00 foi executada sem autorização válida. Os commits ficaram por
   decisão posterior (L-1).
+- **Reauditoria de 05/11 (§16):** só de leitura, em seis frentes, sobre o `333f4c2` e o back
+  `251da97`. 128 IDs novos (13 A, 3 R, 29 C, 33 DOC, 5 DIV, 2 LAC, 18 BA e 25 BK), dos 102 IDs provisórios das frentes e dos itens de 31/10 sem registro; nenhum de gravidade Crítica; Alta: A-59 (INFERIDO) e BK-27 (31/10); Média: A-47, A-48, A-50, A-53, A-56, LAC-17, BA-13 e BA-17; o resto, Baixa ou sem gravidade dada pela frente. Plano revisto no §16.7. Decisões de 05/11 no §16.8: a E-16 (a e b)
+  e a Onda 0 aprovadas, menos a decisão 12, que segue aberta com a proposta.
 
 ### 2. Escopo e método
 
@@ -120,6 +140,7 @@ Os detalhes ficam nos anexos.
 | Auditoria geral, 31/10 | Front e back (`ef1c981`), só leitura | Relatório entregue na conversa, sem arquivo no repositório; plano E-00 a E-15 | §7; §8 |
 | Execuções de 04/11 | E-00, L-9, L-3 e as limpezas L-4 a L-6, integradas à `main` e publicadas no push das 22:51; depois, o `cli.analytics` (`2ccf5d5`) e o `npm ci`. Na revisão de 04/11, as supressões NG8102 e NG8107 saíram de todas as configurações, e a pasta `.impeccable/live/`, sem arquivos e ignorada pelo Git, foi apagada | Cada mudança validada em cópia isolada antes de entrar na `main` | §3; §11; §14 |
 | Esta consolidação, 04/11 | FA, FI, Git e código do front e do back | Só leitura. As linhas citadas dos originais foram conferidas. A redação não rodou build, teste nem `npm`: os números do §3 vêm dos logs. Na revisão de 04/11, o build e os testes do estado final rodaram numa cópia isolada, sem `npm install` nem `npm ci` (§3) | — |
+| Reauditoria, 05/11 | Front `333f4c2` e back `251da97`, em cópias fixas; specs fora do Git copiadas do working tree do back | Só leitura, em seis frentes, com o roteiro de 31/10; classes COMPROVADO, DECLARADO, INFERIDO e NÃO VERIFICADO; `eslint` e `tsc` no front; build e testes unitários e de arquitetura no back | §16 |
 
 ### 3. Linha de base e validações
 
@@ -144,6 +165,7 @@ Os detalhes ficam nos anexos.
 | `origin/main` em `5cd3dce` (merge do PR #5), extraído por `git archive` | 05/11 | 1439 | 382,56 kB | 0 | `rebase/val/5cd3dce/.val/` |
 | E-01 rebaseada sobre o `5cd3dce` (`79e5129`): cada um dos 10 commits numa cópia própria | 05/11 | 1454 | 380,25 kB | 0 | `rebase/val/79e5129/.val/`; `rebase/val-e01/<commit>/.val/` |
 | E-12 rebaseada sobre a E-01 (`2647ab3`): cada um dos 12 commits numa cópia própria, com o `node_modules` exato do seu lockfile; lint sem erros e `npm audit` de produção sem vulnerabilidades | 05/11 | 1456 | 433,61 kB | 0 | `rebase/val-e12/` (uma pasta por commit, de 01 a 12); `rebase/audit/` |
+| Ponta da E-12 (`333f4c2`, com este registro), hoje a `main` e a `origin/main` | 05/11 | 1456 | 433,61 kB | 0 | `rebase/val-e12/13-333f4c2-ponta/.val/`; conferido pela reauditoria (§16.1), sem reexecutar |
 
 - Os 4 avisos eram de orçamento de CSS por componente, anteriores à missão (FI:25-27). Saíram com o
   A-33 (`0df5718`).
@@ -177,7 +199,8 @@ Os detalhes ficam nos anexos.
   SSR (`06f537b`), o build gera só a saída do navegador.
 - Lint: até a E-12, o projeto não tinha ESLint, e a análise estática era o `strict` +
   `strictTemplates` (FI:81). Com a E-12 (`21735f4`), `npm run lint` roda o `angular-eslint`; na
-  ponta da branch, sem erros.
+  ponta (`333f4c2`), sem erros. Na reauditoria de 05/11, `eslint src` numa cópia: sem erro nem aviso
+  (§16.3).
 - Os 1358 de FI:121, FI:207 e FI:236 são anteriores ao saneamento (errata 3).
 
 ### 4. Catálogo-mestre de achados
@@ -191,35 +214,35 @@ Todos os 66 IDs dos documentos. "Detalhe" aponta as linhas do original no anexo.
 | A-03 | Segunda renovação para requisição com token antigo | Média | Corrigido (origin/main) | `664b73b`, PR #2 | `auth.interceptor.ts` (FA:95-99) | FA:93-99 |
 | A-04 | Contrato da spec 029 com nomes errados | Alta | Corrigido (origin/main) | `357f183`, PR #2 | `ticket-dashboard.ts`, `ticket-monitor-item.ts`, `ticket.data.service.ts` (FA:103-114) | FA:101-114 |
 | A-05 (= BR-001) | Cor de função gravada no `localStorage` | Alta (classe Back-end) | Removido; a volta depende da spec 044 do back (Em descoberta) | `664b73b`, `fe8a559`, `46cfbb8`, `311618d`, PR #2 | `role-colors.util.ts` excluído; testes de ausência em `roles/feature-role-list/role-list.component.spec.ts:366` | FA:116-143; FI:337-356 |
-| A-06 | "Reabrir" visível sem permissão | Média | Corrigido (origin/main); evidência do back a reavaliar (N-7) | `357f183`, `a77394d`, PR #2 | `tickets/ui/ticket-action-permissions.ts:27-31`. O `TicketAccessGuard.EnsureOwnerOrManagerAsync` (FA:149) não existe em `ef1c981`; a regra está em `ReopenTicketCommandHandler.cs:33-36` e é mais estrita para o dono (DIV-2) | FA:145-164 |
+| A-06 | "Reabrir" visível sem permissão | Média | Corrigido (origin/main); evidência do back reconferida em 05/11 (N-7) | `357f183`, `a77394d`, PR #2 | `tickets/ui/ticket-action-permissions.ts:27-31`. O `TicketAccessGuard.EnsureOwnerOrManagerAsync` (FA:149) não existe em `ef1c981`; a regra está em `ReopenTicketCommandHandler.cs:33-36` e é mais estrita para o dono (DIV-2); em `251da97`, `:33-41`, e a documentação do back descreve a regra do front (BK-6) | FA:145-164 |
 | A-07 | "Editar" visível para dono sem `tickets:update-own` | Média | Corrigido (origin/main) | `357f183`, PR #2 | `ticket-action-permissions.ts:22-25`. Back conferido em `ef1c981`: a regra de FA:151 segue em `UpdateTicketCommandHandler.cs:35-44` | FA:145-164 |
 | A-08 | "Atribuir responsável" visível sem `tickets:assign` | Média | Corrigido (origin/main) | `357f183`, `a77394d`, PR #2 | Back conferido em `ef1c981`: `Assign.cs:28` (`tickets:manage`) e `AssignTicketCommandHandler.cs:30-32` (`tickets:assign`), como em FA:152-153 | FA:145-164 |
-| A-09 | Nome limitado a 50; o servidor aceita 100 | Média | Corrigido (origin/main); evidência do back a reavaliar (N-7) | `46cfbb8`, PR #2 | `users/entities/user-profile.ts:2` (`USER_NAME_MAX_LENGTH = 100`). `UserValidationRules.NameMaxLength` (FA:168) não existe em `ef1c981`; o limite está nas colunas (`UserConfiguration.cs:16-17`) | FA:166-175 |
+| A-09 | Nome limitado a 50; o servidor aceita 100 | Média | Corrigido (origin/main); evidência do back reconferida em 05/11 (N-7) | `46cfbb8`, PR #2 | `users/entities/user-profile.ts:2` (`USER_NAME_MAX_LENGTH = 100`). `UserValidationRules.NameMaxLength` (FA:168) não existe em `ef1c981`; o limite está nas colunas (`UserConfiguration.cs:16-17`) | FA:166-175 |
 | A-10 | Início importava componente interno de `tickets/ui` | Média (classe Skill) | Corrigido (origin/main) | `664b73b`, `357f183`, `a77394d`, PR #2 | Diálogo em `shared/ui/ticket-assign-dialog/` (FA:183-185) | FA:177-185 |
 | A-11 | Novo pedido de confirmação deixava o anterior sem resposta | Baixa | Corrigido (origin/main) | `664b73b`, PR #2 | `confirm-dialog.service.ts` (FA:189-193) | FA:187-193 |
-| A-12 | Transições de status no front | — | Mantido; evidência do back a reavaliar (N-7) | — | `tickets/entities/ticket-status.ts:38-44`. `TicketStatusTransitions.CanTransition` (FA:466) não existe em `ef1c981`; hoje é `Ticket.CanTransitionTo` (`Ticket.cs:120`) | FA:466 |
+| A-12 | Transições de status no front | — | Mantido; evidência do back reconferida em 05/11 (N-7) | — | `tickets/entities/ticket-status.ts:38-44`. `TicketStatusTransitions.CanTransition` (FA:466) não existe em `ef1c981`; hoje é `Ticket.CanTransitionTo` (`Ticket.cs:120` em `ef1c981`; `:376-392` em `251da97`) | FA:466 |
 | A-13 | Janela de cancelamento do dono | — | Mantido | — | `tickets/ui/ticket-cancel-window.ts` (FA:467) | FA:467 |
-| A-14 | Reclassificação para "Atrasado" entre recargas | — | Mantido; evidência do back a reavaliar (N-7) | — | `TicketSla.GetStatus` (FA:468) não existe em `ef1c981` | FA:468 |
+| A-14 | Reclassificação para "Atrasado" entre recargas | — | Mantido; evidência do back reconferida em 05/11 (N-7) | — | `TicketSla.GetStatus` (FA:468) não existe em `ef1c981`; em `251da97`, a regra é o `Ticket.GetSlaStatus` (`Ticket.cs:403-426`), com o limiar do `TicketSlaPlan.cs:19-20` (spec 045). O selo só promove a "Atrasado" (§16.4) | FA:468 |
 | A-15 | Aritmética do Início sobre contadores | — | Mantido | — | `dashboard.component.ts` (FA:469) | FA:469 |
-| A-16 | Frases e limites de tendência | — | Mantido | — | `dashboard-overview.ts`, `dashboard-insight-rules.ts` (FA:470) | FA:470 |
+| A-16 | Frases e limites de tendência | — | Mantido, menos a frase "Fila estável" (A-53, §16.4) | — | `dashboard-overview.ts`, `dashboard-insight-rules.ts` (FA:470) | FA:470 |
 | A-17 | Seleção dos Alertas (3 + 2) | — | Mantido | — | `ticket-summary.store.ts` (FA:471) | FA:471 |
 | A-18 | Somas de ativos e finalizados | — | Mantido | — | `my-tickets-summary.store.ts` (FA:472) | FA:472 |
 | A-19 | Busca e contagem em Departamentos e Funções | — | Mantido | — | `departments/feature-department-list/*`, `role-insights` (FA:473) | FA:473 |
-| A-20 | Impacto e ações em lote de Usuários | — | Mantido | — | `users.store.ts` (FA:474) | FA:474 |
+| A-20 | Impacto e ações em lote de Usuários | — | Mantido; risco de 429 no lote (A-59, INFERIDO) | — | `users.store.ts` (FA:474) | FA:474 |
 | A-21 | Guards e menus só como UX | — | Mantido | — | `permission.guard.ts` (antes `admin-master.guard.ts`, nome trocado em 05/11), `main-layout` (FA:475) | FA:475 |
 | A-22 | Limites de texto iguais aos do servidor | — | Corrigido (origin/main) | `4b7b0de`, PR #5 (`5cd3dce`) | Front: motivo da reabertura 4000 (`TICKET_REOPEN_REASON_MAX_LENGTH`, `tickets/ui/ticket-reopen-dialog/ticket-reopen-dialog.component.ts:6,41`; o spec ao lado envia 600 caracteres e bloqueia 4001), antes 500. Back: `ReopenTicketCommandValidator.cs:9` só confere o id; limite efetivo 4000 (spec 042); texto acima do limite responde 400 (`GlobalExceptionHandler.cs:46-60`). Ver §5 | FA:476; FI:365 |
 | A-23 | Tokens de acesso e de renovação no `localStorage` | Média | Pendente → spec 046 do back | — | FA:482; back `specs/046-sessao-em-cookie-httponly/spec.md:101` | FA:482; FI:362 |
 | A-24 | A API só informa `canCancel` | Baixa | Pendente → spec 047 | — | FA:483; back `specs/047-acoes-permitidas-do-chamado/spec.md:98` | FA:483; FI:363 |
-| A-25 | Limites de anexo fixos no front | Baixa | Corrigido (origin/main), como A-39; texto a reavaliar | `8473d24`, PR #3 | FA:484 diz que os limites por chamado "continuam só no back-end". Desde `6df64e1` o Store os aplica quando a lista está completa (`tickets/application/ticket-attachments.store.ts:18-34`) | FA:484 |
+| A-25 | Limites de anexo fixos no front | Baixa | Corrigido (origin/main), como A-39; texto revisto em 05/11 (DOC-42) | `8473d24`, PR #3 | FA:484 diz que os limites por chamado "continuam só no back-end". Desde `6df64e1` o Store os aplica quando a lista está completa (`tickets/application/ticket-attachments.store.ts:18-34`). É regra nova do C-09, não mudança de lugar: o detalhe só conferia tamanho e tipo. Quantidade e soma batem com o domínio (`TicketAttachment.cs:103`); a extensão e o tipo normalizado, não (A-57) | FA:484 |
 | A-26 | Busca de responsável em `GET /users` | Média | Corrigido (origin/main), como A-38 | `8473d24`, PR #3 | FA:485 | FA:485 |
 | A-27 | URL de produção ausente | Baixa | Pendente (de propósito, decisão de 31/10) | — | `src/environments/environment.prod.ts:3-4` (TODO e `http://localhost:5195`) | FA:486 |
-| A-28 | Flags `volumeResolved` e `companyStatsForAll` desligadas | Baixa | Corrigido (main local) | `f7cdd73` | `src/environments/environment.ts:11-12` e `environment.prod.ts:12-13` com `true` | FA:487 |
+| A-28 | Flags `volumeResolved` e `companyStatsForAll` desligadas | Baixa | Corrigido (main local). A flag `volumeResolved` seguiu no código, "até a conferência do A-28"; o critério foi dado como cumprido em 05/11 (decisão 15), e ela sai na E-17 (C-33) | `f7cdd73`; `4b7b0de` (T-517) | Em `f7cdd73`, `src/environments/environment.ts:11-12` e `environment.prod.ts:12-13` com `true`. Desde o PR #5, só a `volumeResolved` (`environment.ts:9`; `environment.prod.ts:10`; `shared/entities/dashboard-features.ts:4-7`); o rodapé "disponível em breve" sobrou (A-50) | FA:487 |
 | A-29 | 403 de `GET /roles` disparava `GET /users/me` | Baixa | Corrigido (origin/main) | `4bb5792` | `users/feature-user-list/user-list.component.ts:323` | FA:488 |
 | A-30 | SLA do primeiro ciclo em `GET /tickets` | Baixa | Pendente → spec 048 | — | FA:489; back `specs/048-monitor-ciclo-sla-vigente/spec.md:90` | FA:489; FI:364 |
 | A-31 | Linha "Prazo" do detalhe com o relógio do navegador | Baixa | Mantido; classificação a reavaliar | — | FA:490 o lista como pendência; FI:186 como mantido (errata 2) | FA:490 |
 | A-32 | Diálogo global sobrevivia à troca de tela | Média | Corrigido (origin/main) | `b5aaf70` | `ConfirmDialogComponent` cancela em `NavigationStart` (FA:491) | FA:491 |
-| A-33 | 4 avisos de orçamento de CSS | Baixa | Corrigido (main local) | `0df5718` | Builds da E-00 e da L-3 com 0 avisos (`e00v2/logs/build-final.log`; `l3/x5a/.x5a/build.log`) | FA:492; FI:252 |
-| A-34 | Foco visível abaixo de WCAG 2.4.7 e 1.4.11 | Alta | Corrigido (origin/main); revalidar no navegador depois da E-00 (E-04) | `04ca7e1` (sessão b345b068) | 734 controles: 305 reprovados antes, 19 depois, 0 regressões (FA:230) | FA:195-232; FI:258-280 |
+| A-33 | 4 avisos de orçamento de CSS | Baixa | Corrigido (main local); a reserva do `--bs-card-bg` e a cópia do Monitor saíram na E-01; restam C-36 e C-37 | `0df5718`; `887fee5`, `4c5c575` | Builds da E-00 e da L-3 com 0 avisos (`e00v2/logs/build-final.log`; `l3/x5a/.x5a/build.log`) | FA:492; FI:252 |
+| A-34 | Foco visível abaixo de WCAG 2.4.7 e 1.4.11 | Alta | Corrigido (origin/main); revalidar no navegador depois da E-00 (E-04): o A-33 mudou o anel de `.sector-add` e `.btn-row-name`, e sete contornos locais seguem em `--tk-primary` (R-09) | `04ca7e1` (sessão b345b068) | 734 controles: 305 reprovados antes, 19 depois, 0 regressões (FA:230) | FA:195-232; FI:258-280 |
 | A-35 | Troca de conta em outra aba | Média | Corrigido (origin/main) | `b885c05` | `SessionService.syncFromStorage` (FA:270-272) | FA:262-272 |
 | A-36 | Comentários fora da regra | Baixa | Corrigido (origin/main) | `c44ecc4` | FA:276-281 | FA:274-281 |
 | A-37 | Campo inválido sem borda vermelha (escuro e login) | Média | Corrigido (origin/main) | `7947148`, PR #3 | Medição em FA:255-259 | FA:234-260 |
@@ -227,7 +250,7 @@ Todos os 66 IDs dos documentos. "Detalhe" aponta as linhas do original no anexo.
 | A-39 | Limites de anexo duplicados no front | Baixa | Corrigido (origin/main) | `8473d24`, PR #3 | `GET /ticket-attachments/policy` (FA:294-295) | FA:290-295; FA:484 |
 | A-40 | "Hoje" do gráfico em UTC | Baixa | Corrigido (origin/main) | `000b4cc`, PR #3 | `todayInSaoPaulo` (FA:298-300) | FA:296-300 |
 | A-41 | Rolagem horizontal de Meus Chamados | Média | Corrigido (origin/main) | `7947148`, `838e94f`, PR #3 | FA:306-311 | FA:302-314 |
-| A-42 | 429 mandava pro login quem tinha sessão válida | Alta | Corrigido: as duas etapas na origin/main (`591bc90`, PR #3); o aviso da espera na main local (`00b7252`); defeitos corrigidos na E-01 (`75413f2`, `39f1982`), na origin/main desde 05/11 | `591bc90`; `00b7252` | `app.component.ts:7-8`; `shared/ui/session-retry-notice/session-retry-notice.component.ts` | FA:316-372; FI:256 |
+| A-42 | 429 mandava pro login quem tinha sessão válida | Alta | Corrigido: as duas etapas na origin/main (`591bc90`, PR #3); o aviso da espera na main local (`00b7252`); defeitos corrigidos na E-01 (`75413f2`, `39f1982`), na origin/main desde 05/11; restam o anúncio do aviso (R-08) e o login sem aviso (A-51), §16.5 | `591bc90`; `00b7252` | `app.component.ts:7-8`; `shared/ui/session-retry-notice/session-retry-notice.component.ts` | FA:316-372; FI:256 |
 | A-43 | Falha passageira da renovação lida como sessão recusada | Média | Corrigido (origin/main) | `591bc90`, PR #3 | FA:446-451 | FA:433-460 |
 | A-44 | `admin-master.guard` ignorava `unavailable` | Baixa | Corrigido (origin/main) | `591bc90`, PR #3 | `redirectWhenUserNotLoaded` (FA:582) | FA:45; FA:582; FI:314-315 |
 | A-45 (= P-2) | Foco perdido ao navegar pela gaveta | Baixa | Corrigido (origin/main) | `838e94f`, PR #3 | FA:406-412 | FA:401-431 |
@@ -236,27 +259,28 @@ Todos os 66 IDs dos documentos. "Detalhe" aponta as linhas do original no anexo.
 | R-02 | Foco não entrava na gaveta aberta | Alta | Corrigido (origin/main) | `838e94f`, PR #3 | FA:382 | FA:374-396 |
 | R-03 | Itens fora da tela no celular deitado | Alta | Corrigido (origin/main) | `838e94f`, PR #3 | FA:383 | FA:374-396 |
 | R-04 | Esc não fechava a gaveta | Média | Corrigido (origin/main) | `838e94f`, PR #3 | FA:384 | FA:374-396 |
-| R-05 | Diálogo "Novo usuário" apertado em 844×390 | Baixa | Corrigido (main local); revalidar no navegador (E-04) | `f95f587` | `src/styles.css:1359-1374` | FA:397-399; FI:255 |
-| R-06 | E-mails quebrados no meio na tabela de Usuários | Baixa | Corrigido (main local); revalidar no navegador (E-04) | `008dfcf` | `<wbr>` antes do "@" em `users/feature-user-list/user-list.component.html:217,219` | FA:397-399; FI:255 |
-| R-07 | Alvos de 16 a 23px | Baixa | Corrigido (main local); defeitos corrigidos na E-01 (`d95b336`), na origin/main desde 05/11 | `be5cd6e` | `.tap-target` em `src/styles.css:312-326`; defeitos no bloco de toque `src/styles.css:1347-1357` | FA:397-399; FI:255 |
+| R-05 | Diálogo "Novo usuário" apertado em 844×390 | Baixa | Corrigido (main local); revalidar no navegador (E-04) | `f95f587` | `src/styles.css:1359-1374` (`:1367-1382` em `333f4c2`) | FA:397-399; FI:255 |
+| R-06 | E-mails quebrados no meio na tabela de Usuários | Baixa | Corrigido (main local); revalidar no navegador (E-04) | `008dfcf` | `<wbr>` antes do "@" em `users/feature-user-list/user-list.component.html:217,219` (`:221,223` em `333f4c2`) | FA:397-399; FI:255 |
+| R-07 | Alvos de 16 a 23px | Baixa | Corrigido (main local); defeitos corrigidos na E-01 (`d95b336`), na origin/main desde 05/11; resta o espaço antes do chevron (R-10) | `be5cd6e` | `.tap-target` em `src/styles.css:312-326`; bloco de toque em `src/styles.css:1347-1357` (`:1348-1365` em `333f4c2`) | FA:397-399; FI:255 |
 | C-01 | Resultado tipado no serviço de sessão | Baixa | Pendente: registrar a exceção nas skills é decisão de Rafael Santos | `591bc90` (resultado tipado) | `shared/entities/current-user.ts`, `shared/services/current-user.service.ts` (FA:534) | FA:534; FA:587 |
 | C-02 | `transientFailureReason` no utilitário genérico de HTTP | Baixa | Corrigido (origin/main) | `591bc90` | Movido para `session-unavailable.util.ts` (FA:583) | FA:535; FA:583 |
 | C-03 | Três cópias da busca de responsáveis | Média | Corrigido (origin/main) | `8473d24` | `tickets/application/ticket-assignee-search.ts` (FA:579) | FA:536; FA:579 |
 | C-04 | `constructor()` sem `/** */` | Baixa | Corrigido (origin/main) | `591bc90` | FA:580 | FA:537; FA:580 |
 | C-05 | `SessionRecoveryStore` fora do padrão `resource()` | Baixa | Mantido | — | FA:588 | FA:538; FA:588 |
 | C-06 | Política diferente no `unauthenticated` (guard × Stores) | Baixa | Corrigido (origin/main) | `591bc90` | `redirectWhenUserNotLoaded` (FA:582) | FA:539; FA:582 |
-| C-07 | Foco preso duplicado; breakpoint repetido; `100dvh` sem reserva | Baixa | Corrigido: `100vh` de reserva na origin/main (`838e94f`); utilitário e diretiva de foco na main local (`0573c20`); o breakpoint repetido fica (Mantido, §5) | `838e94f`; `0573c20` | `shared/utils/focus-trap.util.ts`, `shared/ui/directives/focus-trap.directive.ts`; breakpoint em `main-layout.component.ts:110` e `.css:110` | FA:540; FA:585 |
+| C-07 | Foco preso duplicado; breakpoint repetido; `100dvh` sem reserva | Baixa | Corrigido: `100vh` de reserva na origin/main (`838e94f`); utilitário e diretiva de foco na main local (`0573c20`); o breakpoint repetido fica (Mantido, §5) | `838e94f`; `0573c20` | `shared/utils/focus-trap.util.ts`, `shared/ui/directives/focus-trap.directive.ts`; breakpoint em `main-layout.component.ts:110` (`:105` em `333f4c2`) e `.css:110`; restos do foco preso no C-35 | FA:540; FA:585 |
 | C-08 | Reexportação de `todayInSaoPaulo` | Baixa | Corrigido (origin/main) | `000b4cc` | FA:584 | FA:541; FA:584 |
-| C-09 | Validação de anexo no componente; campos sem uso | Baixa | Corrigido (main local); defeito corrigido na E-01 (`0ae9ee4`), na origin/main desde 05/11 | `6df64e1` | `attachmentPolicyViolation` e `uploadIfValid` em `tickets/application/ticket-attachments.store.ts:18-34,209-214` | FA:542; FA:589 |
+| C-09 | Validação de anexo no componente; campos sem uso | Baixa | Corrigido (main local); defeito corrigido na E-01 (`0ae9ee4`), na origin/main desde 05/11 | `6df64e1` | `attachmentPolicyViolation` e `uploadIfValid` em `tickets/application/ticket-attachments.store.ts:18-34,209-214` (`:212-217` em `333f4c2`); erros que passam de um chamado ao outro: A-49 | FA:542; FA:589 |
 | C-10 | Indentação de 4 espaços | Baixa | Corrigido (main local) | `0451269` (21 arquivos: 20 `.ts` e o `dashboard.component.css`) | Em `7fe3bec`, nenhum `.ts` usa só 4 espaços. A contagem de FA:590 está errada (errata 13) | FA:543; FA:590 |
 | C-11 | Membros sem `/** */` | Baixa | Corrigido (origin/main) nos membros listados | `591bc90`, `838e94f` | FA:586 | FA:544; FA:586 |
 | C-12 | Stub do teste do Monitor com o tipo antigo | Baixa | Corrigido (origin/main) | `8473d24` | FA:581 | FA:545; FA:581 |
-| 6.3 | Nomes de teste em inglês | — | Corrigido (main local); o título que restava (N-3) saiu na E-01 (`855ad11`) | `9d7e238` (95 arquivos) | `shared/interceptors/auth.interceptor.spec.ts:117` | FI:170; FI:254 |
+| 6.3 | Nomes de teste em inglês | — | Corrigido (main local); o título que restava (N-3) saiu na E-01 (`855ad11`); resíduos no C-39 | `9d7e238` (95 arquivos) | `shared/interceptors/auth.interceptor.spec.ts:117` | FI:170; FI:254 |
 
 Contagem: 38 corrigidos na `origin/main` (o A-05 como remoção); 10 corrigidos só na `main` local
 (A-28, A-33, A-42 na parte do aviso, R-05, R-06, R-07, C-07 na parte do foco preso, C-09, C-10 e
 6.3); 12 mantidos (A-12 a A-21, A-31 e C-05); 5 pendentes (A-23, A-24, A-27, A-30 e C-01). O A-22,
-antes a reavaliar, foi corrigido em 05/11 na `origin/main` (`4b7b0de`, PR #5).
+antes a reavaliar, foi corrigido em 05/11 na `origin/main` (`4b7b0de`, PR #5). Os achados novos de
+05/11 (A-47 a A-59, R-08 a R-10 e C-13 a C-41) estão no §16, fora desta contagem.
 
 ### 5. Analisados e mantidos
 
@@ -264,19 +288,19 @@ Justificativas completas em FA:462-476 e FA:585-590.
 
 | ID | Onde (front) | Por que fica | Nota de 04/11 |
 |---|---|---|---|
-| A-12 | `tickets/entities/ticket-status.ts:38-44` (`TICKET_STATUS_TRANSITIONS`) e `TICKET_ACTIVE_STATUSES` | Só escolhe quais botões mostrar; o servidor valida a transição | A citação do back mudou (`Ticket.CanTransitionTo`, `Ticket.cs:120`). A transição Resolvido → Fechado ia por PUT e falhava (DIV-1); desde 05/11 vai pelo `POST tickets/{id}/close` (PR #5). A spec 047 (DEC-3) pode aposentar o mapa |
+| A-12 | `tickets/entities/ticket-status.ts:38-44` (`TICKET_STATUS_TRANSITIONS`) e `TICKET_ACTIVE_STATUSES` | Só escolhe quais botões mostrar; o servidor valida a transição | A citação do back mudou (`Ticket.CanTransitionTo`, `Ticket.cs:120`; `:376-392` em `251da97`). A transição Resolvido → Fechado ia por PUT e falhava (DIV-1); desde 05/11 vai pelo `POST tickets/{id}/close` (PR #5). A spec 047 (DEC-3) pode aposentar o mapa |
 | A-13 | `tickets/ui/ticket-cancel-window.ts` | Usa `canCancel` e `ownerCancelDeadlineUtc` do servidor; o relógio só esconde o botão quando a janela vence com a tela aberta | — |
-| A-14 | `ticket-monitor.component.ts` (`displaySlaStatus`) e `dashboard-insights.component.ts` | Reclassifica para "Atrasado" entre recargas, com a fórmula do servidor e o relógio de `serverNowUtc` | `TicketSla.GetStatus` não existe em `ef1c981`. A spec 045 ("fórmula única de prazo", `bb15575`) entrou na `origin/main` do back em 01/11. Reconferir a fórmula contra a 045 (§6, item 14) |
+| A-14 | `ticket-monitor.component.ts` (`displaySlaStatus`) e `dashboard-insights.component.ts` | Reclassifica para "Atrasado" entre recargas, com a fórmula do servidor e o relógio de `serverNowUtc` | `TicketSla.GetStatus` não existe em `ef1c981`. A spec 045 ("fórmula única de prazo", `bb15575`) entrou na `origin/main` do back em 01/11. Reconferido em 05/11: o front não calcula prazo; a promoção a "Atrasado" bate com a regra do back na borda de 1 ms (`Ticket.cs:420`), e o selo nunca promove a "Em risco" (§16.4) |
 | A-15 | `dashboard.component.ts` | Aritmética de apresentação sobre contadores do servidor | A LAC-13 pede indicadores derivados no agregado |
-| A-16 | `dashboard-overview.ts`, `dashboard-insight-rules.ts` | Textos de leitura do gráfico; os limites são regra de redação | — |
+| A-16 | `dashboard-overview.ts`, `dashboard-insight-rules.ts` | Textos de leitura do gráfico; os limites são regra de redação | A frase "Fila estável" deduz a fila de criados × resolvidos e deve sair (A-53, §16.4) |
 | A-17 | `ticket-summary.store.ts` | Seleção de exibição sobre páginas do servidor; os totais vêm do servidor | — |
 | A-18 | `my-tickets-summary.store.ts` | Somas de contadores com o agrupamento do back (`OwnTicketStatusGroup`) | — |
 | A-19 | `departments/feature-department-list/*` e `role-insights` | `GET /departments` e `GET /roles` vêm sem paginação; filtrar a lista carregada é apresentação | Muda se o back paginar |
-| A-20 | `users.store.ts` | Aviso informativo e orquestração de chamadas que o servidor valida uma a uma | A LAC-6 pede o impacto da desativação no back |
-| A-21 | `permission.guard.ts` (antes `admin-master.guard.ts`, nome trocado em 05/11), `main-layout` | Só UX; a API aplica `[HasPermission]` | DIV-9 e DIV-10: telas que não conferem a permissão de cada ação |
+| A-20 | `users.store.ts` | Aviso informativo e orquestração de chamadas que o servidor valida uma a uma | A LAC-6 pede o impacto da desativação no back. Com 100 selecionados, a contagem e o lote podem passar do limite de 100 requisições por minuto (A-59, INFERIDO) |
+| A-21 | `permission.guard.ts` (antes `admin-master.guard.ts`, nome trocado em 05/11), `main-layout` | Só UX; a API aplica `[HasPermission]` | DIV-10 resolvida e DIV-9 em parte pelo PR #5 (T-512). Seguem pelo perfil deduzido os atalhos do Início (DIV-9, decidido em 05/11 que seguem as permissões), e quatro telas mostram ou escondem ações sem a permissão certa (DIV-11 a DIV-13 e DIV-15, §16.4) |
 | A-31 | Linha "Prazo" do detalhe, quando o painel de SLA não carrega | Fallback documentado no template; o painel de SLA usa o relógio do servidor | Classificação a reavaliar (errata 2) |
 | C-05 | `shared/application/session-recovery.store.ts` | Mesmo formato do `LoginStore` e do `ActivateAccountStore`; não há resource a duplicar | — |
-| C-07 (breakpoint) | `shared/ui/layouts/main-layout/main-layout.component.ts:110` e `.css:110` | O CSS não lê constantes do TS; um comentário liga os dois (FA:585) | O resto do C-07 foi corrigido (`0573c20`) |
+| C-07 (breakpoint) | `shared/ui/layouts/main-layout/main-layout.component.ts:110` (`:105` em `333f4c2`) e `.css:110` | O CSS não lê constantes do TS; um comentário liga os dois (FA:585) | O resto do C-07 foi corrigido (`0573c20`) |
 
 **A-22 revisto** (limites de texto; back em `ef1c981`):
 
@@ -284,11 +308,11 @@ Justificativas completas em FA:462-476 e FA:585-590.
 |---|---|---|---|
 | Mensagem | 4000 (`tickets/entities/ticket-message.ts:12`) | Coluna 4000 (`TicketMessageConfiguration.cs:16`) | Igual |
 | Título do chamado | 200 (`tickets/feature-ticket-create/ticket-create.component.ts:35`) | Coluna 200 (`TicketConfiguration.cs:20`) | Igual |
-| Descrição do chamado | 10 a 500 (`ticket-create.component.ts:36`; `tickets/ui/ticket-edit-dialog/ticket-edit-dialog.component.ts:47`) | Coluna 500 (`TicketConfiguration.cs:23`) e check de 10 a 500 (spec 042, REQ-3) | Igual |
+| Descrição do chamado | 10 a 500 (`ticket-create.component.ts:36`; `tickets/ui/ticket-edit-dialog/ticket-edit-dialog.component.ts:47`) | Coluna 500 (`TicketConfiguration.cs:23`) e check de 10 a 500 (spec 042, REQ-3) | Igual; o diálogo de edição valida antes de aparar (A-52) |
 | Motivo da reabertura | 4000 desde 05/11 (`TICKET_REOPEN_REASON_MAX_LENGTH`, `ticket-reopen-dialog.component.ts:6,41`); antes 500 | Sem limite próprio: `ReopenTicketCommandValidator.cs:9` só confere o id; vale a coluna da mensagem, 4000 (spec 042, REQ-4 e DEC-17) | Igual desde 05/11 (DIV-5 resolvido); antes, o front recusava texto que o back aceita |
 | Nome e descrição de departamento e de setor | 100 e 500 (`departments/feature-department-list/department-list.component.ts:195-196,201-202`) | Colunas 100 e 500 (`DepartmentConfiguration.cs:15,23`; `SectorConfiguration.cs:15,23`) | Igual. Acima do limite, o back responde 400, não 500 (`GlobalExceptionHandler.cs:46-60`; spec 042, REQ-7 e AC-6) |
 | Nome e sobrenome do usuário | 100 (`users/entities/user-profile.ts:2`) e mínimo de 2 | Colunas 100 (`UserConfiguration.cs:16-17`), sem mínimo | Máximo igual; mínimo só no front (DIV-8) |
-| Senha | Mínimo 6 e `strongPasswordValidator` (ex.: `shared/feature-activate-account/activate-account.component.ts:45`) | Senha forte no validator (spec 042, REQ-1) | Regra exata não reconferida (a confirmar) |
+| Senha | Mínimo 6 e `strongPasswordValidator` (ex.: `shared/feature-activate-account/activate-account.component.ts:45`) | Senha forte no validator (spec 042, REQ-1) | Igual, reconferido em 05/11: mínimo 6, maiúscula e caractere especial com as mesmas expressões (`shared/utils/password.validators.ts:7-8` × `Password.cs:12,24-29,39-43`); nova diferente da atual nos dois lados |
 
 Conclusão: o A-22 segue válido como validação de experiência, menos no motivo da reabertura. O 500
 de FA:476 e FI:365 vale para a spec 038; a spec 042 (PR #56, anterior a `ef1c981`) o trocou por
@@ -304,37 +328,42 @@ Lista única. Substitui as cinco listas dos originais (errata 6).
 
 | # | Pendência | Depende de | Referência | Próximo passo |
 |---|---|---|---|---|
-| 1 | A-23: tokens no `localStorage` | Back: spec 046, Em descoberta, não versionada | FA:482; `specs/046-sessao-em-cookie-httponly/spec.md` | Rafael Santos decide as DECs da 046. Depois da entrega, o front tira os tokens do `localStorage` (sessão e interceptor) |
-| 2 | A-24: a API só informa `canCancel` | Back: spec 047 | FA:483; `specs/047-acoes-permitidas-do-chamado/spec.md` | Decidir as DECs da 047 (DEC-1 formato; DEC-3 `nextStatuses`). Depois, trocar o espelho de `tickets/ui/ticket-action-permissions.ts` e o `TICKET_STATUS_TRANSITIONS` pelos campos da API |
-| 3 | A-30: SLA do primeiro ciclo em `GET /tickets` (Monitorar) | Back: spec 048; a LAC-2 estende ao agregado e ao detalhe | FA:489; `specs/048-monitor-ciclo-sla-vigente/spec.md` | Decidir as DECs da 048. Depois, `TicketMonitorItem` e as telas do Monitor pelo ciclo vigente (048, `spec.md:64`) |
+| 1 | A-23: tokens no `localStorage` | Back: spec 046, Em descoberta, não versionada | FA:482; `specs/046-sessao-em-cookie-httponly/spec.md` | DECs decididas em 05/11 (§16.8, decisões 8 e 8a), com a recomendação técnica do §16.6; a implementação no back depende de autorização (E-11). Depois da entrega, o front tira os tokens do `localStorage` (sessão e interceptor) e coordena a renovação entre abas (A-55), na E-24 |
+| 2 | A-24: a API só informa `canCancel` | Back: spec 047 | FA:483; `specs/047-acoes-permitidas-do-chamado/spec.md` | DECs decididas em 05/11 (§16.8, decisão 9): DEC-1 com booleanos por ação, mais `canStartProgress` e `canResolve`; DEC-2 (b), com o Monitor; DEC-3 (b), sem `nextStatuses`; DEC-4, depois da fase 2 de chamados da 049; DEC-5 (a), mensagens e anexos numa spec própria (LAC-14). O mecanismo depende da decisão 12, aberta. Depois da entrega, trocar o espelho de `tickets/ui/ticket-action-permissions.ts` e o `TICKET_STATUS_TRANSITIONS` pelos campos da API (E-24) |
+| 3 | A-30: SLA do primeiro ciclo em `GET /tickets` (Monitorar) | Back: spec 048; a LAC-2 estende ao agregado e ao detalhe | FA:489; `specs/048-monitor-ciclo-sla-vigente/spec.md` | DECs decididas em 05/11 (§16.8, decisão 10): o ciclo vigente na lista, no filtro, na ordenação, nos dois resumos e no detalhe (LAC-2), com uma definição em SQL, depois da parte 1 da 043, e o `serverNowUtc` (DEC-66 da 049). Depois da entrega, `TicketMonitorItem` e as telas do Monitor pelo ciclo vigente (048, `spec.md:64`; E-24) |
 | 4 | Volta da cor da função (A-05/BR-001) | Back: spec 044, Em descoberta, DEC-1 a DEC-7 abertas | FA:116-143; FI:337-356 | Responder as DECs. Depois da entrega, os passos de FA:136-143 |
-| 5 | A-27: URL de produção | Implantação; pendente de propósito (Rafael Santos, 31/10) | `src/environments/environment.prod.ts:3-4` | Informar a URL na implantação; ver N-8 (portas) |
-| 6 | C-01: exceção do resultado tipado nos serviços de sessão | Rafael Santos | FA:534; FA:587 | Decidir se a exceção entra nas skills |
+| 5 | A-27: URL de produção | Implantação; pendente de propósito (Rafael Santos, 31/10) | `src/environments/environment.prod.ts:3-4` | Informar a URL na implantação; ver N-8 (portas). Topologia decidida em 05/11 (decisão 16): front e API na mesma origem, com proxy em `/api`, que é a DEC-4 (a) da 046 (DOC-32); a URL de produção segue com Rafael Santos (E-25, §16.7) |
+| 6 | C-01: exceção do resultado tipado nos serviços de sessão | Rafael Santos | FA:534; FA:587 | Decidido em 05/11 (decisão 20): registrar a exceção nas skills, na E-07, que precisa de autorização específica |
 | 7 | A-22: motivo da reabertura (500 × 4000) | Rafael Santos (LAC-10) | §5 | Resolvido em 05/11: o limite ficou em 4000, o do back (T-512 da spec 049 do back), na `origin/main` pelo PR #5 |
-| 8 | Defeitos conhecidos das etapas integradas | — | Tabela abaixo; §11 | Resolvido em 05/11: corrigidos na E-01 (`0ae9ee4` a `79e5129`), na `origin/main` desde o `333f4c2` (16:58). O N-2 veio resolvido pelo PR #5 |
-| 9 | Validação visual com login | API: o container `webapi:dev` não respondia | Etapa E-04 | Revalidar na aplicação real o A-34, R-05 a R-07 e o aviso do A-42 |
+| 8 | Defeitos conhecidos das etapas integradas | — | Tabela abaixo; §11 | Resolvido em 05/11: corrigidos na E-01 (`0ae9ee4` a `79e5129`), na `origin/main` desde o `333f4c2` (16:58). O N-2 veio resolvido pelo PR #5. O que 31/10 apontou e ficou fora da tabela está no §16.5 (R-08, R-10, C-36, C-37, C-39 e DOC-42) |
+| 9 | Validação visual com login | API: o container `webapi:dev` não respondia | Etapa E-04 | Revalidar na aplicação real o A-34, R-05 a R-07 e o aviso do A-42. Desde 05/11, primeiro o A-59 (lote e 429), e depois também R-08 a R-10, A-50, A-55 e os efeitos visuais do A-33 (E-04, §16.7) |
 | 10 | SSR responde 500 nas rotas não pré-renderizadas: `new CommonEngine()` sem `allowedHosts` | Front; problema preexistente | `server.ts:15`; `l3/modificada/.x2/ssr-requests-localhost.txt` e `ssr-server.log` | Resolvido na E-12 com a remoção do SSR (`06f537b`), na `origin/main` desde 05/11. A implantação passa a servir arquivos estáticos (item 28) |
 | 11 | `node_modules` local sem sincronizar | — | `l48/integ/npm-ci.log` | Resolvido em 04/11: `npm ci` às 22:52, sem mudar o lockfile; o `@angular/animations` saiu do `node_modules` |
 | 12 | Push da `main` | — | §11 | Resolvido em 04/11: push às 22:51 (`e977f64` → `d1f5d97`, 14 commits) e às 22:59 (`2ccf5d5` e o registro da integração, `82c7462`). Em 05/11, com autorização: fast-forward da `main` para o `333f4c2` (16:58:43) e push `5cd3dce..333f4c2` (16:58:53), com a E-01 e a E-12 (§11) |
-| 13 | `.impeccable/design.json` defasado | Rafael Santos (decisão pendente) | `.impeccable/design.json:3` (`generatedAt` 2026-10-27); DOC-10 | Não regenerar por enquanto (04/11). Decidir depois se regenera pelo fluxo `/impeccable document` |
-| 14 | Evidências do back que não existem mais (N-7); texto do A-25; classificação do A-31 | Front (documentação) | §4; §5; §7 | Reconferir contra a `origin/main` atual do back (`e5d8a38`) e registrar aqui |
-| 15 | N-4 e N-5 | Front; Rafael Santos (incluir no plano) | §7 | A spec do `SideMenuNavComponent` (N-5) entrou na E-01, na `origin/main` desde 05/11. O N-4 e os outros quatro arquivos do N-5 não têm etapa no plano de 31/10 |
+| 13 | `.impeccable/design.json` defasado | Rafael Santos (decidido) | `.impeccable/design.json:3` (`generatedAt` 2026-10-27); DOC-10 | Mantido sem regenerar: decisão de 04/11, confirmada em 05/11 (decisão 14). A defasagem fica registrada no DOC-10: 23 commits do `DESIGN.md` depois do `generatedAt`, e o badge de sucesso do `design.json` em 1,58:1 |
+| 14 | Evidências do back que não existem mais (N-7); texto do A-25; classificação do A-31 | Front (documentação) | §4; §5; §7 | Em parte em 05/11: o N-7 foi reconferido no `251da97` (§7) e o texto do A-25, revisto (DOC-42). Falta a classificação do A-31 |
+| 15 | N-4 e N-5 | Front; Rafael Santos (incluir no plano) | §7 | A spec do `SideMenuNavComponent` (N-5) entrou na E-01, na `origin/main` desde 05/11. O N-4 e os outros quatro arquivos do N-5 entram na E-20 (§16.7) |
 | 16 | D-SF5: nomenclatura de specs, branches e commits do front | — | §9 | Definida em 04/11: `FE-NNN` espelhando o back (§9). Vale para o trabalho do SDD; as etapas do plano de 31/10 seguem com os IDs da auditoria |
-| 17 | Achados da auditoria geral de 31/10 (DIV-, LAC-, DOC-, BK-) | Front, back e responsável | §8 | Seguem no plano de 31/10 (E-00 feita; E-01 e E-12 feitas e na `origin/main` desde 05/11; as demais sem aprovação). A DIV-3 (Alto) afeta o uso hoje; a DIV-1 (Alto) e a DIV-4 foram resolvidas em 05/11 pelo PR #5 (FE-0 da spec 049 do back); a E-02 prevê corrigir a DIV-2, a DIV-9 e a DIV-10 |
+| 17 | Achados da auditoria geral de 31/10 (DIV-, LAC-, DOC-, BK-) | Front, back e responsável | §8; §16 | Seguem no plano, revisto em 05/11 (§16.7): E-00, E-01, E-05, E-12 (menos o A-27, a CSP e as guardas de plataforma) e E-13 feitas; E-02 em parte. A DIV-3 (Alto) afeta o uso hoje; a DIV-1 (Alto), a DIV-4 e a DIV-10 foram resolvidas pelo PR #5 (FE-0 da spec 049 do back), e a DIV-9 em parte. A DIV-2 foi decidida em 05/11: vale o código do back, e o front corrige na E-02 (§16.8). Estados conferidos em 05/11 no §8 |
 | 18 | Commit das limpezas L-4, L-5 e L-6 | — | §9; §11 | Resolvido em 04/11: três commits independentes (`2445a2a`, `56495bd`, `d1f5d97`), integrados à `main` por fast-forward e publicados |
 | 19 | Supressões NG8102 e NG8107 (`extendedDiagnostics`, no `tsconfig.app.json` e no `tsconfig.spec.json` do `7fe3bec`) | — | §3; §9 | Resolvido em 04/11: removidas de todas as configurações no `d1f5d97` |
-| 20 | Excluir `docs/audit/FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` | Rafael Santos; back (referências do §12) | §12; §15 | Preservar os dois até o back atualizar as referências (decisão de 04/11). O front não altera o back |
+| 20 | Excluir `docs/audit/FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` | Rafael Santos; back (referências do §12) | §12; §15 | Preservar os dois até o back atualizar as referências (decisão de 04/11, confirmada em 05/11, decisão 19). O front não altera o back. Em 05/11, a 049, agora versionada, também cita os originais, e a 044 não os cita (DOC-28; §16.2) |
 | 21 | Itens da revisão da raiz de 04/11 | Rafael Santos | §9; relatório das limpezas L-4 a L-8 | O `server.ts` saiu da raiz com o SSR, na E-12 (`06f537b`, na `origin/main` desde 05/11); `README.md` (DOC-6) e `PRODUCT.md` (DOC-1 a DOC-5) ficam para a E-06. Resolvidos em 04/11: o `cli.analytics` como `false` (`2ccf5d5`) e a pasta `.impeccable/live/`, apagada (a regra `.impeccable/live/` do `.gitignore` continua) |
-| 22 | Impacto no front das specs do back mergeadas depois de 31/10 (022, 023, 045, 024, 035, 051 e 050) | Front | §12 | Avaliar; não foi feito nesta consolidação |
+| 22 | Impacto no front das specs do back mergeadas depois de 31/10 (022, 023, 045, 024, 035, 051 e 050) | Front | §12 | Em parte em 05/11 (§16.4): a 023 dispensou o detalhe do departamento (T-519 do PR #5); a 024 deixou morto o recuo de Meus Chamados (C-41); a 022 entrega a contagem de chamados ativos que o front não usa (A-58); a 045 mudou a regra citada no A-14 (reconferida). A 035, a 050 e a 051 não foram avaliadas |
 | 23 | Fontes do Google embutidas no build | Front (E-12) | `src/index.html:9-12`; §3 | Resolvido na E-12 (`ce43d3f`, na `origin/main` desde 05/11): Public Sans (400, 400 itálico, 500, 600 e 700) e Sora (700) pelo `@fontsource`, e o Boxicons pelo npm. Dois builds seguidos saem idênticos, e o navegador não busca mais fontes no Google nem no unpkg |
 | 24 | Vulnerabilidades nas dependências | Front (E-12) | `l48/integ/npm-audit-prod.json`; `npm-audit-completo.txt` | Resolvido na E-12 para as dependências de produção (`06f537b`, sem a cadeia do Express; `1135935`, Angular 22.2; `c1508a6`, `@ngrx/signals` 22.0.1): `npm audit --omit=dev` sem vulnerabilidades. Restam as de desenvolvimento (item 27) |
-| 25 | Guarda `isPlatformBrowser` que sobrou no `TicketMonitorComponent` | Front | `55c5744` tirou as outras cinco | Inofensiva num app só de navegador. Tirar num commit próprio |
-| 26 | Menu lateral: só os itens de chamados expõem `aria-current`, e os ícones decorativos não têm `aria-hidden` | Front (acessibilidade) | Achado da spec do `SideMenuNavComponent` (E-01, N-5) | Usar `ariaCurrentWhenActive` nos `routerLinkActive` e `aria-hidden="true"` nos ícones |
-| 27 | Vulnerabilidades nas dependências de desenvolvimento | Front | `npm audit` de 05/11 na ponta da E-12 (`rebase/audit/`) | 23 (17 moderadas, 6 altas), no ferramental de lint e de testes, fora do pacote entregue. Na primeira medição da E-12, antes do rebase, eram 8 (2 moderadas, 6 altas), com o mesmo lockfile: a diferença é um aviso do `minimatch` (GHSA-g3hv-75wg-m249) que não aparecia antes e chega pelo `eslint`, pelo `typescript-eslint` e pelo `angular-eslint`; a correção que o npm sugere rebaixa esses pacotes de versão major. As 6 altas são da cadeia do Karma (`body-parser`, `engine.io`, `socket.io-parser`, `follow-redirects`), do `brace-expansion` e do `browserslist`. O Karma foi descontinuado: avaliar o runner de testes recomendado para o Angular 22 e um `overrides` do `minimatch` |
+| 25 | Guarda `isPlatformBrowser` que sobrou no `TicketMonitorComponent` | Front | `55c5744` tirou as outras cinco | Inofensiva num app só de navegador. Tirar num commit próprio. Em 05/11, também quatro guardas `typeof window` no `SessionService` (C-31); as duas vão para a E-03 (§16.7) |
+| 26 | Menu lateral: só os itens de chamados expõem `aria-current`, e os ícones decorativos não têm `aria-hidden` | Front (acessibilidade) | Achado da spec do `SideMenuNavComponent` (E-01, N-5) | Usar `ariaCurrentWhenActive` nos `routerLinkActive` e `aria-hidden="true"` nos ícones. Confirmado em 05/11 (`side-menu-nav.component.html:8,16,34`) |
+| 27 | Vulnerabilidades nas dependências de desenvolvimento | Front | `npm audit` de 05/11 na ponta da E-12 (`rebase/audit/`) | 23 (17 moderadas, 6 altas), no ferramental de lint e de testes, fora do pacote entregue. Na primeira medição da E-12, antes do rebase, eram 8 (2 moderadas, 6 altas), com o mesmo lockfile: a diferença é um aviso do `minimatch` (GHSA-g3hv-75wg-m249) que não aparecia antes e chega pelo `eslint`, pelo `typescript-eslint` e pelo `angular-eslint`; a correção que o npm sugere rebaixa esses pacotes de versão major. As 6 altas são da cadeia do Karma (`body-parser`, `engine.io`, `socket.io-parser`, `follow-redirects`), do `brace-expansion` e do `browserslist`. O Karma foi descontinuado: avaliar o runner de testes recomendado para o Angular 22 e um `overrides` do `minimatch`. Runner decidido em 05/11 (decisão 17): Vitest, pelo builder de testes unitários do Angular CLI, na E-25, com o mesmo número de casos |
 | 28 | Implantação sem SSR | Implantação (A-27) | `06f537b` | Servir `dist/tickest-pristine/browser` como arquivos estáticos, com as rotas desconhecidas redirecionadas para o `index.html` |
 | 29 | Bootstrap ainda vem do jsDelivr | Front | `src/index.html` | Tem `integrity`. Trazer o pacote `bootstrap` 5.3.3 para o build deixaria a página toda na mesma origem e a CSP mais simples |
 | 30 | Build inicial perto do aviso de orçamento | Front | §3 | 433,61 kB contra o aviso de 500 kB; quase todo o salto é o CSS do Boxicons. Avaliar usar só os ícones que o app usa |
-| 31 | Tarefas da FE-0 (PR #5) sem conferência nesta Parte I | Front (documentação) | Mensagem do `4b7b0de`; §6; §7; §8 | O registro do PR #5 neste documento cobre o A-21, o A-22, o DIV-5 e a pendência 7. As outras tarefas não foram conferidas contra os achados: a T-500 (fechar pelo `POST /tickets/{id}/close`) corresponde ao DIV-1, e a T-517 (sem as flags das rotas entregues) cobriu o N-2. Conferir cada tarefa contra o §6, o §7 e o §8 e atualizar os estados |
+| 31 | Tarefas da FE-0 (PR #5) sem conferência nesta Parte I | Front (documentação) | Mensagem do `4b7b0de`; §6; §7; §8 | Resolvido em 05/11: a reauditoria conferiu cada tarefa contra o §6, o §7 e o §8 (§16.2). A T-500 é o DIV-1 e a T-504 (parte), o DIV-4, registrados pela outra sessão; a T-512 resolveu a DIV-10 e, em parte, a DIV-9; a T-517 cobriu o N-2 e deixou a flag do A-28 (C-33); a T-518 trouxe os valores 12 e 13 do histórico e tirou o `responsibleId`; a T-519 dispensou o detalhe do departamento; a T-514 criou as specs dos 9 Data Services (DOC-18). O comportamento contra o back fica para a E-04 |
+| 32 | Registro no `AUDITORIA.md` (E-16) | Outra sessão (commit da edição dela) | §16.7 | E-16a e E-16b aprovadas por Rafael Santos em 05/11, por volta das 22:15. A (a) espera o commit da outra sessão, que até as 22:18 não tinha commitado; o commit e o push dependem de confirmação |
+| 33 | Decisões da Onda 0 | Rafael Santos | §16.7; §16.8 | Aprovadas em 05/11, menos a decisão 12 (conferência de permissão por recurso), aberta com a proposta |
+| 34 | Achados novos da reauditoria de 05/11 | Front, back e responsável | §16.2 a §16.6 | 128 IDs novos (13 A, 3 R, 29 C, 33 DOC, 5 DIV, 2 LAC, 18 BA e 25 BK), dos 102 IDs provisórios das frentes e dos itens de 31/10 sem registro; nenhum de gravidade Crítica; Alta: A-59 (INFERIDO) e BK-27 (31/10); Média: A-47, A-48, A-50, A-53, A-56, LAC-17, BA-13 e BA-17; o resto, Baixa ou sem gravidade dada pela frente. Seguem o plano revisto (§16.7) |
+| 35 | Flag `volumeResolved` (A-28) | Front | §4; §16.5 | Critério cumprido em 05/11 (decisão 15): o contrato do A-28 está comprovado. A flag e os ramos mortos saem na E-17 (C-33); a validação visual fica na E-04 |
+| 36 | DIV-3 e A-59, de gravidade Alta | Back; front | §8.1; §16.8 | Tratamento pedido em 05/11. DIV-3: a correção é do back (T-501 e T-502 da 049; Q-83), com a troca no front na E-24; mitigação opcional na E-02, relendo o chamado logo antes do `PUT` de cancelar. A-59: primeiro item da E-04; confirmado, a REQ-505 da 049 com a 034 (E-23) |
 
 **Defeitos conhecidos para a E-01**
 
@@ -363,11 +392,11 @@ amplia a que o PR #5 criou. O N-2 veio resolvido pelo PR #5 (T-517), e o commit 
 | N-1 | Comentário fala em "amostra de cor", que saiu com o BR-001 | `roles/feature-role-list/role-list.component.css:1` | Corrigido na E-01 (`77fb19d`), na `origin/main` desde 05/11 | — |
 | N-2 | Comentário diz que as flags do Início esperam endpoint que o back "ainda não entrega"; hoje as cinco flags estão ligadas | `shared/entities/dashboard-features.ts:4-8`; `src/environments/environment.ts:9-13` | Corrigido na `origin/main` pelo PR #5 (T-517, `4b7b0de`): ficou só a flag `volumeResolved`, e o comentário foi reescrito. O commit da E-01 saiu no rebase | — |
 | N-3 | Título de teste em português ("deve manter a sessão…") | `shared/interceptors/auth.interceptor.spec.ts:117` | Corrigido na E-01 (`855ad11`), na `origin/main` desde 05/11 | — |
-| N-4 | Variáveis com nome em português em teste (`prazoDd`, `prazoText`, `prazoLines`) | `tickets/feature-ticket-detail/ticket-detail.component.spec.ts:256,280,1102` | Pendente | Sem etapa no plano de 31/10 |
-| N-5 | Cinco arquivos novos sem spec própria | `shared/utils/focus-trap.util.ts`; `shared/ui/session-retry-notice/session-retry-notice.component.ts`; `shared/ui/layouts/main-layout/side-menu-nav.component.ts`; `tickets/feature-ticket-list/ticket-list-first-use.component.ts`; `tickets/feature-ticket-list/ticket-list-due-cell.component.ts` | Em parte: o PR #5 criou a spec do `SideMenuNavComponent`, com 2 testes, e a E-01 (`79e5129`, na `origin/main` desde 05/11) a amplia para 13. Os outros quatro seguem só com testes indiretos, como `focus-trap.directive.spec.ts` e `app.component.spec.ts` | Os outros quatro, sem etapa no plano de 31/10 |
+| N-4 | Variáveis com nome em português em teste (`prazoDd`, `prazoText`, `prazoLines`) | `tickets/feature-ticket-detail/ticket-detail.component.spec.ts:256,280,1102` (`:1124` em `333f4c2`) | Pendente | E-20 (§16.7) |
+| N-5 | Cinco arquivos novos sem spec própria | `shared/utils/focus-trap.util.ts`; `shared/ui/session-retry-notice/session-retry-notice.component.ts`; `shared/ui/layouts/main-layout/side-menu-nav.component.ts`; `tickets/feature-ticket-list/ticket-list-first-use.component.ts`; `tickets/feature-ticket-list/ticket-list-due-cell.component.ts` | Em parte: o PR #5 criou a spec do `SideMenuNavComponent`, com 2 testes, e a E-01 (`79e5129`, na `origin/main` desde 05/11) a amplia para 13. Os outros quatro seguem só com testes indiretos, como `focus-trap.directive.spec.ts` e `app.component.spec.ts` | Os outros quatro na E-20, com o C-23 (§16.7) |
 | N-6 | Referência `#menu` sem uso: o `.ts` só lê `menuOpener`, `menuCloser` e `mainContent` | `main-layout.component.html:4`; `main-layout.component.ts:68-74` | Corrigido na E-01 (`a0eb626`), na `origin/main` desde 05/11 | — |
-| N-7 | Evidências do back que não existem em `ef1c981`: `TicketAccessGuard.EnsureOwnerOrManagerAsync` (A-06, FA:149), `UserValidationRules.NameMaxLength` (A-09, FA:168), `TicketStatusTransitions.CanTransition` (A-12, FA:466), `TicketSla.GetStatus` (A-14, FA:468) e os limites do A-22 (FA:476) | Busca no `ef1c981` sem ocorrência; entre `a72e07b` e `ef1c981` entraram as specs 039, 042 e 041 (PRs #55, #56 e #57) | A reavaliar | Registrado nesta Parte I (§4, §5); os anexos ficam como estão |
-| N-8 | Portas diferentes: 5000 em desenvolvimento e 5195 em produção | `src/environments/environment.ts:3`; `src/environments/environment.prod.ts:4` | Registrado (ligado ao A-27) | Resolver junto com a URL de produção |
+| N-7 | Evidências do back que não existem em `ef1c981`: `TicketAccessGuard.EnsureOwnerOrManagerAsync` (A-06, FA:149), `UserValidationRules.NameMaxLength` (A-09, FA:168), `TicketStatusTransitions.CanTransition` (A-12, FA:466), `TicketSla.GetStatus` (A-14, FA:468) e os limites do A-22 (FA:476) | Busca no `ef1c981` sem ocorrência; entre `a72e07b` e `ef1c981` entraram as specs 039, 042 e 041 (PRs #55, #56 e #57) | Reconferido em 05/11 no `251da97`: os cinco símbolos seguem inexistentes, e os substitutos registrados no §4 e no §5 conferem (A-06: `ReopenTicketCommandHandler.cs:33-41`; A-12: `Ticket.cs:376-392`; A-14: `Ticket.cs:403-426` e `TicketSlaPlan.cs:19-20`) | Os anexos ficam como estão |
+| N-8 | Portas diferentes: 5000 em desenvolvimento e 5195 em produção | `src/environments/environment.ts:3`; `src/environments/environment.prod.ts:4` | Registrado (ligado ao A-27) | Resolver junto com a URL de produção (E-25, §16.7) |
 
 ### 8. Auditoria geral de 31/10 — registro compacto
 
@@ -379,21 +408,24 @@ Auditoria só de leitura, do front e do back (`ef1c981`). O relatório foi entre
 - **DIV-n** = D-n do relatório de 31/10, na mesma ordem e com os mesmos temas (conferido no
   relatório: D-1 é o "Fechar chamado" pela rota errada; D-10, a tela de Usuários).
 - **DOC-n** e **BK-n:** numerados nesta redação.
+- **05/11:** os estados abaixo foram conferidos na reauditoria (front `333f4c2`, back `251da97`), com as
+  decisões de 05/11 (§16.8). Os IDs novos das mesmas séries (DIV-11 a DIV-15, LAC-16 e LAC-17, DOC-11 a
+  DOC-43 e BK-6 a BK-30) estão no §16.
 
 #### 8.1 Divergências front/back (DIV-)
 
 | ID | Grav. | Divergência | Front | Back (`ef1c981`) | Situação |
 |---|---|---|---|---|---|
-| DIV-1 | Alto | "Fechar chamado" sempre falha: o front fecha por PUT com status Fechado, e o back recusa PUT em chamado não ativo | `tickets/entities/ticket-status.ts:41` (Resolvido → Fechado); `tickets/infrastructure/ticket.data.service.ts:39` (PUT `/tickets/{id}`) | `UpdateTicketCommandHandler.cs:51-54`; `Ticket.cs:50` (`IsActive`; linha 48 na `origin/main` atual); teste `UpdateTicketCommandHandlerTests.cs:91-105`. A rota certa, `POST tickets/{ticketId}/close` (`Close.cs:13`, com `tickets:manage` em `Close.cs:25`), não era usada pelo front | Resolvido em 05/11 pelo PR #5 (T-500 da spec 049 do back): o front fecha pelo `POST tickets/{id}/close`; Iniciar, Resolver e Cancelar seguem no `PUT` |
-| DIV-2 | Baixo | Regra de reabrir | Dono com `tickets:reopen-own` ou qualquer um com `tickets:manage` (`tickets/ui/ticket-action-permissions.ts:28-31`) | Dono só com `tickets:reopen-own`; os demais com `tickets:manage` (`ReopenTicketCommandHandler.cs:33-36`) | Aberto: o dono com `manage` e sem `reopen-own` vê o botão e recebe 403 |
-| DIV-3 | Alto | O PUT reenvia a descrição e o status lidos | Cancelar pela lista manda a descrição carregada na tela (`tickets/feature-ticket-list/ticket-list.component.ts:357`) | O PUT recebe o estado inteiro (descrição e status) | Aberto: pode desfazer edição alheia (LAC-1) |
-| DIV-4 | Baixo | Código de erro esperado | `Tickets.AssigneeCannotManageTickets` (`tickets/application/ticket-detail.store.ts:264`) | Devolve `Tickets.AssigneeNotAttendant` (`TicketErrors.cs:23-24`; `AssignTicketCommandHandler.cs:65`) | Resolvido em 05/11 pelo PR #5 (T-504 da spec 049 do back): o front espera `Tickets.AssigneeNotAttendant`, e a orientação "Escolha outro usuário na lista" aparece |
+| DIV-1 | Alto | "Fechar chamado" sempre falha: o front fecha por PUT com status Fechado, e o back recusa PUT em chamado não ativo | `tickets/entities/ticket-status.ts:41` (Resolvido → Fechado); `tickets/infrastructure/ticket.data.service.ts:39` (PUT `/tickets/{id}`) | `UpdateTicketCommandHandler.cs:51-54`; `Ticket.cs:50` (`IsActive`; linha 48 na `origin/main` atual); teste `UpdateTicketCommandHandlerTests.cs:91-105`. A rota certa, `POST tickets/{ticketId}/close` (`Close.cs:13`, com `tickets:manage` em `Close.cs:25`), não era usada pelo front | Resolvido em 05/11 pelo PR #5 (T-500 da spec 049 do back): o front fecha pelo `POST tickets/{id}/close`; Iniciar, Resolver e Cancelar seguem no `PUT`. Conferido em 05/11 no `333f4c2` (`ticket.data.service.ts:42-45`; `ticket-detail.store.ts:175-177`) |
+| DIV-2 | Baixo | Regra de reabrir | Dono com `tickets:reopen-own` ou qualquer um com `tickets:manage` (`tickets/ui/ticket-action-permissions.ts:28-31`) | Dono só com `tickets:reopen-own`; os demais com `tickets:manage` (`ReopenTicketCommandHandler.cs:33-36`) | Aberto: o dono com `manage` e sem `reopen-own` vê o botão e recebe 403. Decidido em 05/11 que vale o código do back (decisão 1, §16.8): o front corrige na E-02, e a RN-06, a 047 e o anexo C da 049, que descrevem a regra do front, são corrigidos no back (BK-6). Só afeta funções personalizadas |
+| DIV-3 | Alto | O PUT reenvia a descrição e o status lidos | Cancelar pela lista manda a descrição carregada na tela (`tickets/feature-ticket-list/ticket-list.component.ts:357`) | O PUT recebe o estado inteiro (descrição e status) | Aberto: pode desfazer edição alheia (LAC-1). Conferido em 05/11: cancelar pela lista manda a descrição da tela, editar manda o status, e mudar o status manda a descrição (`ticket-list.component.ts:340,360`; `ticket-detail.store.ts:177,206`). A correção é do back (T-501 e T-502 da 049, abertas; Q-83); mitigação opcional no front na E-02 (§16.8) |
+| DIV-4 | Baixo | Código de erro esperado | `Tickets.AssigneeCannotManageTickets` (`tickets/application/ticket-detail.store.ts:264`) | Devolve `Tickets.AssigneeNotAttendant` (`TicketErrors.cs:23-24`; `AssignTicketCommandHandler.cs:65`) | Resolvido em 05/11 pelo PR #5 (T-504 da spec 049 do back): o front espera `Tickets.AssigneeNotAttendant`, e a orientação "Escolha outro usuário na lista" aparece. Conferido em 05/11 (`ticket-detail.store.ts:269`) |
 | DIV-5 | — | Motivo da reabertura | 4000 desde 05/11 (antes 500) | 4000 | Resolvido em 05/11, na `origin/main` pelo PR #5 (A-22, §5) |
-| DIV-6 | — | "Atribuir a mim" | Só sem responsável (`tickets/feature-ticket-monitor/ticket-monitor-info-panel.component.ts:33`) | Permite assumir chamado que já tem responsável (levantamento de 31/10) | Decisão de produto (LAC-9) |
-| DIV-7 | — | Administrador tirar a própria função de administrador | Só o front impede (`users/feature-user-list/user-list.component.ts:564`) | Não impede (levantamento de 31/10) | Decisão (LAC-8) |
-| DIV-8 | — | Mínimo de 2 caracteres no nome | Só no front (FA:173-175) | Só exige não vazio (FA:173-174) | Decisão (LAC-10) |
-| DIV-9 | — | "Novo Chamado" e "Meus Chamados" | Aparecem pelo perfil deduzido, não por `tickets:create` e `tickets:view-own`; `/tickets/novo` sem guarda de permissão (`core/routes/app.routes.ts:55-59`) | Exige as permissões (levantamento de 31/10) | Aberto |
-| DIV-10 | — | Ações da tela de Usuários | Só confere `users:read` (`core/routes/app.routes.ts:81`; `shared/ui/layouts/main-layout/side-menu-nav.component.html:21,38`); nenhuma conferência de `users:create`, `users:deactivate`, `users:assign-roles` ou `users:update` fora dos testes | Exige cada permissão (levantamento de 31/10) | Aberto (LAC-5) |
+| DIV-6 | — | "Atribuir a mim" | Só sem responsável (`tickets/feature-ticket-monitor/ticket-monitor-info-panel.component.ts:33`) | Permite assumir chamado que já tem responsável (levantamento de 31/10) | Decisão de produto (LAC-9). Conferido em 05/11: quem tem `tickets:manage` assume qualquer chamado ativo, mesmo com responsável, e o segundo de dois cliques em sequência toma o chamado sem conflito (`AssignTicketCommandHandler.cs:28-39,68-73`). Decidido em 05/11 (decisão 2): assumir chamado que já tem responsável passa a exigir `tickets:assign`, numa spec própria no back; o front já se comporta assim |
+| DIV-7 | — | Administrador tirar a própria função de administrador | Só o front impede (`users/feature-user-list/user-list.component.ts:564`) | Não impede (levantamento de 31/10) | Decisão (LAC-8). Conferido em 05/11: o back só protege o último administrador ativo (`AssignUserRolesCommandHandler.cs:69-80`). Decidido em 05/11 (decisão 3): a proteção vira regra do back, e o front mantém o espelho até lá |
+| DIV-8 | — | Mínimo de 2 caracteres no nome | Só no front (FA:173-175) | Só exige não vazio (FA:173-174) | Decisão (LAC-10). Conferido em 05/11 (`RegisterUserCommandValidator.cs:9-10`; `UpdateUserProfileCommandValidator.cs:10-11`). Decidido em 05/11 (decisão 4): o mínimo de 2 vira regra do back, e o front mantém o espelho até lá |
+| DIV-9 | — | "Novo Chamado" e "Meus Chamados" | Aparecem pelo perfil deduzido, não por `tickets:create` e `tickets:view-own`; `/tickets/novo` sem guarda de permissão (`core/routes/app.routes.ts:55-59`) | Exige as permissões (levantamento de 31/10) | Em parte desde 05/11 (PR #5, T-512): rotas, menu e Meus Chamados conferem `tickets:view-own` e `tickets:create` (`core/routes/app.routes.ts:50-63`; `side-menu-nav.component.html:13`). O Início ainda esconde "Novo Chamado" e "Meus Chamados" de quem tem qualquer permissão administrativa e liga os números a `/tickets` sem conferir `tickets:view-own` (`dashboard/dashboard.component.ts:158-167,315-320`; `.html:29,181`). Decidido em 05/11 que os atalhos seguem as permissões (decisão 5); a correção vai na E-17 |
+| DIV-10 | — | Ações da tela de Usuários | Só confere `users:read` (`core/routes/app.routes.ts:81`; `shared/ui/layouts/main-layout/side-menu-nav.component.html:21,38`); nenhuma conferência de `users:create`, `users:deactivate`, `users:assign-roles` ou `users:update` fora dos testes | Exige cada permissão (levantamento de 31/10) | Resolvido em 05/11 pelo PR #5 (T-512): as ações conferem `users:create`, `users:update`, `users:assign-roles` e `users:deactivate` (`user-list.component.ts:109-119`). Restam a regra por alvo (LAC-5) e dois resíduos: as funções no cadastro sem `users:assign-roles` (DIV-12) e a contagem por `GET /tickets` sem `tickets:manage` (A-54) |
 
 #### 8.2 Lacunas para specs novas no back (LAC-)
 
@@ -417,30 +449,50 @@ A coluna "Relaciona-se com" é leitura desta redação.
 | LAC-14 (L-14) | Baixa | Ações sobre mensagens e anexos | — |
 | LAC-15 (L-15) | Baixa | Atribuição na abertura com as mesmas regras da atribuição | DP-02 do back (`SPEC-TICKEST.md:164`) |
 
+**Estado em 05/11** (§16.4; decisões de 05/11 no §16.8):
+
+| Lacuna | Estado | Onde está registrada |
+|---|---|---|
+| LAC-1 | Continua, com spec em parte | 049 REQ-501, DEC-61, T-501 e T-502, abertas; a versão no contrato é só pergunta (Q-83) |
+| LAC-2 | Continua; decidido em 05/11 que entra na 048 (decisão 10) | A 048 só cobre `GET tickets`; a Q-61 da 049 só cita as listas |
+| LAC-3 | Continua, com spec | 049 DEC-67, REQ-508, T-510 e AC-513; em andamento na 043 |
+| LAC-4 | Continua, com spec | 049 DEC-65, REQ-506 e T-508 |
+| LAC-5 | Continua, só como pergunta | Q-64 da 049; a visibilidade pela permissão saiu no PR #5 (T-512) |
+| LAC-6 | Continua, em parte | Contagem: 034 e 049 REQ-505; devolução à fila só na 014, fora da `main` (BK-27) |
+| LAC-7 | Continua, com spec | 049 REQ-505, T-506, T-507 e AC-510 |
+| LAC-8 | Decidida em 05/11 (decisão 3): a proteção vira regra do back | Q-64 da 049; falta a spec (E-10) |
+| LAC-9 | Decidida em 05/11 (decisão 2): exige `tickets:assign`, numa spec própria | Nem a 047 nem a 049 a tinham; falta a spec (E-10) |
+| LAC-10 | Em parte; decidido em 05/11 que o mínimo do nome vira regra do back (decisão 4) | Motivo da reabertura resolvido (049 REQ-510, AC-515); limites só no banco (049 DEC-62, T-503, AC-525) |
+| LAC-11 | Mudou: entregue no back (G1, DEC-58) | Faltam o front (T-504, AC-523) e o cabeçalho no CORS (LAC-16) |
+| LAC-12 | Continua, sem spec | Inclui a janela de 15 minutos do cancelamento |
+| LAC-13 | Continua, sem spec | — |
+| LAC-14 | Decidida em 05/11 (decisão 9, DEC-5 (a) da 047): spec própria | DEC-5 da 047; Q-62 da 049 |
+| LAC-15 | Continua, com spec | 049 REQ-211 e DEC-35 (b), G3-b; hoje o back aceita `AssignedToUserId` sem `tickets:assign` |
+
 #### 8.3 Documentação (DOC-)
 
-| ID | Grav. | Problema | Evidência | Situação em 04/11 |
+| ID | Grav. | Problema | Evidência | Situação em 04/11 e em 05/11 |
 |---|---|---|---|---|
-| DOC-1 | Alto | `PRODUCT.md` diz que o produto é multi-tenant e que o isolamento entre empresas é "inegociável"; o back decidiu "uma organização por instalação" (DP-01) | `PRODUCT.md:35-36,84`; back `SPEC-TICKEST.md:62,134` | Aberto |
-| DOC-2 | — | Papéis com nomes errados | `PRODUCT.md:14-17,25` | Aberto |
-| DOC-3 | — | Link quebrado: `docs/plano-onboarding-rh.md` não existe no back | `PRODUCT.md:23-24` | Aberto |
-| DOC-4 | — | `GET /tickets/{id}/sla` dado como pendente | `PRODUCT.md:63-64` | Aberto |
-| DOC-5 | — | "Nenhum requisito de acessibilidade" × WCAG AA aplicado no `DESIGN.md` | `PRODUCT.md:92-94`; `DESIGN.md:171,193` | Aberto |
-| DOC-6 | — | O `README.md` é o modelo do Angular CLI: cita a versão 18.2.6 e manda rodar `ng e2e` | `README.md:3,23` | Aberto |
-| DOC-7 | — | `CLAUDE.md` com exemplo antigo (`TicketsService`) e sem `core/` e `dashboard/` | `CLAUDE.md:19-24,38` | Aberto |
-| DOC-8 | — | Skills citam lint que não existe, Prettier, `flushEffects`/`fakeAsync` e `console.error` | `.claude/skills/add-context/SKILL.md:74`; `add-feature/SKILL.md:41,56`; `add-feature/references/store-method.md:34,115`; `add-tests/SKILL.md:29-30`; `ca-review/SKILL.md:99`; `.claude/skills/README.md:100,105` | Em parte: o lint passou a existir na E-12 (`21735f4`, `npm run lint`, na `origin/main` desde 05/11). As skills não foram alteradas e ainda citam Prettier, `flushEffects`/`fakeAsync` e `console.error` |
-| DOC-9 | — | `DESIGN.md`: token do botão primário, texto transitório da spec 031 e o padrão `is-refreshing` não registrado | `DESIGN.md` no HEAD | Tratados na limpeza L-5, aprovada em 04/11 sem regenerar o documento (`56495bd`) |
-| DOC-10 | — | `.impeccable/design.json` defasado | `.impeccable/design.json:3` (`generatedAt` 2026-10-27) | Pendente (§6, item 13); sem regenerar por enquanto (04/11) |
+| DOC-1 | Alto | `PRODUCT.md` diz que o produto é multi-tenant e que o isolamento entre empresas é "inegociável"; o back decidiu "uma organização por instalação" (DP-01) | `PRODUCT.md:35-36,84`; back `SPEC-TICKEST.md:62,134` | Aberto; igual em 05/11 |
+| DOC-2 | — | Papéis com nomes errados | `PRODUCT.md:14-17,25` | Aberto; pior em 05/11: o "Admin Master" do `PRODUCT.md:16` não existe mais em `src/` |
+| DOC-3 | — | Link quebrado: `docs/plano-onboarding-rh.md` não existe no back | `PRODUCT.md:23-24` | Aberto; igual em 05/11 |
+| DOC-4 | — | `GET /tickets/{id}/sla` dado como pendente | `PRODUCT.md:63-64` | Aberto; igual em 05/11 |
+| DOC-5 | — | "Nenhum requisito de acessibilidade" × WCAG AA aplicado no `DESIGN.md` | `PRODUCT.md:92-94`; `DESIGN.md:171,193` | Aberto; igual em 05/11 |
+| DOC-6 | — | O `README.md` é o modelo do Angular CLI: cita a versão 18.2.6 e manda rodar `ng e2e` | `README.md:3,23` | Aberto em 05/11; o `README.md` também não cita o `npm run lint` nem o back na porta 5000 (DOC-38) |
+| DOC-7 | — | `CLAUDE.md` com exemplo antigo (`TicketsService`) e sem `core/` e `dashboard/` | `CLAUDE.md:19-24,38` | Aberto; pior em 05/11: o `CLAUDE.md:31` cita o `admin-master.guard.ts`, renomeado no PR #5 (DOC-11) |
+| DOC-8 | — | Skills citam lint que não existe, Prettier, `flushEffects`/`fakeAsync` e `console.error` | `.claude/skills/add-context/SKILL.md:74`; `add-feature/SKILL.md:41,56`; `add-feature/references/store-method.md:34,115`; `add-tests/SKILL.md:29-30`; `ca-review/SKILL.md:99`; `.claude/skills/README.md:100,105` | Em parte: o lint passou a existir na E-12 (`21735f4`, `npm run lint`, na `origin/main` desde 05/11). As skills não foram alteradas e ainda citam Prettier, `flushEffects`/`fakeAsync` e `console.error`. Igual em 05/11; o padrão real de espera é o `whenStable` (DOC-18) |
+| DOC-9 | — | `DESIGN.md`: token do botão primário, texto transitório da spec 031 e o padrão `is-refreshing` não registrado | `DESIGN.md` no HEAD | Tratados na limpeza L-5, aprovada em 04/11 sem regenerar o documento (`56495bd`); resolvido em 05/11 (o texto da 031 saiu no PR #5, que trouxe o DOC-13) |
+| DOC-10 | — | `.impeccable/design.json` defasado | `.impeccable/design.json:3` (`generatedAt` 2026-10-27) | Mantido sem regenerar (04/11; confirmado em 05/11, decisão 14). Defasagem ampliada em 05/11: 23 commits do `DESIGN.md` depois do `generatedAt`; badge de sucesso a 1,58:1 (§6, item 13) |
 
 #### 8.4 Modelo de specs do back (BK-)
 
-| ID | Grav. | Problema | Evidência | Nota de 04/11 |
+| ID | Grav. | Problema | Evidência | Nota de 04/11 e de 05/11 |
 |---|---|---|---|---|
-| BK-1 | Alto | Colisão de IDs RN entre `SPEC-TICKEST.md` e `SYSTEM_SPECIFICATION.md`: o RN-30 é o responsável na abertura num e o convite de conta no outro | `SPEC-TICKEST.md:164` (DP-02 → RN-30); `SYSTEM_SPECIFICATION.md:223` (RN-30, spec 008) | — |
-| BK-2 | Alto | `SPEC-TICKEST.md` órfão e contraditório | Relatório de 31/10 | — |
-| BK-3 | — | Partes do `SYSTEM_SPECIFICATION.md` congeladas | Relatório de 31/10 | — |
-| BK-4 | — | Quatro registros de decisão sem índice | Relatório de 31/10 | — |
-| BK-5 | — | 15 pastas de spec fora do git: 12 nunca commitadas, 5 delas aprovadas (022, 034, 035, 037 e 043) | Relatório de 31/10 | A 022 e a 035 entraram na `origin/main` (PRs #60 e #62, 01/11). Às 17:04 de 04/11, sem rastreio: 032, 033, 034, 036, 037, 040, 043, 044, 046, 047, 048 e 049, além de `specs/_fontes/` (`git status` do back, que outra sessão altera durante o dia: a 052, vista às 16:54, saiu do working tree) |
+| BK-1 | Alto | Colisão de IDs RN entre `SPEC-TICKEST.md` e `SYSTEM_SPECIFICATION.md`: o RN-30 é o responsável na abertura num e o convite de conta no outro | `SPEC-TICKEST.md:164` (DP-02 → RN-30); `SYSTEM_SPECIFICATION.md:223` (RN-30, spec 008) | 05/11: ampliado; o RN-30, o RN-34 e o RN-35 têm significados diferentes (`SPEC-TICKEST.md:351,355,356` × `SYSTEM_SPECIFICATION.md:223,227,228`), e o "RN-35" do PR #5 é ambíguo (DOC-13) |
+| BK-2 | Alto | `SPEC-TICKEST.md` órfão e contraditório | Relatório de 31/10 | 05/11: continua |
+| BK-3 | — | Partes do `SYSTEM_SPECIFICATION.md` congeladas | Relatório de 31/10 | 05/11: não reconferido |
+| BK-4 | — | Quatro registros de decisão sem índice | Relatório de 31/10 | 05/11: não reconferido |
+| BK-5 | — | 15 pastas de spec fora do git: 12 nunca commitadas, 5 delas aprovadas (022, 034, 035, 037 e 043) | Relatório de 31/10 | A 022 e a 035 entraram na `origin/main` (PRs #60 e #62, 01/11). Às 17:04 de 04/11, sem rastreio: 032, 033, 034, 036, 037, 040, 043, 044, 046, 047, 048 e 049, além de `specs/_fontes/` (`git status` do back, que outra sessão altera durante o dia: a 052, vista às 16:54, saiu do working tree). Em 05/11: 11 pastas e `specs/_fontes/contratos-central-atendimento.md` fora do Git (032, 033, 034, 036, 037, 040, 043, 044, 046, 047 e 048); a 049, a 050 e a 051 foram versionadas (`back-wt-status.txt`). Decidido em 05/11 que o back versiona as pastas soltas (decisão 21) |
 
 #### 8.5 Conformidade com as skills (31/10)
 
@@ -449,15 +501,20 @@ A coluna "Relaciona-se com" é leitura desta redação.
 | Front, agregado | 91,6% (1095 de 1196) | 93,8% |
 | Front, média simples | 87,7% | 96,0% |
 | Back | cerca de 80% (bruto) | cerca de 90% |
+| Front, agregado (05/11, `333f4c2`) | 92,0% (1110 de 1207) | 94,2% |
+| Front, média simples (05/11) | 88,0% | 96,2% |
+| Back (05/11, `251da97`; média das 26 regras) | 86,8% | 97,1% |
 
-Fonte: relatório de 31/10.
+Fonte: relatório de 31/10; para 05/11, o §16.3 (mesmo método, com os universos de 31/10 reconstruídos).
 
 #### 8.6 Achado de 04/11: spec 049 do back
 
 - A spec 049 ("Tickest — reavaliação arquitetural do projeto inteiro, modelo-alvo e plano de
-  refatoração", não versionada) usa FE-01 a FE-28 para achados do front.
+  refatoração") usa FE-01 a FE-28 para achados do front. Em 04/11 não era versionada; desde 05/11 está
+  no `bcf0356` (PR #71, merge `251da97`), "Em implementação" (`spec.md:4`).
 - Estado: no começo desta redação, o cabeçalho dizia Em descoberta. Às 16:41 de 04/11 passou a
-  Aprovada, "como spec-mãe, pelo modelo por etapa", ainda sem commit (`spec.md:4,6` e `:2152`).
+  Aprovada, "como spec-mãe, pelo modelo por etapa", ainda sem commit naquele dia (`spec.md:4,6` e
+  `:2152`).
 - A 049 cita os documentos `docs/audit` (§12). A FE-19 é o motivo da reabertura (A-22, DIV-5).
 - Observação desta redação: a D-SF1 prevê specs do front em `specs/FE-NNN-slug`. Os IDs FE- da 049
   podem colidir com essa numeração.
@@ -515,6 +572,8 @@ Fonte: relatório de 31/10.
 | 05/11 | Rebase sequencial da E-01 e depois da E-12 sobre o `5cd3dce` (merge do PR #5), com os conflitos resolvidos pela integridade da arquitetura e build, lint e testes depois de cada rebase; avisar quando estiver pronto para o merge na `main`, que segue dependendo de aprovação | Conversa de 05/11 |
 | 05/11 (16:58) | Fast-forward da `main` para o `333f4c2`, push e exclusão das branches da E-01 e da E-12: "Aprovado. Pode seguir com a opção 1: fast-forward, push e exclusão das branches" | Conversa de 05/11; §11 |
 | 05/11 (por volta das 17:40) | Plano do registro: esperar a outra sessão commitar a edição dela na `fix/SPEC-049-fe0-front-alignment` e trazer a `main` nova; resolver os 3 conflitos com ela; um único commit corretivo com as menções que davam a E-01 e a E-12 fora da `main`, e o push. Aprovado e pausado | Conversa de 05/11; §11 |
+| 05/11 (18:06) | Reauditoria com o roteiro de 31/10, só de leitura, com as entregas para aprovação antes de qualquer execução (§16) | Conversa de 05/11 |
+| 05/11 (por volta das 22:15) | Aprovadas a E-16 (a e b) e as decisões da Onda 0, "todas as recomendações técnicas padrão apresentadas no relatório", menos a 12, que fica aberta com a proposta. Pedidos junto: manter a consistência arquitetural, a prioridade 046 → 048 → 047 e o tratamento do DIV-3 e do A-59. Origem de cada decisão: recomendação dos relatórios (1, 2, 5, 7, 8, 9, 10, 11, 13 e 16), decisão anterior (14 e 19), padrão técnico (3, 4, 6, 8a, 15, 17, 20 e 21; e a 12, que fica aberta) e pedido de 05/11 (11 e 18). Escolhas no §16.8 | Conversa de 05/11; `reaudit/entrega/DECISOES-2026-11-05.md` |
 
 ### 10. Matriz de aceitação
 
@@ -538,7 +597,7 @@ Resumo da matriz de FI:87-245 (Anexo B). Nenhum item FAIL ou BLOCKED.
 
 Total: 85 PASS em 91 linhas; 5 PARTIAL; 1 NOT APPLICABLE.
 
-**Itens não PASS** (FI:247-256) e situação em 04/11. "Resolvido" quer dizer corrigido no código; a
+**Itens não PASS** (FI:247-256) e situação em 04/11 e em 05/11. "Resolvido" quer dizer corrigido no código; a
 nova aceitação não foi feita.
 
 | Item | Status em FI | Situação em 04/11 |
@@ -546,10 +605,10 @@ nova aceitação não foi feita.
 | 2.10 / A-23 | PARTIAL | Igual: pendente (spec 046) |
 | 2.13 / A-33 | PARTIAL | Resolvido (`0df5718`; builds com 0 avisos) |
 | 2.14 e 9.7 / testes de integração | PARTIAL | Igual: o projeto não tem testes de integração nem e2e; a validação com login está bloqueada (E-04) |
-| 6.3 / nomes de teste | PARTIAL | Resolvido (`9d7e238`); o N-3 saiu na E-01 |
-| 2.12 / R-05 a R-07 | PARTIAL em FI:255 (PASS em FI:119, errata 15) | Resolvido (`f95f587`, `008dfcf`, `be5cd6e`); falta revalidar no navegador (E-04); defeitos do R-07 corrigidos na E-01, na `origin/main` desde 05/11 |
-| A-42 / espera da primeira carga | PARTIAL | Resolvido (`00b7252`); defeitos corrigidos na E-01, na `origin/main` desde 05/11 |
-| 9.5 / lint | NOT APPLICABLE | Igual: sem ESLint; as skills ainda citam lint (DOC-8) |
+| 6.3 / nomes de teste | PARTIAL | Resolvido (`9d7e238`); o N-3 saiu na E-01; resíduos no C-39 |
+| 2.12 / R-05 a R-07 | PARTIAL em FI:255 (PASS em FI:119, errata 15) | Resolvido (`f95f587`, `008dfcf`, `be5cd6e`); falta revalidar no navegador (E-04); defeitos do R-07 corrigidos na E-01, na `origin/main` desde 05/11; resta o R-10 |
+| A-42 / espera da primeira carga | PARTIAL | Resolvido (`00b7252`); defeitos corrigidos na E-01, na `origin/main` desde 05/11; restam R-08 e A-51 (§16.5) |
+| 9.5 / lint | NOT APPLICABLE | Mudou: o lint existe desde a E-12 (`21735f4`, `npm run lint`) e passa sem erros na `main` (por log; `eslint src` sem erros na reauditoria de 05/11). O 9.5 passa a ser aplicável; a nova aceitação não foi feita. As skills ainda citam Prettier (DOC-8) |
 
 ### 11. Histórico de integração
 
@@ -592,13 +651,15 @@ Horários de Brasília, salvo indicação.
 | 05/11, logo depois | Exclusão, com `git branch -d`, de `fix/E-01-audit-known-defects` (era `79e5129`) e `chore/E-12-structural-decisions` (era `333f4c2`); remoção do worktree temporário `wt-e01`. Nunca houve branch remota com esses nomes | — | `git branch -a`; pasta do scratchpad |
 | 05/11, por volta das 17:10 | Simulação, em cópia, da integração da edição da outra sessão (working tree principal, `fix/SPEC-049-fe0-front-alignment`) com a `main` nova: o `CLAUDE.md` sem conflito; este documento com 3 conflitos (§0; §6, itens 7 e 8; §6, itens 16 e 17) | — | Merge de três vias em cópia |
 | 05/11, por volta das 17:40 | Plano do registro aprovado por Rafael Santos e pausado à espera do commit da outra sessão (§9); às 17:46 começa uma vigia só de leitura | — | Conversa de 05/11 |
+| 05/11 18:06–19:08 | Reauditoria só de leitura, com o roteiro de 31/10, em seis frentes (relatórios gravados entre 18:55 e 19:05); às 19:08, a base desta redação foi atualizada com a edição da outra sessão, que seguia igual | — | `reaudit/out/`; `reaudit/base-outra-sessao/` (§14) |
+| 05/11, por volta das 22:15 | Rafael Santos aprova a E-16 (a e b) e as decisões da Onda 0, menos a 12 (§9; §16.8) | — | Conversa de 05/11 |
 | 05/11, às 22:18 | A outra sessão ainda não tinha commitado: a branch dela seguia em `4b7b0de`, local e remota, e a edição dela no `CLAUDE.md` e neste documento continuava igual à cópia das 19:08. A `main` e a `origin/main` seguiam em `333f4c2` | — | Conferência só de leitura da sessão coordenadora |
 
 ### 12. Rastreabilidade com o back
 
 | Spec | Título | Estado em 31/10 (`ef1c981`) | Estado em 04/11 | Achado do front | O que o front faz depois |
 |---|---|---|---|---|---|
-| 024 | "Meus Chamados" com o prazo e a situação do ciclo de SLA vigente | Aprovada, não implementada (FA:489; levantamento de 31/10) | Verificada; PR #61 mergeado em 01/11 (`74a8a5f`), depois do levantamento. Em `ef1c981`, a pasta da spec ainda não estava versionada | Ligada ao A-30 (a 024 cobre só Meus Chamados) | Nada novo no código: o front já lê `currentDueAtUtc` e `currentSlaStatus`, com recuo para os campos antigos (`tickets/feature-ticket-list/ticket-list-due.ts:74-76`, desde `1af95df`). Falta validar na aplicação real |
+| 024 | "Meus Chamados" com o prazo e a situação do ciclo de SLA vigente | Aprovada, não implementada (FA:489; levantamento de 31/10) | Verificada; PR #61 mergeado em 01/11 (`74a8a5f`), depois do levantamento. Em `ef1c981`, a pasta da spec ainda não estava versionada | Ligada ao A-30 (a 024 cobre só Meus Chamados) | Nada novo no código: o front já lê `currentDueAtUtc` e `currentSlaStatus`, com recuo para os campos antigos (`tickets/feature-ticket-list/ticket-list-due.ts:74-76`, desde `1af95df`). Falta validar na aplicação real. Em 05/11, o recuo é código morto, porque a 024 nunca manda nulo (C-41) |
 | 028 | Volume de resolvidos por período | Verificada (PR #48) | Igual | A-28 | Flag `volumeResolved` ligada (`f7cdd73`) |
 | 029 | Chamados aguardando ação | Verificada (PR #49) | Igual | A-04 | Contrato corrigido (PR #2) |
 | 030 | Responsáveis elegíveis para atendentes | Verificada (PR #44) | Igual | A-26, A-38 | Em uso (`GET /tickets/assignees`) |
@@ -609,11 +670,12 @@ Horários de Brasília, salvo indicação.
 | 046 | Sessão sem tokens no JavaScript (cookie `HttpOnly`) | Em descoberta, não versionada; criada em 31/10 | Igual | A-23 | Depois da entrega: tokens fora do `localStorage`, sessão e interceptor ajustados |
 | 047 | Ações permitidas do chamado na resposta da API | Em descoberta, não versionada; criada em 31/10 | Igual | A-24 (e A-06 a A-08, A-12) | Depois da entrega: trocar o espelho de `ticket-action-permissions.ts` pelas ações da API |
 | 048 | Monitor com o prazo e a situação do ciclo de SLA vigente | Em descoberta, não versionada; criada em 31/10 | Igual | A-30 | Depois da entrega: `TicketMonitorItem` e telas do Monitor pelo ciclo vigente |
-| 049 | Reavaliação arquitetural do projeto inteiro | — (não registrada em 31/10) | Aprovada em 04/11 como spec-mãe, ainda sem commit (`spec.md:4,6`, `:2152`), na branch local `refactor/SPEC-049-tickest-architecture-reassessment` do back. Mudou durante esta redação | FE-01 a FE-28 (FE-19 = A-22, DIV-5) | Conferir cada FE- contra este catálogo; o trabalho segue os portões de cada etapa da 049 (`spec.md:2152`) |
+| 049 | Reavaliação arquitetural do projeto inteiro | — (não registrada em 31/10) | Aprovada em 04/11 como spec-mãe, ainda sem commit (`spec.md:4,6`, `:2152`), na branch local `refactor/SPEC-049-tickest-architecture-reassessment` do back. Mudou durante esta redação. Em 05/11: versionada no `bcf0356` (PR #71, merge `251da97`), "Em implementação" (`spec.md:4`), com a G1 entregue | FE-01 a FE-28 (FE-19 = A-22, DIV-5) | Conferir cada FE- contra este catálogo; o trabalho segue os portões de cada etapa da 049 (`spec.md:2152`) |
 
 Entraram na `origin/main` do back depois de 31/10 (`git log ef1c981..origin/main`): specs 022 (PR #60),
 023 (PR #52), 045 (PR #59), 024 (PR #61) e 035 (PR #62), em 01/11; 051 (PR #64), em 03/11; 050
-(PR #65), em 04/11. O impacto delas no front não foi avaliado (§6, item 22). Outra
+(PR #65), em 04/11; a G1 da 049 (PR #71, `bcf0356`), em 05/11. O impacto delas no front foi avaliado
+em parte em 05/11 (§6, item 22). Outra
 sessão edita o back durante o dia: a 049 mudou de estado, e a 052 apareceu e depois saiu do working
 tree enquanto este documento era escrito.
 
@@ -622,7 +684,8 @@ quando os originais forem removidos:
 
 - `docs/audit/FRONTEND_AUDIT.md` passa a ser o Anexo A deste documento, e `FINAL_ACCEPTANCE_AUDIT.md`,
   o Anexo B. Uma linha `n` citada vira `FA:n` ou `FI:n`.
-- A spec 049 está em edição: vale o conteúdo citado, não só o número da linha.
+- A spec 049 está versionada desde o `bcf0356` (PR #71); a cópia do working tree segue em edição (em
+  05/11, 4 linhas diferentes, nenhuma sobre os documentos de auditoria). Vale o conteúdo citado.
 - No front, nenhum arquivo fora de `docs/audit` cita os dois documentos.
 
 | Onde | Linhas | O que cita |
@@ -631,10 +694,16 @@ quando os originais forem removidos:
 | Back, `specs/046-sessao-em-cookie-httponly/spec.md` | 101 | `docs/audit/FRONTEND_AUDIT.md` (A-23) |
 | Back, `specs/047-acoes-permitidas-do-chamado/spec.md` | 98 | `docs/audit/FRONTEND_AUDIT.md` (A-24) |
 | Back, `specs/048-monitor-ciclo-sla-vigente/spec.md` | 90 | `docs/audit/FRONTEND_AUDIT.md` (A-30) |
-| Back, `specs/049-reavaliacao-arquitetural-dominio-chamados/anexo-a-achados.md` | 834, 869 | `docs/audit/FRONTEND_AUDIT.md` e `FRONTEND_AUDIT.md:476` (A-22) |
+| Back, `specs/049-reavaliacao-arquitetural-dominio-chamados/anexo-a-achados.md` | 834, 869 (1022 e 1057 no `251da97`) | `docs/audit/FRONTEND_AUDIT.md` e `FRONTEND_AUDIT.md:476` (A-22) |
 | Back, `specs/049-…/anexo-b-inventario.md` | 420, 542 | `docs/audit/*.md`; a T-512 atualizaria a A-22 |
 | Back, `specs/049-…/anexo-c-analise-por-area.md` | 1564 (o levantamento citava 1550; o arquivo mudou) | `docs/audit/FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` |
 | GitHub, descrições dos PRs #3 e #4 | — | `docs/audit` consolidado (PR #3) e `docs/audit/FINAL_ACCEPTANCE_AUDIT.md` (PR #4). São remotas e não serão alteradas |
+
+**Estado em 05/11** (back `251da97`; §16.6): as 044, 046, 047 e 048 seguem "Em descoberta" e fora do
+Git, sem DEC fechada no texto delas; as DECs das 046 a 048 foram decididas por Rafael Santos em 05/11
+(§16.8), e o texto e a implementação no back dependem de autorização (E-09, E-11). A 043 foi aprovada em
+05/11 e está em implementação no working tree do back, pela outra sessão. A 049 está versionada, com a
+G1 entregue (PR #71). As referências da tabela acima seguem sem troca (DOC-28).
 
 ### 13. Falhas de processo
 
@@ -658,6 +727,7 @@ Ficam fora do repositório e podem sumir. Só a localização fica registrada.
 |---|---|---|
 | `C:\Users\rafae\AppData\Local\Temp\claude\c--dev-tickest-pristine-front\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | Backup do BR-001 (`backup-br001\`), patch da missão, cópias isoladas e logs (`acc\`, `final2\` a `final8\`), medições de foco (`focus\`), preparação da E-00 (`e00\`, `a33\`) e scripts de 31/10 | 29/10 a 31/10 |
 | `C:\Users\rafae\AppData\Local\Temp\claude\cb02df504aad776f\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\` | `backup\` (antes da reindentação e da tradução dos títulos); `e00v2\` (simulação e execução da E-00: commits, `manifest.json`, logs de build e de testes por estado); `l9\` (fotos das refs e `git fsck` da L-9); `l3\` (validação da L-3: `original\`, `modificada\`, `x5a\`); `l48\` (rascunho e validação deste documento; diffs e conferências das limpezas L-5 e L-6; `v6b\`, `v6h\`, `v6c\` e `v6d\`, cópias isoladas da revisão de 04/11; `impeccable-live.txt`; `integ\`, conferências P0 a P4, `fsck`, refs, push, `npm ci` e `npm audit` da integração; `v6e\` e `v7a\`, validação do `d1f5d97` e do `2ccf5d5`); `status-*.txt`; `wt-e01\` (worktree da E-01 e da E-12, removido em 05/11); `e01-logs\` (mensagens dos commits, scripts de validação e medidas do R-07 e do A-33); `e01-val\` (validação de cada commit da E-01); `e12-val\` (cópias da E-12, cada uma com `npm ci` próprio, e os logs do `ng update`, das fontes e do lint); `rebase\` (rebase de 05/11: refs, mensagens, a validação de cada commit da E-01 e da E-12 sobre o `5cd3dce` em `val\`, `val-e01\` e `val-e12\`, o `npm audit` de cada lockfile em `audit\`, o `node_modules` próprio do commit do Angular 22.2 e a cópia do validador deste documento) | 04/11 a 05/11 |
+| `C:\Users\rafae\AppData\Local\Temp\claude\cb02df504aad776f\65d7fc55-6391-4e98-8ae7-b7f896419fc4\scratchpad\reaudit\` | Reauditoria de 05/11: cópias fixas do front (`front\`, `333f4c2`) e do back (`back\`, `251da97`); specs fora do Git (`back-wt-specs\`) e a lista do working tree do back (`back-wt-status.txt`); o relatório de 31/10 (`relatorio-3110.md`); a base desta redação (`base-outra-sessao\`, merge de três vias com a edição da outra sessão); os seis relatórios das frentes e os scripts deles (`out\`); as entregas (`entrega\`: relatório consolidado, `mapa-ids.md`, plano, decisões, este documento proposto, os scripts de montagem e de conferência e o `validacao.txt`) | 05/11 |
 
 Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l48/…`, `e01-logs/…`,
 `e01-val/…`, `e12-val/…` e `rebase/…`) partem da pasta de 04/11. `focus/compare.md` parte da pasta de
@@ -690,14 +760,20 @@ Os caminhos curtos citados neste documento (`e00v2/…`, `l3/…`, `l9/…`, `l4
   e DIV-4), resolve os 3 conflitos com ela (§0; §6, itens 7, 8, 16 e 17), registra o fast-forward, o
   push e a exclusão das branches (§9; §11) e corrige as menções que davam a E-01 e a E-12 fora da
   `main`. Montado por script sobre a cópia da edição da outra sessão (`reaudit/entrega/monta-auditoria.cjs`) e conferido por outro (`valida-auditoria.cjs`).
+- **05/11, à noite, registro da reauditoria:** acrescenta o §16 (números, achados novos com ID final,
+  plano e decisões de 05/11), atualiza os estados conferidos no §0 a §12, no §14 e aqui, com as
+  erratas 21 a 25, e corrige as linhas citadas que mudaram até o `333f4c2` (R-05, R-06, R-07, C-07,
+  C-09 e N-4). Aprovado com a E-16a por Rafael Santos, por volta das 22:15.
 - **Regra:** a Parte I prevalece. Os anexos preservam o texto original, sem alterações.
 - **Cópia dos anexos:** texto idêntico aos blobs de `7fe3bec`, conferido por script
-  (`l48/l4-validate.cjs`). No working tree do Windows, este documento e os originais usam CRLF
+  (`l48/l4-validate.cjs`); conferido de novo em 05/11 (`reaudit/out/docs-tmp/check-anexos.cjs` e
+  `reaudit/entrega/valida-auditoria.cjs`). No working tree do Windows, este documento e os originais usam CRLF
   (`core.autocrlf=true`); no repositório, LF.
 
 #### 15.1 Erratas
 
-Para cada contradição: o que diz o original e o valor correto.
+Para cada contradição: o que diz o original e o valor correto. As erratas 21 a 25 são do relatório de
+31/10, conferidas em 05/11.
 
 | # | Tema | O que diz o original | Valor correto |
 |---|---|---|---|
@@ -720,7 +796,959 @@ Para cada contradição: o que diz o original e o valor correto.
 | 17 | 3.3.5 | FI:135: "nenhuma referência a `roleColor`, `badge-role-custom` ou `--role-color`" | Não há referência no código de produção. Os testes de ausência citam `tickest.roleColors` e `--role-color` (`role-list.component.spec.ts:366`; `user-list.component.spec.ts:665-672` em `a4cedca`, `:675-682` hoje), como o próprio FI:138 registra |
 | 18 | 6.6 | FI:173: "sem comentário desatualizado" | `roles/feature-role-list/role-list.component.css:1` ainda fala em "amostra de cor", removida com o BR-001 (N-1) |
 | 19 | Focos medidos | FI:82: 761 focos. FI:267 e FA:230: 734 controles | 761 é o total de focos medidos (`focus/real-auth-antes-auth.json` e `real-auth-depois-auth.json`); 734 são os focos únicos (`focus/compare.md`, linhas 1-2) |
-| 20 | Data | FA:1 e FI:3: 2026-10-29 | Os dois cobrem 29 e 30/10 (ex.: FA:37-47; FI:40-44; FI:381-436). Este documento cobre de 29/10 a 04/11 |
+| 20 | Data | FA:1 e FI:3: 2026-10-29 | Os dois cobrem 29 e 30/10 (ex.: FA:37-47; FI:40-44; FI:381-436). Este documento cobre de 29/10 a 05/11 |
+| 21 | Seed (relatório de 31/10, seção 2.4) | Dá como correta a estrutura inicial do `PRODUCT.md:43-45` (5 departamentos com 2 setores) | O seed tem 7 departamentos e 21 setores desde o `3387ff9` (04/10; `DefaultOrganizationSeeder.cs:17-57`); o `PRODUCT.md` está errado (DOC-12) |
+| 22 | Duas abas na 046 (relatório de 31/10, seção 6) | "Já coberto: o back aceita reutilizar o token anterior por 30 segundos" | Dentro dos 30 s o back só deixa de revogar e recusa (`RefreshTokenCommandHandler.cs:25-30,91-99`; `UsersTests.cs:384-398`); a corrida entre abas pede coordenação (BK-10, A-55) |
+| 23 | Espera nos testes (relatório de 31/10, P16) | Recomenda `TestBed.tick()` no lugar do `flushEffects` | O padrão real do código é o `whenStable` (1.009 `fixture.whenStable` e 318 `ApplicationRef).whenStable`, contra 3 `TestBed.tick()`) (DOC-18) |
+| 24 | Vocabulário (relatório de 31/10, D6) | Marca "Não" (sem divergência) para português e vocabulário | Diverge: é o P6 (`PRODUCT.md:20` × `DESIGN.md:872-873`; DOC-35) |
+| 25 | README das skills (relatório de 31/10, P18) | Hipótese de texto herdado de outro projeto (datas de 23/07, `@nx/angular`) | Não se sustenta: o front teve commits em 23/07 e já estava no Angular 22 desde 13/07; sobra o texto ambíguo (DOC-19) |
+
+### 16. Reauditoria de 05/11
+
+Rafael Santos pediu às 18:06 de 05/11 a reauditoria com o roteiro de 31/10: documentos, arquitetura e
+limpeza do front e do back, separação de responsabilidades, etapas recentes e as specs 046, 047 e 048.
+Foi só de leitura, em seis frentes, sobre cópias fixas; nada mudou nos repositórios. Esta seção registra
+a base, os números, os estados conferidos, os achados novos com ID final, o plano e as decisões de 05/11.
+O detalhe, com os scripts, fica nos seis relatórios das frentes e no relatório consolidado (§14).
+
+- **Classes de evidência:** COMPROVADO (no código, num teste, no Git ou executado); DECLARADO (só escrito
+  em documento ou dito por outra sessão); INFERIDO (dedução sem execução); NÃO VERIFICADO (com o motivo).
+- **Gravidade:** a escala do §0 (Crítica, Alta, Média, Baixa). "—" quando a frente não deu gravidade;
+  "(31/10)" quando a gravidade vem do relatório de 31/10. Nos DOC, "Prio." é a prioridade documental do
+  relatório de documentos: Alta quando o texto é lido por ferramenta ou é o registro oficial e leva a
+  código ou decisão errada.
+- **IDs:** cada ID novo é definido uma vez, numa tabela desta seção. A coluna Origem traz os IDs
+  provisórios das frentes (T-DOC, T-FEA, T-BEA, T-SEP, T-ETP e T-SPC) e os itens de 31/10; a ligação
+  completa, com as fusões, está no `reaudit/entrega/mapa-ids.md`. A coluna Etapa aponta o §16.7.
+
+#### 16.1 Base, método e números
+
+| Item | Valor | Classe |
+|---|---|---|
+| Front | Cópia fixa de `333f4c2` (`main` = `origin/main`), conferida blob a blob: 358 arquivos, 326 em `src/` | COMPROVADO |
+| Back | Cópia fixa de `251da97` (`origin/main`, merge do PR #71, G1 da 049, 05/11 às 17:11) | COMPROVADO |
+| Specs fora do Git | 032, 033, 034, 036, 037, 040, 043, 044, 046, 047 e 048, copiadas do working tree do back em 05/11; a sessão da 043 segue no working tree do back | COMPROVADO (cópia) |
+| Edição pendente do front | `CLAUDE.md` e este documento no working tree principal, copiados às 19:08; iguais às 22:18 | COMPROVADO (cópia) |
+| Linha de base | Relatório de 31/10 e este documento no `333f4c2` | — |
+| Frentes | Documentos (relatório gravado às 19:02), arquitetura do front (19:01), arquitetura do back (19:05), separação (18:55), etapas recentes (18:59) e specs 046 a 048 (18:56) | COMPROVADO (horário de gravação) |
+| Execução | Front: `eslint src` e `tsc --noEmit` com `--noUnusedLocals` e `--noUnusedParameters`, numa cópia; sem build nem testes, que gravariam na cópia. Back: build e testes unitários e de arquitetura numa cópia, sem rede; sem testes de integração, que pedem banco | — |
+| Segredos | Nenhum nos documentos do front. No back, só credenciais de desenvolvimento versionadas (SE-12 da 049): a senha de banco local na connection string de `appsettings.Development.json:3` (valor mascarado), e o mesmo tipo em `docker-compose.yml:26`, `docker-compose.override.yml:7`, `launchSettings.json:38` e `README.md:60` | COMPROVADO |
+
+| Indicador | 31/10 | 05/11 | Classe |
+|---|---|---|---|
+| Testes do front | 1381 | 1456, na ponta `333f4c2` | COMPROVADO por log; não reexecutado |
+| Build inicial do front | 386,51 kB | 433,61 kB, 0 aviso de orçamento | Idem |
+| Lint do front | Não existia | 0 erro e 0 aviso (`eslint src`) | COMPROVADO |
+| Fronteiras do front | 0 violação | 0 violação (414 imports de produção entre pastas e 219 nas specs) | COMPROVADO |
+| Conformidade do front, agregado estrito e ajustado | 91,6% e 93,8% | 92,0% e 94,2% | INFERIDO (universos de 31/10 reconstruídos) |
+| Conformidade do front, média simples estrita e ajustada | 87,7% e 96,0% | 88,0% e 96,2% | Idem |
+| Camadas do back | 0 violação | 0 violação | COMPROVADO |
+| Conformidade do back, bruta e ajustada | ≈80% e ≈90% | 86,8% e 97,1% | COMPROVADO (contagem) |
+| Testes do back | 1.466, declarados | 940 unitários e 134 de arquitetura passando; 674 de integração, declarados pela 049 | COMPROVADO; DECLARADO |
+| Achados novos | — | 128 IDs novos (13 A, 3 R, 29 C, 33 DOC, 5 DIV, 2 LAC, 18 BA e 25 BK), dos 102 IDs provisórios das frentes e dos itens de 31/10 sem registro; nenhum de gravidade Crítica; Alta: A-59 (INFERIDO) e BK-27 (31/10); Média: A-47, A-48, A-50, A-53, A-56, LAC-17, BA-13 e BA-17; o resto, Baixa ou sem gravidade dada pela frente. | — |
+
+#### 16.2 Documentação
+
+**Números.** Dos 22 problemas de 31/10 (P1 a P22), 17 continuam, 4 foram resolvidos (P14, P20, P21 e
+P22) e 1 foi reavaliado (P18); além disso, o relatório de 31/10 errou ao dar como correta a estrutura
+inicial do seed (DOC-12; errata 21). DOC-1 a DOC-10: 7 abertos, o DOC-8 em parte (o lint existe), o
+DOC-9 resolvido e o DOC-10 mantido por decisão e ampliado. Anexos A e B idênticos aos originais e os 69
+IDs dos originais presentes na Parte I; as 322 referências `FA:n` e `FI:n` caem no trecho certo. Das 642
+citações de caminho em 14 documentos, 3 referências vigentes estavam quebradas (`CLAUDE.md:31`,
+`PRODUCT.md:24` e o "Como ler" deste documento), mais o `wt-e01` do §0 e do §14. Do `DESIGN.md`, 118 de
+119 símbolos existem no código. O "CLOUD.md" não existe: é o `CLAUDE.md`.
+
+| Tema | 31/10 | 05/11 |
+|---|---|---|
+| `PRODUCT.md` | P1 a P9 | Igual, sem commit desde 26/10; os P5, P6, P7 e P9, que nunca tiveram registro, viram DOC-34 a DOC-37, e o seed errado, DOC-12 |
+| `README.md` | P10 e P11 | Igual; o SSR saiu e falta citar o lint (DOC-6, DOC-38) |
+| `CLAUDE.md` | P12 e P13 | Pior: o exemplo do guard quebrou no PR #5 (DOC-11, corrigido na edição pendente da outra sessão); faltam comandos, mapa de documentos e regras de trabalho (DOC-29) |
+| Skills | P14 a P18 | O lint existe (P14); seguem Prettier, `flushEffects`, `fakeAsync` e `console.error` (DOC-8); modelos com erro (DOC-16, DOC-17); sem testes de Data Service (DOC-18) |
+| `DESIGN.md` | P19 a P22 | P20 a P22 resolvidos na L-5 e no PR #5; o `design.json` ficou 23 commits atrás (DOC-10); "Em breve" obsoleto (DOC-14); padrões globais da E-00 sem registro (DOC-15) |
+| Este documento | Criado na L-4 | Anexos íntegros; a Parte I do `333f4c2` ficou defasada às 16:58 (DOC-20 a DOC-24), corrigida nesta redação |
+
+As 18 duplicações de 31/10 (D1 a D18) não tinham ID e colidiam com as divergências D-1 a D-10 (DOC-31).
+Ficam assim:
+
+| Duplicação de 31/10 | Estado em 05/11 | ID |
+|---|---|---|
+| D1 Arquitetura em quatro documentos | Diverge igual | DOC-7; DOC-39 |
+| D2, D4, D5, D9, D13 e D16 | Sem divergência; podem divergir sem fonte única | DOC-40 |
+| D3 Lint, testes e build | Resolvida: o lint existe | — |
+| D6 Vocabulário | Diverge (31/10 marcou "Não"; errata 24) | DOC-35 |
+| D7 Tenant; D8 Papéis | Divergem | DOC-1; DOC-2 |
+| D10 SLA e 75% | Sem divergência; ponteiro impreciso | DOC-26 |
+| D11 Primeira resposta; D12 RBAC | Divergem | DOC-34; DOC-36 |
+| D14 e D15 Tokens e `design.json` | O botão resolvido; o `design.json` diverge mais | DOC-9; DOC-10 |
+| D17 Acessibilidade | Diverge | DOC-5 |
+| D18 "Faça e não faça" | O "Don't" ficou obsoleto | DOC-14 |
+
+**Tarefas da FE-0 conferidas contra esta Parte I** (pendência 31; o comportamento contra o back fica
+para a E-04):
+
+| Tarefa do PR #5 | O que o código de `333f4c2` mostra | Registro |
+|---|---|---|
+| T-500 | Fechar por `POST /tickets/{id}/close` (`ticket.data.service.ts:42-45`; `ticket-detail.store.ts:176`) | DIV-1 resolvido |
+| T-504 (parte) | Espera `Tickets.AssigneeNotAttendant` (`ticket-detail.store.ts:269`) | DIV-4 resolvido |
+| T-512 | Rotas e menu por `tickets:view-own` e `tickets:create`; ações de Usuários pela própria permissão | DIV-10 resolvido; DIV-9 em parte |
+| T-517 | Só a flag `volumeResolved`, "até a conferência do A-28" | N-2 resolvido; C-33 |
+| T-518 | `TicketHistoryAction` com 12 e 13; sem `responsibleId` | Itens de 31/10 resolvidos |
+| T-519 | Edição de departamento com o responsável da listagem | Item de 31/10 resolvido |
+| T-514 | Specs dos 9 Data Services | DOC-18 (as skills não os preveem) |
+
+**Destino dos documentos.** Ficam como estão as decisões de 04/11: este documento em `docs/audit/` e os
+originais até o back trocar as referências (DOC-28; decisão 19). `PRODUCT.md`, `README.md`, `DESIGN.md`
+e `CLAUDE.md` ficam na raiz e são corrigidos na E-06; as skills, na E-07; o `.impeccable/design.json`
+fica mantido, sem regenerar (decisão 14).
+
+**Achados novos com ID final (DOC-11 a DOC-43):**
+
+| ID | Grav. | Prio. | Achado | Evidência | Classe | Origem | Estado | Etapa |
+|---|---|---|---|---|---|---|---|---|
+| DOC-11 | Baixa | Média | O `CLAUDE.md:31` cita `src/app/shared/guards/admin-master.guard.ts`, renomeado para `permission.guard.ts` no PR #5; é a segunda vez que um caminho de exemplo quebra | `git show --stat 4b7b0de`; arquivo ausente em `333f4c2`; `CLAUDE.md.outra-sessao:31` | COMPROVADO | T-DOC-1; T-FEA-10 (CLAUDE.md:31) | Corrigido na edição não commitada da outra sessão (cópia de 19:08 de 05/11); entra com o commit dela | E-16a (dependência); E-06 se não entrar |
+| DOC-12 | Baixa | Alta | O `PRODUCT.md:43-45` descreve uma estrutura inicial (5 departamentos, "Helpdesk"…) que não existe desde o `3387ff9` (04/10): o seed tem 7 departamentos e 21 setores. O relatório de 31/10 a deu como correta | back `DefaultOrganizationSeeder.cs:17-57` (igual em `ef1c981`) | COMPROVADO | T-DOC-2; 31/10 §2.4 (seed dado como correto; errata 21) | Aberto | E-06 |
+| DOC-13 | Baixa | Média | "RN-35" citado sem o documento: no `SYSTEM_SPECIFICATION.md:228` são os números da empresa para todo papel; no `SPEC-TICKEST.md:356`, o responsável ativo do departamento (colisão do BK-1). Veio no PR #5 | `DESIGN.md:583`; `ticket-summary.store.ts:67`; `ticket.data.service.ts:213`; `git log -S'RN-35'` só no `4b7b0de` | COMPROVADO | T-DOC-3 | Aberto | E-06 |
+| DOC-14 | Baixa | Média | O `DESIGN.md` ainda descreve o "Em breve" que não existe mais: o "Don't" abre exceção para a prévia do Monitorar, removida no PR #5 (`:920-921`); o exemplo de dica "Em breve" (`:260`) e o "Disponível em breve" de flag desligada (`:743-745`) também | `git show 4b7b0de -- …/ticket-monitor.component.html` (−8 linhas); "Em breve" em produção: 0 | COMPROVADO | T-DOC-4; T-ETP-13 ("Disponível em breve", parte); 31/10 §2.3 D18 | Aberto | E-06 |
+| DOC-15 | Baixa | Baixa | Padrões globais novos sem registro no `DESIGN.md`: `.tap-target` (24px com qualquer ponteiro, 44px no toque), o alvo de toque do `.dropdown-item` e do `.btn-close`, o diálogo em tela baixa (R-05), `.num`, `.text-wrap-anywhere` e a reserva `--tk-surface` do `.item-new` | `src/styles.css:312-326,1302-1310,1336-1344,1348-1382`; nenhum commit da E-00, da E-01 ou da E-12 tocou o `DESIGN.md` | COMPROVADO | T-DOC-5; T-ETP-13 | Aberto | E-06 |
+| DOC-16 | Baixa | Alta | O modelo de tela da `add-feature` lê um `input.required` no construtor: o Angular lança NG0950, porque os inputs chegam depois da construção. Quem seguir a skill gera uma tela que quebra | `.claude/skills/add-feature/references/routed-component.md:22-26`; `@angular/core/fesm2022/core.mjs:29-37` | COMPROVADO | T-DOC-6 | Aberto | E-07 |
+| DOC-17 | Baixa | Média | Modelos das skills com erros: o `FlightEditStore` usa `of(undefined)` sem importar `of`; os modelos usam `standalone: true` e `CommonModule`, que o código não usa; os da `add-feature` não têm o `/** */` que o `CLAUDE.md` exige | `store-method.md:83-101`; `add-context/references/routed-component.md:16-21`; `add-feature/references/routed-component.md:13-18,73-88` | COMPROVADO | T-DOC-7 | Aberto | E-07 |
+| DOC-18 | Baixa | Média | As skills só preveem testes de Store e de componente; o código tem testes de Data Service com `HttpTestingController` nos 9 Data Services (T-514 do PR #5), e o padrão real de espera é o `whenStable` | `add-tests/SKILL.md:9-11`; `ca-review/SKILL.md:83-88`; 9 `*.data.service.spec.ts` | COMPROVADO | T-DOC-8; 31/10 §2.2 P16 (correção: whenStable) | Aberto | E-07 |
+| DOC-19 | Baixa | Baixa | O README das skills justifica não migrar para Nx com o "SSR server", removido na E-12, e fala de "this project's `@nx/angular`" num projeto que nunca teve Nx; a hipótese de 31/10 de texto herdado não se sustenta | `.claude/skills/README.md:29-31`; `06f537b`; commits de 23/07 no próprio front | COMPROVADO | T-DOC-9; T-FEA-10 (README das skills, :30-31); 31/10 §2.2 P18 (resíduo) | Aberto | E-07 |
+| DOC-20 | Baixa | Alta | A Parte I do `333f4c2` dizia em 17 lugares que a E-01 e a E-12 estavam "sem merge", "aguardando o merge" ou "em branches locais", e citava linhas que mudaram (A-28, R-05, R-06, R-07, C-07, C-09 e N-4). O documento estava no próprio commit mesclado e não podia registrar o merge | `AUDITORIA-333f4c2.md:11,73,95,311,313,315,320,324,326,349,359,361,363,364,427,583,671`; reflogs da `main` (16:58:43) e da `origin/main` (16:58:53) | COMPROVADO | T-DOC-10; T-ETP-17 | Resolvido nesta proposta (E-16a), se aprovada | E-16a |
+| DOC-21 | Baixa | Média | O §10 dizia "9.5 / lint: NOT APPLICABLE; Igual: sem ESLint", contra o §3 e o DOC-8 | `AUDITORIA-333f4c2.md:546` × `:175-177,427`; `package.json:11`; `angular.json:103-111` | COMPROVADO | T-DOC-11 | Resolvido nesta proposta (E-16b), se aprovada | E-16b |
+| DOC-22 | Baixa | Alta | O §1 e o §8.1 davam DIV-1, DIV-4, DIV-9 e DIV-10 como abertos, mas o PR #5 mudou o front nos quatro | `AUDITORIA-333f4c2.md:100-101,383,386,391,392`; conferência das tarefas da FE-0 (docs.md §9.2) | COMPROVADO | T-DOC-12; specs-046-048 §2.2 (nota sobre o §8.1) | Resolvido nesta proposta: DIV-1 e DIV-4 pela edição da outra sessão; DIV-9 e DIV-10 na E-16b | E-16b |
+| DOC-23 | Baixa | Média | A spec 049 aparecia como "não versionada" e "Aprovada… ainda sem commit"; no `251da97` ela está versionada (`bcf0356`, PR #71) e "Em implementação", e as linhas do anexo A da 049 citadas no §12 (834, 869) são hoje 1022 e 1057 | `AUDITORIA-333f4c2.md:27,439,453-456,600,622`; `git log 251da97 -- specs/049-…/spec.md` | COMPROVADO | T-DOC-13 | Resolvido nesta proposta (E-16b), se aprovada | E-16b |
+| DOC-24 | Baixa | Baixa | O "Como ler" listava o `server.ts` entre os caminhos da raiz (saiu na E-12), e o §0 e o §14 apontavam o worktree `wt-e01`, removido em 05/11 | árvore do `333f4c2`; `ls` do scratchpad | COMPROVADO | T-DOC-16 | Resolvido nesta proposta (o `wt-e01` na E-16a; o `server.ts` na E-16b) | E-16a; E-16b |
+| DOC-25 | Baixa | Alta | Há edição não commitada no `CLAUDE.md` e neste documento, no working tree principal, numa branch (`4b7b0de`) anterior à `main`; qualquer correção destes documentos tem de ser conciliada com ela | `git status` do início da sessão; merge de três vias em cópia (17:10 e 19:08), com 3 conflitos neste documento e nenhum no `CLAUDE.md` | COMPROVADO (base e conflitos, em cópia); conteúdo pela cópia de 19:08 | T-DOC-17 | Em andamento: os 3 conflitos estão resolvidos nesta proposta; falta o commit da outra sessão | E-16a |
+| DOC-26 | Baixa | Baixa | O limiar de 75% é atribuído ao `TicketSlaFilters`, mas está no `TicketSlaPlan`; o `PRODUCT.md` lista 6 estados do SLA e o back tem 7 (falta `NotApplicable`) | `DESIGN.md:238`; `PRODUCT.md:61-62`; back `TicketSlaPlan.cs:19-20`, `SlaObjectiveState.cs` | COMPROVADO | T-DOC-18; 31/10 §2.3 D10 | Aberto | E-06 |
+| DOC-27 | Baixa | Baixa | Com o ESLint no projeto, o `.vscode/` não recomenda a extensão do ESLint nem tem tarefa de lint | `.vscode/extensions.json`; `.vscode/tasks.json` (sem mudança desde `669e8ec`) | COMPROVADO | T-DOC-19 | Aberto | E-20 |
+| DOC-28 | Baixa | Média | A exclusão dos originais depende das 046, 047, 048 e 049 (agora versionada, então a troca exige commit no back); a 044 não cita os originais (cita o `BACKEND_RECONSTRUCTION.md`, já removido) | `046/spec.md:101`; `047/spec.md:98`; `048/spec.md:90`; `049/anexo-a-achados.md:1022,1057`; `anexo-b-inventario.md:420,542`; `anexo-c-analise-por-area.md:1564`; `044/spec.md:16,141` | COMPROVADO | T-DOC-20; 31/10 §2.8 (links das 046 a 048) | Aberto | E-09 |
+| DOC-29 | Baixa | Média | Além do DOC-7, o `CLAUDE.md` não diz que `shared/` hospeda as telas de autenticação e sessão nem que um domínio pode ter `ui/`, e não tem os comandos (`npm start`, `npm test`, `npm run build`, `npm run lint`), o mapa de documentos, a D-SF5 nem as regras de trabalho front/back | `CLAUDE.md:19-23`; pastas de `src/app`; `package.json:5-11`; D-SF5 só no §9 deste documento | COMPROVADO | T-DOC-21; 31/10 §2.7 | Aberto | E-06 |
+| DOC-30 | Baixa | Média | Supervisor e RH aparecem no `PRODUCT.md` como "direção de produto confirmada", sem registro no back; o único ponteiro é o link morto do DOC-3 | `PRODUCT.md:18-26`; 0 ocorrência de "supervisor" e "onboarding" no `SPEC-TICKEST.md` e no `SYSTEM_SPECIFICATION.md` | COMPROVADO (ausência no back); INFERIDO (origem) | T-DOC-22 | Aberto (decisão de produto) | E-06 |
+| DOC-31 | Baixa | Média | As 18 duplicações (D1 a D18) do relatório de 31/10 não tinham registro, e o nome colidia com as divergências D-1 a D-10 (DIV-n) | `relatorio-3110.md:121-142` × `:562-602`; busca por "D1" na Parte I do `333f4c2`: 0 | COMPROVADO | T-DOC-23 | Resolvido nesta proposta: as D1 a D18 foram mapeadas para IDs DOC (§16.2) | E-16b |
+| DOC-32 | Baixa | Baixa | A DEC-4 da 046, que liga o A-27 à forma de implantação, não estava na Parte I | `back-wt-specs/046-…/spec.md:61`; "DEC-4" na Parte I do `333f4c2`: 0 | COMPROVADO | T-DOC-24; 31/10 §2.8 (A-27 como dependência da DEC-4) | Resolvido nesta proposta (§6, item 5; §16.6) | E-16b |
+| DOC-33 | Baixa | Baixa | Os originais `FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` não avisam que foram substituídos: quem chega pelos links do back cai em texto vencido (ex.: `FA:476`, motivo da reabertura 500) | leitura dos dois originais em `333f4c2` | COMPROVADO | T-DOC-25 | Aberto: não editar (os anexos têm de seguir idênticos); resolve com a troca dos links no back e a exclusão (§6, item 20) | E-09; E-05 |
+| DOC-34 | Baixa | — | O `PRODUCT.md` define a primeira resposta como a "de quem não é o solicitante"; o back exige também que o autor atenda chamados | `PRODUCT.md:66-67`; back `TicketSlaTimer.cs:105-111` (`authorIsAgent`), `PostTicketMessageCommandHandler.cs:45` | COMPROVADO | 31/10 §2.2 P5; 31/10 §2.3 D11 | Aberto | E-06 |
+| DOC-35 | Baixa | — | O `PRODUCT.md` usa "Meus Tickets", "Todos os Tickets" e "Monitorar Tickets", contra a regra do `DESIGN.md` ("Chamado", nunca "ticket") | `PRODUCT.md:20` × `DESIGN.md:872-873` | COMPROVADO | 31/10 §2.2 P6; 31/10 §2.3 D6 | Aberto | E-06 |
+| DOC-36 | Baixa | — | O `PRODUCT.md` fala em "RBAC dinâmico", mas as funções são fixas, criadas pela migration, e a do Administrador não aceita edição | `PRODUCT.md:53-54,87-88`; back `RoleNames.cs:3-5`, `AssignRolePermissionsCommandHandler.cs:29-31` | COMPROVADO | 31/10 §2.2 P7; 31/10 §2.3 D12 | Aberto | E-06 |
+| DOC-37 | Baixa | — | O `PRODUCT.md` diz que o Administrador "não abre nem atende chamados"; o Administrador recebe o catálogo inteiro de permissões, inclusive `tickets:create` e `tickets:manage` | `PRODUCT.md:16-17`; back `RolePermissionConfiguration.cs:39` (`PermissionCatalog.All`) | COMPROVADO (era hipótese em 31/10) | 31/10 §2.2 P9 | Aberto | E-06 |
+| DOC-38 | Baixa | — | O `README.md` não cita o back em `localhost:5000` nem o `npm run lint`, e sugere `ng generate … module` num app sem nenhum `@NgModule` | `README.md:11`; `environment.ts:3`; `package.json:11`; 0 `@NgModule` em `src/` | COMPROVADO | 31/10 §2.2 P10 (sem a versão); 31/10 §2.2 P11 (sem o ng e2e) | Aberto | E-06 |
+| DOC-39 | Baixa | — | A tabela da `ca-review` põe `core/` no shell, mas não classifica `dashboard/` (34 arquivos); a `add-context` manda o painel para `src/app/core/` | `ca-review/SKILL.md:27`; `add-context/SKILL.md:88-90` | COMPROVADO | 31/10 §2.2 P13 (parte da ca-review); 31/10 §2.3 D1 | Aberto | E-07 |
+| DOC-40 | Baixa | — | Temas repetidos em mais de um documento, hoje sem divergência: sem Repository nem `Result<T>` (D2; a exceção do C-01 segue fora das skills), Karma e Jasmine (D4), propósito do produto (D5), ciclo do chamado (D9), convite e ativação (D13) e cor de status (D16); sem fonte única, podem divergir | docs.md §3.3 e §4 | COMPROVADO | 31/10 §2.3 D2, D4, D5, D9, D13 e D16 | Aberto (risco futuro) | E-06 |
+| DOC-41 | Baixa | — | O `DESIGN.md` reescreve regras do back sem apontar a fonte (lista de usuários sem filtro de pendentes, sem a 037; responsáveis elegíveis, sem a 030; catálogo fixo de funções; desativação; limite de reenvios) e aponta a spec 044, que não é versionada | `DESIGN.md:560,777-778,813-814,851-853,861-862`; `DESIGN.md:384` | COMPROVADO | 31/10 §2.4 (referência frágil à 044); 31/10 §2.6 (regra só como link, não adotada) | Aberto | E-06 |
+| DOC-42 | Baixa | — | O C-09 (`6df64e1`, `refactor`) trouxe regra nova sem registro: a recusa local por quantidade e soma "sai do detalhe", mas o detalhe só conferia tamanho e tipo; o A-25 seguia "texto a reavaliar" | diff de `6df64e1` em `ticket-detail.component.ts`; `ticket-attachments.store.ts:25-31` | COMPROVADO | T-ETP-8; 31/10 §7 (C-09, limites novos) | Resolvido nesta proposta (§4, A-25), se aprovada | E-16b |
+| DOC-43 | Baixa | — | As skills não têm modelo para o "carregar mais" por cursor, para a contagem antes do diálogo de confirmação nem para enums e rótulos em `entities` | `ticket-attachments.store.ts:109`; `users.store.ts:122,140`; `fe-arch-tmp/entities-atual.txt` | COMPROVADO | 31/10 §3.3 (sem modelo na skill) | Aberto | E-07 |
+
+#### 16.3 Arquitetura e limpeza, front e back
+
+**Front.** Fronteiras com 0 violação; nenhum barrel exporta componente ou rota. As peças são as mesmas de
+31/10 (12 features, 18 Stores, 9 Data Services, 58 componentes, 38 entities e 5 barrels); as specs
+passaram de 95 a 102. A meta de 90% é atingida no agregado e não na média simples estrita (88,0%); ficam
+abaixo de 90% no estrito as categorias Signal Store, camadas e convenções. Dos 55 itens de 31/10 no
+escopo, 8 foram resolvidos, 6 mudaram em parte e 41 continuam. A E-03 não foi executada: saíram só o
+`@angular/animations` (L-3) e a leitura do detalhe do departamento (PR #5). `eslint src` sem nenhum
+problema; o `tsc` com `--noUnusedLocals` e `--noUnusedParameters` acusa só um falso positivo
+(`revealNewItem`, um `effect()` guardado em campo) e 4 parâmetros sem uso numa spec (C-32).
+
+- **Resolvidos desde 31/10:** a leitura do detalhe do departamento (PR #5, T-519); o
+  `@angular/animations` (L-3); o `@ngrx/signals` estável (E-12); o SSR e o que vinha com ele (E-12); o
+  `extendedDiagnostics` duplicado (L-6); os 16 arquivos novos dependentes (E-00).
+- **Particularidades que continuam mantidas, sem pendência:** a `LoginStore` no login e no primeiro
+  acesso; o barrel de `shared` com serviços e utilitários; `environments` em dois arquivos de `shared`
+  e nos Data Services; o `Router` nas Stores de sessão; duas Stores providas por tela; a recarga manual
+  ao entrar em 7 telas.
+- **Conformidade por categoria (estrita, 31/10 → 05/11):** fronteiras 95,9% → 95,9%; Signal Store
+  88,1% → 88,7%; camadas 88,1% → 88,1%; transversais 100%; testes 100%; convenções do `CLAUDE.md` e do
+  README 86,6% → 87,1%.
+
+**Achados novos com ID final (A-47, A-48, A-56 e C-13 a C-32):**
+
+| ID | Grav. | Achado | Evidência | Classe | Origem | Estado | Etapa |
+|---|---|---|---|---|---|---|---|
+| A-47 | Média | `/tickets/novo` usa a `TicketsStore` da lista: dispara `GET /tickets/mine` assim que a Store nasce (403 e releitura de `/users/me` para quem só tem `tickets:create`), mostra como erro de envio uma falha de leitura ou um erro antigo e, depois de criar, vai a `/tickets` sem conferir `tickets:view-own` | `tickets/feature-ticket-create/ticket-create.component.ts:24,90-93`; `.html:94-95`; `tickets/application/tickets.store.ts:35-45,97-106`; back `GetOwn.cs:28` | COMPROVADO (código); INFERIDO (o 403 em execução) | T-SEP-5; 31/10 §3.3 R4; 31/10 §1 item 9 | Aberto | E-03 |
+| A-48 | Média | Anexos: reabrir o mesmo chamado ou clicar em "Tentar novamente" não recarrega a lista, porque `loadForTicket` com o mesmo id só faz `patchState` e os parâmetros do `rxResource` não mudam (mensagens e histórico recarregam) | `tickets/application/ticket-attachments.store.ts:104-106`; `ticket-detail.component.html:252`; × `ticket-messages.store.ts:76-81`, `ticket-history.store.ts:69-74` | COMPROVADO (código); a recarga em execução não foi observada | 31/10 §3.5 (Médio); 31/10 §1 item 10 | Aberto | E-03 |
+| A-56 | Média (31/10) | O front não tem Content Security Policy: o `index.html` não declara nenhuma e não há implantação que a envie por cabeçalho (A-27). Junto do A-23, é defesa em profundidade; hoje não há ponto de injeção de HTML no código de produção | `src/index.html:1-16` (busca por `Content-Security-Policy` em `src/`: 0); pendência 29 (Bootstrap no jsDelivr) | COMPROVADO (sem CSP no `index.html` de `333f4c2`); cabeçalho de implantação NÃO VERIFICADO (não há implantação) | 31/10 §1 item 17; 31/10 §9 (E-12, CSP) | Aberto | E-25 |
+| C-13 | Baixa | Erro de leitura e erro de mutação no mesmo sinal em 3 Stores (`TicketsStore`, `TicketAttachmentsStore`, `UsersStore`); na de anexos, a falha do "carregar mais" vai para `mutationError` | `tickets.store.ts:97-106`; `ticket-attachments.store.ts:77-87,126`; `users.store.ts:82-90` | COMPROVADO | 31/10 §3.3 R18 | Aberto | E-03 |
+| C-14 | Baixa | A busca de candidato a responsável tem 4 implementações sem `rxResource`: nas 3 Stores de chamados, loading e erro à mão e sem cancelar a busca anterior (uma resposta fora de ordem pode aparecer); na `DepartmentsStore`, `Subject` + `switchMap` com o estado à mão | `ticket-detail.store.ts:141-159`; `ticket-monitor.store.ts:275-293`; `ticket-summary.store.ts:198-216`; `departments/application/departments.store.ts:32-42,119-133,228-246` | COMPROVADO (código); a resposta fora de ordem é INFERIDA | 31/10 §3.3 R5 (busca); 31/10 §3.5 (resposta fora de ordem); T-FEA-3 | Aberto | E-03 |
+| C-15 | Baixa | `InjectionToken` das flags e mapas `*_BADGE_CLASS` (classes CSS) dentro de `entities` | `shared/entities/dashboard-features.ts:14`; `tickets/entities/ticket-priority.ts:18`, `ticket-sla-status.ts:25`, `ticket-sla.ts:36`, `ticket-status.ts:20` | COMPROVADO | 31/10 §3.3 R7 | Aberto (opcional na E-03 de 31/10) | E-03 |
+| C-16 | Baixa | Declarações sem o `/** */` em português que o `CLAUDE.md` exige: 258 em 53 arquivos (o mesmo script dá 264 na base de 31/10); os maiores são `ticket-detail.component.ts` (24) e `ticket-monitor.component.ts` (23) | `reaudit/out/fe-arch-tmp/doc-comments-atual.txt`; `doc-comments-base-9d7e238.txt` | COMPROVADO (script calibrado na base de 31/10) | 31/10 §3.3 R13; 31/10 §9 (E-08) | Aberto (decisão: completar ou alinhar o `CLAUDE.md`) | E-08 |
+| C-17 | Baixa | Código morto que 31/10 apontou e continua: `slaRefreshing`, `clearPostError()`, `isFiltered` e `permissionsLoadError`; três campos `data` nunca lidos; `TicketSlaStatus` exposto ao template sem uso; o comentário obsoleto da diretiva de dropdown; 25 exports usados só no próprio arquivo (e 22 só em specs) | `ticket-detail.store.ts:35`; `ticket-messages.store.ts:178`; `tickets.store.ts:76,100`; `roles.store.ts:22,41,52,54,92`; `ticket-monitor.component.ts:333`; `dropdown-fixed-position.directive.ts:3,11-12`; `fe-arch-tmp/dead-exports.txt` | COMPROVADO | 31/10 §3.4 (código morto, campos data, TicketSlaStatus, comentário do dropdown, 42 símbolos); 31/10 §3.3 R5 (permissionsLoadError) | Aberto | E-03 |
+| C-18 | Baixa | Duplicações de Store de 31/10: o "carregar mais" por cursor (3 Stores e 2 Data Services), o mapa de erros de atribuição (3) e os 6 `computed` de paginação (3) | `ticket-attachments.store.ts:109`, `ticket-history.store.ts:83`, `ticket-messages.store.ts:85`; `ticket-monitor.store.ts:301` ≡ `ticket-summary.store.ts:232`; `tickets.store.ts:108-121`, `ticket-monitor.store.ts:123-136`, `users.store.ts:98-109` | COMPROVADO | 31/10 §3.4 (duplicações de Store) | Aberto | E-19 |
+| C-19 | Baixa | Duplicações de formulário de 31/10: `isFieldInvalid` em 9 métodos de 7 arquivos, a regra de senha em 3 telas e a regra da descrição em 2 | `department-list.component.ts:193,199`; `activate-account.component.ts:45,64`; `first-access.component.ts:24,29`; `profile-edit.component.ts:34,74,80`; `ticket-create.component.ts:36,69`; `ticket-edit-dialog.component.ts:47,59`; `user-list.component.ts:239` | COMPROVADO | 31/10 §3.4 (isFieldInvalid, senha, descrição) | Aberto | E-19 |
+| C-20 | Baixa | Desvios menores de convenção de 31/10: o painel apresentacional do Monitor injeta a Store que o pai já injeta (R19); quatro Stores com nome de entidade (R24); um `== null` (R27); o logout engole o erro, agora com comentário que diz que é de propósito (R17); o título fixo "TickestPristine" do CLI | `ticket-monitor-info-panel.component.ts:52`; `tickets.store.ts:15`, `departments.store.ts:18`, `roles.store.ts:16`, `users.store.ts:18`; `ticket-list-due.ts:76`; `login.store.ts:156-162`; `src/index.html:5` | COMPROVADO | 31/10 §3.3 R17, R19, R24 e R27; 31/10 §3.4 (título do CLI) | Aberto | E-19 |
+| C-21 | Baixa | Ciclo de vida e DOM: `valueChanges` sem `takeUntilDestroyed` na criação; o `Dropdown` do Bootstrap nunca é descartado; o download cria e clica um `<a>` dentro da Store e revoga a URL logo depois do clique | `ticket-create.component.ts:58`; `dropdown-fixed-position.directive.ts:20-26`; `ticket-attachments.store.ts:163-168` | COMPROVADO | 31/10 §3.5 (valueChanges, Dropdown, revokeObjectURL) | Aberto | E-03 |
+| C-22 | Baixa (31/10: Médio) | Componentes grandes: `user-list` com 868 linhas (eram 853), `dashboard` 771 (795), `ticket-monitor` 611 (619), `ticket-detail` 577 (577) e `department-list` 482 (551) | `.ts` dos cinco componentes em `333f4c2` × `9d7e238` (fe-arch §3.3) | COMPROVADO (`wc -l`) | 31/10 §3.5 (tamanho dos componentes) | Aberto (opcional) | E-19 |
+| C-23 | Baixa | Lacunas de teste direto: 4 métodos de Store sem chamada na própria spec (`reloadTrend`, `hydrateFiltersFromUrl`, `resetAssignment`, `loadForCurrentUser`); 9 utilitários (entre eles o `extractErrorMessage`), o helper `ticket-assignee-search.ts`, o `AuthLayoutComponent` e a `DropdownFixedPositionDirective` sem spec própria, além dos 4 do N-5 | `ticket-dashboard.store.ts:252`; `ticket-monitor.store.ts:237`; `ticket-summary.store.ts:219`; `tickets.store.ts:154`; `fe-arch-tmp/tests-report.txt` | COMPROVADO | 31/10 §3.5 (4 métodos sem teste); T-FEA-12 | Aberto | E-20 |
+| C-24 | Baixa | O recorte do Início vira filtros da API em dois lugares, com igualdades diferentes (campo a campo × `JSON.stringify`); nada garante que os Alertas usem o mesmo recorte do agregado, como o comentário pede | `ticket-dashboard.store.ts:43-46,83-92` × `ticket-summary.store.ts:20-32,262` | COMPROVADO (duplicação); risco de divergir INFERIDO | T-FEA-1 | Aberto | E-17 |
+| C-25 | Baixa | A sincronização dos filtros com a URL está copiada entre Monitor e Usuários (os dois `effect`, `filtersToQueryParams` e `matchesCurrentUrl`); Meus Chamados tem a sua variante; `debounceTime(300)` em 5 buscas | `ticket-monitor.component.ts:314-330,484,504` × `user-list.component.ts:283-298,402,413`; `ticket-list.component.ts:178` | COMPROVADO | T-FEA-2 | Aberto | E-19 |
+| C-26 | Baixa | Regras de permissão e de cancelamento ficam em `tickets/ui/`, que não entra no barrel: a constante `TICKETS_MANAGE_PERMISSION` não pode ser importada fora dela, e o literal `'tickets:manage'` aparece 17 vezes em 10 arquivos | `tickets/ui/ticket-action-permissions.ts:1-38`; `tickets/ui/ticket-cancel-window.ts`; `fe-arch-tmp/dup-report.txt`, seção 1 | COMPROVADO (local e imports); causa do literal repetido INFERIDA | T-FEA-4; 31/10 §3.4 (literal 'tickets:manage') | Aberto | E-19 |
+| C-27 | Baixa | As mensagens de erro da leitura do chamado (403 e 404) estão copiadas entre a Store do detalhe e a do painel rápido do Monitor | `ticket-detail.store.ts:56-67` ≡ `ticket-quick-info.store.ts:35-44` | COMPROVADO | T-FEA-5 | Aberto | E-19 |
+| C-28 | Baixa | Sem formatação de data comum: `'dd/MM/yyyy HH:mm'` em 22 linhas de 7 templates; `'HH:mm'` no `DatePipe` e em dois `Intl.DateTimeFormat` iguais no Início; formatadores próprios em Meus Chamados | `dashboard/dashboard-overview.ts:138`; `dashboard.component.ts:550`; `ticket-monitor.component.html:204`; `ticket-list.component.ts:27,30` | COMPROVADO | T-FEA-6 | Aberto | E-19 |
+| C-29 | Baixa | CSS repetido entre componentes e com o `styles.css`: `.department-load-error` ≡ `.role-notice`; `.info-list-title` ≡ `.info-list dt`; o mesmo contorno de foco em 3 seletores (a cor é o R-09); 4 regras do global repetidas no `auth-form.css`; o `.min-w-0` inline do diálogo | `department-list.component.css:~96` × `role-list.component.css:~8`; `shared/ui/auth-form.css`; `dialog.component.ts:58` × `styles.css:335-337`; `fe-arch-tmp/css-overlap.txt` | COMPROVADO | T-FEA-7; T-ETP-10 (.min-w-0, parte) | Aberto | E-19 |
+| C-30 | Baixa | CSS global sem uso: `.icon-tile-xl`, `.border-primary` e o ramo `.was-validated` | `src/styles.css:713-716,958-960,549-550`; 0 ocorrência em `.html`, `.ts` e `index.html` (`fe-arch-tmp/css-usage.txt`) | COMPROVADO | T-FEA-8 | Aberto | E-03 |
+| C-31 | Baixa | Restos do SSR no `SessionService`: 4 guardas `typeof window !== 'undefined'` num app só de navegador desde a E-12; o item 25 do §6 só citava a do Monitor | `shared/services/session.service.ts:63,87,97,139`; `ticket-monitor.component.ts:2,291` | COMPROVADO | T-FEA-9 | Aberto | E-03 |
+| C-32 | Baixa | Resíduos em specs: parâmetros sem uso e um spy com métodos que a Store testada não usa | `tickets.store.spec.ts:272,291`; `ticket-history.store.spec.ts:27` | COMPROVADO (`tsc --noUnusedParameters`) | T-FEA-11 | Aberto | E-20 |
+
+**Back.** 0 violação da regra de dependência; build sem aviso; 940 testes unitários e 134 de arquitetura
+passando. A conformidade foi de 79,6% para 86,8% (bruta) e de 89,8% para 97,1% (ajustada), quase toda
+pela G1 da 049 e pela 045: `FallbackPolicy`, matriz de autorização por rota, regra de arquitetura que
+exige proteção em todo endpoint, snapshot aprovado do OpenAPI, `<summary>` em todas as interfaces e o
+único handler de evento no padrão. O bruto fica abaixo de 90% pelo legado declarado (usuários e funções
+anêmicos, guards estáticos e classes estáticas de usuário); sem as cinco regras dominadas por ele, as
+outras 21 dão 96,0%. Do §5 de 31/10, a maior parte continua e já tem ID na 049 (citado como `049/…`);
+o que nunca teve registro virou BA-n, LAC-17 e BK-27 a BK-30. A sessão da 043 mexe agora em arquivos
+de vários achados (`Ticket.cs`, consultas de usuários e de chamados, `CLAUDE.md` e a skill de
+autorização): a limpeza do back vem depois do merge da parte 1 (E-22), e a decisão 12 antes da T-5 dela.
+
+**Achados novos com ID final (LAC-17, BA-1 a BA-18 e BK-27 a BK-30):**
+
+| ID | Grav. | Achado | Evidência | Classe | Origem | Estado | Etapa |
+|---|---|---|---|---|---|---|---|
+| LAC-17 | Média (31/10) | As decisões DP-11 e DP-12 do `SPEC-TICKEST.md` seguem sem spec: a DP-11 só tem a 033 em Rascunho e o OR-09 da 049; a DP-12, nada (remover o responsável não muda o status). A DP-02 está coberta pela REQ-211 da 049, delegada à G3-b (LAC-15) | back `SPEC-TICKEST.md:164,173-174,351-356`; `Ticket.cs:161-175`; `specs/049-…/spec.md:279` | COMPROVADO | 31/10 §5.5 (DP-11 e DP-12); 31/10 §1 item 15; 31/10 §9 (E-14) | Aberto | E-14 |
+| BA-1 | Baixa | O `TicketSlaPlan.GetDeadlines`, que a spec 045 apresenta como a fórmula única de prazo, só é chamado por testes; a produção chama o `CalculateDeadlines` interno. Ter um ponto de entrada só e corrigir o texto da 045 | `Domain/Tickets/TicketSlaPlan.cs:27,44`; `Ticket.cs:67`; `TicketSlaCycleService.cs:47,155`; `specs/045-…/spec.md:27-28` | COMPROVADO | T-BEA-1 | Aberto | E-22 |
+| BA-2 | Baixa | `BusinessCalendar.SubtractBusinessTime` não tem chamador de produção desde a spec 004; só os testes o usam | `Domain/SlaCalendars/BusinessCalendar.cs:73`; `BusinessCalendarTests.cs:61,91,108,140`; `71d52c4` | COMPROVADO | T-BEA-2 | Aberto (decidir numa spec se fica) | E-22 |
+| BA-3 | Baixa | Três nomes de exibição de validação sem regra nenhuma (`Reason`, `RequesterId` e `ResponsibleUserId`); o teste só confere o sentido "propriedade validada sem nome" | `Abstractions/Behaviors/ValidationDisplayNames.cs:37,39,40` | COMPROVADO | T-BEA-3 | Aberto | E-22 |
+| BA-4 | Baixa | A ordenação paginada de usuários pela data de cadastro não tem índice, contra a regra de paginação da skill | `Users/GetAll/GetUsersQueryHandler.cs:79-84`; `Infrastructure/Users/UserConfiguration.cs:27,31,34,47`; `add-feature/references/pagination.md:150` | COMPROVADO (vem de 31/10) | T-BEA-4; 31/10 §5.2 (índice de usuários) | Aberto (migration própria, com autorização) | E-22 |
+| BA-5 | Baixa | Os 33 validators são `internal sealed`, e a skill manda classe pública; o desvio não está declarado no `CLAUDE.md` do back (funciona porque o registro inclui tipos internos) | `Tickets/Close/CloseTicketCommandValidator.cs:5` e os outros 32; `add-feature/references/command-slice.md:44,51`; `Application/DependencyInjection.cs:43` | COMPROVADO (vem de 31/10) | T-BEA-5; 31/10 §5.2 (validators internal) | Aberto | E-15 |
+| BA-6 | Baixa | O `CLAUDE.md` do back está defasado depois da G1: diz que `ValueObject`, `ResultExtensions` e `Result.Create` "ainda não existem", e o mapa não lista as abstrações `Notifications`, `Sla` e `Telemetry` | `CLAUDE.md:102,142`; `SharedKernel/ValueObject.cs:8`; `ResultExtensions.cs:3`; `Result.cs:35-38` | COMPROVADO | T-BEA-6 | Aberto | E-15 |
+| BA-7 | Baixa (prioridade de governança) | Instruções contraditórias sobre a conferência por recurso: a skill e o `CLAUDE.md` mandam o método privado `HasPermissionTo{Action}`; a DEC-30 da 041 proíbe método separado nos command handlers; a 049 recomenda o `HasPermissionTo{Action}` (DEC-9) sem citar a DEC-30; a 043 põe as conferências das queries num método privado com SQL. Nenhum handler usa o padrão da skill | `add-feature/references/authorization.md:72-104`; `CLAUDE.md:131`; `specs/041-…/spec.md:244`; `specs/049-…/spec.md:230,360,567`; `back-wt-specs/043-…/spec.md:29` | COMPROVADO (vem de 31/10, E-15) | T-BEA-7; 31/10 §5.2 (instruções contraditórias) | Aberto (decisão) | E-15 |
+| BA-8 | Baixa | Comentários que citam spec: 42 arquivos de `src` e 16 de `tests`, dois acrescentados pela G1; só os de usuários têm tarefa (US-24 da 049) e não há teste de arquitetura | `IntegrationTests/Departments/DepartmentsTests.cs:514`; `Sectors/SectorsTests.cs:380` (`bcf0356`); `CLAUDE.md:177`; `specs/041-…/spec.md:250` | COMPROVADO | T-BEA-8; 31/10 §5.2 (42 arquivos citando spec) | Aberto | E-22 |
+| BA-9 | Baixa | O `ResendUserInvitationCommandValidator` não tem teste de validator; os outros 32 têm | `Users/ResendInvitation/ResendUserInvitationCommandValidator.cs:9` | COMPROVADO | T-BEA-9 | Aberto | E-22 |
+| BA-10 | Baixa | O `IApplicationDbContext` expõe `SlaCalendarHolidays`, que a Application não usa; só a Infrastructure lê, pelo `ApplicationDbContext` | `Abstractions/Data/IApplicationDbContext.cs:36`; `Infrastructure/SlaCalendars/SlaCalendarProvider.cs:65` | COMPROVADO | T-BEA-10 | Aberto | E-22 |
+| BA-11 | Baixa | Regras sem teste de arquitetura nem plano na 049: pacote de framework proibido no Domain e no SharedKernel; código de erro no padrão; evento como `sealed record`; DTO de resposta por slice; citação de spec em comentário (BA-8) | be-arch §3.3; `ArchitectureTests/Layers/LayerTests.cs:9-167` | COMPROVADO; INFERIDO (risco futuro) | T-BEA-11; 31/10 §5.2 (regras sem teste de arquitetura) | Aberto (parte resolvida pela G1) | E-22 |
+| BA-12 | Baixa | O agente `dotnet-architect` manda "construtor privado com guardas" e métodos que devolvem `Result` ou `bool`, contra as skills e o `CLAUDE.md` (um construtor privado sem parâmetros, nenhuma guarda na entidade) | `.claude/agents/dotnet-architect.md:35`; `domain-modeling/SKILL.md:39`; `ca-review/SKILL.md:29`; `CLAUDE.md:176` | COMPROVADO | T-BEA-12 | Aberto | E-15 |
+| BA-13 | Média | O mesmo par `createdFrom`/`createdTo` tem duas semânticas: dia UTC em `GET users` e dia de São Paulo em `GET tickets`; quem filtra os usuários cadastrados num dia perde os das 21h à meia-noite de São Paulo e ganha os do dia anterior | `Users/GetAll/GetUsersQueryHandler.cs:17-18`; `SlaCalendars/LocalDatePeriod.cs:11-30`; `specs/025-chamados-filtro-periodo/spec.md:22` | COMPROVADO | T-BEA-13; 31/10 §5.4 (filtro de data de usuários) | Aberto (decisão) | E-23 |
+| BA-14 | Baixa | A skill do back não tem modelo para o serviço em segundo plano com trava entre instâncias | `Infrastructure/Tickets/SlaMonitoring/SlaMonitorBackgroundService.cs` | COMPROVADO | 31/10 §5.2 (sem modelo na skill: serviço em segundo plano) | Aberto | E-15 |
+| BA-15 | Baixa | `Ticket.Unassign` confia no handler: usa `AssignedToUserId!.Value`, e só o handler confere antes que há responsável | `Domain/Tickets/Ticket.cs:168`; `UnassignTicketCommandHandler.cs:34` | COMPROVADO | 31/10 §5.3 (Unassign confia no handler) | Aberto | E-22 |
+| BA-16 | Baixa | O OpenAPI só é publicado em Development; o snapshot aprovado cobre o contrato nos testes, mas não há documento da API fora de Development | `Web.Api/Program.cs:35-38`; `IntegrationTests/Swagger/SwaggerTests.cs:12` | COMPROVADO | 31/10 §5.3 (sem OpenAPI fora de Development); 31/10 §1 item 16 | Em parte (o teste de contrato existe desde a G1) | E-25 |
+| BA-17 | Média (31/10) | Os anexos ficam em disco local (`LocalFileStorage`), o que prende a API a uma instância | `Infrastructure/DependencyInjection.cs:89` | COMPROVADO | 31/10 §5.3 (anexos em disco local); 31/10 §5.6 (risco Médio) | Aberto | E-25 |
+| BA-18 | Baixa | Faltam testes de envio por SMTP e de exportação de telemetria; a cobertura é coletada e publicada no CI, sem limite mínimo | `.github/workflows/build.yml:79-83`; `Evidence/Ct26/EvidenceFactAttribute.cs:17` | COMPROVADO | 31/10 §5.3 (testes que faltam) | Em parte (cache entre instâncias com evidências da 050; contrato feito) | E-22 |
+| BK-27 | Alto (31/10) | As specs 014, 017 e 021 seguem só em branches não mescladas: a 014 está "Verificada" sobre uma base anterior ao domínio rico, com o PR #34; por isso a `main` não devolve chamados à fila ao desativar um usuário | `origin/feat/SPEC-014-first-access-open-tickets` (`4e055ae`); `chore/SPEC-017-activation-url-environments` (`8afa21a`) | COMPROVADO (commits fora da `main`); estado dos PRs NÃO VERIFICADO | 31/10 §5.5 (014, 017 e 021); 31/10 §1 item 8 | Aberto (decisão 21) | E-09 |
+| BK-28 | — | A 036 diverge entre a cópia local ("Aprovada") e a branch `feat/SPEC-036-role-stable-identity` (`f7ebf67`); a 049 (7.15.4) manda refazê-la a partir da `main` | `back-wt-specs/036-funcoes-identidade-estavel/spec.md` | COMPROVADO | 31/10 §5.5 (cópia local × branch: 036) | Aberto (023 e 024 resolvidas) | E-09 |
+| BK-29 | — | Metadados de PR das specs: a 041 "Verificada" sem `pr:` (o commit que registra o PR #57 está no #58, fora da `main`); a 041 e a 012 com tarefa desmarcada; a 049 "Em implementação" com `pr:` vazio, embora a G1 tenha saído no PR #71 (o modelo guarda um PR só) | `specs/012-…/spec.md:266`; `specs/041-…/spec.md:291`; `e47a3e9` fora da `251da97` | COMPROVADO | 31/10 §5.5 (041 e 012); be-arch §10 (049 sem pr) | Aberto | E-09 |
+| BK-30 | — | O script de auditoria SDD dava 100% sem olhar arquivos não rastreados, estado de PR nem divergência entre branches | `scripts/auditoria_sdd.py` (não reexecutado) | NÃO VERIFICADO em 05/11 (a cópia não tem `.git`) | 31/10 §5.5 (auditoria SDD) | A confirmar | E-09 |
+
+#### 16.4 Separação de responsabilidades
+
+**E-02 de 31/10.** Dos 8 itens, o PR #5 fez 4 (DIV-1, DIV-4, DIV-10 e o enum 12 e 13 do histórico) e 1
+em parte (DIV-9: sobrou o perfil deduzido no Início); faltam a DIV-2, os espaços antes de validar (A-52)
+e a frase de fila (A-53). O aceite da E-02 ("nenhum botão aparece para quem o servidor recusaria") ainda
+não vale: DIV-2, DIV-12, DIV-13, DIV-15 e a parte por alvo da LAC-5 mostram ações que o servidor recusa.
+
+**Seção 4 de 31/10.** Os 2 acertos continuam. Das 10 divergências, 4 foram resolvidas (DIV-1, DIV-4,
+DIV-5 e DIV-10), 1 em parte (DIV-9) e 5 continuam (DIV-2, DIV-3, DIV-6, DIV-7 e DIV-8), todas com
+decisão de 05/11 (§16.8). Das 31 constatações do inventário, 1 foi resolvida, 2 mudaram porque o back
+entregou (a 024 e o `Retry-After`) e 28 continuam. Das 15 lacunas, a LAC-11 mudou (entregue no back),
+e o estado de cada uma está no §8.2. Dos 4 ajustes de spec, o da 024 foi feito; o da regra de reabrir
+piorou, porque a RN-06 e o anexo C da 049 também descrevem a regra do front (BK-6). O princípio de 31/10
+continua: nada sai do front antes de o back cobrir; a ordem é spec, back e só então a remoção do espelho.
+
+**Mapa de 05/11.** 50 regras: 23 espelhos legítimos de experiência (a), 13 divergências (b), 3 regras
+só no front (c), 10 cálculos ou derivações que deveriam vir da API (d) e 1 brecha só do back (LAC-15).
+Das que pedem ação, 2 são de gravidade Alta (DIV-3 e A-59, este inferido) e 5 Média (DIV-6, LAC-15,
+A-30 com a LAC-2, A-53 e LAC-3). Com as funções do seed, só o DIV-3 acontece; o resto aparece com
+funções personalizadas, que a tela de Funções permite criar.
+
+| # | Regra (número do mapa) | Classe | ID | Depende de | Critério de aceite |
+|---|---|---|---|---|---|
+| 4 | Reabrir | (b) | DIV-2 | Decisão 1 (vale o código do back) | O dono com `tickets:manage` e sem `reopen-own` não vê "Reabrir" |
+| 9 | Assumir pelo detalhe e pelos Alertas | (b), esconde | DIV-11 | — | O Atendente do seed assume pelo detalhe |
+| 11 | Excluir chamado, sem tela | (b), esconde | 049/Q-65, DEC-69 | Decisão de produto na 049 | Tela ou rota obsoleta |
+| 12 | `PUT` com o estado inteiro | (b), contrato | DIV-3 (LAC-1) | 049 T-501 e T-502; Q-83 | Corpo de um campo só (AC-501 a AC-503 e AC-526 da 049) |
+| 31 | Perfil deduzido no Início | (b), esconde | DIV-9 | Decisão 5 (pelas permissões) | O Administrador do seed vê "Novo Chamado" |
+| 33 | Criar chamado lê "meus chamados" | (b) | A-47 | — | Abrir `/tickets/novo` não chama `GET /tickets/mine` |
+| 35 | Ações por usuário-alvo | (b) e (a) | LAC-5 | Q-64 da 049; spec nova | Nenhum item de menu leva a 403 |
+| 37 | Espaços antes de validar | (b), borda | A-52 | — | Texto só com espaços não é enviado |
+| 38 | Mínimo de 2 no nome | (b) | DIV-8 (LAC-10) | Decisão 4 (regra do back) | O back recusa nome de 1 caractere; depois o front tira o espelho |
+| 42 | Contagem sem `tickets:manage` | (b) | A-54 | 034 (definitivo) | Sem a permissão, nenhum `GET /tickets` em Usuários |
+| 43 | Funções no cadastro sem `users:assign-roles` | (b) | DIV-12 | 049 REQ-505 (depois) | Sem a permissão, o cadastro faz uma chamada só |
+| 45 | Funções: `roles:manage` × `roles:read` | (b) | DIV-13 | — | `roles:read` abre a tela em modo leitura |
+| 47 | Escalada ao editar permissões | (b) | DIV-15 | LAC-5, estendida | Nenhum "Salvar" que o back recuse por escalada |
+| 8 | Assumir só sem responsável | (c) | DIV-6 (LAC-9) | Decisão 2 (exige `tickets:assign`; spec no back) | O back recusa assumir de outro sem `tickets:assign` |
+| 40 | Tirar a própria função de administrador | (c) | DIV-7 (LAC-8) | Decisão 3 (regra do back) | O back recusa; depois o front tira o `removesOwnAdminAccess` |
+| 50 | Responsável de departamento | (c) | DIV-14 | Decisão 6; Q-65 da 049 | O back recusa o inelegível; quem só tem `departments:manage` escolhe |
+| 17 | Autor da mensagem | (d) | LAC-4 | 049 REQ-506 e T-508 | O nome vem na resposta (AC-511 da 049) |
+| 20 | 1º ciclo no Monitor, nos Alertas, no agregado e no detalhe | (d) | A-30 (LAC-2) | 048 (decisão 10) | Um reaberto não aparece como "Cumprido" |
+| 21 | Prazo vigente em Meus Chamados | (d), entregue | C-41 | 024, entregue | Campos obrigatórios; sem o recuo |
+| 23 | Alertas: total do servidor e vencidos ao vivo | (d) | A-17 | 049 DEC-66, T-509 e T-511 | Uma listagem só, com o relógio da resposta |
+| 25 | Taxa de SLA, variação e período anterior | (d) | LAC-13 | Spec nova | O Início não calcula percentual nem variação |
+| 26 | Frase de "fila" | (d) | A-53 | 032, depois | Nenhuma frase de fila a partir de criados × resolvidos |
+| 30 | Departamento traduzido em setores ativos | (d) | LAC-3 | 049 DEC-67 e T-510 | O front manda `departmentId` (AC-513 da 049) |
+| 41 | Lote, contagem e cadastro orquestrados no front | (d) | A-59 (A-20, LAC-6, LAC-7) | 049 REQ-505, T-506 e T-507; 034 | No máximo 2 requisições para 100 selecionados, sem 429 |
+| 44 | Convite pendente, expirado e revogado | (d) | spec 037 | 037, aprovada | Os estados do convite vêm da API |
+| 49 | Desativar com chamados ativos | (d), dado pronto | A-58 | 022, entregue | "Desativar" avisa com o número da API |
+| 13 | Responsável na abertura | só do back | LAC-15 | 049 REQ-211 e DEC-35 (G3-b) | AC-211 da 049 |
+
+**Achados novos com ID final (A-52 a A-54, A-57 a A-59, C-40, C-41, DIV-11 a DIV-15 e LAC-16):**
+
+| ID | Grav. | Achado | Evidência | Classe | Origem | Estado | Etapa |
+|---|---|---|---|---|---|---|---|
+| A-52 | Baixa | Edição e criação de chamado validam o texto antes de aparar: "abc" com 7 espaços passa no diálogo de edição (mínimo 10) e o banco recusa; a criação aceita título ou descrição só com espaços, que o validator do back recusa | `tickets/ui/ticket-edit-dialog/ticket-edit-dialog.component.ts:46-48,81`; `ticket-create.component.ts:35-36,84-89`; back `TicketConfiguration.cs:30`, `CreateTicketCommandValidator.cs:9-10` | COMPROVADO (código); a recusa do back é INFERIDA da regra | 31/10 §4.4 (E-02, espaços); 31/10 §4.3 (o); separacao §2 (criação, novo) | Aberto | E-02 |
+| A-53 | Média | A frase "Fila estável: tantos chamados resolvidos quanto abertos…" deduz a fila de criados × resolvidos; a spec 032 (Bloqueada) diz que o front não consegue reconstruir a fila | `dashboard/dashboard-overview.ts:283-285`; `back-wt-specs/032-serie-da-fila-por-periodo/spec.md:15` | COMPROVADO | 31/10 §4.3 (s); 31/10 §4.4 (E-02, frase de fila) | Aberto | E-17 |
+| A-54 | Baixa | Antes de desativar, Usuários conta os chamados de cada pessoa por `GET /tickets` (endpoint de outro domínio, com `tickets:manage`) sem conferir a permissão: sem ela, cada 403 relê `/users/me`. O comentário do Data Service justifica a chamada com um import entre `tickets` e `users` que não existe mais, e a nota de FA:496-500 não estava na Parte I | `users/infrastructure/user.data.service.ts:73-87`; `users/application/users.store.ts:122-131`; `shared/interceptors/auth.interceptor.ts:58-72`; back `Tickets/GetAll.cs:53` | COMPROVADO | 31/10 §4.3 (v); T-DOC-15; 31/10 §5.4 (contagem antes de desativar) | Aberto | E-02 |
+| A-57 | Baixa | A conferência local de anexos ignora a lista `extensions` da política, compara o tipo por igualdade exata e confere o tamanho antes do tipo; o back normaliza o tipo e confere a extensão do nome, então um arquivo com tipo aceito e extensão recusada passa no front e cai no back | `tickets/application/ticket-attachments.store.ts:18-34`; back `TicketAttachment.cs:84-108,161`; `GetTicketAttachmentPolicyQueryHandler.cs:22-28` | COMPROVADO | 31/10 §4.3 (n) | Aberto | E-02 |
+| A-58 | Baixa | `GET /departments` já traz a contagem de chamados ativos (spec 022), mas o front não tem o campo e só explica em texto a recusa de desativar departamento ou setor | `departments/entities/department.ts` (sem `activeTicketCount`); `department-list.component.ts:336,468`; back `GetDepartmentsQueryHandler.cs:15-18,33-34,43` | COMPROVADO | T-SEP-9 | Aberto | E-02 |
+| A-59 | Alta (INFERIDO) | Desativação em lote e contagem por pessoa orquestradas no front: com 100 selecionados (página máxima), chegam a cerca de 200 requisições em segundos, contra o limite global de 100 por minuto; o que passar leva 429 | `users/application/users.store.ts:15,364-`; `user-list.component.ts:34`; back `Api/appsettings.json:37-39` | COMPROVADO (código); INFERIDO (o 429) | 31/10 §4.3 (z); separacao §5, regra 41 | A confirmar na E-04 | E-04; E-23 |
+| C-40 | Baixa | Meus Chamados faz uma requisição extra ("tem algum chamado?") embora o resumo `GET /tickets/mine/summary` já traga o total | `tickets/application/tickets.store.ts:53-62`; `my-tickets-summary.store.ts:71` | COMPROVADO | 31/10 §4.3 (w) | Aberto | E-03 |
+| C-41 | Baixa | Recuo morto em Meus Chamados: a 024 sempre manda `currentDueAtUtc` e `currentSlaStatus` (não anuláveis), mas o front os declara opcionais ("ausente enquanto o back-end não manda") e mantém o recuo "Reaberto: prazo novo no chamado" | `tickets/entities/ticket.ts:26-29`; `ticket-list-due.ts:36-43,76-79`; back `OwnTicketResponse.cs:20-21`, `GetOwnTicketsQueryHandler.cs:77-91` | COMPROVADO | 31/10 §4.3 (j) | Aberto | E-02 |
+| DIV-11 | Baixa | Quem tem `tickets:manage` sem `tickets:assign` (o Atendente do seed) só assume chamado no Monitor: o detalhe e os Alertas do Início não oferecem "Atribuir a mim", que o back aceita | `ticket-detail.component.ts:409-411`; `dashboard.component.html:86`; back `Assign.cs:28`, `RolePermissionConfiguration.cs:41-46` | COMPROVADO | T-SEP-2 | Aberto | E-02 |
+| DIV-12 | Baixa | O cadastro de usuário mostra a escolha de funções a quem tem `users:create` sem conferir `users:assign-roles`: a segunda chamada recebe 403 e o aviso manda usar "Atribuir funções", que a pessoa não vê; sem `roles:read`, a lista nem carrega | `user-list.component.html:390-412`; `users.store.ts:191-200`; back `AssignRoles.cs:29`, `Roles/GetAll.cs:22` | COMPROVADO | T-SEP-3 | Aberto | E-02 |
+| DIV-13 | Baixa | Tela de Funções: a rota e o menu exigem `roles:manage`, e `GET /roles` exige `roles:read`; quem só lê não vê a tela, e quem só gerencia recebe 403 na lista | `core/routes/app.routes.ts:98-104`; `side-menu-nav.component.html:49`; back `Roles/GetAll.cs:22`, `AssignPermissions.cs:36` | COMPROVADO | T-SEP-4; 31/10 §5.4 (permissão da tela de Funções) | Aberto | E-02 |
+| DIV-14 | Baixa | Responsável de departamento: o front só oferece usuários ativos e busca em `GET /users` (`users:read`); o back aceita qualquer usuário existente, inclusive desativado, e não tem rota de candidatos com a permissão da tela | `departments/application/departments.store.ts:231-238`; back `CreateDepartmentCommandHandler.cs:22-31`, `UpdateDepartmentCommandHandler.cs:32-41`, `Department.cs:22-43` | COMPROVADO | T-SEP-6; 31/10 §4.3 (cc); 31/10 §5.4 (Departamentos usa GET /users) | Aberto (decisão; spec no back) | E-23 |
+| DIV-15 | Baixa | O diálogo de permissões de função deixa marcar permissões administrativas que quem edita não tem; o back recusa por escalada de privilégio | `roles/feature-role-list/role-list.component.ts:148-177,184-200`; back `AssignRolePermissionsCommandHandler.cs:41-54`, `PrivilegeEscalationGuard.cs:17-32` | COMPROVADO | T-SEP-7 | Aberto | E-02 |
+| LAC-16 | Baixa | O `Retry-After` que a G1 passou a mandar no 429 não chega ao JavaScript entre origens: o CORS só expõe `Correlation-Id`. A T-504 e o AC-523 da 049 (o front espera o tempo do cabeçalho) não funcionariam assim; com front e API na mesma origem (DEC-4 da 046), o problema some | back `CorsExtensions.cs:39,46`, `RateLimitingExtensions.cs:60-88`; front `current-user.service.ts:11-15,49-56` | COMPROVADO (configuração); INFERIDO (o navegador esconde o cabeçalho) | T-ETP-4; T-SEP-10 | Aberto | E-21 |
+
+#### 16.5 Etapas recentes
+
+| Etapa | Commits | Veredito | Achados de 05/11 |
+|---|---|---|---|
+| A-28 | `f7cdd73`; reescrito pelo PR #5 (T-517) | OK com ressalvas | A-50, C-33, C-34 |
+| A-42 (aviso) | `00b7252`; E-01 `75413f2`, `39f1982` | OK com ressalvas | LAC-16, R-08, A-51 |
+| C-07 | `0573c20` | OK com ressalvas | C-35 |
+| C-09 | `6df64e1`; E-01 `0ae9ee4` | OK com ressalvas | DOC-42, A-49 |
+| A-33 | `0df5718`; E-01 `887fee5`, `4c5c575` | OK com ressalvas | C-36, R-09, C-37, DOC-15 |
+| R-05 | `f95f587` | OK com ressalvas (validação visual nunca feita) | — |
+| R-06 | `008dfcf` | OK (visual pendente na E-04) | — |
+| R-07 | `be5cd6e`; E-01 `d95b336` | OK com ressalvas | R-10 |
+| C-10 | `0451269` | OK com ressalvas | C-38 |
+| 6.3 | `9d7e238`; E-01 `855ad11` | OK com ressalvas | C-39 |
+| Registro | `333f4c2` (este documento) | — | DOC-20 |
+
+Nenhum achado Crítico ou Alto. O plano da E-01 de 31/10 foi cumprido, menos a duplicação de Meus
+Chamados (C-36). Ficaram fora da tabela de defeitos da E-01 o `role="status"` do A-42 (R-08), o chevron
+do R-07 (R-10), a margem do orçamento do A-33 (C-37), o formato "should…" dos títulos (C-39) e a mudança
+de comportamento do C-09 (DOC-42). As medidas de 44px da E-01 foram feitas numa página de teste só com o
+Bootstrap; na aplicação, a E-04.
+
+**Regras globais e telas atingidas** (conferido em `333f4c2`):
+
+| Regra | Telas e elementos | Diferença para 31/10 |
+|---|---|---|
+| `.tap-target`, 24px com qualquer ponteiro e 44px no toque (R-07; `styles.css:312-326`) | Início ("Limpar", "Ver a fila pelo prazo", "Ver chamados" do gráfico, legenda abaixo de 1200px); Departamentos ("Definir responsável", "Remover"); Detalhe ("Atribuir/Alterar responsável", "Remover"); Meus Chamados ("Cobrar no chamado") | Igual |
+| Transição de opacidade em `.table` (A-33; `styles.css:1315-1317`) | As cinco tabelas; só as três com `.is-refreshing` mudam de opacidade | Igual |
+| `.table.is-refreshing` a 0,5 (A-33; `styles.css:1319-1322`) | Funções, Meus Chamados e Monitorar | + Monitorar, que tinha cópia própria |
+| `.item-new` e `.item-new-row` (A-33; `styles.css:1324-1346`) | Departamentos (card e setor) e Usuários (linha) | Igual |
+| `.dropdown-item` com 44px no toque (A-33, R-07; `styles.css:1354-1358`) | Menu do usuário, Usuários, Departamentos, Funções e Monitorar | + Usuários |
+| `.btn-close` com 44px no toque (A-33, R-07; `styles.css:1360-1364`) | Todos os diálogos, os toasts e os alertas fecháveis de Usuários, Departamentos, Monitorar e Meus Chamados | 31/10 não citava os alertas de Usuários e de Meus Chamados |
+| Diálogo em tela de até 500px de altura (R-05; `styles.css:1367-1382`) | Todos os `app-dialog` (confirmação, guia do Início, Departamentos, Funções, atribuir, editar e reabrir chamado, Usuários) | Igual |
+| `.num` e `.text-wrap-anywhere` (A-33; `styles.css:1302-1310`) | `.num` em Meus Chamados; `.text-wrap-anywhere` em Departamentos | Não estavam na lista de 31/10 |
+
+**Achados novos com ID final (A-49 a A-51, R-08 a R-10 e C-33 a C-39):**
+
+| ID | Grav. | Achado | Evidência | Classe | Origem | Estado | Etapa |
+|---|---|---|---|---|---|---|---|
+| A-49 | Baixa | Um `uploadError` ou `downloadError` de um chamado aparece no próximo chamado aberto: a Store é da raiz e `loadForTicket` só limpa `mutationError` e `validationError` | `ticket-attachments.store.ts:41,104-106`; `ticket-detail.component.html:245-248`; `ticket-detail.component.ts:177` | COMPROVADO (código); efeito INFERIDO; anterior à E-00 | T-ETP-9 | Aberto | E-03 |
+| A-50 | Média | Com `volumeResolved` ligada, o rodapé do gráfico do Início diz "Resolvidos por período e fila ao longo do tempo: disponível em breve." sempre que não há pontos (primeira carga, troca de agrupamento ou de escopo, falha), embora o back entregue `ResolvedCount` desde a 028 | `dashboard/dashboard-hero-chart.component.html:175-178`; `.ts:177-180`; `dashboard.component.ts:262-290`; back `TicketVolumeResponse.cs:12`; nota criada em `bf45bb2` | COMPROVADO (código); efeito visual INFERIDO | T-ETP-1 | Aberto | E-17 |
+| A-51 | Baixa | No login, as novas tentativas de `GET /users/me` (até ~15 s) acontecem sem aviso e com o botão "Entrar" reativado; um segundo clique faz outro login, e o back cria outro token de renovação sem revogar o anterior | `shared/application/login.store.ts:51-67,71-75`; `app.component.ts:20`; `current-user.service.ts:43-46`; back `UserSessions.cs:31-45` | COMPROVADO (código); efeito INFERIDO | T-ETP-6 | Aberto | E-18 |
+| R-08 | Baixa | O aviso de nova tentativa do A-42 nasce com `role="status"` e o texto ao mesmo tempo (`@if` no shell), padrão que o próprio projeto registra como não anunciado | `shared/ui/session-retry-notice/session-retry-notice.component.ts:11-17`; `app.component.ts:20-22`; regra em `department-list.component.html:245` | COMPROVADO (padrão); anúncio NÃO VERIFICADO | T-ETP-5; 31/10 §7 (A-42, role="status") | Aberto | E-18 |
+| R-09 | Baixa | O anel de foco foi unificado só em parte: sete contornos locais seguem em `outline: 2px solid var(--tk-primary)`, cor que o `styles.css` diz cair a 3,6:1 nos fundos tingidos, em vez do `--tk-focus-ring` | `user-menu.component.css:12-15`; `ticket-monitor.component.css:29-33`; `dashboard.component.css:104-107`; `department-insights.component.css:34-37`; `dashboard-hero-chart.component.css:58-62`; `dashboard-insights.component.css:73-76`; `dashboard-kpi-strip.component.ts:127-128`; `styles.css:27-28,621-627` | COMPROVADO (duplicação); contraste NÃO VERIFICADO | T-ETP-11; T-FEA-7 (contorno de foco do Monitor, parte) | Aberto | E-19 |
+| R-10 | Baixa | Com o `.tap-target` em `inline-flex` para qualquer ponteiro desde o `be5cd6e`, some o espaço antes do chevron de "Ver a fila pelo prazo" (antes, só no toque) | `dashboard/dashboard-insights.component.html:51`; `src/styles.css:316-320` | COMPROVADO (código); efeito visual INFERIDO | T-ETP-14; 31/10 §7 (R-07, chevron) | Aberto | E-17 |
+| C-33 | Baixa | A flag `volumeResolved` não tem critério de saída: o código a mantém "até a conferência do A-28", que a Parte I não definia nem listava; os ramos de flag desligada e os `@case ('unavailable')` do gráfico seguem no código e nos testes sem uso real | `shared/entities/dashboard-features.ts:4-7`; `environment.ts:4-9`; `environment.prod.ts:5-10`; `dashboard.component.ts:182,237,283,285,300`; `dashboard-hero-chart.component.html:40,65,136` | COMPROVADO | T-ETP-2; T-DOC-14 | Aberto; a nota do A-28 (§4) foi corrigida nesta proposta | E-17 |
+| C-34 | Baixa | Configurações de teste mortas e padrão invertido: a spec da `TicketSummaryStore` fornece `DASHBOARD_FEATURES`, que a Store não injeta desde o PR #5; a do detalhe mantém `ATTACHMENT_POLICY` e `policy`, que o componente não lê desde o C-09; a do Início usa `volumeResolved: false` por padrão, o contrário de produção | `ticket-summary.store.spec.ts:13,20,64,78`; `ticket-detail.component.spec.ts:27,122`; `dashboard.component.spec.ts:145` | COMPROVADO | T-ETP-3 | Aberto | E-20 |
+| C-35 | Baixa | Restos do C-07: linhas em branco sobrando; a spec do layout calcula o primeiro e o último com o seletor antigo; o utilitário não tem spec própria e o Tab para a frente a partir do título não é testado | `dialog.component.ts:4-5,121`; `side-panel.directive.ts:3-4`; `main-layout.component.spec.ts:188,208`; `focus-trap.directive.spec.ts:46-89` | COMPROVADO | T-ETP-7; 31/10 §7 (C-07, cosméticos) | Aberto | E-20 |
+| C-36 | Baixa | Duplicações de CSS que restam depois da E-01 (a varredura ignorava `@media` e padrões equivalentes): a exceção de movimento reduzido de `.table` fora do global (e ausente em Meus Chamados); `.cancel-hint` com `tabular-nums` além de `.num`; `.due-nudge` com 44px além de `.tap-target` | `styles.css:1315-1317`; `role-list.component.css:80-85`; `ticket-monitor.component.css:81-84`; `ticket-list.component.css:164-169`; `ticket-list-due-cell.component.css:50-55` | COMPROVADO | T-ETP-10 (sem o .min-w-0, que ficou no C-29); 31/10 §7 (A-33, Meus Chamados) | Aberto | E-19 |
+| C-37 | Baixa | Margem pequena no orçamento de 2 kB por componente: por estimativa, seis CSS ficam entre 1,8 e 1,98 kB minificados (`dashboard-insights` 1983, `dashboard-hero-chart` 1976, `department-list` 1923, `ticket-list` 1917, `user-list` 1891 e `main-layout` 1819 bytes) | `angular.json:46-50`; `reaudit/out/etapas-tmp/scripts/css-size.cjs` | INFERIDO (minificação aproximada, sem build) | T-ETP-12; 31/10 §7 (A-33, orçamento) | Aberto (medir antes) | E-19 |
+| C-38 | Baixa | Sem `.git-blame-ignore-revs`: o `git blame` atribui ao `0451269`, só de espaços, 3.251 das 5.030 linhas dos 21 arquivos (64,6%) | `git blame -s 333f4c2` × `git blame -s -w` (3.251 × 0 linhas); `git ls-tree` sem o arquivo | COMPROVADO | T-ETP-15 | Aberto | E-20 |
+| C-39 | Baixa | Resíduos de idioma nos testes: 5 de 10 mensagens `withContext` em português e 77 títulos "should…" misturados ao formato descritivo (31/10: 73); as variáveis em português são o N-4 | `ticket-detail.component.spec.ts:257,339`; `main-layout.component.spec.ts:27`; `ticket-monitor.component.spec.ts:613,981`; `etapas-tmp/scripts/test-titles.cjs` | COMPROVADO | T-ETP-16 (sem a parte das variáveis, que é o N-4); 31/10 §7 (6.3, should…) | Aberto | E-20 |
+
+#### 16.6 Specs 046, 047 e 048
+
+As três seguem "Em descoberta" desde 31/10, sem DEC fechada no texto, sem código no back e sem sinal de
+revisão. Mudou o entorno: a 045 e a 024 entraram na `main` do back em 01/11, a G1 da 049 em 05/11, a
+parte 1 da 043 começou em 05/11, e o front recebeu o PR #5 e a E-12. Das 18 recomendações de 31/10, 9
+continuam valendo (3 delas reforçadas), 3 valem com ajuste, 1 foi revista (DEC-3 da 047), 2 foram
+superadas por fatos, 2 não valem mais (as duas abas da 046 e a DEC-3 da 048; errata 22) e 1 seguia sem
+resposta (a DEC-6 nova da 047, LAC-9). As decisões de 05/11 (§16.8) aprovaram as recomendações abaixo.
+
+| Campo | 046 — sessão sem tokens no JavaScript (A-23) | 047 — ações permitidas na resposta (A-24) | 048 — Monitor no ciclo vigente (A-30) |
+|---|---|---|---|
+| Contexto | Os dois tokens ficam no `localStorage`, ao alcance de script injetado; o front é o único cliente e, desde a E-12, só navegador | A API só informa `canCancel`; o front repete as regras dos handlers para os outros botões (A-06 a A-08, A-12) | `GET tickets` devolve o prazo e a situação do 1º ciclo mesmo depois de reabrir; a 024 levou o ciclo vigente só a Meus Chamados |
+| Problema | `session.service.ts:85-104`; renovação e logout com o token no corpo; logout com o access token vencido não revoga; duas abas renovando podem cair juntas (A-55) | Espelho fiel, menos reabrir (DIV-2) e assumir (DIV-6) | Um reaberto com o novo ciclo vencido não aparece em "Atrasados" e aparece como "Cumprido" no Monitor e no selo do detalhe: ponto cego da operação |
+| Comportamento atual | Back: corpo com os dois tokens, renovação recusada com 400, CORS sem credenciais, limite de 10 por minuto por IP para anônimo. Front: `localStorage`, sincronização pelo evento `storage` | Back valida cada ação na execução; só `canCancel` e o prazo do dono nas respostas | Toda leitura de SLA, menos Meus Chamados e o bloco `sla` do detalhe, usa o retrato do 1º ciclo |
+| Comportamento esperado | Token de renovação só em cookie `HttpOnly` e `Secure`; renovação e logout pelo cookie; credenciais só para as origens da lista; proteção contra requisição forjada | Detalhe, Meus Chamados e Monitor informam o que a pessoa pode fazer agora, pela mesma regra do servidor | Ciclo vigente em cada item de `GET tickets`, no filtro, na ordenação e nos resumos |
+| Alternativas | A: cookie para a renovação e access token em memória; B: os dois em cookie; C: só endurecer | A: booleanos nomeados por ação; B: lista de textos e `nextStatuses`; C: manter o espelho e corrigir só o DIV-2 | A: ciclo vigente em toda leitura, com uma definição; B: só campos novos na lista; C: colunas desnormalizadas |
+| Recomendação técnica | A, com DEC-1 (a), DEC-2 (a) com o caminho público configurável, DEC-3 com `SameSite=Strict` e cabeçalho obrigatório, DEC-4 (a), DEC-5 (a) e DEC-6 (a) obrigatória; coordenação entre abas no front | A, com DEC-1 mais `canStartProgress` e `canResolve`, DEC-2 (b), DEC-3 (b) sem `nextStatuses`, DEC-4 depois da fase 2 de chamados da 049 e DEC-5 (a) | A, com DEC-1 (a) mais a LAC-2, DEC-2 como trecho SQL nomeado com teste de concordância, DEC-3 (b) depois da parte 1 da 043 e DEC-4 (b) |
+| DECs | DEC-1 a DEC-6; novas DEC-7 (limite da renovação) e DEC-8 (manter o 400); DEC-63 (b) da 049 | DEC-1 a DEC-5; DEC-6 nova (LAC-9: exige `tickets:assign`) | DEC-1 a DEC-4; DEC-66 da 049 (`serverNowUtc`) |
+| Impacto no front | `session.service.ts`, `auth.data.service.ts`, `token-refresh.service.ts`, interceptor, `login.store.ts`, guards e uma etapa de inicialização; sai o `localStorage` | Entidades, detalhe, Meus Chamados, Monitor e Alertas pelas flags; saem `ticket-action-permissions.ts` e `TICKET_STATUS_TRANSITIONS` | `TicketMonitorItem`, Monitor, painel e selo do detalhe; sai o recuo de Meus Chamados (C-41) |
+| Critério de aceite | `Set-Cookie` com `HttpOnly`, `Secure`, `SameSite=Strict` e o `Path` decidido; renovação recusada com o status da DEC-8; logout só com o cookie responde 204 e revoga; nenhum token no `localStorage`; F5 mantém a sessão; duas abas seguem logadas | AC-1 reescrito; AC-1b do dono sem `reopen-own`; iniciar e resolver; Monitor; AC-7 por ação; AC-517 da 049 sem os imports do espelho | AC-1 a AC-6; o agregado conta o reaberto vencido e o teste de paridade passa com um reaberto na massa; o detalhe traz o ciclo vigente; o trecho SQL concorda com o cronômetro |
+| Estado | Decisões aprovadas em 05/11 (decisões 8 e 8a); texto e implementação no back dependem de autorização (E-09, E-11) | Decisões aprovadas (decisão 9); o mecanismo depende da decisão 12, aberta | Decisões aprovadas (decisão 10) |
+
+**Ordem:** 046, depois 048, depois 047 (decisão 11). A 046 e a 048 podem correr em paralelo; a 047 vem
+depois da fase 2 de chamados da 049 e mexe nas mesmas respostas da 048. A 049 punha as três no portão G6;
+antecipar a 046 e a 048 muda o texto da 049, no back, com autorização (BK-17). Agora, só no front, vai a
+correção do DIV-2 (E-02).
+
+**Achados novos com ID final (A-55 e BK-6 a BK-26):**
+
+| ID | Grav. | Achado | Evidência | Classe | Origem | Estado | Etapa |
+|---|---|---|---|---|---|---|---|
+| A-55 | — | Duas abas que renovam a sessão ao mesmo tempo podem encerrar as duas: a que perde recebe 409 ou 400, limpa o `localStorage`, e o evento `storage` limpa a outra | back `UsersTests.cs:384-398`; front `shared/utils/http-error.util.ts:39-41`, `token-refresh.service.ts:44`, `auth.interceptor.ts:41-44`, `session.service.ts:115-121` | INFERIDO, sem reprodução no navegador | T-SPC-25 | Aberto (reproduzir antes de corrigir) | E-04; E-24 |
+| BK-6 | Baixa | A regra de reabrir documentada no back é a do front: a RN-06 (que ainda cita o inexistente `TicketAccessGuard.EnsureOwnerOrManagerAsync`), a 047 e o anexo C da 049 dizem "dono com `reopen-own` ou `tickets:manage`"; o código só deixa o dono reabrir com `reopen-own`. Sem decidir antes, a correção do DIV-2 pode ir para o lado errado | back `SYSTEM_SPECIFICATION.md:199`; `047/spec.md:23`; `049/anexo-c-analise-por-area.md:1668` × `ReopenTicketCommandHandler.cs:33-41` | COMPROVADO | T-SEP-8; specs-046-048 §7.1 item 1; T-SPC-16 (a); 31/10 §4.6 (047, regra de reabrir) | Aberto (depende da decisão 1) | E-09 |
+| BK-7 | — | Citações de linha desatualizadas nas specs 046, 047 e 048 (a G1, a 045 e a 024 mudaram o código), e a 046 não registra o que a G1 fez (`WithNoStore`, teto de 60 min, CORS validado) | anexo do specs-046-048 (ex.: 047 `Ticket.cs:180-187` → 438-445; 048 `Ticket.cs:145-168` → 403-426; 046 `CorsExtensions.cs:27-41` → 32-48) | COMPROVADO | specs-046-048 §7.1 item 2; T-SPC-2; T-SPC-19; separacao §3.6 (linhas); 31/10 §4.6 (linhas da 047 e da 048) | Aberto | E-09 |
+| BK-8 | — | Estado do entorno desatualizado: a 046 cita o SSR e o `core/config/app.routes.server.ts`, removidos na E-12; a 047 e a 048 dão a 045 como não implementada; a 048 dá a 024 como não implementada e mantém o R-2, já resolvido | `046/spec.md:29`; `047/spec.md:34`; `048/spec.md:27-28,69` × `3305fb5` (045) e `74a8a5f` (024) | COMPROVADO | T-SPC-1; T-SPC-15; T-SPC-18 | Aberto | E-09 |
+| BK-9 | — | O AC-4 da 046 e o AC-508 da 049 pedem 401 para a renovação recusada; hoje é 400, como fixam os testes, e a seção de contratos não registra a troca | `046/spec.md:49,76`; `UserErrors.cs:51-53`; `CustomResults.cs:38`; `UsersTests.cs:402-411`; `049/spec.md:472` | COMPROVADO | T-SPC-3 | Aberto (DEC-8 proposta) | E-09 |
+| BK-10 | — | O R-3 da 046 está incompleto: dentro dos 30 s o back recusa o token anterior (não aceita), e com o cookie compartilhado e a renovação a cada carga a corrida entre abas fica mais provável; falta um AC para abas simultâneas | `046/spec.md:81`; `RefreshTokenCommandHandler.cs:91-99`; `UsersTests.cs:384-398` | COMPROVADO (código); INFERIDO (cenário) | T-SPC-4; 31/10 §6 (duas abas; errata 22) | Aberto | E-09 |
+| BK-11 | — | A 046 não trata o `PUT users/me/password`, que a DEC-63 da 049 manda coordenar com ela | `046/spec.md:37` × `049/spec.md:522,329,1697` | COMPROVADO | T-SPC-5 | Aberto | E-09 |
+| BK-12 | — | A DEC-2 (a) da 046 diz que só as rotas de sessão recebem o cookie, mas `Path=/users` alcança todas as rotas `/users/*`; atrás de proxy em `/api`, o caminho público é outro e o cookie nem chegaria às rotas de sessão | `046/spec.md:59` | INFERIDO | T-SPC-6; 31/10 §6 (DEC-2 da 046) | Aberto | E-09 |
+| BK-13 | — | O AC-7 da 046 não é verificável no servidor para a opção `SameSite`: quem aplica o atributo é o navegador | `046/spec.md:52` | INFERIDO | T-SPC-7 | Aberto | E-09 |
+| BK-14 | — | A renovação a cada carga passa pelo limite `Authentication` (10 por minuto), particionado por IP para requisição anônima; atrás de proxy sem `ForwardedHeaders`, todos os usuários dividem a mesma partição | `RateLimitingExtensions.cs:39-43,96-102`; `appsettings.json:41-44`; Q-53 da 049 (`049/spec.md:687`) | COMPROVADO (código); INFERIDO (efeito) | T-SPC-8 | Aberto (DEC-7 proposta) | E-09; E-25 |
+| BK-15 | — | O REQ-4 e o AC-6 da 046 pedem lista explícita de origens e não dizem o que acontece com o loopback de Development, que aceita qualquer porta | `046/spec.md:40,51`; `CorsExtensions.cs:34-39`; `appsettings.Development.json:40` | COMPROVADO | T-SPC-9 | Aberto | E-09 |
+| BK-16 | — | A 046 não discute a RNF-SEG-05 da fonte de requisitos (tokens fora das respostas de API); a DEC-1 (a) mantém o access token no corpo | `specs/_fontes/gestao-acessos-onboarding.md:294` × `046/spec.md:58` | INFERIDO (leitura literal da fonte) | T-SPC-10 | Aberto | E-09 |
+| BK-17 | — | A posição da 046 na 049 se contradiz: "em qualquer ponto" na DEC-29 e na 7.17, e G6 "aprovada antes de implementar" na 7.15.2 | `049/spec.md:603,1535` × `:1351` | COMPROVADO | T-SPC-11 | Aberto (decisão 11) | E-09 |
+| BK-18 | — | A lista da DEC-1 (a) da 047 não tem "iniciar atendimento" nem "marcar como resolvido" | `047/spec.md:59` × `ticket-status.ts:38-40`; `ticket-detail.component.ts:437,446` | COMPROVADO | T-SPC-12 | Aberto | E-09 |
+| BK-19 | — | O REQ-5 da 047 é absoluto ("aceita quando executada em seguida"), mas há conferências de tempo, de alvo, de calendário, de ciclo aberto e de concorrência | `047/spec.md:43`; `AssignTicketCommandHandler.cs:53-66`; `ReopenTicketCommandHandler.cs:53-58`; `Ticket.cs:314-316,438-445` | COMPROVADO | T-SPC-13 | Aberto | E-09 |
+| BK-20 | — | O AC-1 da 047 é ambíguo: "atendente com `tickets:manage`" pode ser o dono sem `reopen-own`, que não pode reabrir | `047/spec.md:48` × `ReopenTicketCommandHandler.cs:33-41` | COMPROVADO | T-SPC-14 | Aberto | E-09 |
+| BK-21 | — | Duas contradições da 049 com a 047: o AC-517 inclui o Monitor, o que exige a DEC-2 (b); e o Q-62 entrega mensagens e anexos à 047, cuja DEC-5 (a) os deixa fora (a LAC-14 precisaria de spec própria) | `049/spec.md:481` × `047/spec.md:60`; `049/spec.md:696` × `047/spec.md:63` | COMPROVADO | T-SPC-16 (b) e (c) | Aberto | E-09 |
+| BK-22 | — | O mecanismo da 047 diverge da 049: a 047 propõe regras estáticas sobre colunas, usadas pela consulta e pelo handler; a 049 propõe perguntas de instância (DEC-8) e métodos privados no handler (DEC-9), que a consulta não consegue usar (ver BA-7) | `047/spec.md:71` × `049/spec.md:566,567`; precedente do `CanBeCanceled` em `Ticket.cs:287` | COMPROVADO; INFERIDO na conciliação | T-SPC-17 | Aberto (decisão 12) | E-15; E-09 |
+| BK-23 | — | O plano da 048 mira o EF e o `TicketSlaFilters`, que a parte 1 da 043 tira do projeto, e a DEC-3 (a) diz "antes da 043 parte 2", quando quem reescreve as consultas é a parte 1; contradiz também a DEC-18 da 049, já decidida | `048/spec.md:53,63` × `043/spec.md:25,64` (cópia); `049/spec.md:602,1250` | COMPROVADO; DECLARADO para a 043 | T-SPC-20; T-SPC-21; 31/10 §6 (DEC-3 da 048) | Aberto | E-09 |
+| BK-24 | — | A 048 não menciona a DEC-66 da 049, que põe `serverNowUtc` em `GET tickets` "dentro da 048" | `049/spec.md:537,1701,476` | COMPROVADO | T-SPC-22 | Aberto | E-09 |
+| BK-25 | — | A 048 atribui o índice sobre chamado, métrica e ciclo ao REQ-12 da 045; o índice é anterior (migration `20261025201353_Add_Ticket_Sla_Timers`), e o REQ-12 só trata a violação como 409 | `048/spec.md:66`; `045/spec.md:37` | COMPROVADO | T-SPC-23 | Aberto | E-09 |
+| BK-26 | — | O REQ-1 da 048 manda usar "a mesma regra da 024", que a 024 escreveu à mão por ser a única consulta; com a 048 serão cinco consumidores, e o REQ-22 da 049 exige uma definição só, com teste de concordância | `048/spec.md:33`; `024/spec.md:66`; `GetOwnTicketsQueryHandler.cs:74-91`; `049/spec.md:243` | COMPROVADO | T-SPC-24; 31/10 §6 (DEC-2 da 048) | Aberto | E-09 |
+
+#### 16.7 Plano
+
+Proposta para Rafael Santos aprovar antes de qualquer execução. O mesmo texto está em `reaudit/entrega/PLANO-2026-11-05.md`. Base: front `333f4c2` (`main` = `origin/main`) e back `251da97`. Os IDs dos
+achados estão definidos no §16.2 a §16.6; a ligação com os IDs provisórios das frentes, no `mapa-ids.md`.
+
+Regras do plano: nenhuma etapa cria skill nova; nenhuma muda contrato ou migration sem autorização
+explícita; no back, o que muda está descrito em prosa; cada etapa só começa com a autorização dela, e
+Git só com autorização expressa. Esforço: P (menos de meio dia), M (até 2 dias), G (mais).
+
+**Atualização de 05/11, depois das 22:15.** Rafael Santos aprovou as decisões da Onda 0, menos a 12, que
+segue aberta com a proposta, e aprovou a E-16 (a e b), que é a decisão 18. A escolha e a origem de cada
+decisão estão no `DECISOES-2026-11-05.md` (§16.8). Este plano já as
+incorpora: as dependências citam a escolha feita, e a E-02 ganha a mitigação opcional do DIV-3. A
+execução do que mexe no back, no `CLAUDE.md`, nas skills, em contratos ou em migrations continua
+dependendo de autorização específica.
+
+##### Mudanças em relação à estrutura do coordenador, com o motivo
+
+1. **A frase "Fila estável" (A-53) fica só na E-17.** A estrutura a punha no resto da E-02 e na E-17. A
+   tela é o Início, e a correção anda junto com o rodapé (A-50) e com a flag (C-33).
+2. **A E-02 recebe as correções só de front que a estrutura não punha em nenhuma etapa:** DIV-11,
+   DIV-12, DIV-13, DIV-15, A-54, A-57, A-58 e C-41 (etapa 1 do separacao.md, F-5 a F-13). São
+   correções de integração que não dependem do back, que é o objetivo da E-02.
+3. **O T-ETP-2 e o T-DOC-14 viraram um ID só (C-33), que fica na E-17.** A estrutura punha o primeiro na
+   E-20 e o segundo na E-17.
+4. **As guardas de plataforma que sobraram da E-12 (pendência 25 e C-31) e o CSS sem uso (C-30) entram
+   na E-03**, junto com o código morto. A estrutura dizia que sobravam da E-12, sem etapa.
+5. **Achados sem lugar na estrutura ganharam etapa:** A-49 (E-03), C-35 (E-20), C-37 (E-19, medir antes
+   de mexer no CSS), R-10 (E-17), DOC-27 (E-20), DOC-42 (E-16b), A-55 (E-04 para reproduzir, E-24 para
+   corrigir com a 046), A-56 (E-25), A-59 (E-04 para verificar, E-23), BA-14 (E-15), BA-16 e BA-17 (E-25),
+   LAC-17 (E-14) e os BK (E-09).
+6. **A Onda 0 ganha duas decisões** que etapas do plano exigem e que seguem abertas desde antes de
+   05/11: a exceção do C-01 nas skills (pendência 6, para a E-07) e o destino das branches e PRs do back
+   com specs fora da `main` e de quem versiona as specs soltas (BK-5, BK-27 a BK-29, para a E-09).
+7. **E-21:** a exposição do `Retry-After` no CORS não é tarefa da 049. A T-504 e o AC-523 são do front; o
+   lado do back é a LAC-16, nova.
+8. **E-14:** a DP-02 está coberta pela REQ-211 da 049 (delegada à G3-b; LAC-15). A E-14 fica com a DP-11
+   e a DP-12 (LAC-17).
+9. **A E-05 ganha o passo final** (excluir os originais), que depende da E-09 e da decisão 19.
+10. **Depois das decisões de 05/11:** a E-02 ganha a mitigação opcional do DIV-3 (reler o chamado logo
+    antes do `PUT` de cancelar), e o A-59 passa a ser o primeiro item da E-04, como Rafael Santos pediu
+    junto com a aprovação.
+
+##### Resumo
+
+| Etapa | Título | Estado ou dependência | Autorização |
+|---|---|---|---|
+| E-00 | Commit do working tree | Feita em 04/11 | — |
+| E-01 | Fechar as etapas sem commit | Feita em 05/11, na `origin/main` | — |
+| E-02 | Integração só do front (resto) | Em parte; DIV-2 decidida em 05/11 (vale o código do back) | Código; commit e push |
+| E-03 | Desvios das skills e bugs do front | Não executada | Código; commit e push |
+| E-04 | Validação visual e em execução | Bloqueada pela API; o A-59 é o primeiro item | Subir front e API; nenhuma mudança de código |
+| E-05 | `AUDITORIA.md` | Feita como L-4; falta excluir os originais, depois da E-09 (decisão 19) | Commit e push |
+| E-06 | Documentos da raiz | Pendente; o `design.json` fica mantido (decisão 14) | Documentos; `CLAUDE.md` com autorização expressa |
+| E-07 | Skills: só as correções | Pendente; a exceção do C-01 entra (decisão 20) | Skills com autorização expressa |
+| E-08 | Doc comments | Pendente; completar os 258 (decisão 13) | Código |
+| E-09 | Back: preservar e corrigir as specs | Em parte; decisões 1, 8 a 11 e 21 tomadas | Back (specs); commit e push no back |
+| E-10 | Back: specs novas para as lacunas | Pendente; decisões 2 a 4 e 9 tomadas | Back (specs) |
+| E-11 | Back: implementar 046, 048 e 047 | Pendente; decisões 8 a 11 tomadas; 043 parte 1; fase 2 da 049; decisão 12 (aberta) para a 047 | Back; contratos |
+| E-12 | Decisões estruturais | Feita, menos A-27, CSP e guardas (passaram à E-25 e à E-03) | — |
+| E-13 | Back: proteção estrutural | Feita pela G1 da 049 | — |
+| E-14 | Back: specs da DP-11 e da DP-12 | Pendente | Back (specs) |
+| E-15 | Back: instruções e conferência de permissão | Pendente; decisão 12 aberta, com proposta | `CLAUDE.md` e skills do back, expressa |
+| E-16 | Registro no `AUDITORIA.md` | (a) e (b) aprovadas em 05/11; a (a) espera o commit da outra sessão | Commit e push, com confirmação |
+| E-17 | Início | Decisões 5 e 15 tomadas | Código; commit e push |
+| E-18 | Login e aviso de conexão | Sem dependência | Código; commit e push |
+| E-19 | Duplicações e consistência do front | Depois da E-03 e da E-17 | Código; commit e push |
+| E-20 | Testes e higiene do front | Sem dependência | Código; commit e push |
+| E-21 | `Retry-After` de ponta a ponta | Decisão 16 tomada; depois da E-18 | Back (configuração); código |
+| E-22 | Limpeza do back | Depois do merge da 043 parte 1 | Back; migration (BA-4) expressa |
+| E-23 | Usuários | Decisões 6 e 7 tomadas; A-59 verificado na E-04 | Back (spec, código, contrato); código |
+| E-24 | Troca dos espelhos do front | E-11; T-501, T-502, T-509 e T-510 da 049 | Código; commit e push |
+| E-25 | Preparação para produção | Decisões 16 e 17 tomadas; a URL de produção segue com Rafael Santos | Código; dependências; back; implantação |
+
+##### Etapas de 31/10
+
+###### E-00 — Commit do working tree
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Feita em 04/11: 10 commits, `f7cdd73` a `9d7e238`, mantidos pela L-1 (§11, §13). Nada a fazer |
+
+###### E-01 — Fechar as etapas sem commit
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Feita em 05/11: `0ae9ee4` a `79e5129`, rebaseada sobre o `5cd3dce`, validada commit a commit (por log) e na `origin/main` desde 16:58 (§11) |
+| O que ficou fora | Os apontamentos de 31/10 que não entraram na tabela da E-01: R-08 (E-18), R-10 (E-17), C-36 e C-37 (E-19), C-39 (E-20) e DOC-42 (E-16b) |
+
+###### E-02 — Correções de integração que dependem só do front (resto)
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Em parte. O PR #5 fez DIV-1, DIV-4, DIV-10 e o enum 12 e 13; a DIV-9 ficou em parte (o resto vai para a E-17). Faltam a DIV-2 (decidida em 05/11: vale o código do back) e os espaços (A-52); a frase "Fila estável" passou para a E-17 |
+| Objetivo | Nenhum botão, menu ou campo aparece para quem o servidor recusaria, e nenhuma regra local recusa ou aceita diferente do back, sem depender de entrega do back |
+| Problema | DIV-2, A-52, DIV-11, DIV-12, DIV-13, DIV-15, A-54, A-57, A-58 e C-41; opcional, a mitigação do DIV-3 pedida em 05/11 (reler o chamado logo antes do `PUT` de cancelar, na lista e no detalhe; sai quando o back entregar o `PUT` parcial) |
+| Arquivos | `tickets/ui/ticket-action-permissions.ts` (DIV-2); `tickets/ui/ticket-edit-dialog/ticket-edit-dialog.component.ts` e `tickets/feature-ticket-create/ticket-create.component.ts` (A-52); `tickets/feature-ticket-detail/ticket-detail.component.ts` e `.html`, `dashboard/dashboard.component.html` (DIV-11); `users/feature-user-list/user-list.component.ts` e `.html`, `users/application/users.store.ts`, `users/infrastructure/user.data.service.ts` (DIV-12, A-54); `core/routes/app.routes.ts`, `shared/ui/layouts/main-layout/side-menu-nav.component.html`, `dashboard/dashboard.component.ts`, `roles/feature-role-list/role-list.component.ts` e `.html` (DIV-13, DIV-15); `tickets/application/ticket-attachments.store.ts` (A-57); `departments/entities/department.ts` e `departments/feature-department-list/department-list.component.ts` e `.html` (A-58); `tickets/entities/ticket.ts` e `tickets/feature-ticket-list/ticket-list-due.ts` (C-41); as specs de cada um |
+| Dependências | DIV-2: decisão 1, tomada em 05/11 (vale o código do back; o texto da RN-06, da 047 e do anexo C é corrigido no back, BK-6). As outras não dependem do back |
+| Aceite | `npm run build` sem aviso de orçamento; `npm test` verde; `npm run lint` sem erro; `ca-review` sem bloqueio. Specs de componente e de Store provam: o Atendente do seed vê "Atribuir a mim" no detalhe e nos Alertas, e ninguém vê "atribuir a outra pessoa" sem `tickets:assign` (DIV-11); sem `users:assign-roles`, o cadastro faz uma chamada só e não mostra funções (DIV-12); `roles:read` abre Funções em modo leitura, e `roles:manage` sem `roles:read` não abre uma tela que daria 403 (DIV-13); nenhuma permissão administrativa que a sessão não tem fica marcável (DIV-15); "abc" com 7 espaços e título só com espaços não são enviados, e a mensagem de mínimo aparece (A-52); sem `tickets:manage`, nenhum `GET /tickets` na tela de Usuários (A-54, com `HttpTestingController`), e o comentário do Data Service diz o motivo real; arquivo de tipo aceito com extensão fora da política é recusado no front com a regra do back (A-57); "Desativar" avisa com o número de `GET /departments` (A-58); os campos do ciclo vigente são obrigatórios e o recuo saiu (C-41); o dono com `tickets:manage` e sem `tickets:reopen-own` não vê "Reabrir", e quem não é dono e tem `tickets:manage` vê (DIV-2); se a mitigação do DIV-3 entrar, spec com `HttpTestingController` prova que o cancelar relê o chamado logo antes do `PUT` e manda a descrição relida. Validação contra a API real na E-04 |
+| Autorização | Código do front; commit e push. Nenhuma mudança no back nem em contrato |
+| Risco | Médio: muda a visibilidade de ações para funções personalizadas |
+| Esforço | M |
+
+###### E-03 — Desvios das skills e bugs de código do front
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Não executada. Saíram só o `@angular/animations` (L-3) e a leitura do detalhe do departamento (PR #5, T-519) |
+| Objetivo | Stores no padrão da skill (uma por caso de uso, erros separados, leitura por `resource`), sem os bugs de anexos e sem código morto |
+| Problema | A-47, A-48, A-49, C-13, C-14, C-15 (opcional), C-17, C-21, C-30, C-31 e a pendência 25, C-40 |
+| Arquivos | `tickets/application/tickets.store.ts` e uma Store da criação em `tickets/application/`, `tickets/feature-ticket-create/ticket-create.component.ts` e `.html` (A-47, C-21); `tickets/application/ticket-attachments.store.ts` (A-48, A-49, C-13, C-21); `users/application/users.store.ts` (C-13); `ticket-detail.store.ts`, `ticket-monitor.store.ts`, `ticket-summary.store.ts`, `ticket-assignee-search.ts` e `departments/application/departments.store.ts` (C-14); `tickets/entities/ticket-priority.ts`, `ticket-sla-status.ts`, `ticket-sla.ts`, `ticket-status.ts` e `shared/entities/dashboard-features.ts` (C-15); os arquivos do C-17; `shared/ui/directives/dropdown-fixed-position.directive.ts` (C-21); `src/styles.css` (C-30); `shared/services/session.service.ts` e `tickets/feature-ticket-monitor/ticket-monitor.component.ts` (C-31, pendência 25); as specs |
+| Dependências | Nenhuma do back. Antes da E-19, que mexe nas mesmas Stores. Sem decisão nova: o destino depois de criar segue `tickets:view-own` |
+| Aceite | Build sem aviso; testes verdes; lint sem erro; `ca-review` sem bloqueio; conformidade estrita pela média simples de pelo menos 90%, pelo método do §16.3 (o fe-arch estima 90,4% só com os itens de 31/10 da E-03). Specs provam: abrir `/tickets/novo` não chama `GET /tickets/mine`, e o erro de envio não mostra falha de leitura (A-47); "Tentar novamente" e reabrir o mesmo chamado refazem o `GET` dos anexos (A-48); `uploadError` e `downloadError` não passam para outro chamado (A-49); duas buscas de responsável seguidas cancelam a primeira (C-14); Meus Chamados sem a requisição "tem algum chamado?" (C-40). Busca em `src/`: 0 `typeof window` e 0 `isPlatformBrowser` (C-31), 0 ocorrência dos membros do C-17 e das classes do C-30 |
+| Autorização | Código do front; commit e push |
+| Risco | Médio: refatoração de Stores com estado compartilhado |
+| Esforço | G |
+
+###### E-04 — Validação visual e em execução
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente, bloqueada pela API (em 31/10, o container não respondia; pendência 9) |
+| Objetivo | Validar na aplicação real, com login, o que só foi conferido no código |
+| Problema | Primeiro, o A-59 (lote e 429), como pedido em 05/11. Depois, A-34 (revalidar), R-05 a R-07 e o aviso do A-42; efeitos visuais do A-33, R-08, R-09, R-10 e A-50; os comportamentos INFERIDOS: A-55 (duas abas), os 403 do A-47 e das DIV-11 a DIV-15, a LAC-16 (`Retry-After` entre origens), o A-48 em execução e o efeito cruzado R-05 × R-07 no cabeçalho do diálogo |
+| Arquivos | Nenhum. Evidências no scratchpad; resultado no §6 e no §16 |
+| Dependências | API de pé (opção (a) de 31/10: Rafael Santos inicia pelo Visual Studio) e login de administrador; front na 4201 se o watcher falhar |
+| Aceite | Capturas em 1366×768, 390×844 e 844×390, claro e escuro; console sem erro; rede sem 403 nem 429 inesperado; cada item com veredito registrado; o A-34 medido pelo mesmo método de captura |
+| Autorização | Subir o front e a API; sessão de navegador; nenhuma mudança de código; não aplicar migrations no banco compartilhado |
+| Risco | Baixo |
+| Esforço | M |
+
+###### E-05 — `AUDITORIA.md`
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Feita como L-4 (04/11). O documento fica em `docs/audit/`, por decisão de 04/11. Anexos idênticos aos originais, conferidos de novo em 05/11 |
+| Objetivo do passo que falta | Excluir `docs/audit/FRONTEND_AUDIT.md` e `FINAL_ACCEPTANCE_AUDIT.md` |
+| Problema | DOC-28, DOC-33; pendência 20 |
+| Dependências | E-09 (o back troca as referências das 046, 047, 048 e 049); a decisão 19, tomada em 05/11, confirma a ordem |
+| Aceite | Busca nos dois repositórios sem referência aos originais (salvo histórico); `valida-auditoria.cjs` passa |
+| Autorização | Commit e push |
+| Risco | Baixo |
+| Esforço | P |
+
+###### E-06 — Documentos da raiz
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente |
+| Objetivo | `PRODUCT.md`, `README.md`, `DESIGN.md` e `CLAUDE.md` sem erro e sem regra do back reescrita: a regra do back vira ponteiro |
+| Problema | DOC-1 a DOC-7, DOC-11 (se a edição da outra sessão não entrar), DOC-12 a DOC-15, DOC-26, DOC-29, DOC-30, DOC-34 a DOC-38, DOC-40 e DOC-41. O `design.json` (DOC-10) fica mantido, sem regenerar (decisão 14) |
+| Arquivos | `PRODUCT.md`, `README.md`, `DESIGN.md`, `CLAUDE.md`; os comentários de `tickets/application/ticket-summary.store.ts:67` e `tickets/infrastructure/ticket.data.service.ts:213` (DOC-13) |
+| Dependências | Commit da outra sessão antes de mexer no `CLAUDE.md` (DOC-25); as decisões 13 (completar os doc comments, sem mudar a regra do `CLAUDE.md`) e 14 (manter o `design.json`) foram tomadas em 05/11; a decisão de produto sobre Supervisor e RH (DOC-30) não bloqueia o resto |
+| Aceite | Busca por "multi-tenant", "Requester", "Admin Master", "Supervisor", "plano-onboarding-rh", "RBAC dinâmico" e "18.2.6" no `PRODUCT.md` e no `README.md`: 0; o `check-caminhos.cjs` e o `check-simbolos.cjs` do docs.md sem referência vigente quebrada; o `README.md` traz `npm ci`, `npm start` (back em `localhost:5000`), `npm test`, `npm run lint` e `npm run build` (saída `dist/tickest-pristine/browser`), sem `ng e2e` nem `ng generate … module`; o `CLAUDE.md` tem comandos, `core/`, `dashboard/`, as telas de sessão em `shared/`, `ui/`, o mapa de documentos e a D-SF5; o `DESIGN.md` registra os padrões globais (DOC-15) e não tem "Em breve" (DOC-14); o `.impeccable/design.json` sem mudança (decisão 14) |
+| Autorização | Documentos da raiz; `CLAUDE.md` com autorização expressa; commit e push |
+| Risco | Baixo; o Impeccable lê o `PRODUCT.md` e o `DESIGN.md` |
+| Esforço | M |
+
+###### E-07 — Skills: só as correções de fato
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente |
+| Objetivo | Skills sem erro de modelo e alinhadas ao código, sem skill nova |
+| Problema | DOC-8 (Prettier, `flushEffects` e `fakeAsync`, `console.error`), DOC-16 a DOC-19, DOC-39 e DOC-43; a exceção do C-01, que entra nas skills (decisão 20) |
+| Arquivos | `.claude/skills/README.md`; `add-context/SKILL.md` e `references/routed-component.md`; `add-feature/SKILL.md`, `references/routed-component.md` e `references/store-method.md`; `add-tests/SKILL.md`; `ca-review/SKILL.md` |
+| Dependências | Decisão 20, tomada em 05/11; depois da E-03, para os modelos refletirem o padrão corrigido |
+| Aceite | O modelo de tela da `add-feature`, gerado numa cópia, compila e não lança NG0950 (spec com `input.required`); o modelo de Store compila com os imports completos; nenhuma menção a Prettier, `flushEffects`, `fakeAsync` ou `console.error`; a `add-tests` e a `ca-review` preveem spec de Data Service; a tabela da `ca-review` classifica `dashboard/`; `ca-review` rodada sobre a `main` sem falso bloqueio |
+| Autorização | Skills, com autorização expressa; commit e push |
+| Risco | Baixo |
+| Esforço | P |
+
+###### E-08 — Doc comments
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente |
+| Objetivo | Completar os `/** */` em português que faltam, como o `CLAUDE.md` exige (decisão 13) |
+| Problema | C-16 (258 declarações em 53 arquivos) |
+| Arquivos | Os arquivos de `reaudit/out/fe-arch-tmp/doc-comments-atual.txt` (maiores: `ticket-detail.component.ts` e `ticket-monitor.component.ts`) |
+| Dependências | Decisão 13, tomada em 05/11; depois da E-03 e da E-19, que mexem nos mesmos arquivos |
+| Aceite | `doc-comments.cjs` do fe-arch com 0 falta; build, testes e lint verdes |
+| Autorização | Código; commit e push |
+| Risco | Baixo |
+| Esforço | M |
+
+###### E-09 — Back: preservar e corrigir as specs
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Em parte. Entraram 022, 023, 024 e 035; a 049, a 050 e a 051 foram versionadas; 023 e 024 conciliadas, e a 024 entregue. Faltam: versionar 11 pastas (032, 033, 034, 036, 037, 040, 043, 044, 046, 047 e 048) e `specs/_fontes/contratos-central-atendimento.md` (a 043 entra com o PR dela); a 036; o texto das 046, 047 e 048; os links para a auditoria; os PRs #34 e #58; a colisão de IDs e o destino do `SPEC-TICKEST.md` |
+| Objetivo | Specs do back versionadas, coerentes com o código e com a 049, antes de aprovar as 046 a 048 |
+| Problema | BK-1 a BK-5; BK-6 a BK-26 (texto das 046 a 048 e da 049); BK-27 a BK-30; DOC-28 |
+| Arquivos (back, em prosa) | As pastas `specs/` fora do Git; `specs/046-…`, `047-…` e `048-…`; `specs/049-…/spec.md` e os anexos A, B e C; a RN-06 do `SYSTEM_SPECIFICATION.md`; o `SPEC-TICKEST.md`; `specs/044-…/spec.md` |
+| Dependências | Decisões tomadas em 05/11: 1 (o texto passa a dizer a regra do código, BK-6), 8 a 11 (o texto segue as escolhas das DECs e o portão G6 antecipado) e 21 (o back versiona as pastas soltas e decide os PRs com a sessão dele); coordenação com a sessão da 043 |
+| Aceite | `git status` do back sem spec fora do Git (salvo a 043 em andamento); cada BK fechado com o trecho corrigido; nenhuma citação de linha que não bata com a `main` (conferência por script, como o anexo do specs-046-048); a 049 e as 046 a 048 apontam o `AUDITORIA.md`, não os originais; a auditoria SDD rodada e o resultado registrado (BK-30) |
+| Autorização | Back (specs e documentos); commit e push no back |
+| Risco | Médio: a outra sessão edita o back e a 049 durante o dia |
+| Esforço | M |
+
+###### E-10 — Back: specs novas para as lacunas
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente. Oito lacunas viraram tarefas da 049 (L-1 na T-501; L-2 na 048 e na T-509; L-3 na T-510; L-4 na T-508; L-7 na T-506; L-10 na T-503, na T-504 e na T-512; L-11 na T-409; L-15 na T-211). A L-11 foi feita (G1), e a L-3 está em andamento na 043 |
+| Objetivo | Spec própria para o que nenhuma spec cobre |
+| Problema | LAC-2 (entra na 048, decisão 10), LAC-5 (regra por alvo), LAC-8 (a proteção vira regra do back, decisão 3), LAC-9 (assumir chamado com responsável passa a exigir `tickets:assign`, decisão 2), LAC-10 (o mínimo de 2 no nome vira regra do back, decisão 4), LAC-12, LAC-13 e LAC-14 (spec própria, decisão 9) |
+| Arquivos (back) | Specs novas em `specs/`, pelo fluxo de specs do back |
+| Dependências | Decisões 2 a 4, 9 e 10, tomadas em 05/11; o front mantém os espelhos até o back entregar |
+| Aceite | Cada lacuna com spec aprovada ou registrada como fora do escopo; o §8.2 atualizado |
+| Autorização | Back (specs); contratos e migrations só com autorização explícita |
+| Risco | Baixo (só texto) |
+| Esforço | M |
+
+###### E-11 — Back: implementar 046, 048 e 047
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente. As três "Em descoberta" desde 31/10, sem DEC fechada |
+| Objetivo | No back, sessão em cookie (046), ciclo vigente em toda leitura de SLA (048 com a LAC-2) e ações permitidas (047), nesta ordem |
+| Problema | A-23; A-30 e LAC-2; A-24 (e A-06 a A-08, A-12, DIV-2, DIV-6); BK-9 a BK-26 corrigidos antes no texto (E-09) |
+| Arquivos (back, em prosa) | Rotas de sessão, emissão do cookie e CORS com credenciais (046); as consultas da lista, dos dois resumos, do detalhe e de Meus Chamados, com um trecho SQL único do ciclo vigente (048); as respostas da lista, do detalhe e de Meus Chamados, com as ações (047); o snapshot do OpenAPI |
+| Dependências | Decisões 8 a 11, tomadas em 05/11 (ordem 046, 048 e 047; portão G6 antecipado); a 046 não depende da 043; a 048 depois da parte 1 da 043; a 047 depois da fase 2 de chamados da 049 (DEC-8, DEC-9, T-6), da spec da LAC-9 (decisão 2) e da decisão 12, que segue aberta; 048 e 047 em sequência, porque mexem nas mesmas respostas |
+| Aceite | Os ACs de cada spec com os ajustes do §16.6. 046: `Set-Cookie` com `HttpOnly`, `Secure`, `SameSite=Strict` e o `Path` decidido; renovação recusada com o status da DEC-8; logout só com o cookie responde 204 e revoga; preflight com credenciais de origem fora da lista recusado. 048: AC-1 a AC-6; o agregado conta o reaberto vencido e o teste de paridade passa com um reaberto na massa; o detalhe traz o ciclo vigente; o trecho SQL concorda com o cronômetro em todas as situações. 047: AC-1 reescrito, AC-1b do dono sem `reopen-own`, iniciar e resolver, o Monitor e o AC-7 por ação. Build sem aviso; testes unitários, de arquitetura e de integração verdes; snapshot do OpenAPI só com os campos novos |
+| Autorização | Back; contratos (as três mudam a API); commit e push no back |
+| Risco | Alto na 046 (sessão); médio nas outras |
+| Esforço | G |
+
+###### E-12 — Decisões estruturais
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Feita: SSR removido, Angular 22.2, `@ngrx/signals` estável, fontes e Boxicons no build, SRI no Bootstrap e lint. Sobraram o A-27 e a CSP (A-56), que vão para a E-25, e as guardas de plataforma (pendência 25 e C-31), que vão para a E-03 |
+
+###### E-13 — Back: proteção estrutural
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Feita pela G1 da 049: `FallbackPolicy`, matriz de autorização por rota, regra de arquitetura que exige proteção em todo endpoint e snapshot aprovado do OpenAPI |
+
+###### E-14 — Back: specs das decisões sem spec
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente. A DP-02 está coberta pela REQ-211 da 049, delegada à G3-b (LAC-15) |
+| Objetivo | Spec para a DP-11 e a DP-12 |
+| Problema | LAC-17 |
+| Arquivos (back) | Specs novas; a 033 (Rascunho) |
+| Dependências | Nenhuma decisão nova (as DP são de 24/10); coordenar com a G3 da 049 |
+| Aceite | DP-11 e DP-12 com spec aprovada; a abertura com responsável segue a REQ-211 quando a G3-b entrar |
+| Autorização | Back (specs) |
+| Risco | Baixo |
+| Esforço | P |
+
+###### E-15 — Back: instruções e padrão de conferência de permissão
+
+| Campo | Conteúdo |
+|---|---|
+| Estado | Pendente, ampliada pelo BA-7 |
+| Objetivo | Uma forma só de conferir permissão por recurso, e o `CLAUDE.md`, as skills e o agente do back coerentes com o código |
+| Problema | BA-7 e BK-22; BA-5, BA-6, BA-12 e BA-14; na 049: PL-16 (lista "em migração"), AZ-15 (`CLAUDE.md:121`) e F-38 |
+| Arquivos (back, em prosa) | `CLAUDE.md`; `.claude/skills/add-feature/references/authorization.md` e `SKILL.md`; `.claude/agents/dotnet-architect.md`; a DEC-30 da 041 |
+| Dependências | Decisão 12, que segue aberta. Proposta: uma peça reutilizável (regra de domínio ou serviço injetado), usada pelo handler e pela consulta das ações permitidas da 047, sem método privado no handler, como já manda a DEC-30 da 041. Decidir antes da T-6 da 049 (G3-a) e da T-5 da 043; juntar com a T-7 da 043, que reescreve o `CLAUDE.md` do back agora |
+| Aceite | Busca nas skills, no `CLAUDE.md` e nas specs ativas sem a forma descartada; o teste de instruções do back verde; nenhum handler contra a forma escolhida (busca) |
+| Autorização | `CLAUDE.md` e skills do back, com autorização expressa; back |
+| Risco | Alto de conflito: a `authorization.md` está modificada no working tree da 043 |
+| Esforço | P |
+
+##### Etapas novas
+
+###### E-16 — Registro no `AUDITORIA.md`
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | (a) Commit corretivo, aprovado em 05/11 por volta das 17:40 e pausado: o documento da `main` conciliado com a edição da outra sessão e sem as menções que davam a E-01 e a E-12 fora da `main`. (b) Registro desta reauditoria: o §16 e os ajustes de estado |
+| Problema | (a) DOC-20, DOC-25 e a parte do `wt-e01` do DOC-24; os 3 conflitos (§0; §6, itens 7 e 8; §6, itens 16 e 17). (b) DOC-21, DOC-22, DOC-23, a parte do `server.ts` do DOC-24, DOC-31, DOC-32 e DOC-42; os estados do §0 ao §15 |
+| Arquivos | `docs/audit/AUDITORIA.md` (proposta em `reaudit/entrega/AUDITORIA.md`; a parte (a) sozinha em `reaudit/entrega/AUDITORIA-16a.md`; lista das mudanças, com a marca [16a] ou [16b], em `AUDITORIA-mudancas.md`) |
+| Dependências | (a) a outra sessão commitar a edição dela na `fix/SPEC-049-fe0-front-alignment` e trazer a `main` nova (até as 22:18 de 05/11 não tinha commitado, e a edição seguia igual à cópia das 19:08); se a edição mudar, remontar pelo script. (b) a (a); a decisão 18 foi tomada em 05/11 |
+| Aceite | `valida-auditoria.cjs` passa nos dois modos: anexos idênticos aos originais; todo ID do `333f4c2` presente; nenhum marcador de conflito; nenhuma afirmação de estado atual de que a E-01 ou a E-12 estão fora da `main`, salvo as linhas de histórico justificadas; títulos do §0 ao §16 (ou ao §15, na (a)) seguidos dos anexos; em (b), cada ID novo definido uma vez e sem colisão. O `git diff` muda só o `AUDITORIA.md` |
+| Autorização | (a) e (b) aprovadas por Rafael Santos em 05/11, por volta das 22:15; o commit e o push ainda dependem de confirmação |
+| Risco | Baixo |
+| Esforço | P |
+
+###### E-17 — Início
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O Início sem texto que promete o que já existe nem frase que deduz a fila, com os atalhos pela permissão e um recorte só |
+| Problema | A-50, A-53, C-33 (e a nota do A-28), o resto da DIV-9 (atalhos e links dos números), C-24 e R-10 |
+| Arquivos | `dashboard/dashboard-hero-chart.component.html` e `.ts` (A-50); `dashboard/dashboard-overview.ts` (A-53); `src/environments/environment.ts`, `environment.prod.ts`, `shared/entities/dashboard-features.ts`, `dashboard/dashboard.component.ts` e `.html`, `tickets/application/ticket-dashboard.store.ts` e as specs (C-33); `dashboard/dashboard.component.ts:158-167,315-320` e `.html:29,181` (DIV-9); `ticket-dashboard.store.ts:43-46,83-92` e `ticket-summary.store.ts:20-32,262` (C-24); `dashboard/dashboard-insights.component.html:51` ou `src/styles.css:316-320` (R-10) |
+| Dependências | Decisões tomadas em 05/11: 5 (os atalhos seguem `tickets:create` e `tickets:view-own`, não o perfil deduzido) e 15 (o critério da flag está cumprido: a flag e os ramos mortos saem aqui, e a validação visual fica na E-04). A frase sobre a fila volta só com a 032 |
+| Aceite | Build, testes, lint e `ca-review` verdes. A spec do gráfico confere o rodapé no carregamento, na troca de agrupamento e no erro, sem "em breve" com o fluxo pronto (A-50); nenhuma frase do Início fala de fila a partir de criados × resolvidos (A-53); busca em `src/` sem `volumeResolved`, sem `DASHBOARD_FEATURES` e sem os ramos `'unavailable'` (C-33); o Administrador do seed vê "Novo Chamado" e "Meus Chamados", e quem não tem `tickets:view-own` não recebe link para `/tickets` (DIV-9); uma função só monta o recorte do agregado e dos Alertas, com teste de concordância (C-24); espaço antes do chevron conferido na E-04 (R-10) |
+| Autorização | Código do front; commit e push |
+| Risco | Baixo |
+| Esforço | M |
+
+###### E-18 — Login e aviso de conexão
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O login não fica sem resposta nem aceita segundo clique durante as novas tentativas, e o aviso é anunciado |
+| Problema | A-51 e R-08 |
+| Arquivos | `shared/application/login.store.ts`; `shared/feature-login/login.component.ts` e `.html`; `app.component.ts`; `shared/ui/session-retry-notice/session-retry-notice.component.ts`; `shared/services/current-user.service.ts`; as specs |
+| Dependências | Nenhuma. Antes da E-21, que mexe no mesmo serviço |
+| Aceite | Build, testes, lint e `ca-review` verdes. Spec com relógio falso: durante as novas tentativas do login, o botão segue desabilitado e um aviso aparece; um segundo clique não faz outro `POST users/login` (com `HttpTestingController`); a região viva está no DOM desde o início e só o texto muda (spec de DOM); anúncio conferido com leitor de tela na E-04 |
+| Autorização | Código do front; commit e push |
+| Risco | Baixo |
+| Esforço | P |
+
+###### E-19 — Duplicações e consistência do front, sem mudar comportamento
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Uma implementação só para o que hoje está copiado, sem mudar o que a pessoa vê; a exceção é o anel de foco do R-09, que melhora o contraste |
+| Problema | C-18, C-19, C-20, C-22 (opcional), C-25, C-26, C-27, C-28, C-29, C-36, C-37 (medir antes) e R-09 |
+| Arquivos | As Stores de chamados e de usuários (C-18); os formulários (C-19); `ticket-monitor-info-panel.component.ts`, `ticket-list-due.ts`, `login.store.ts` e `src/index.html` (C-20); `ticket-monitor.component.ts` e `user-list.component.ts` (C-25); `tickets/ui/ticket-action-permissions.ts`, `ticket-cancel-window.ts` e os 10 arquivos com o literal (C-26); `ticket-detail.store.ts` e `ticket-quick-info.store.ts` (C-27); os 7 templates com datas (C-28); o CSS dos componentes e o `src/styles.css` (C-29, C-36, R-09); `angular.json` (orçamento, C-37) |
+| Dependências | Depois da E-03 e da E-17. O C-26 pode mudar onde mora a regra de permissão (barrel de `tickets`); renomear as Stores do R24 (C-20) só com aprovação na revisão |
+| Aceite | Build sem aviso de orçamento, com o tamanho de cada CSS medido no `stats.json` antes e depois (C-37); testes verdes sem mudar asserção de comportamento; lint sem erro; `ca-review` sem bloqueio; o `dup.cjs` e o `css-overlap.cjs` do fe-arch sem os grupos tratados; o literal `'tickets:manage'` só na constante; nenhum `outline: 2px solid var(--tk-primary)` local (R-09), com a medição do A-34 na E-04 |
+| Autorização | Código do front; commit e push |
+| Risco | Médio: muitos arquivos e regressão visual |
+| Esforço | G |
+
+###### E-20 — Testes e higiene do front
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Cobertura direta do que falta e testes sem resíduo |
+| Problema | N-4; os quatro arquivos do N-5 que faltam; C-23, C-32, C-34, C-35, C-38, C-39 e DOC-27 |
+| Arquivos | Specs novas para `focus-trap.util.ts`, `session-retry-notice.component.ts`, `ticket-list-first-use.component.ts`, `ticket-list-due-cell.component.ts`, os utilitários do C-23 (entre eles `http-error.util.ts`), `auth-layout.component.ts` e `dropdown-fixed-position.directive.ts`; `ticket-detail.component.spec.ts` (N-4, C-39); `tickets.store.spec.ts` e `ticket-history.store.spec.ts` (C-32); `ticket-summary.store.spec.ts`, `ticket-detail.component.spec.ts` e `dashboard.component.spec.ts` (C-34); `dialog.component.ts`, `side-panel.directive.ts` e `main-layout.component.spec.ts` (C-35); `.git-blame-ignore-revs` (C-38); `.vscode/extensions.json` e `tasks.json` (DOC-27) |
+| Dependências | A parte da flag do C-34 cai com a E-17. A decisão 17 (runner) não bloqueia |
+| Aceite | Build, testes (o número sobe) e lint verdes; `tsc -p tsconfig.spec.json --noEmit --noUnusedLocals --noUnusedParameters` só com o falso positivo do `revealNewItem`; `git blame --ignore-revs-file .git-blame-ignore-revs` sem linha do `0451269`; os títulos no formato decidido e os `withContext` em inglês; nenhuma variável em português nas specs (N-4) |
+| Autorização | Código do front; commit e push |
+| Risco | Baixo |
+| Esforço | M |
+
+###### E-21 — `Retry-After` de ponta a ponta
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O front espera o tempo que o back manda no 429 |
+| Problema | LAC-16; o lado do front da LAC-11 (T-504 e AC-523 da 049) |
+| Arquivos | Back (em prosa): a política de CORS passa a expor o cabeçalho `Retry-After`, ou o 429 passa a levar os segundos num campo do Problem Details. Front: `shared/services/current-user.service.ts:11-15,49-56` e a spec |
+| Dependências | Decisão 16, tomada em 05/11: em produção, front e API na mesma origem, com proxy em `/api`, e o CORS deixa de importar ali; em desenvolvimento (4200 e 5000) as origens seguem diferentes, e o front ainda precisa ler o cabeçalho. Depois da E-18 |
+| Aceite | Back: teste de integração do CORS confere o cabeçalho exposto (ou o campo), como os testes de CORS existentes. Front: spec com relógio falso espera o tempo do cabeçalho e cai nas esperas fixas sem ele. O AC-523 da 049 com front e API em origens diferentes (E-04). A LAC-11 atualizada no §8.2 |
+| Autorização | Back (configuração; contrato, se for campo); código do front; commit e push nos dois |
+| Risco | Baixo |
+| Esforço | P |
+
+###### E-22 — Limpeza do back
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Tirar código morto e duplicação do back e fechar as regras sem teste de arquitetura |
+| Problema | BA-1, BA-2, BA-3, BA-4, BA-8, BA-9, BA-10, BA-11, BA-15 e BA-18 |
+| Arquivos (back, em prosa) | O plano de prazos e o serviço de ciclo, com o texto da 045 (BA-1); o calendário útil (BA-2); os nomes de exibição de validação e o teste deles (BA-3); a configuração de usuários e uma migration própria do índice (BA-4); os comentários que citam spec em `src` e `tests`, com uma regra nova nos testes de arquitetura (BA-8, BA-11); os testes de validators de usuários (BA-9); a abstração do contexto de dados (BA-10); o `Unassign` do chamado (BA-15); os testes de SMTP e de telemetria e um limite de cobertura (BA-18) |
+| Dependências | Depois do merge da 043 parte 1 (conflitos no `Ticket.cs`, nas consultas de usuários e em `Application/Tickets`), coordenada com a outra sessão; o BA-4 só com autorização de migration |
+| Aceite | Build com 0 aviso e 0 erro; 940 ou mais testes unitários e 134 ou mais de arquitetura verdes, com as regras novas do BA-11; integração verde; busca de citação de spec em comentário só nas exceções listadas |
+| Autorização | Back; migration (BA-4) com autorização expressa; commit e push no back |
+| Risco | Médio: conflito com a 043 |
+| Esforço | M |
+
+###### E-23 — Usuários
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O filtro de período, o lote e o responsável de departamento com a regra do back |
+| Problema | BA-13 (decisão 7: o dia de São Paulo, como nos chamados); A-59 (verificar primeiro na E-04; confirmado, REQ-505 e T-506 da 049 e a spec 034); DIV-14 (decisão 6: só usuário ativo, com a recusa no back e a rota de candidatos com `departments:manage`; Q-65 da 049) |
+| Arquivos | Back (em prosa): o filtro de período de `GET users` pela peça de período local dos chamados (BA-13); o lote e o cadastro com funções (T-506 da 049) e a contagem agregada (034); a elegibilidade do responsável de departamento e uma rota de candidatos com a permissão da tela (DIV-14). Front: `users/application/users.store.ts`, `user-list.component.ts` e `departments/application/departments.store.ts` |
+| Dependências | Decisões 6 e 7, tomadas em 05/11; A-59 confirmado na E-04 (até lá, nada muda no front); a 043 parte 1, que reescreve as consultas de usuários |
+| Aceite | Back: teste de integração na virada do dia em São Paulo (BA-13); AC-509 e AC-510 da 049 (no máximo 2 requisições para 100 selecionados, sem 429); o back recusa responsável inelegível. Front: uma chamada por operação; quem só tem `departments:manage` escolhe o responsável |
+| Autorização | Back (spec, código e contrato do lote e dos candidatos); código do front; commit e push |
+| Risco | Médio |
+| Esforço | M |
+
+###### E-24 — Troca dos espelhos do front pelos campos da API
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | Em cada trilha, o back entrega, o front troca e o front remove o espelho |
+| Problema | 047: A-24, A-06 a A-08, A-12, DIV-2, DIV-6 e DIV-11. 048 com a LAC-2: A-30, A-14 ("Em risco") e A-17. 046: A-23 e A-55. LAC-3 (departamento). DIV-3 com a LAC-1 (`PUT` sem reenviar o estado) |
+| Arquivos | `tickets/ui/ticket-action-permissions.ts` e `TICKET_STATUS_TRANSITIONS` (saem com a 047); `tickets/entities/ticket.ts`, `ticket-monitor-item.ts`, `ticket-monitor.component.ts`, `ticket-monitor-info-panel.component.ts`, `ticket-detail.component.html:20` e `ticket-summary.store.ts:91-96` (048); `shared/services/session.service.ts`, `shared/infrastructure/auth.data.service.ts`, `token-refresh.service.ts`, `auth.interceptor.ts`, `login.store.ts`, os guards e `core/config/app.config.ts` (046); `dashboard/dashboard-filters.ts:106-130` (LAC-3); `ticket-list.component.ts:340,360` e `ticket-detail.store.ts:177,206` (DIV-3) |
+| Dependências | E-11; as tarefas T-501 (`PUT` parcial), T-502 (front), T-509 (relógio) e T-510 (departamento) da 049; as decisões 8, 8a, 9 e 10, tomadas em 05/11; para a 047, também a decisão 12, que segue aberta. A trilha do contrato do chamado (DIV-3) vem primeiro |
+| Aceite | AC-517 da 049: nenhum import de `ticket-action-permissions` nem de `TICKET_STATUS_TRANSITIONS`, e cada botão vai à sua rota. Um reaberto não aparece como "Cumprido" no Monitor nem nos Alertas, e cards, lista e detalhe contam o mesmo ciclo. Nenhum token no `localStorage`, F5 mantém a sessão, duas abas seguem logadas e o logout com o token vencido revoga no servidor. AC-513 da 049 (o front manda `departmentId`). AC-501 a AC-503 e AC-526 da 049 (corpo de um campo só). Em cada trilha, build, testes, lint e `ca-review` verdes e validação contra a API real |
+| Autorização | Código do front; commit e push. As entregas do back são da E-11 e da 049 |
+| Risco | Alto na 046 (sessão); médio nas outras |
+| Esforço | G |
+
+###### E-25 — Preparação para produção
+
+| Campo | Conteúdo |
+|---|---|
+| Objetivo | O front e a API prontos para publicar com segurança |
+| Problema | A-27 e N-8; pendência 28 (implantação estática); A-56 (CSP); pendências 29 e 30 (Bootstrap e Boxicons locais, ou um subconjunto dos ícones); pendência 27 (vulnerabilidades de desenvolvimento e troca do Karma pelo Vitest, decisão 17); `ForwardedHeaders` no back (DEC-4 da 046; BK-14; SE-07 e SE-08 da 049); BA-16 (OpenAPI fora de Development) e BA-17 (anexos em disco local) |
+| Arquivos | `src/environments/environment.prod.ts`; `src/index.html`; `angular.json`; `package.json` e `package-lock.json`; a configuração do servidor estático (a definir, fora do repositório). Back (em prosa): `ForwardedHeaders` na subida da API, as origens permitidas de produção, o armazenamento de anexos e a publicação do OpenAPI |
+| Dependências | Decisões tomadas em 05/11: 16 (mesma origem, com proxy em `/api`, DEC-4 (a) da 046; a URL de produção segue com Rafael Santos, para informar na implantação) e 17 (Vitest, pelo builder de testes unitários do Angular CLI). O Bootstrap local, as vulnerabilidades e o runner podem vir antes |
+| Aceite | O build de produção aponta a URL real; o servidor estático devolve o `index.html` nas rotas desconhecidas; a página carrega com CSP e sem violação no console; nenhum recurso de outra origem (com o Bootstrap local); `npm audit` sem vulnerabilidade alta; os testes no Vitest, com o mesmo número de casos; no back, teste de integração com `X-Forwarded-For` atrás de proxy e o limite por IP real |
+| Autorização | Código do front; dependências; back (configuração); implantação; commit e push |
+| Risco | Médio |
+| Esforço | G |
+
+##### Onda 0 — decisões de 05/11
+
+Rafael Santos aprovou estas decisões em 05/11, por volta das 22:15, menos a 12, que segue aberta com a
+proposta. A escolha e a origem de cada uma estão no §16.8 (`DECISOES-2026-11-05.md`); aqui fica o que
+cada uma destrava.
+
+| # | Decisão | Estado em 05/11 | IDs | O que destrava |
+|---|---|---|---|---|
+| 1 | Regra de reabrir | Decidida: vale o código do back | DIV-2, BK-6 | A correção do DIV-2 na E-02; o texto da RN-06, da 047 e do anexo C (E-09); o AC-1b da 047 |
+| 2 | Assumir chamado que já tem responsável | Decidida: exige `tickets:assign`, numa spec própria no back | LAC-9, DIV-6 | A spec no back (E-10), o "atribuir a mim" da 047 (E-11) e a E-24 |
+| 3 | Administrador tirar a própria função havendo outro | Decidida: vira regra do back; o front mantém o espelho até lá | DIV-7, LAC-8 | A spec no back (E-10) e a troca na E-24 |
+| 4 | Mínimo de 2 caracteres no nome | Decidida: vira regra do back; o front mantém o espelho até lá | DIV-8, LAC-10 | Os validators do back (E-10) e a troca na E-24 |
+| 5 | Atalhos do Início | Decidida: seguem as permissões, não o perfil deduzido | DIV-9 (resto) | A E-17 |
+| 6 | Responsável de departamento | Decidida: só usuário ativo; o back recusa o inelegível e oferece a rota de candidatos | DIV-14; Q-65 da 049 | A E-23 (back e front) |
+| 7 | Datas de filtro | Decidida: dia de São Paulo, como nos chamados | BA-13 | A E-23 (back) |
+| 8 | DECs da 046 | Decidida: as recomendações do §16.6, com a DEC-7 e a DEC-8 propostas | A-23; BK-9 a BK-16; A-55 | O texto e a implementação da 046 (E-09, E-11) e a troca na E-24; a DEC-4 destrava também a E-25 |
+| 8a | DEC-63 da 049, junto com a 046 | Decidida: (b), a troca da própria senha reemite a sessão pelo cookie | BK-11 | A E-09 e a E-11 (back) e a E-24 |
+| 9 | DECs da 047 | Decidida: as recomendações do §16.6 | A-24; BK-18 a BK-22 | A E-09 e a E-11 (back) e a E-24; o mecanismo depende da decisão 12 |
+| 10 | DECs da 048, com a DEC-66 da 049 | Decidida: as recomendações do §16.6, com a LAC-2 | A-30; LAC-2; BK-23 a BK-26 | A E-09 e a E-11 (back) e a E-24 |
+| 11 | Portão G6 da 049 | Decidida: antecipar a 046 e a 048, na ordem 046, 048 e 047 | BK-17 | O texto da 049 (back, com autorização) e a ordem da E-11 |
+| 12 | Conferência de permissão por recurso | **Aberta**, com a proposta do §16.8 | BA-7; BK-22 | A E-15, a T-6 da 049, a T-5 da 043 e o mecanismo da 047 |
+| 13 | Doc comments | Decidida: completar os 258 | C-16 | A E-08 |
+| 14 | `design.json` | Decidida: manter, sem regenerar | DOC-10; pendência 13 | — |
+| 15 | Critério da flag `volumeResolved` | Decidida: cumprido; a flag e os ramos mortos saem na E-17 | C-33; A-28 | A E-17 |
+| 16 | A-27 e topologia | Decidida: mesma origem, com proxy em `/api`; a URL segue com Rafael Santos | A-27, N-8, A-56, DOC-32, LAC-16 | A E-25 e a E-21 |
+| 17 | Runner de testes no lugar do Karma | Decidida: Vitest, pelo builder de testes unitários do Angular CLI | Pendência 27 | A E-25 |
+| 18 | E-16b (registro desta reauditoria) | Decidida: aprovada, com a E-16a | DOC-21 a DOC-24, DOC-31, DOC-32, DOC-42 | A E-16 |
+| 19 | Excluir os originais de `docs/audit` | Decidida: só depois de o back trocar as referências | DOC-28, DOC-33; pendência 20 | O passo final da E-05 |
+| 20 | Exceção do C-01 nas skills | Decidida: registrar nas skills, com autorização específica | C-01; pendência 6 | A E-07 |
+| 21 | Branches, PRs e specs soltas do back | Decidida: fica com o back; o front não altera o back | BK-5, BK-27 a BK-29 | A E-09 (back) |
+
+##### Ordem
+
+1. Onda 0: decidida em 05/11, menos a decisão 12, que segura só a E-15 e o mecanismo da 047.
+2. E-16a, assim que a outra sessão commitar, e logo depois a E-16b. As duas foram aprovadas em 05/11; o
+   commit e o push dependem de confirmação.
+3. No front, sem o back: o resto da E-02, a E-03, a E-17 e a E-18; depois a E-19 e a E-20.
+4. Documentos e skills, com autorização: E-06, E-07 e E-08.
+5. A E-04 assim que a API estiver disponível.
+6. Back: E-21, E-09, E-14, E-15, E-22, E-23 e E-10; depois a E-11, na ordem 046, 048 e 047.
+7. A E-24, trilha por trilha, depois de cada entrega da E-11 e da 049.
+8. A E-25 antes da produção; o Bootstrap local, as vulnerabilidades e o runner podem vir antes. O passo
+   final da E-05 depois da E-09.
+
+##### O que NÃO refazer, porque já funciona
+
+- Fronteiras do front: 0 violação (414 imports de produção entre pastas e 219 nas specs, pela matriz da
+  `ca-review`); nenhum barrel exporta componente ou rota.
+- Lint: `eslint src` com 0 erro e 0 aviso.
+- SSR removido, fontes e Boxicons no build, SRI no Bootstrap e `@ngrx/signals` estável (E-12).
+- As correções da E-01 (C-09, A-42, R-07, A-33, N-1, N-3, N-6 e a spec do `SideMenuNavComponent`),
+  validadas commit a commit.
+- Camadas do back: 0 violação de dependência (projetos e `using`).
+- `FallbackPolicy`, matriz de autorização por rota e snapshot aprovado do OpenAPI (G1 da 049).
+- 940 testes unitários e 134 de arquitetura do back passando, com build sem aviso.
+- A consolidação do `AUDITORIA.md`: anexos idênticos aos originais e os 69 IDs dos originais presentes na
+  Parte I, cada um no catálogo do §4.
+
+#### 16.8 Decisões de 05/11
+
+Rafael Santos aprovou, em 05/11 por volta das 22:15, "todas as recomendações técnicas padrão apresentadas
+no relatório". Pediu também que se mantenham a consistência arquitetural, a prioridade 046 → 048 → 047 e
+o tratamento do DIV-3 e do A-59.
+
+A coluna **Origem** diz de onde vem cada escolha:
+- **Relatório:** recomendação dos relatórios ou do plano de 05/11, agora aprovada.
+- **Decisão anterior:** decisão de Rafael Santos já registrada antes, que continua valendo.
+- **Padrão técnico:** o relatório não recomendava nada para esse item. Vale o padrão mais coerente com
+  a arquitetura, em que a regra fica no back e o front só a espelha. Nenhum desses trava o bloco inicial,
+  e cada um pode ser revisto antes da etapa que destrava.
+
+A execução de tudo o que mexe no back, no `CLAUDE.md`, nas skills, em contratos ou em migrations continua
+dependendo de autorização específica. Vale também a regra de 04/11: o back não é alterado sem autorização.
+
+| # | Decisão | Escolha | Origem | Destrava |
+|---|---|---|---|---|
+| 1 | Regra de reabrir | Vale o código do back: o dono reabre só com `tickets:reopen-own`, e os outros com `tickets:manage`. O front corrige o DIV-2. A RN-06, a 047 e o anexo C da 049 são corrigidos no back (BK-6) | Relatório (specs-046-048: "o DIV-2 pode ser corrigido no front já"; princípio de 31/10, §4.7: o servidor é a fonte da regra) | E-02 (DIV-2); E-09 (BK-6, com autorização para o back) |
+| 2 | Assumir chamado que já tem responsável | Exige `tickets:assign`, numa spec própria no back (LAC-9). "Atribuir a mim" sem responsável segue com `tickets:manage`. O front de hoje já se comporta assim | Relatório (specs-046-048, DEC-6 da 047) | E-10 e E-11 (back); E-24 |
+| 3 | Administrador tirar a própria função havendo outro | A proteção continua e vira regra do back (LAC-8). O front mantém o espelho até o back entregar | Padrão técnico | E-10 (back); E-24 |
+| 4 | Mínimo de 2 caracteres no nome | O mínimo atual (2) vira regra do back (LAC-10). O front mantém o espelho até lá | Padrão técnico | E-10 (back); E-24 |
+| 5 | Atalhos do Início | Seguem as permissões (`tickets:create` e `tickets:view-own`), não o perfil deduzido | Relatório (aceite da E-17; DIV-9) | E-17 |
+| 6 | Responsável de departamento | Só usuário ativo, a regra que o front já aplica. O back recusa responsável inelegível e oferece uma rota de candidatos com a permissão da tela (`departments:manage`; Q-65 da 049) | Padrão técnico (com base no aceite da E-23) | E-23 (back e front) |
+| 7 | Datas de filtro | Dia de São Paulo, como já é nos chamados (`LocalDatePeriod`) | Relatório (BA-13; E-23) | E-23 (back) |
+| 8 | DECs da 046 | DEC-1 (a). DEC-2 (a), com o caminho público configurável. DEC-3 com `SameSite=Strict` mais um cabeçalho obrigatório nas rotas de sessão. DEC-4 (a), mesma origem com proxy em `/api` e `ForwardedHeaders`. DEC-5 (a), corte direto, se não houver outro consumidor da API e o snapshot do OpenAPI mudar no mesmo PR. DEC-6 (a), obrigatória. DEC-7 (proposta): política própria para `users/refresh-token`, particionada pela sessão, decidida antes da primeira implantação atrás de proxy. DEC-8 (proposta): manter o 400 e corrigir o AC-4 da 046 e o AC-508 da 049. No front: coordenar a renovação entre abas (A-55) | Relatório (specs-046-048, §3.7) | E-09 e E-11 (back); E-24 |
+| 8a | DEC-63 da 049, junto com a 046 | (b): a troca da própria senha reemite a sessão pelo cookie, sem token no corpo, como pede a DEC-1 (a) | Padrão técnico | E-09 e E-11 (back); E-24 |
+| 9 | DECs da 047 | DEC-1: booleanos por ação, acrescentando `canStartProgress` e `canResolve`. DEC-2 (b), com o Monitor. DEC-3 (b), sem `nextStatuses`. DEC-4: depois da fase 2 de chamados da 049. DEC-5 (a): mensagens e anexos numa spec própria (LAC-14) | Relatório | E-09 e E-11 (back); E-24 |
+| 10 | DECs da 048 | DEC-1 (a), com a LAC-2: ciclo vigente na lista, no filtro, na ordenação, nos dois resumos e no detalhe. Os reabertos vencidos passam a contar como atrasados. DEC-2: uma definição nomeada em SQL, com teste de concordância. DEC-3 (b): depois da parte 1 da 043. DEC-4 (b). Inclui a DEC-66 da 049 (`serverNowUtc` em `GET tickets`) | Relatório | E-09 e E-11 (back); E-24 |
+| 11 | Portão G6 da 049 | Antecipar a 046 e a 048, na ordem 046 → 048 → 047. A 046 não depende da 043; a 048 vem depois da parte 1 da 043 | Relatório (ordem do specs-046-048) e pedido de 05/11 | Mudança no texto da 049 (back, com autorização) |
+| 12 | Conferência de permissão por recurso (BA-7) | **Fica aberta**, com esta proposta: uma peça reutilizável (regra de domínio ou serviço injetado), usada pelo handler e pela consulta das ações permitidas da 047, sem método privado no handler, como já manda a DEC-30 da 041 | Padrão técnico; precisa da confirmação de Rafael Santos, porque muda as instruções do back (E-15) e cruza com a 043 em andamento | E-15 (back), T-6 da 049, T-5 da 043 |
+| 13 | Doc comments | Completar os 258 `/** */` em português que faltam, como o `CLAUDE.md` exige | Relatório (o `CLAUDE.md` trata a regra como convenção estabelecida) | E-08 |
+| 14 | `design.json` | Manter, sem regenerar | Decisão anterior (04/11: não rodar o `/impeccable document` nem regenerar) | — |
+| 15 | Critério da flag `volumeResolved` | Cumprido: a reauditoria comprovou o contrato do A-28 (`ResolvedCount` sempre presente e rotas abertas a todo usuário autenticado). A flag e os ramos mortos saem na E-17, e a validação visual fica na E-04 | Padrão técnico (com base no veredito do A-28 no etapas.md) | E-17 |
+| 16 | A-27 e topologia | Mesma origem, com proxy em `/api` (DEC-4 (a)). A URL de produção continua com Rafael Santos, para informar na implantação | Relatório | E-25; E-21 |
+| 17 | Runner de testes no lugar do Karma | Vitest, pelo builder de testes unitários do Angular CLI, padrão para projetos novos desde o Angular 21. Executa na E-25, com o mesmo número de casos | Padrão técnico | E-25 |
+| 18 | E-16b (registro da reauditoria) | Aprovada | Pedido de 05/11 | E-16 |
+| 19 | Excluir os originais de `docs/audit` | Só depois de o back trocar as referências (E-09); então o passo final da E-05 | Decisão anterior (04/11) | E-05 |
+| 20 | Exceção do C-01 nas skills | Registrar a exceção nas skills, para documentar o que o código já faz. A edição das skills precisa de autorização específica (E-07) | Padrão técnico | E-07 |
+| 21 | Branches e PRs do back com specs fora da `main`; quem versiona as specs soltas | Fica com o back. A sessão do back versiona as 11 pastas, e o destino dos PRs #34 e #58 e da branch da 036 Rafael Santos decide com ela. O front não altera o back | Padrão técnico (regra de 04/11) | E-09 (back) |
+
+##### DIV-3 e A-59
+
+- **DIV-3 (Alta):** o `PUT` do chamado reenvia o estado lido na tela.
+  - A correção é do back: `PUT` parcial e versão do chamado (T-501 e T-502 da 049; Q-83).
+  - O front troca na E-24, na trilha "contrato do chamado", que vem em primeiro lugar.
+  - Mitigação proposta no front, opcional e dentro da E-02: reler o chamado logo antes do `PUT` de cancelar
+    na lista e no detalhe. Isso encurta a janela em que a edição de outra pessoa se perde, de "desde a
+    carga da tela" para milissegundos. Não elimina a corrida e sai quando o back entregar o `PUT` parcial.
+- **A-59 (Alta, inferido):** o lote de Usuários contra o limite de 100 requisições por minuto.
+  - Primeiro item da E-04: reproduzir com a API de pé.
+  - Confirmado, a correção é a REQ-505 da 049 com a spec 034 (E-23, back), e o front passa a mandar no
+    máximo 2 requisições para 100 selecionados.
+  - Até lá, nada muda no front sem a reprodução.
+
+#### 16.9 Limites e o que não foi verificado
+
+**Não verificado, com o motivo:**
+
+- Build, testes e lint da `main` não foram reexecutados: valem os logs da ponta (`rebase/val-e12/13-333f4c2-ponta/`).
+- Comportamento em execução: os 403 e o 429 do §16.4, o `GET /tickets/mine` ao abrir `/tickets/novo`, a
+  recarga dos anexos, a corrida entre abas, o `Retry-After` entre origens e a resposta fora de ordem da
+  busca. Estão comprovados no código e inferidos no efeito; ficam para a E-04, que exige a API e o login.
+- Aparência: o realce novo, os anéis de foco, o esmaecido do Monitor, o chevron, a nota "em breve", o
+  R-05 em 844×390 e o cabeçalho do diálogo com o X de 44px; o anúncio do aviso do A-42 por leitor de
+  tela; o contraste dos contornos locais (R-09) e a revalidação do A-34; o tamanho real dos CSS no build.
+- Testes de integração do back (674), a auditoria SDD (BK-30), o CI do PR #71 e o estado dos PRs #34 e
+  #58 no GitHub: exigem banco, histórico Git na cópia ou rede.
+- Conteúdo do working tree da 043 no back e das edições não commitadas do front: só a lista de arquivos e
+  as cópias das 19:08.
+- Universos de 31/10 de sete regras do front e os denominadores de 31/10 do back: reconstruídos pela
+  aritmética dos totais publicados.
+- Origem das decisões de Supervisor, RH e "5S" do `PRODUCT.md` (DOC-30); se o Impeccable depende do
+  comportamento de tela no `DESIGN.md`; se o repositório no GitHub é público (o §14 expõe caminhos locais).
+- Impacto no front das specs 035, 050 e 051 (§6, item 22).
+
+**Divergências entre frentes e como ficaram:**
+
+| Tema | O que cada frente disse | Como ficou |
+|---|---|---|
+| Correção do DIV-2 | specs-046-048: corrigir no front já; separacao: decidir antes, porque a documentação do back diz a regra do front | Decidido em 05/11 (decisão 1): vale o código do back; o front corrige na E-02, e o texto do back é corrigido (BK-6) |
+| Estado do DIV-9 | docs.md (§9.2) e specs-046-048 (§6.1): corrigido pelo PR #5; separacao: em parte, pelo diff do `4b7b0de` (`dashboard.component.ts:163-167`) | Em parte, pela evidência do código (decidido pelo coordenador) |
+| Gravidade do A-47 | fe-arch: Média (erro de outra origem visível a todos); separacao: Baixa (o 403 só com funções personalizadas) | Média, pela evidência do erro visível |
+| Classe dos números do front | docs.md: DECLARADO; etapas: COMPROVADO por log | COMPROVADO por log, não reexecutado: as etapas leram os logs |
+| Linha da flag em `environment.prod.ts` | separacao: 20-22; docs, fe-arch e etapas: 9-11 | 9-11, conferido na cópia de `333f4c2` |
+| Linhas da regra de reabrir | docs.md: `ReopenTicketCommandHandler.cs:34-36`; separacao e specs: `:33-41` | `:33-41`, a faixa que inclui a conferência inteira |
 
 ## Anexo A — FRONTEND_AUDIT.md (texto original preservado)
 
