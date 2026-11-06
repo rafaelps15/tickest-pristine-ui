@@ -6,15 +6,13 @@ import { TicketAttachmentsStore } from '../application/ticket-attachments.store'
 import { TicketHistoryStore } from '../application/ticket-history.store';
 import { TicketMessagesStore } from '../application/ticket-messages.store';
 import {
-  TicketStatus, TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS, TICKET_ACTIVE_STATUSES,
-  TICKET_STATUS_TRANSITIONS, TICKET_STATUS_ACTION_LABELS
+  TicketStatus, TICKET_STATUS_LABELS, TICKET_ACTIVE_STATUSES, TICKET_STATUS_TRANSITIONS, TICKET_STATUS_ACTION_LABELS
 } from '../entities/ticket-status';
-import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
-import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
+import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS } from '../entities/ticket-sla-status';
 import { TicketDetail } from '../entities/ticket';
 import {
-  TicketSla, TicketSlaObjective, TICKET_SLA_METRIC_LABELS,
-  TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS
+  TicketSla, TicketSlaObjective, TICKET_SLA_METRIC_LABELS, TicketSlaObjectiveState, TICKET_SLA_OBJECTIVE_STATE_LABELS
 } from '../entities/ticket-sla';
 import { TicketMessage, TICKET_MESSAGE_MAX_LENGTH } from '../entities/ticket-message';
 import { ConfirmDialogService, SessionService, ToastService, formatFileSize, saveFile } from '../../shared';
@@ -24,6 +22,7 @@ import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
 import { TicketAttachment } from '../entities/ticket-attachment';
+import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS } from '../ui/ticket-badge-classes';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../ui/ticket-cancel-window';
 import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescription, canReopenTicket } from '../ui/ticket-action-permissions';
 

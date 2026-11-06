@@ -32,17 +32,6 @@ export const TICKET_SLA_OBJECTIVE_STATE_LABELS: Record<TicketSlaObjectiveState, 
   [TicketSlaObjectiveState.NotApplicable]: 'Sem meta'
 };
 
-/** Classe de badge Bootstrap por situação do objetivo (as classes bg-label-* já têm variante para o dark mode). */
-export const TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS: Record<TicketSlaObjectiveState, string> = {
-  [TicketSlaObjectiveState.Running]: 'bg-label-success',
-  [TicketSlaObjectiveState.AtRisk]: 'bg-label-warning',
-  [TicketSlaObjectiveState.Breached]: 'bg-label-danger',
-  [TicketSlaObjectiveState.Met]: 'bg-label-success',
-  [TicketSlaObjectiveState.Missed]: 'bg-label-danger',
-  [TicketSlaObjectiveState.Stopped]: 'bg-label-secondary',
-  [TicketSlaObjectiveState.NotApplicable]: 'bg-label-secondary'
-};
-
 /**
  * Plano de SLA aplicado ao chamado — política, versão e calendário usados pelo back-end para
  * calcular os prazos em tempo útil (fora do expediente, fins de semana e feriados não contam).

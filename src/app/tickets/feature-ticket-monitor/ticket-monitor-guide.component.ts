@@ -1,7 +1,8 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { GuideSectionComponent, ScreenGuideComponent } from '../../shared/ui/screen-guide/screen-guide.component';
-import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS } from '../entities/ticket-sla-status';
+import { TICKET_SLA_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
 
 /** Explicação de uma linha por valor de SLA — mesmos 6 valores que a coluna SLA da tabela pode exibir. */
 const SLA_EXPLANATIONS: Record<TicketSlaStatus, string> = {

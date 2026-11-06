@@ -13,11 +13,3 @@ export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
   [TicketPriority.High]: 'Alta',
   [TicketPriority.Urgent]: 'Urgente'
 };
-
-/** Classe de badge Bootstrap por prioridade, para exibição consistente nas listas. */
-export const TICKET_PRIORITY_BADGE_CLASS: Record<TicketPriority, string> = {
-  [TicketPriority.Low]: 'bg-label-secondary',
-  [TicketPriority.Medium]: 'bg-label-primary',
-  [TicketPriority.High]: 'bg-label-warning',
-  [TicketPriority.Urgent]: 'bg-label-danger'
-};

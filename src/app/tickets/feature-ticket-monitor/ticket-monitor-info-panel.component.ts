@@ -2,10 +2,11 @@ import { Component, ChangeDetectionStrategy, computed, inject, input, output } f
 import { RouterLink } from '@angular/router';
 import { NgClass, DatePipe } from '@angular/common';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
-import { TICKET_STATUS_LABELS, TICKET_STATUS_BADGE_CLASS } from '../entities/ticket-status';
-import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_CLASS } from '../entities/ticket-priority';
-import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS, TICKET_SLA_STATUS_BADGE_CLASS } from '../entities/ticket-sla-status';
+import { TICKET_STATUS_LABELS } from '../entities/ticket-status';
+import { TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
+import { TicketSlaStatus, TICKET_SLA_STATUS_LABELS } from '../entities/ticket-sla-status';
 import { TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
+import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
 
