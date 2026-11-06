@@ -70,9 +70,10 @@ export class UserDataService {
 
   /**
    * Quantos chamados ainda em aberto (Aberto ou Em Andamento) estão atribuídos ao usuário — lido
-   * do `totalCount` de GET /tickets com `pageSize=1`, sem trazer a lista. Fica aqui, e não no
-   * domínio de chamados, porque `tickets` já importa `users`: o caminho inverso fecharia um ciclo
-   * entre os barrels. Os status são os números do enum TicketStatus do back-end (1 = Aberto,
+   * do `totalCount` de GET /tickets com `pageSize=1`, sem trazer a lista. O back-end não tem essa
+   * contagem nas rotas de usuários, então a pergunta da tela de Usuários antes de desativar alguém
+   * usa a listagem de chamados, que exige `tickets:manage`: o `UsersStore` só chama com essa
+   * permissão. Os status são os números do enum TicketStatus do back-end (1 = Aberto,
    * 2 = Em Andamento), os mesmos de `TICKET_ACTIVE_STATUSES`.
    */
   countOpenAssignedTickets(userId: string): Observable<number> {

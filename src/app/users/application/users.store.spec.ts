@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef, provideZonelessChangeDetection } from '@angular/core';
 import { of, throwError, Subject } from 'rxjs';
 import { UsersStore } from './users.store';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { AuthDataService, PagedResponse } from '../../shared';
+import { AuthDataService, PagedResponse, SessionService } from '../../shared';
 import { UserSummary } from '../entities/user-summary';
+import { environment } from '../../../environments/environment';
 
 /** Monta uma página de usuários como a API devolveria, calculando os campos de navegação. */
 function buildPage(items: UserSummary[], page = 1, pageSize = 20, totalCount = items.length): PagedResponse<UserSummary> {
@@ -35,10 +37,13 @@ describe('UsersStore', () => {
   let store: InstanceType<typeof UsersStore>;
   let userDataService: jasmine.SpyObj<UserDataService>;
   let authDataService: jasmine.SpyObj<AuthDataService>;
+  /** Sessão falsa: por padrão, quem administra os usuários também atende a fila (`tickets:manage`). */
+  let sessionService: { hasPermission: jasmine.Spy };
 
   beforeEach(() => {
     userDataService = jasmine.createSpyObj('UserDataService', ['getAll', 'getStatusCounts', 'updateProfile', 'assignRoles', 'deactivate', 'activate', 'resendInvitation', 'countOpenAssignedTickets']);
     authDataService = jasmine.createSpyObj('AuthDataService', ['register']);
+    sessionService = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
     userDataService.getAll.and.returnValue(of(buildPage([user])));
     userDataService.getStatusCounts.and.returnValue(of({ totalCount: 1, activeCount: 1, pendingActivationCount: 0, inactiveCount: 0 }));
 
@@ -47,7 +52,8 @@ describe('UsersStore', () => {
         provideZonelessChangeDetection(),
         UsersStore,
         { provide: UserDataService, useValue: userDataService },
-        { provide: AuthDataService, useValue: authDataService }
+        { provide: AuthDataService, useValue: authDataService },
+        { provide: SessionService, useValue: sessionService }
       ]
     });
     store = TestBed.inject(UsersStore);
@@ -307,6 +313,20 @@ describe('UsersStore', () => {
     store.countOpenAssignedTickets('u1', onDone);
 
     expect(onDone).toHaveBeenCalledWith(null);
+  });
+
+  it('without tickets:manage, which GET /tickets requires, returns null without counting, so the deactivation goes on without the warning', () => {
+    sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
+    const onDone = jasmine.createSpy('onDone');
+    const onDoneMany = jasmine.createSpy('onDoneMany');
+
+    store.countOpenAssignedTickets('u1', onDone);
+    store.countOpenAssignedTicketsMany(['u1', 'u2'], onDoneMany);
+
+    expect(userDataService.countOpenAssignedTickets).not.toHaveBeenCalled();
+    expect(onDone).toHaveBeenCalledWith(null);
+    expect(onDoneMany).toHaveBeenCalledWith(null);
+    expect(store.countingTicketsIds()).toEqual([]);
   });
 
   it('resends the invitation, reloads the listing and releases the progress indicator', async () => {
@@ -630,5 +650,55 @@ describe('UsersStore', () => {
     store.clearListMutationError();
 
     expect(store.listMutationError()).toBeNull();
+  });
+});
+
+describe('UsersStore with the real UserDataService', () => {
+  /** Requisições da contagem de chamados: GET /tickets, rota do domínio de chamados que exige `tickets:manage`. */
+  const isTicketCount = (request: { url: string }) => request.url === `${environment.apiUrl}/tickets`;
+
+  let store: InstanceType<typeof UsersStore>;
+  let http: HttpTestingController;
+  let sessionService: { hasPermission: jasmine.Spy };
+
+  beforeEach(() => {
+    sessionService = { hasPermission: jasmine.createSpy('hasPermission').and.returnValue(true) };
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        UsersStore,
+        { provide: AuthDataService, useValue: jasmine.createSpyObj('AuthDataService', ['register']) },
+        { provide: SessionService, useValue: sessionService }
+      ]
+    });
+    store = TestBed.inject(UsersStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  it('without tickets:manage, makes no GET /tickets to count before deactivating, for one person or for many', () => {
+    sessionService.hasPermission.and.callFake((code: string) => code !== 'tickets:manage');
+    const onDone = jasmine.createSpy('onDone');
+    const onDoneMany = jasmine.createSpy('onDoneMany');
+
+    store.countOpenAssignedTickets('u1', onDone);
+    store.countOpenAssignedTicketsMany(['u1', 'u2'], onDoneMany);
+
+    http.expectNone(isTicketCount);
+    expect(onDone).toHaveBeenCalledWith(null);
+    expect(onDoneMany).toHaveBeenCalledWith(null);
+  });
+
+  it('with tickets:manage, counts from the totalCount of GET /tickets with the assignee and the two active statuses', () => {
+    const onDone = jasmine.createSpy('onDone');
+
+    store.countOpenAssignedTickets('u1', onDone);
+
+    const request = http.expectOne(isTicketCount);
+    expect(request.request.params.get('assignedToUserId')).toBe('u1');
+    expect(request.request.params.getAll('status')).toEqual(['1', '2']);
+    request.flush({ items: [{}], page: 1, pageSize: 1, totalCount: 3, totalPages: 3, hasNextPage: true, hasPreviousPage: false });
+    expect(onDone).toHaveBeenCalledWith(3);
   });
 });

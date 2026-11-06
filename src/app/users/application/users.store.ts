@@ -6,7 +6,7 @@ import { finalize, from, mergeMap, toArray, of, catchError, map, switchMap } fro
 import { UserFilters } from '../entities/user-filters';
 import { UpdateProfileRequest } from '../entities/user-profile';
 import { UserDataService } from '../infrastructure/user.data.service';
-import { AuthDataService, CreateUserData, extractErrorMessage, valueOf } from '../../shared';
+import { AuthDataService, CreateUserData, SessionService, extractErrorMessage, valueOf } from '../../shared';
 
 /** Filtros e paginação padrão: todos os status, primeira página, 20 itens por página. */
 const DEFAULT_FILTERS: UserFilters = { status: 'All', page: 1, pageSize: 20 };
@@ -53,7 +53,9 @@ export const UsersStore = signalStore(
     /** Acesso HTTP aos usuários. */
     _userDataService: inject(UserDataService),
     /** Acesso HTTP ao cadastro (POST /users/register). */
-    _authDataService: inject(AuthDataService)
+    _authDataService: inject(AuthDataService),
+    /** Sessão atual: a contagem de chamados usa GET /tickets, que exige `tickets:manage`. */
+    _sessionService: inject(SessionService)
   })),
   withProps((store) => ({
     /** Página atual da listagem, recarregada sempre que {@link filters} muda. */
@@ -117,9 +119,14 @@ export const UsersStore = signalStore(
   withMethods((store) => ({
     /**
      * Conta os chamados em aberto atribuídos ao usuário, pra confirmação de desativação avisar.
-     * Falha devolve `null`: o aviso some, mas a desativação não fica bloqueada por causa dele.
+     * Falha devolve `null`: o aviso some, mas a desativação não fica bloqueada por causa dele. Sem
+     * `tickets:manage`, que o GET /tickets exige, devolve `null` sem consultar (o 403 releria a sessão à toa).
      */
     countOpenAssignedTickets(userId: string, onDone: (count: number | null) => void): void {
+      if (!store._sessionService.hasPermission('tickets:manage')) {
+        onDone(null);
+        return;
+      }
       if (store.countingTicketsIds().includes(userId)) return;
       patchState(store, { countingTicketsIds: [...store.countingTicketsIds(), userId] });
 
@@ -135,9 +142,14 @@ export const UsersStore = signalStore(
      * Conta, pra confirmação da desativação em lote, quantos chamados em aberto os selecionados
      * atendem no total e quantas dessas pessoas atendem algum. Uma consulta por pessoa (não há
      * agregado no back-end), no máximo {@link BULK_CONCURRENCY} em voo. Qualquer falha devolve
-     * `null`: o aviso some, mas a desativação não fica bloqueada por causa dele.
+     * `null`: o aviso some, mas a desativação não fica bloqueada por causa dele. Sem `tickets:manage`,
+     * devolve `null` sem consultar, como a contagem de uma pessoa só.
      */
     countOpenAssignedTicketsMany(userIds: string[], onDone: (result: { tickets: number; people: number } | null) => void): void {
+      if (!store._sessionService.hasPermission('tickets:manage')) {
+        onDone(null);
+        return;
+      }
       patchState(store, { countingTicketsIds: [...store.countingTicketsIds(), ...userIds] });
 
       from(userIds).pipe(
