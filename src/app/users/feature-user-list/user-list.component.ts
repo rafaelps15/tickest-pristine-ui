@@ -1,5 +1,4 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal, computed, effect, HostListener, untracked, afterNextRender, Injector, DestroyRef } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -21,6 +20,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.com
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
+import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
 import { UserListInsightsComponent } from './user-list-insights.component';
 import { UserStatusBadgeComponent, UserStatusKind, userStatusKind } from './user-status-badge.component';
 
@@ -83,7 +83,7 @@ function joinNames(names: string[]): string {
 /** Tela administrativa de gestão de usuários: listagem paginada/filtrada, criação, edição, roles e ativação/desativação. */
 @Component({
   selector: 'app-user-list',
-  imports: [ReactiveFormsModule, DatePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, UserListInsightsComponent, UserStatusBadgeComponent],
+  imports: [ReactiveFormsModule, DateTimePipe, PageHeaderComponent, RowActionsComponent, UserListInfoPanelComponent, UserListGuideComponent, PaginationComponent, EmptyStateComponent, LoadingStateComponent, DialogComponent, UserListInsightsComponent, UserStatusBadgeComponent],
   templateUrl: './user-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './user-list.component.css'

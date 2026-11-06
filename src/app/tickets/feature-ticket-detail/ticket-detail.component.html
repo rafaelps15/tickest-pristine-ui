@@ -105,11 +105,11 @@
             <dd>{{ t.sectorName }}</dd>
 
             <dt>Aberto em</dt>
-            <dd>{{ t.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+            <dd>{{ t.createdAtUtc | dateTime }}</dd>
 
             @if (t.resolvedAtUtc) {
               <dt>Resolvido em</dt>
-              <dd>{{ t.resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+              <dd>{{ t.resolvedAtUtc | dateTime }}</dd>
             }
 
             <!-- Só sem o painel de SLA: com ele, o prazo vigente (que muda a cada reabertura) já está lá —
@@ -117,7 +117,7 @@
             @if (!detailStore.sla()) {
               <dt>Prazo</dt>
               <dd class="mb-0" [ngClass]="slaUrgencyClass(t.slaStatus)">
-                {{ t.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                {{ t.dueAtUtc | dateTime }}
                 @if (dueRelativeLabel(t); as relative) {
                   <span class="fw-semibold">— {{ relative }}</span>
                 }
@@ -189,7 +189,7 @@
                   <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
                     <span class="fw-semibold small">
                       {{ messageAuthorName(message, t) }}
-                      <span class="text-muted fw-normal">— {{ message.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                      <span class="text-muted fw-normal">— {{ message.createdAtUtc | dateTime }}</span>
                       @if (message.editedAtUtc) {
                         <span class="text-muted fw-normal">(editada)</span>
                       }
@@ -278,7 +278,7 @@
                   <i class="bx bx-file fs-4 text-muted flex-shrink-0" aria-hidden="true"></i>
                   <div class="text-break">
                     <div class="fw-semibold">{{ attachment.fileName }}</div>
-                    <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+                    <div class="text-muted small">{{ formatSize(attachment.fileSizeBytes) }} · {{ attachment.uploadedAtUtc | dateTime }}</div>
                   </div>
                 </div>
                 <div class="d-flex gap-1 flex-shrink-0">
@@ -341,7 +341,7 @@
                 } @else {
                   @if (objective.dueAtUtc) {
                     <p class="small mb-1" [ngClass]="objectiveUrgencyClass(objective)">
-                      Prazo: {{ objective.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                      Prazo: {{ objective.dueAtUtc | dateTime }}
                       @if (objectiveRelativeLabel(objective, slaBlock.serverNowUtc); as relative) {
                         <span class="fw-semibold">— {{ relative }}</span>
                       }
@@ -351,9 +351,9 @@
                     <p class="text-muted small mb-1">{{ formatBusinessMinutes(objective.remainingMinutes) }} úteis restantes · {{ formatBusinessMinutes(objective.consumedMinutes) }} consumidos</p>
                   }
                   @if (objective.completedAtUtc) {
-                    <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                    <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | dateTime }}</p>
                   } @else if (objective.stoppedAtUtc) {
-                    <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                    <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | dateTime }}</p>
                   }
                 }
               </div>
@@ -375,9 +375,9 @@
                       <span class="badge" [ngClass]="slaObjectiveStateBadgeClass[objective.state]">{{ slaObjectiveStateLabels[objective.state] }}</span>
                     </div>
                     @if (objective.completedAtUtc) {
-                      <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                      <p class="text-muted small mb-0">Concluído em {{ objective.completedAtUtc | dateTime }}</p>
                     } @else if (objective.stoppedAtUtc) {
-                      <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | date:'dd/MM/yyyy HH:mm' }}</p>
+                      <p class="text-muted small mb-0">Parado em {{ objective.stoppedAtUtc | dateTime }}</p>
                     }
                   </div>
                 }
@@ -410,7 +410,7 @@
             @for (entry of historyStore.entries(); track entry.id) {
               <li class="list-group-item px-0">
                 <div>{{ entry.description }}</div>
-                <div class="text-muted small">{{ entry.occurredAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+                <div class="text-muted small">{{ entry.occurredAtUtc | dateTime }}</div>
               </li>
             }
           </ul>

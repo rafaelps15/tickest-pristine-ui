@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, ChangeDetectionStrategy, signal, viewChild, ElementRef, DestroyRef, afterNextRender } from '@angular/core';
-import { DatePipe, NgClass } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TicketDetailStore } from '../application/ticket-detail.store';
 import { TicketAttachmentsStore } from '../application/ticket-attachments.store';
@@ -21,6 +21,7 @@ import { TicketReopenDialogComponent } from '../ui/ticket-reopen-dialog/ticket-r
 import { PageCrumb, PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 import { TicketAssignDialogComponent } from '../../shared/ui/ticket-assign-dialog/ticket-assign-dialog.component';
+import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
 import { TicketAttachment } from '../entities/ticket-attachment';
 import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS, TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS } from '../ui/ticket-badge-classes';
 import { TICKETS_CANCEL_PERMISSION, isCancelAvailable, ownerCancelHint } from '../application/ticket-cancel-window';
@@ -30,7 +31,7 @@ import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescriptio
 /** Tela de detalhe de um ticket: dados do ticket (GET /tickets/{id}), histórico e anexos. */
 @Component({
   selector: 'app-ticket-detail',
-  imports: [DatePipe, NgClass, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, LoadingStateComponent, TicketAssignDialogComponent],
+  imports: [DateTimePipe, NgClass, RouterLink, PageHeaderComponent, TicketEditDialogComponent, TicketReopenDialogComponent, LoadingStateComponent, TicketAssignDialogComponent],
   templateUrl: './ticket-detail.component.html',
   styleUrl: './ticket-detail.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

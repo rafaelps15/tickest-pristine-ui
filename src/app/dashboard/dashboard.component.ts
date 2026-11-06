@@ -7,7 +7,7 @@ import { DashboardFilters, dashboardFilterChips, resolveDashboardScope, toMonito
 import { DashboardTimesComponent } from './dashboard-times.component';
 import { DashboardFilterBarComponent } from './dashboard-filter-bar.component';
 import { DashboardMetric, DashboardMetricGroupComponent, DashboardMetricLead } from './dashboard-metric-group.component';
-import { SessionService, TICKETS_MANAGE_PERMISSION, ToastService, todayInSaoPaulo } from '../shared';
+import { SessionService, TICKETS_MANAGE_PERMISSION, ToastService, formatTimeOfDay, todayInSaoPaulo } from '../shared';
 import { DashboardGuideComponent } from './dashboard-guide.component';
 import { DashboardInsightsComponent } from './dashboard-insights.component';
 import { DashboardHeroChartComponent } from './dashboard-hero-chart.component';
@@ -534,8 +534,7 @@ export class DashboardComponent implements OnInit {
     if (this.staleAfterFailure()) {
       // Ao voltar à tela, os números na tela são da visita anterior (stores da raiz): sem hora desta visita, diz isso.
       if (updatedAt === null) return 'Falha ao atualizar · números de uma visita anterior';
-      const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(updatedAt);
-      return `Falha ao atualizar · números das ${time}`;
+      return `Falha ao atualizar · números das ${formatTimeOfDay(updatedAt)}`;
     }
     // Um bloco sem números falhou (o aviso dele está na tela): nunca "Atualizado agora". Sem nenhum bloco
     // com números e nada mais carregando, a falha é total: "nem todos" daria a entender que algum veio.

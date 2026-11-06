@@ -15,7 +15,7 @@
           <h2 #alertsTitle id="slaAlertsTitle" class="h5 card-title fw-bold mb-0" tabindex="-1">Alertas de SLA</h2>
           <!-- A idade da lista à vista (como o intervalo do gráfico): o prazo anda sozinho, a lista é a da última carga. -->
           <!-- No escopo "Com filtros", os Alertas seguem os filtros (o mesmo recorte do topo); no da empresa, a empresa toda. -->
-          <p class="text-muted small mb-0">{{ filtered() ? 'Com os filtros' : 'Toda a empresa' }}@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | date:'HH:mm' }}}</p>
+          <p class="text-muted small mb-0">{{ filtered() ? 'Com os filtros' : 'Toda a empresa' }}@if (loadedAtMs(); as loadedAt) { · atualizado às {{ loadedAt | timeOfDay }}}</p>
         </div>
         <!-- aria-disabled, não disabled: o foco não sai do botão enquanto recarrega. -->
         <button type="button" class="btn btn-sm btn-icon btn-row-actions rounded-circle flex-shrink-0 ms-auto"
@@ -90,7 +90,7 @@
                 <!-- Prazo relativo vivo (anda a cada 30s); a data absoluta fica no `datetime`/title pra quem precisar. -->
                 <span class="d-block small" [class.text-danger]="item.overdue" [class.text-muted]="!item.overdue">
                   {{ item.ticket.sectorName }} ·
-                  <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">{{ item.relative }}</time>
+                  <time [attr.datetime]="item.ticket.dueAtUtc" [title]="'Prazo: ' + (item.ticket.dueAtUtc | dateTime)">{{ item.relative }}</time>
                 </span>
                 <!-- Quem atende: atrasado sem dono e atrasado em atendimento pedem ações opostas. -->
                 @if (item.ticket.assignedToName; as assignee) {

@@ -32,13 +32,13 @@
       </dd>
 
       <dt>Cadastrado em</dt>
-      <dd>{{ user().createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+      <dd>{{ user().createdAtUtc | dateTime }}</dd>
 
       @if (status() === 'pending') {
         <dt>Convite</dt>
         <dd [class.invitation-expired]="!user().invitationExpiresAtUtc">
           @if (user().invitationExpiresAtUtc) {
-            Vale até {{ user().invitationExpiresAtUtc | date:'dd/MM/yyyy HH:mm' }}
+            Vale até {{ user().invitationExpiresAtUtc | dateTime }}
           } @else {
             Convite expirado
           }
@@ -47,7 +47,7 @@
 
       @if (user().deactivatedAtUtc) {
         <dt>Desativado em</dt>
-        <dd>{{ user().deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        <dd>{{ user().deactivatedAtUtc | dateTime }}</dd>
       }
     </dl>
 

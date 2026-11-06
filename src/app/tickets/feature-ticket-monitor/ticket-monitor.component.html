@@ -201,7 +201,7 @@
       </span>
       @if (store.listLoadedAtMs(); as updatedAt) {
         <span class="small text-muted" aria-hidden="true">·</span>
-        <span class="small text-muted">Atualizado às {{ updatedAt | date:'HH:mm' }}</span>
+        <span class="small text-muted">Atualizado às {{ updatedAt | timeOfDay }}</span>
       }
       <button type="button" class="btn btn-sm btn-link monitor-refresh text-decoration-none px-1"
               [disabled]="store.listState().loading" (click)="refresh()">
@@ -322,7 +322,7 @@
                 hora do servidor — a assinatura do produto, a mesma da faixa do Início. A data exata fica no title.
               -->
               <td data-label="SLA e prazo">
-                <span class="d-inline-flex flex-column align-items-start gap-1" [title]="'Prazo: ' + (ticket.dueAtUtc | date:'dd/MM/yyyy HH:mm')">
+                <span class="d-inline-flex flex-column align-items-start gap-1" [title]="'Prazo: ' + (ticket.dueAtUtc | dateTime)">
                   <!-- O selo acompanha o relógio: um "No prazo"/"Em risco" que venceu com a tela aberta vira "Atrasado" na hora. -->
                   <span class="badge" [ngClass]="slaStatusBadgeClass[displaySlaStatus(ticket)]">{{ slaStatusLabels[displaySlaStatus(ticket)] }}</span>
                   @if (dueRelative(ticket); as relative) {

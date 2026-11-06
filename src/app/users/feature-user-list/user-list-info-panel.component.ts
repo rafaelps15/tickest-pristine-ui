@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { UserSummary } from '../entities/user-summary';
 import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
+import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
 import { UserStatusBadgeComponent, userStatusKind } from './user-status-badge.component';
 
 /**
@@ -13,7 +13,7 @@ import { UserStatusBadgeComponent, userStatusKind } from './user-status-badge.co
  */
 @Component({
   selector: 'app-user-list-info-panel',
-  imports: [DatePipe, SidePanelDirective, UserStatusBadgeComponent],
+  imports: [DateTimePipe, SidePanelDirective, UserStatusBadgeComponent],
   templateUrl: './user-list-info-panel.component.html',
   styleUrl: './user-list-info-panel.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

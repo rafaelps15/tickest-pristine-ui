@@ -1,8 +1,9 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect, untracked, inject, viewChild, afterNextRender, ElementRef, Injector, DestroyRef } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { Params, RouterLink } from '@angular/router';
 import { TicketMonitorItem, TicketSlaStatus } from '../tickets';
 import { formatSlaDuration } from '../shared';
+import { DateTimePipe } from '../shared/ui/pipes/date-time.pipe';
+import { TimeOfDayPipe } from '../shared/ui/pipes/time-of-day.pipe';
 import { DashboardNoticeComponent } from './dashboard-notice.component';
 
 /** De quanto em quanto tempo o prazo relativo ("vence em 2h 14min") é recalculado, com a aba visível. */
@@ -31,7 +32,7 @@ interface CriticalTicketView {
  */
 @Component({
   selector: 'app-dashboard-insights',
-  imports: [DatePipe, RouterLink, DashboardNoticeComponent],
+  imports: [DateTimePipe, TimeOfDayPipe, RouterLink, DashboardNoticeComponent],
   templateUrl: './dashboard-insights.component.html',
   styleUrl: './dashboard-insights.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

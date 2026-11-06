@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NgClass, DatePipe } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { TicketMonitorItem } from '../entities/ticket-monitor-item';
 import { TICKET_STATUS_LABELS } from '../entities/ticket-status';
 import { TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
@@ -9,6 +9,7 @@ import { TICKET_AWAITING_LABELS } from '../entities/ticket-awaiting';
 import { TICKET_STATUS_BADGE_CLASS, TICKET_PRIORITY_BADGE_CLASS, TICKET_SLA_STATUS_BADGE_CLASS } from '../ui/ticket-badge-classes';
 import { TicketQuickInfoStore } from '../application/ticket-quick-info.store';
 import { SidePanelDirective } from '../../shared/ui/directives/side-panel.directive';
+import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
 
 /**
  * Painel "Informações do Ticket" de Monitorar Tickets: mostra na hora os dados que já vieram na
@@ -19,7 +20,7 @@ import { SidePanelDirective } from '../../shared/ui/directives/side-panel.direct
  */
 @Component({
   selector: 'app-ticket-monitor-info-panel',
-  imports: [RouterLink, NgClass, DatePipe, SidePanelDirective],
+  imports: [RouterLink, NgClass, DateTimePipe, SidePanelDirective],
   templateUrl: './ticket-monitor-info-panel.component.html',
   styleUrl: './ticket-monitor-info-panel.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush

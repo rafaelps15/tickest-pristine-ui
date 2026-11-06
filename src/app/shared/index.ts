@@ -22,6 +22,7 @@ export * from './utils/side-panel.util';
 export * from './utils/resource-value.util';
 export * from './utils/term-search-resource.util';
 export * from './utils/iso-date.util';
+export * from './utils/date-time.util';
 export * from './utils/sla-duration.util';
 export * from './utils/file-size.util';
 export * from './utils/file-download.util';

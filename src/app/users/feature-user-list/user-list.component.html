@@ -243,7 +243,7 @@
                   <app-user-status-badge [status]="statusOf(user)" />
                   @if (statusOf(user) === 'pending') {
                     @if (user.invitationExpiresAtUtc) {
-                      <span class="invitation-expiry small text-muted">Vale até {{ user.invitationExpiresAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                      <span class="invitation-expiry small text-muted">Vale até {{ user.invitationExpiresAtUtc | dateTime }}</span>
                     } @else {
                       <!-- Vencido pede ação de quem administra: âmbar AA e o caminho, não só "expirado". -->
                       <span class="invitation-expiry invitation-expired small">Convite expirado: reenvie pelo ⋮</span>
@@ -253,9 +253,9 @@
               </td>
               <td data-label="Cadastrado em" class="text-muted small">
                 <span class="cell-value">
-                  {{ user.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                  {{ user.createdAtUtc | dateTime }}
                   @if (user.deactivatedAtUtc) {
-                    <span class="deactivated-at">Desativado em {{ user.deactivatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</span>
+                    <span class="deactivated-at">Desativado em {{ user.deactivatedAtUtc | dateTime }}</span>
                   }
                 </span>
               </td>

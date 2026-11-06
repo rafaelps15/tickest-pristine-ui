@@ -33,7 +33,7 @@
       <dt>Prazo</dt>
       <dd>
         @if (hasDeadline()) {
-          {{ ticket().dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+          {{ ticket().dueAtUtc | dateTime }}
           @if (dueRelative(); as relative) {
             <!-- O mesmo prazo relativo da linha, pela hora do servidor; atrasado também em texto e peso. -->
             <span class="d-block small" [class.text-danger]="overdue()" [class.fw-semibold]="overdue()" [class.text-muted]="!overdue()">{{ relative }}</span>
@@ -51,7 +51,7 @@
 
       @if (ticket().resolvedAtUtc) {
         <dt>Resolvido em</dt>
-        <dd>{{ ticket().resolvedAtUtc | date:'dd/MM/yyyy HH:mm' }}</dd>
+        <dd>{{ ticket().resolvedAtUtc | dateTime }}</dd>
       }
     </dl>
 

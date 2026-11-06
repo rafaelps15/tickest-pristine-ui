@@ -26,6 +26,8 @@ import { canAssignTicketToOthers, canAssignTicketToSelf } from '../application/t
 import { PaginationComponent } from '../../shared/ui/pagination/pagination.component';
 import { FilterBarComponent } from '../../shared/ui/filter-bar/filter-bar.component';
 import { EmptyStateComponent, LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
+import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
+import { TimeOfDayPipe } from '../../shared/ui/pipes/time-of-day.pipe';
 
 /** Ordenação padrão: o prazo que vence primeiro (a fila de trabalho). */
 const DEFAULT_SORT = TicketSortOrder.DueDate;
@@ -67,7 +69,7 @@ function parsePageParam(value: string | null): number {
 /** Tela "Monitorar Chamados": todos os chamados do sistema, com filtros e resumo de SLA (permissão tickets:manage). */
 @Component({
   selector: 'app-ticket-monitor',
-  imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, StatCardComponent, TicketAssignDialogComponent],
+  imports: [CommonModule, RouterLink, PageHeaderComponent, RowActionsComponent, TicketMonitorGuideComponent, TicketMonitorInfoPanelComponent, PaginationComponent, FilterBarComponent, EmptyStateComponent, LoadingStateComponent, StatCardComponent, TicketAssignDialogComponent, DateTimePipe, TimeOfDayPipe],
   templateUrl: './ticket-monitor.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './ticket-monitor.component.css'

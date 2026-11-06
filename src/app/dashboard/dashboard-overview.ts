@@ -1,5 +1,5 @@
 import { TicketStatus, TicketStatusCounts, TicketVolumeGrouping, TicketVolumePoint } from '../tickets';
-import { formatIsoDate, shiftIsoDate } from '../shared';
+import { formatIsoDate, formatTimeOfDay, shiftIsoDate } from '../shared';
 import { DASHBOARD_INSIGHT_RULES, DashboardInsightRules } from './dashboard-insight-rules';
 
 /**
@@ -132,8 +132,7 @@ export function freshnessLabel(updatedAtMs: number | null, nowMs: number): strin
   const minutes = Math.floor(Math.max(0, nowMs - updatedAtMs) / 60_000);
   if (minutes < 1) return 'Atualizado agora';
   if (minutes < 60) return `Atualizado há ${minutes} min`;
-  const time = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(updatedAtMs);
-  return `Atualizado às ${time}`;
+  return `Atualizado às ${formatTimeOfDay(updatedAtMs)}`;
 }
 
 /**

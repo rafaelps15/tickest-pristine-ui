@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
 import { RouterLink } from '@angular/router';
 import { DueDisplay } from './ticket-list-due';
 
@@ -9,7 +9,7 @@ import { DueDisplay } from './ticket-list-due';
  */
 @Component({
   selector: 'app-ticket-list-due-cell',
-  imports: [DatePipe, RouterLink],
+  imports: [DateTimePipe, RouterLink],
   templateUrl: './ticket-list-due-cell.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './ticket-list-due-cell.component.css'
