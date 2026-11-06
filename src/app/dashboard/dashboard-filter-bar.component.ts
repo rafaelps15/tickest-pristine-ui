@@ -192,9 +192,11 @@ export class DashboardFilterBarComponent {
 
   /** Prioridades, da mais baixa à mais alta. */
   readonly priorityOptions = [TicketPriority.Low, TicketPriority.Medium, TicketPriority.High, TicketPriority.Urgent];
+  /** Rótulo de cada prioridade. */
   readonly priorityLabels = TICKET_PRIORITY_LABELS;
   /** Períodos prontos, do mais curto ao mais longo. */
   readonly periodOptions = Object.keys(DASHBOARD_PERIOD_DAYS) as DashboardPeriodPreset[];
+  /** Rótulo de cada período pronto. */
   readonly periodLabels = DASHBOARD_PERIOD_LABELS;
 
   /** Se a linha "Mais filtros" (prioridade e responsável) está aberta — estado de tela, não vai pra URL. */

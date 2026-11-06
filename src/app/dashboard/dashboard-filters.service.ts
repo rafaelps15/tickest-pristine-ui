@@ -12,7 +12,9 @@ import { queryParamsMatch } from '../shared';
  */
 @Injectable()
 export class DashboardFiltersService {
+  /** Rota atual, de onde vêm os filtros (query string). */
   private readonly route = inject(ActivatedRoute);
+  /** Router, pra gravar os filtros na URL. */
   private readonly router = inject(Router);
 
   /** Filtros atuais, sempre derivados da URL. */

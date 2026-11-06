@@ -38,6 +38,7 @@ interface CriticalTicketView {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardInsightsComponent {
+  /** Encerra o relógio, a escuta da aba e os realces quando o card sai da tela. */
   private readonly destroyRef = inject(DestroyRef);
   /** Injetor pro `afterNextRender` do foco depois de uma nova tentativa que deu certo. */
   private readonly injector = inject(Injector);
@@ -145,6 +146,7 @@ export class DashboardInsightsComponent {
   /** A tentativa pedida já começou a carregar (o fim dela é o próximo `loading` falso). */
   private retryStarted = false;
 
+  /** Liga o foco depois de uma nova tentativa, o aviso de chamado que venceu e o relógio do prazo relativo. */
   constructor() {
     // Fim da tentativa pedida no aviso: se deu certo, o aviso (e o botão focado nele) sai da tela e o
     // foco, que cairia no início da página, vai pro título. Se falhou, a pendência acaba aqui — uma
