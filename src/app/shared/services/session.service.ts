@@ -60,13 +60,11 @@ export class SessionService {
   });
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      // Outra aba renovou ou encerrou a sessão: sem isso, esta aba reenviaria o refresh token já trocado e o
-      // back-end trataria como reuso, revogando todas as sessões do usuário.
-      const onStorage = (event: StorageEvent) => this.syncFromStorage(event);
-      window.addEventListener('storage', onStorage);
-      inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
-    }
+    // Outra aba renovou ou encerrou a sessão: sem isso, esta aba reenviaria o refresh token já trocado e o
+    // back-end trataria como reuso, revogando todas as sessões do usuário.
+    const onStorage = (event: StorageEvent) => this.syncFromStorage(event);
+    window.addEventListener('storage', onStorage);
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('storage', onStorage));
   }
 
   /** Códigos de permissão do usuário logado, vindos de GET /users/me — mesma fonte que a autorização da API usa. */
@@ -84,20 +82,16 @@ export class SessionService {
 
   /** Salva os tokens da sessão e no local storage. */
   saveSession(tokens: AccessTokens): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
-    }
+    localStorage.setItem(this.ACCESS_TOKEN_KEY, tokens.accessToken);
+    localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refreshToken);
     this._token.set(tokens.accessToken);
     this._refreshToken.set(tokens.refreshToken);
   }
 
   /** Limpa a sessão e local storage. */
   clearSession(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    }
+    localStorage.removeItem(this.ACCESS_TOKEN_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     this._token.set(null);
     this._refreshToken.set(null);
     this._currentUser.set(null);
@@ -135,12 +129,10 @@ export class SessionService {
     window.location.reload();
   }
 
+  /** Valor gravado no localStorage para a chave, ou `null` se não houver. */
   private getStoredValue(key: string): string | null {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(key);
-      return typeof saved === 'string' ? saved : null;
-    }
-    return null;
+    const saved = localStorage.getItem(key);
+    return typeof saved === 'string' ? saved : null;
   }
 
   private decodeToken(token: string): JwtPayload | null {
