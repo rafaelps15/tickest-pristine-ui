@@ -19,6 +19,7 @@ export const TICKET_REOPEN_REASON_MAX_LENGTH = 4000;
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketReopenDialogComponent {
+  /** Construtor do formulário do motivo. */
   private readonly fb = inject(FormBuilder);
 
   /** Título do chamado, exibido no cabeçalho do modal para dar contexto. */

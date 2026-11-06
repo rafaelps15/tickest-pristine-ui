@@ -15,7 +15,9 @@ import { SessionService } from '../../shared';
 export const MyTicketsSummaryStore = signalStore(
   { providedIn: 'root' },
   withProps(() => ({
+    /** Acesso HTTP aos chamados (GET /tickets/mine/summary). */
     _ticketDataService: inject(TicketDataService),
+    /** Sessão atual: permissão de ver os próprios chamados e id de quem está logado. */
     _sessionService: inject(SessionService)
   })),
   withProps((store) => ({

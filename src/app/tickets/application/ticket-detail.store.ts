@@ -20,12 +20,19 @@ import { extractErrorMessage, valueOf } from '../../shared';
 export const TicketDetailStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Id do chamado exibido; trocar dispara a carga do detalhe. */
     ticketId: undefined as string | undefined,
+    /** Falha da última ação sobre o chamado (responsável, status, descrição ou reabertura). */
     mutationError: null as string | null,
+    /** Remoção do responsável em andamento. */
     removingAssignee: false,
+    /** Atribuição do responsável em andamento. */
     assigningTicket: false,
+    /** Mudança de status em andamento. */
     updatingStatus: false,
+    /** Edição da descrição em andamento. */
     updatingDescription: false,
+    /** Reabertura em andamento. */
     reopening: false,
     /**
      * Bloco de SLA mais recente buscado via `refreshSla()` (GET /tickets/{id}/sla), sem recarregar
@@ -34,14 +41,17 @@ export const TicketDetailStore = signalStore(
      * este override pra não mostrar um SLA desatualizado por engano.
      */
     _slaOverride: null as TicketSla | null,
+    /** Falha da última atualização do SLA por `refreshSla()`. */
     slaError: null as string | null,
     /** Termo da busca de candidatos a responsável (vazio = sem busca). */
     assigneeSearchTerm: ''
   }),
   withProps(() => ({
+    /** Acesso HTTP aos chamados (detalhe, SLA, status, responsável e reabertura). */
     _ticketDataService: inject(TicketDataService)
   })),
   withProps((store) => ({
+    /** Detalhe do chamado (GET /tickets/{id}), recarregado a cada troca de {@link ticketId}. */
     _detailResource: rxResource({
       params: () => store.ticketId(),
       stream: ({ params }) => store._ticketDataService.getById(params)

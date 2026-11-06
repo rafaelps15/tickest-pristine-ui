@@ -18,12 +18,15 @@ import { valueOf } from '../../shared';
 export const TicketQuickInfoStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Id do chamado selecionado no painel (`undefined` = nenhum). */
     ticketId: undefined as string | undefined
   }),
   withProps(() => ({
+    /** Acesso HTTP aos chamados (GET /tickets/{id}). */
     _ticketDataService: inject(TicketDataService)
   })),
   withProps((store) => ({
+    /** Detalhe do chamado selecionado, buscado a cada troca de {@link ticketId}. */
     _detailResource: rxResource({
       params: () => store.ticketId(),
       stream: ({ params }) => store._ticketDataService.getById(params)

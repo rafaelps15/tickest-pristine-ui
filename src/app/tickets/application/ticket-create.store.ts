@@ -16,6 +16,7 @@ export const TicketCreateStore = signalStore(
     mutationError: null as string | null
   }),
   withProps(() => ({
+    /** Acesso HTTP aos chamados (POST /tickets). */
     _ticketDataService: inject(TicketDataService)
   })),
   withMethods((store) => ({

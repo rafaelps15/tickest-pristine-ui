@@ -28,7 +28,9 @@ export interface TicketEditDialogTicket {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketEditDialogComponent {
+  /** Construtor do formulário da descrição. */
   private readonly fb = inject(FormBuilder);
+  /** Diálogo de confirmação do sistema, usado no aviso de alteração não salva. */
   private readonly confirmDialogService = inject(ConfirmDialogService);
 
   /** Ticket cuja descrição está sendo editada. */
@@ -51,6 +53,7 @@ export class TicketEditDialogComponent {
     description: ['', TICKET_DESCRIPTION_VALIDATORS]
   });
 
+  /** Recarrega o formulário com a descrição atual sempre que o ticket editado muda. */
   constructor() {
     // Recarrega o formulário com a descrição atual sempre que o ticket editado mudar — cobre
     // tanto a abertura inicial quanto um eventual reaproveitamento da mesma instância.

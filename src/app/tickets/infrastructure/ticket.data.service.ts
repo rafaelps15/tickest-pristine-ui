@@ -26,7 +26,9 @@ import { environment } from '../../../environments/environment';
  */
 @Injectable({ providedIn: 'root' })
 export class TicketDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** Base dos endpoints de chamados na API (/tickets). */
   private readonly apiUrl = `${environment.apiUrl}/tickets`;
 
   /** Cria um novo ticket (POST /tickets). */

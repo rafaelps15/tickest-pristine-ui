@@ -26,9 +26,13 @@ const SLA_EXPLANATIONS: Record<TicketSlaStatus, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketMonitorGuideComponent {
+  /** As situações de SLA, na ordem do enum, uma por linha do guia. */
   protected readonly slaStatusOptions = Object.values(TicketSlaStatus).filter((v): v is TicketSlaStatus => typeof v === 'number');
 
+  /** Rótulo de cada situação de SLA. */
   protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
+  /** Classe de badge de cada situação de SLA. */
   protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+  /** Explicação de uma linha de cada situação de SLA. */
   protected readonly slaExplanations = SLA_EXPLANATIONS;
 }

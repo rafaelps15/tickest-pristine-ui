@@ -24,6 +24,7 @@ import { DateTimePipe } from '../../shared/ui/pipes/date-time.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketMonitorInfoPanelComponent {
+  /** Linha selecionada da tabela, com os dados que o painel mostra na hora. */
   readonly ticket = input.required<TicketMonitorItem>();
   /**
    * Se o painel está no modo overlay de tela cheia (abaixo de "lg"): vira um diálogo modal de
@@ -57,12 +58,19 @@ export class TicketMonitorInfoPanelComponent {
   /** Pedido de buscar a descrição de novo ("Tentar novamente" depois de uma falha). */
   readonly descriptionRetry = output<void>();
 
+  /** Rótulo de cada status. */
   protected readonly statusLabels = TICKET_STATUS_LABELS;
+  /** Classe de badge de cada status. */
   protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
+  /** Rótulo de cada prioridade. */
   protected readonly priorityLabels = TICKET_PRIORITY_LABELS;
+  /** Classe de badge de cada prioridade. */
   protected readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
+  /** Rótulo de cada situação de SLA. */
   protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
+  /** Classe de badge de cada situação de SLA. */
   protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+  /** Rótulo de cada situação de espera ("Aguardando a equipe" ou "o solicitante"). */
   protected readonly awaitingLabels = TICKET_AWAITING_LABELS;
 
   /** Situação de SLA exibida: a mesma da linha da tabela. */

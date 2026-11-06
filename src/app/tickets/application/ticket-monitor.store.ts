@@ -32,6 +32,7 @@ export const TICKET_MONITOR_DEFAULT_FILTERS: TicketMonitorFilters = { activeOnly
 export const TicketMonitorStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Filtros, ordenação e paginação aplicados à listagem (GET /tickets). */
     filters: TICKET_MONITOR_DEFAULT_FILTERS,
     /** Ids de chamados com uma atribuição "pra mim" em andamento — desabilita só a linha, não a tabela inteira. */
     assigningToMeIds: [] as string[],
@@ -45,6 +46,7 @@ export const TicketMonitorStore = signalStore(
     listLoadedAtMs: null as number | null
   }),
   withProps(() => ({
+    /** Acesso HTTP aos chamados (listagem, agregado, atribuição e busca de responsáveis). */
     _ticketDataService: inject(TicketDataService)
   })),
   withProps((store) => {
@@ -61,16 +63,19 @@ export const TicketMonitorStore = signalStore(
     }, { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) });
 
     return {
+      /** Página atual da listagem, recarregada sempre que {@link filters} muda; grava em `listLoadedAtMs` a hora da chegada. */
       _listResource: rxResource({
         params: () => store.filters(),
         stream: ({ params }) => store._ticketDataService.getAll(params).pipe(
           tap(() => patchState(store, { listLoadedAtMs: Date.now() }))
         )
       }),
-      // Os números do topo vêm do agregado da operação (GET /tickets/stats/overview, spec 026) com o
-      // recorte da tabela que ele aceita: setores (vários), prioridade, responsável e período de abertura.
-      // Busca, Status, SLA e Aguardando ficam de fora — a tela diz isso acima dos cards. Um objeto
-      // sempre (nunca `undefined`), pra o resource buscar também sem nenhum filtro.
+      /**
+       * Os números do topo vêm do agregado da operação (GET /tickets/stats/overview, spec 026) com o
+       * recorte da tabela que ele aceita: setores (vários), prioridade, responsável e período de abertura.
+       * Busca, Status, SLA e Aguardando ficam de fora — a tela diz isso acima dos cards. Um objeto
+       * sempre (nunca `undefined`), pra o resource buscar também sem nenhum filtro.
+       */
       _slaSummaryResource: rxResource({
         params: overviewQuery,
         // A hora da chegada junto da hora do servidor: o prazo relativo da tabela anda no relógio do servidor.
@@ -92,6 +97,7 @@ export const TicketMonitorStore = signalStore(
     ticketsPage: computed(() => valueOf(store._listResource)),
     /** Tickets da página atual. */
     tickets: computed(() => valueOf(store._listResource)?.items ?? []),
+    /** Estado da leitura da listagem: carregando e erro (com mensagem própria para 403). */
     listState: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
       return {

@@ -39,8 +39,11 @@ const DEFAULT_SORT = TicketSortOrder.DueDate;
 const CLOCK_TICK_MS = 30_000;
 /** Idade a partir da qual a lista é recarregada sozinha ao voltar pra aba (mesma regra dos Alertas de SLA do Início). */
 const STALE_ON_RETURN_MS = 5 * 60_000;
+/** Página padrão: a URL a omite, e vale quando `?page=` falta ou é inválido. */
 const DEFAULT_PAGE = 1;
+/** Itens por página padrão: a URL o omite, e vale quando `?pageSize=` falta ou não é aceito. */
 const DEFAULT_PAGE_SIZE = 20;
+/** Tamanhos de página aceitos em `?pageSize=`. */
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 /** Lê um valor numérico da query string só se ele bater com um dos valores aceitos; senão, `undefined`. */
@@ -78,13 +81,19 @@ function parsePageParam(value: string | null): number {
   styleUrl: './ticket-monitor.component.css'
 })
 export class TicketMonitorComponent implements OnInit {
+  /** Store de Monitorar Chamados: listagem, filtros, resumo de SLA e atribuições. */
   protected readonly store = inject(TicketMonitorStore);
+  /** Descrição completa do chamado selecionado, pro painel "Informações do Ticket". */
   protected readonly quickInfoStore = inject(TicketQuickInfoStore);
+  /** Departamentos e setores, pro filtro de setor e o nome do recorte vindo do Início. */
   protected readonly departmentsStore = inject(DepartmentsStore);
   /** Responsáveis elegíveis pro filtro "Responsável" (GET /tickets/assignees). */
   protected readonly assigneesStore = inject(TicketAssigneesStore);
+  /** Sessão atual: usuário logado ("Atribuídos a mim", "Atribuir a mim") e permissões das ações. */
   protected readonly sessionService = inject(SessionService);
+  /** Toasts de confirmação das atribuições. */
   private readonly toastService = inject(ToastService);
+  /** Rota atual, de onde vêm os filtros, a página e o chamado selecionado. */
   private readonly route = inject(ActivatedRoute);
 
   /**
@@ -196,6 +205,7 @@ export class TicketMonitorComponent implements OnInit {
 
   /** Opções do filtro "Aguardando". */
   protected readonly awaitingOptions = [TicketAwaiting.Agent, TicketAwaiting.Requester];
+  /** Rótulo de cada opção do filtro "Aguardando". */
   protected readonly awaitingLabels = TICKET_AWAITING_LABELS;
 
   /** Valor do seletor de setor: um setor, "vários" (veio de um departamento no Início) ou todos. Vai no `[selected]` de cada opção, que chega depois do select. */
@@ -291,6 +301,7 @@ export class TicketMonitorComponent implements OnInit {
     return ticketId ? this.store.tickets().find(ticket => ticket.id === ticketId) ?? null : null;
   });
 
+  /** Liga o relógio do prazo relativo, a descrição do painel, a busca com debounce, a URL e a volta pra última página válida. */
   constructor() {
     // O prazo relativo ("vence em 2h") anda sozinho: um tique a cada 30s, só no navegador.
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
@@ -320,15 +331,24 @@ export class TicketMonitorComponent implements OnInit {
     clampPageToTotal(this.store.totalPages, () => this.store.filters().page, page => this.store.goToPage(page));
   }
 
+  /** Rótulo de cada status. */
   readonly statusLabels = TICKET_STATUS_LABELS;
+  /** Classe de badge de cada status. */
   readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
+  /** Rótulo de cada prioridade. */
   readonly priorityLabels = TICKET_PRIORITY_LABELS;
+  /** Classe de badge de cada prioridade. */
   readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
+  /** Rótulo de cada situação de SLA. */
   readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
+  /** Classe de badge de cada situação de SLA. */
   readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+  /** Rótulo de cada ordenação. */
   readonly sortOrderLabels = TICKET_SORT_ORDER_LABELS;
 
+  /** Opções do filtro de status, na ordem do enum. */
   readonly statusOptions = Object.values(TicketStatus).filter((v): v is TicketStatus => typeof v === 'number');
+  /** Opções do filtro de prioridade, da mais baixa à mais alta. */
   readonly priorityOptions = Object.values(TicketPriority).filter((v): v is TicketPriority => typeof v === 'number');
 
   /**
@@ -345,8 +365,10 @@ export class TicketMonitorComponent implements OnInit {
   /** Estados de chamados já resolvidos (desfecho final do SLA), separados dos "em monitoramento" acima. */
   readonly resolvedSlaStatusOptions: TicketSlaStatus[] = [TicketSlaStatus.Met, TicketSlaStatus.Missed, TicketSlaStatus.NotApplicable];
 
+  /** Opções do seletor de ordenação, na ordem do enum. */
   readonly sortOptions = Object.values(TicketSortOrder).filter((v): v is TicketSortOrder => typeof v === 'number');
 
+  /** Opções de itens por página no rodapé da tabela. */
   readonly pageSizeOptions = [10, 20, 50];
 
   /** Se a janela está abaixo de "lg", onde o painel "Informações do Ticket" vira um diálogo modal de tela cheia. */

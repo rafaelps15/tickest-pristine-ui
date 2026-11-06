@@ -53,6 +53,7 @@ export type TicketDashboardChartScope = 'company' | 'filtered';
 export const TicketDashboardStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Recorte dos widgets (setores, prioridade, responsável e período), vindo dos filtros da URL. */
     scope: {} as TicketDashboardScope,
     /** Agrupamento do gráfico Criados x Resolvidos. */
     groupBy: 'Day' as TicketVolumeGrouping,
@@ -65,7 +66,9 @@ export const TicketDashboardStore = signalStore(
     scopeHeld: false
   }),
   withProps(() => ({
+    /** Acesso HTTP às estatísticas dos chamados (agregado, tempos e volume). */
     _ticketDataService: inject(TicketDataService),
+    /** Sessão atual: permissão `tickets:manage` e id pro recorte "meus". */
     _session: inject(SessionService)
   })),
   withProps((store) => {
@@ -80,7 +83,7 @@ export const TicketDashboardStore = signalStore(
     const allowed = () => store._session.hasPermission(TICKETS_MANAGE_PERMISSION) && !store.scopeHeld();
 
     return {
-      // Volume, SLA e atenção contam os chamados abertos no período.
+      /** Volume, SLA e atenção contam os chamados abertos no período. */
       _overviewResource: rxResource({
         params: () => {
           const query = allowed() ? base() : null;
@@ -88,8 +91,10 @@ export const TicketDashboardStore = signalStore(
         },
         stream: ({ params }) => store._ticketDataService.getOverview(params)
       }),
-      // O mesmo agregado no período anterior de mesmo tamanho, pra comparar ("12 a mais que no período
-      // anterior"); só com as duas pontas do período — sem período, não há "anterior".
+      /**
+       * O mesmo agregado no período anterior de mesmo tamanho, pra comparar ("12 a mais que no período
+       * anterior"); só com as duas pontas do período — sem período, não há "anterior".
+       */
       _previousOverviewResource: rxResource({
         params: () => {
           const query = allowed() ? base() : null;
@@ -100,7 +105,7 @@ export const TicketDashboardStore = signalStore(
         },
         stream: ({ params }) => store._ticketDataService.getOverview(params)
       }),
-      // Os tempos médios consideram as conclusões no período (spec 027, DEC-4).
+      /** Os tempos médios consideram as conclusões no período (spec 027, DEC-4). */
       _timesResource: rxResource({
         params: () => {
           const query = allowed() ? base() : null;
@@ -108,8 +113,10 @@ export const TicketDashboardStore = signalStore(
         },
         stream: ({ params }) => store._ticketDataService.getTimes(params)
       }),
-      // O período define o intervalo do gráfico; sem período, as janelas padrão do back-end. Só no
-      // escopo "filtered": no da empresa, o fluxo vem do volume da empresa (TicketSummaryStore).
+      /**
+       * O período define o intervalo do gráfico; sem período, as janelas padrão do back-end. Só no
+       * escopo "filtered": no da empresa, o fluxo vem do volume da empresa (TicketSummaryStore).
+       */
       _trendResource: rxResource({
         params: () => {
           const query = allowed() && store.chartScope() === 'filtered' ? base() : null;

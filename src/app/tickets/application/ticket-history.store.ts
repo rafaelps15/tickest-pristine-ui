@@ -12,6 +12,7 @@ import { withTicketCursorPages } from './ticket-cursor-pages';
 export const TicketHistoryStore = signalStore(
   { providedIn: 'root' },
   withProps(() => ({
+    /** Acesso HTTP aos chamados (GET /tickets/{id}/history). */
     _ticketDataService: inject(TicketDataService)
   })),
   withFeature((store) => withTicketCursorPages<TicketHistoryEntry>(

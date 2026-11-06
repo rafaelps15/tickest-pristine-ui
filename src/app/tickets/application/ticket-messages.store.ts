@@ -18,13 +18,19 @@ import { extractErrorMessage } from '../../shared';
 export const TicketMessagesStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Publicação de mensagem em andamento. */
     posting: false,
+    /** Falha da última publicação de mensagem. */
     postError: null as string | null,
+    /** Edição de mensagem em andamento. */
     savingEdit: false,
+    /** Falha da última edição ou exclusão de mensagem. */
     mutationError: null as string | null,
+    /** Id da mensagem com exclusão em andamento, ou `null`. */
     deletingMessageId: null as string | null
   }),
   withProps(() => ({
+    /** Acesso HTTP às mensagens (listagem, publicação, edição e exclusão). */
     _ticketMessageDataService: inject(TicketMessageDataService)
   })),
   withFeature((store) => withTicketCursorPages<TicketMessage>(

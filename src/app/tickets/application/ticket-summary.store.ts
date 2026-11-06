@@ -40,6 +40,7 @@ const BREACHED_RESERVED_SLOTS = 3;
 export const TicketSummaryStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Agrupamento do gráfico de volume da empresa (dia, semana ou mês). */
     groupBy: 'Day' as TicketVolumeGrouping,
     /** Recorte dos Alertas de SLA: vazio = a empresa toda; no escopo "Com filtros" do Início, o dos filtros. */
     criticalScope: {} as TicketDashboardScope,
@@ -53,7 +54,9 @@ export const TicketSummaryStore = signalStore(
     assignError: null as string | null
   }),
   withProps(() => ({
+    /** Acesso HTTP aos chamados (totais, volume, Alertas de SLA e atribuição). */
     _ticketDataService: inject(TicketDataService),
+    /** Sessão atual: permissão `tickets:manage` e id pro recorte "meus" dos Alertas. */
     _sessionService: inject(SessionService)
   })),
   withProps((store) => {
@@ -61,10 +64,12 @@ export const TicketSummaryStore = signalStore(
     return {
       // Quem atende a fila já recebe os totais da empresa no agregado da operação (spec 026, escopo
       // vazio): não pede a mesma conta duas vezes a cada atualização.
+      /** Totais da empresa por status (GET /tickets/stats/status), pedidos só por quem não tem `tickets:manage`. */
       _statusCountsResource: rxResource({
         params: () => (store._sessionService.hasPermission(TICKETS_MANAGE_PERMISSION) ? undefined : true),
         stream: () => store._ticketDataService.getStatusCounts()
       }),
+      /** Volume de chamados abertos na empresa, no agrupamento de {@link groupBy} (GET /tickets/stats/volume). */
       _volumeResource: rxResource({
         params: () => store.groupBy(),
         stream: ({ params }) => store._ticketDataService.getVolume(params)

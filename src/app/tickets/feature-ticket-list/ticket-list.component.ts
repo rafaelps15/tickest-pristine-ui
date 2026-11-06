@@ -56,24 +56,35 @@ export function formatLastActivity(isoUtc: string, nowMs: number): string {
   styleUrl: './ticket-list.component.css'
 })
 export class TicketListComponent implements OnInit {
+  /** Store de "Meus Chamados": listagem, filtro, busca e as ações da linha. */
   protected readonly store = inject(TicketsStore);
   /** Contagens por grupo pro seletor (GET /tickets/mine/summary, o mesmo resumo do Início). */
   protected readonly summaryStore = inject(MyTicketsSummaryStore);
+  /** Diálogo de confirmação do sistema, usado antes de cancelar. */
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  /** Toasts de confirmação das ações da linha. */
   private readonly toastService = inject(ToastService);
+  /** Sessão atual, pras permissões de abrir, cancelar, editar e reabrir. */
   private readonly sessionService = inject(SessionService);
 
   /** Pode abrir chamados (`tickets:create`): decide os atalhos para "Novo Chamado". */
   protected readonly canCreateTickets = computed(() => this.sessionService.hasPermission('tickets:create'));
+  /** Departamentos e setores, pros que atendem no estado vazio de primeiro uso. */
   private readonly departmentsStore = inject(DepartmentsStore);
+  /** Elemento da tela, onde se procuram as ações da linha pra devolver o foco. */
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** Injector dos `afterNextRender` e `toObservable` chamados fora do contexto de injeção. */
   private readonly injector = inject(Injector);
+  /** Rota atual, de onde vêm o filtro e a busca (`?status=` e `?q=`). */
   private readonly route = inject(ActivatedRoute);
+  /** Encerra o relógio e a escuta da URL quando a tela sai. */
   private readonly destroyRef = inject(DestroyRef);
   /** Cabeçalho da tela — recebe o foco quando a linha de origem não existe mais. */
   private readonly pageHeader = viewChild(PageHeaderComponent);
 
+  /** Rótulo de cada status. */
   readonly statusLabels = TICKET_STATUS_LABELS;
+  /** Classe de badge de cada status. */
   readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
   /** Prazo, situação e exibição do ciclo vigente de cada chamado (o novo, depois de reabrir). */
   readonly currentDue = currentTicketDue;
@@ -145,6 +156,7 @@ export class TicketListComponent implements OnInit {
   /** Ticket em reabertura no modal de motivo (null quando o modal está fechado). */
   reopeningTicket = signal<Ticket | null>(null);
 
+  /** Liga a busca com debounce, o filtro à URL e o relógio do "atualizado há X". */
   constructor() {
     // Busca com debounce, como no Monitor: só pergunta à API quando a pessoa para de digitar.
     toObservable(this.searchInput).pipe(

@@ -37,31 +37,53 @@ import { canAssignTicketToOthers, canAssignTicketToSelf, canEditTicketDescriptio
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketDetailComponent implements OnInit {
+  /** Rota atual, de onde vêm o id do chamado e a origem (`?from=monitor`). */
   private readonly route = inject(ActivatedRoute);
+  /** Store do detalhe do chamado e das ações sobre ele (status, responsável, descrição e reabertura). */
   protected readonly detailStore = inject(TicketDetailStore);
+  /** Store dos anexos do chamado: listagem, envio, download e exclusão. */
   protected readonly store = inject(TicketAttachmentsStore);
+  /** Store do histórico do chamado. */
   protected readonly historyStore = inject(TicketHistoryStore);
+  /** Store das mensagens do chamado: listagem, envio, edição e exclusão. */
   protected readonly messagesStore = inject(TicketMessagesStore);
+  /** Sessão atual: usuário logado e permissões que decidem as ações da tela. */
   protected readonly sessionService = inject(SessionService);
+  /** Encerra o relógio da janela de cancelamento quando a tela sai. */
   private readonly destroyRef = inject(DestroyRef);
 
   /** Hora atual do navegador, atualizada a cada 30 s, pra janela de cancelamento do dono vencer com a tela aberta. */
   protected readonly now = signal(Date.now());
+  /** Diálogo de confirmação do sistema, usado antes de cancelar, remover o responsável e excluir mensagem ou anexo. */
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  /** Toasts de confirmação das ações da tela. */
   private readonly toastService = inject(ToastService);
 
+  /** Enum dos status, exposto ao template. */
   protected readonly TicketStatus = TicketStatus;
+  /** Rótulo de cada status. */
   protected readonly statusLabels = TICKET_STATUS_LABELS;
+  /** Classe de badge de cada status. */
   protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
+  /** Rótulo do botão que leva a cada status. */
   protected readonly statusActionLabels = TICKET_STATUS_ACTION_LABELS;
+  /** Tamanho máximo de uma mensagem, pro `maxlength` e o contador dos campos. */
   protected readonly TICKET_MESSAGE_MAX_LENGTH = TICKET_MESSAGE_MAX_LENGTH;
+  /** Rótulo de cada prioridade. */
   protected readonly priorityLabels = TICKET_PRIORITY_LABELS;
+  /** Classe de badge de cada prioridade. */
   protected readonly priorityBadgeClass = TICKET_PRIORITY_BADGE_CLASS;
+  /** Rótulo de cada situação de SLA. */
   protected readonly slaStatusLabels = TICKET_SLA_STATUS_LABELS;
+  /** Classe de badge de cada situação de SLA. */
   protected readonly slaStatusBadgeClass = TICKET_SLA_STATUS_BADGE_CLASS;
+  /** Enum dos estados de um objetivo de SLA, exposto ao template. */
   protected readonly TicketSlaObjectiveState = TicketSlaObjectiveState;
+  /** Rótulo de cada métrica de SLA. */
   protected readonly slaMetricLabels = TICKET_SLA_METRIC_LABELS;
+  /** Rótulo de cada estado de um objetivo de SLA. */
   protected readonly slaObjectiveStateLabels = TICKET_SLA_OBJECTIVE_STATE_LABELS;
+  /** Classe de badge de cada estado de um objetivo de SLA. */
   protected readonly slaObjectiveStateBadgeClass = TICKET_SLA_OBJECTIVE_STATE_BADGE_CLASS;
 
   /** Painel "Ciclos anteriores" do SLA: fechado por padrão, só relevante em chamados já reabertos. */
@@ -116,6 +138,7 @@ export class TicketDetailComponent implements OnInit {
     return diffMs < 0 ? `Atrasado há ${duration}` : `Vence em ${duration}`;
   }
 
+  /** Id do chamado, lido da rota. */
   readonly ticketId = this.route.snapshot.paramMap.get('id')!;
 
   /**
@@ -171,6 +194,7 @@ export class TicketDetailComponent implements OnInit {
     });
   }
 
+  /** Carrega o detalhe, o histórico, os anexos e as mensagens do chamado da rota. */
   ngOnInit(): void {
     this.detailStore.loadTicket(this.ticketId);
     this.historyStore.loadForTicket(this.ticketId);

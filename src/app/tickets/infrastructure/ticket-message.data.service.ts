@@ -8,7 +8,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP às mensagens de um ticket (listagem, publicação, edição e exclusão). */
 @Injectable({ providedIn: 'root' })
 export class TicketMessageDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** URL base da API (as mensagens ficam em /tickets/{id}/messages e /ticket-messages). */
   private readonly apiUrl = environment.apiUrl;
 
   /**

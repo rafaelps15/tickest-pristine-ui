@@ -20,16 +20,24 @@ import { TicketCreateGuideComponent } from './ticket-create-guide.component';
   styleUrl: './ticket-create.component.css'
 })
 export class TicketCreateComponent implements OnInit {
+  /** Construtor do formulário do chamado. */
   private readonly fb = inject(FormBuilder);
+  /** Router, pra ir a "Meus Chamados" ou ao Início depois de abrir o chamado. */
   private readonly router = inject(Router);
+  /** Toast que confirma a abertura do chamado. */
   private readonly toastService = inject(ToastService);
+  /** Sessão atual, pra saber se quem abriu pode ver "Meus Chamados". */
   private readonly sessionService = inject(SessionService);
+  /** Encerra a ligação do setor ao departamento quando a tela sai. */
   private readonly destroyRef = inject(DestroyRef);
   /** Injector da tela: a lista de "Meus Chamados" só é obtida depois de criar, nunca ao abrir a tela. */
   private readonly injector = inject(Injector);
+  /** Store da abertura do chamado: envio e falha. */
   protected readonly store = inject(TicketCreateStore);
+  /** Departamentos e setores dos seletores do formulário. */
   protected readonly departmentsStore = inject(DepartmentsStore);
 
+  /** Opções do seletor de prioridade, da mais baixa à mais alta, com o rótulo de cada uma. */
   readonly priorities = [
     { value: TicketPriority.Low, label: TICKET_PRIORITY_LABELS[TicketPriority.Low] },
     { value: TicketPriority.Medium, label: TICKET_PRIORITY_LABELS[TicketPriority.Medium] },
@@ -49,6 +57,7 @@ export class TicketCreateComponent implements OnInit {
     sectorId: [{ value: '', disabled: true }, [Validators.required]]
   });
 
+  /** Departamento escolhido no formulário, como sinal, pra listar os setores dele. */
   private readonly selectedDepartmentId = toSignal(this.form.controls.departmentId.valueChanges, { initialValue: '' });
 
   /** Departamentos que têm pelo menos um setor — sem setor não há para onde abrir o chamado. */

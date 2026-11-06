@@ -16,8 +16,11 @@ export const TICKETS_PAGE_SIZE = 20;
 export const TicketsStore = signalStore(
   { providedIn: 'root' },
   withState({
+    /** Falha da última mutação (editar, cancelar ou reabrir), separada do erro de leitura. */
     mutationError: null as string | null,
+    /** Página atual da listagem (começa em 1). */
     page: 1,
+    /** Itens por página. */
     pageSize: TICKETS_PAGE_SIZE,
     /** Grupo de status filtrado ("Em aberto" por padrão; null = todos). */
     statusGroup: TicketStatusGroup.Active as TicketStatusGroup | null,
@@ -27,10 +30,13 @@ export const TicketsStore = signalStore(
     pendingTicketIds: [] as string[]
   }),
   withProps(() => ({
+    /** Acesso HTTP aos chamados (GET /tickets/mine, atualização e reabertura). */
     _ticketDataService: inject(TicketDataService),
+    /** Sessão atual: o id de quem está logado dispara a listagem. */
     _session: inject(SessionService)
   })),
   withProps((store) => ({
+    /** Página atual de "Meus Chamados", recarregada quando a página, o filtro, a busca ou o usuário mudam. */
     _listResource: rxResource({
       // O id não vai na requisição (a API usa o do token); fica nos params só para esperar o login e recarregar
       // quando outro usuário entrar.

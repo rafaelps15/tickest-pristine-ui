@@ -57,15 +57,21 @@ export const TicketAttachmentsStore = signalStore(
   withState({
     /** Falha da última exclusão de anexo (a da leitura vem do resource, em {@link listState}). */
     mutationError: null as string | null,
+    /** Envio de anexo em andamento. */
     uploading: false,
+    /** Falha do último envio de anexo. */
     uploadError: null as string | null,
     /** Motivo pelo qual o arquivo escolhido foi recusado pela política antes de enviar (`null` quando passou). */
     validationError: null as string | null,
+    /** Download de anexo em andamento. */
     downloading: false,
+    /** Falha do último download de anexo. */
     downloadError: null as string | null,
+    /** Exclusão de anexo em andamento. */
     deleting: false
   }),
   withProps(() => ({
+    /** Acesso HTTP aos anexos (listagem, política, envio, download e exclusão). */
     _ticketAttachmentDataService: inject(TicketAttachmentDataService)
   })),
   withFeature((store) => withTicketCursorPages<TicketAttachment>(
@@ -77,6 +83,7 @@ export const TicketAttachmentsStore = signalStore(
     }
   )),
   withProps((store) => ({
+    /** Política de anexos do back-end: tipos aceitos e limites de tamanho e quantidade. */
     _policyResource: rxResource({ stream: () => store._ticketAttachmentDataService.getPolicy() })
   })),
   withComputed((store) => ({

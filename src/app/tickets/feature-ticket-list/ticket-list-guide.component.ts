@@ -26,14 +26,18 @@ const STATUS_EXPLANATIONS: Record<TicketStatus, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TicketListGuideComponent {
+  /** Os status, na ordem do enum, um por linha do guia. */
   protected readonly statusOptions = Object.values(TicketStatus).filter((v): v is TicketStatus => typeof v === 'number');
   /** Situações de prazo, na ordem em que o chamado passa por elas — inclusive "Sem prazo". */
   protected readonly dueLegend = TICKET_LIST_DUE_LEGEND;
   /** Texto, ícone e tom de cada situação, os mesmos da coluna Prazo. */
   protected readonly dueDisplay = TICKET_LIST_DUE_DISPLAY;
 
+  /** Rótulo de cada status. */
   protected readonly statusLabels = TICKET_STATUS_LABELS;
+  /** Classe de badge de cada status. */
   protected readonly statusBadgeClass = TICKET_STATUS_BADGE_CLASS;
+  /** O que cada status significa pra quem abriu o chamado. */
   protected readonly statusExplanations = STATUS_EXPLANATIONS;
 
 }

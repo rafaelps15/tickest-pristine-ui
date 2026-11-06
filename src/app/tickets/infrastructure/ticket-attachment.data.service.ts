@@ -8,7 +8,9 @@ import { environment } from '../../../environments/environment';
 /** Acesso HTTP aos anexos de ticket (listagem, upload, download e exclusão). */
 @Injectable({ providedIn: 'root' })
 export class TicketAttachmentDataService {
+  /** Cliente HTTP do Angular. */
   private readonly http = inject(HttpClient);
+  /** URL base da API (os anexos ficam em /tickets/{id}/attachments e /ticket-attachments). */
   private readonly apiUrl = environment.apiUrl;
 
   /**

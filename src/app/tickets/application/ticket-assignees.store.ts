@@ -13,10 +13,13 @@ import { SessionService, TICKETS_MANAGE_PERMISSION, extractErrorMessage } from '
 export const TicketAssigneesStore = signalStore(
   { providedIn: 'root' },
   withProps(() => ({
+    /** Acesso HTTP aos chamados (GET /tickets/assignees). */
     _ticketDataService: inject(TicketDataService),
+    /** Sessão atual, pra só buscar com `tickets:manage`. */
     _session: inject(SessionService)
   })),
   withProps((store) => ({
+    /** Responsáveis elegíveis (GET /tickets/assignees), buscados só com `tickets:manage`. */
     _listResource: rxResource({
       params: () => (store._session.hasPermission(TICKETS_MANAGE_PERMISSION) ? true : undefined),
       stream: () => store._ticketDataService.getAssignees()
