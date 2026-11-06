@@ -44,7 +44,7 @@ describe('ProfileEditComponent', () => {
       .compileComponents();
   });
 
-  it('should load the logged-in user profile and fill in the form', async () => {
+  it('loads the logged-in user profile and fills in the form', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -71,7 +71,7 @@ describe('ProfileEditComponent', () => {
     expect(getTypes()).toEqual(['text', 'text', 'text']);
   });
 
-  it('should save with the values trimmed of surrounding whitespace', async () => {
+  it('saves with the values trimmed of surrounding whitespace', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -95,7 +95,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.save).not.toHaveBeenCalled();
   });
 
-  it('should not save when the name is empty', async () => {
+  it('does not save when the name is empty', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -106,7 +106,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.componentInstance.isFieldInvalid('firstName')).toBeTrue();
   });
 
-  it('should display the save error message', async () => {
+  it('displays the save error message', async () => {
     storeFake.mutationError.set('Você não tem permissão para editar este perfil.');
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
@@ -114,7 +114,7 @@ describe('ProfileEditComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Você não tem permissão para editar este perfil.');
   });
 
-  it('should change the password when the form is valid', async () => {
+  it('changes the password when the form is valid', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -131,7 +131,7 @@ describe('ProfileEditComponent', () => {
     });
   });
 
-  it('should not change the password when the confirmation does not match', async () => {
+  it('does not change the password when the confirmation does not match', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -145,7 +145,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.changePassword).not.toHaveBeenCalled();
   });
 
-  it('should not change the password when the new password is the same as the current one', async () => {
+  it('does not change the password when the new password is the same as the current one', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
@@ -159,7 +159,7 @@ describe('ProfileEditComponent', () => {
     expect(storeFake.changePassword).not.toHaveBeenCalled();
   });
 
-  it('should not change the password when the new password is weak', async () => {
+  it('does not change the password when the new password is weak', async () => {
     const fixture = TestBed.createComponent(ProfileEditComponent);
     await fixture.whenStable();
 
