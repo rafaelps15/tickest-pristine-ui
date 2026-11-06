@@ -905,6 +905,26 @@ describe('TicketDetailComponent', () => {
       expect(findReopenButton(fixture)).toBeFalsy();
     });
 
+    it('does not show "Reabrir chamado" to the owner with tickets:manage but without tickets:reopen-own: the back end requires reopen-own from the owner', async () => {
+      sessionServiceFake.userId.set(ticket.openedByUserId);
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Resolved });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findReopenButton(fixture)).toBeFalsy();
+    });
+
+    it('shows "Reabrir chamado" to someone who is not the owner and has tickets:manage, even without tickets:reopen-own', async () => {
+      sessionServiceFake.userId.set('outro-usuario');
+      sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage');
+      detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Closed });
+      const fixture = TestBed.createComponent(TicketDetailComponent);
+      await fixture.whenStable();
+
+      expect(findReopenButton(fixture)).toBeTruthy();
+    });
+
     it('does not show the "Reabrir chamado" button for an active ticket', async () => {
       detailStoreFake.ticket.set({ ...ticket, status: TicketStatus.Open });
       const fixture = TestBed.createComponent(TicketDetailComponent);

@@ -243,6 +243,15 @@ describe('TicketListComponent', () => {
     expect(rowActionLabels(fixture.nativeElement)).toEqual([]);
   });
 
+  it('does not show "Reabrir" to the owner with tickets:manage but without tickets:reopen-own: the back end requires reopen-own from the owner', async () => {
+    sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:manage' || code === 'tickets:view-own');
+    storeFake.tickets.set([resolvedTicket]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(rowActionLabels(fixture.nativeElement)).not.toContain('Reabrir');
+  });
+
   it('only shows "Reabrir" for inactive tickets (Resolvido/Fechado/Cancelado)', async () => {
     storeFake.tickets.set([openTicket, resolvedTicket]);
     const fixture = TestBed.createComponent(TicketListComponent);

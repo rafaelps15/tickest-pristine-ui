@@ -259,7 +259,7 @@ export class TicketListComponent implements OnInit {
 
   /**
    * "Reabrir" na linha: chamado inativo e permissão de reabrir. A lista só traz chamados abertos por
-   * quem está logado, então a pessoa é sempre a dona (`tickets:reopen-own` ou `tickets:manage`).
+   * quem está logado, então a pessoa é sempre a dona e precisa de `tickets:reopen-own` (`tickets:manage` não vale).
    */
   canReopen(ticket: Ticket): boolean {
     return canReopenTicket(ticket.status, true, code => this.sessionService.hasPermission(code));

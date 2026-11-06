@@ -462,7 +462,7 @@ export class TicketDetailComponent implements OnInit {
     return TICKET_STATUS_TRANSITIONS[t.status].filter(status => status !== TicketStatus.Canceled || this.canCancelNow(t));
   }
 
-  /** Indica se o botão "Reabrir chamado" deve aparecer: chamado inativo e dono com `tickets:reopen-own` ou `tickets:manage`. */
+  /** Indica se o botão "Reabrir chamado" deve aparecer: chamado inativo e o dono com `tickets:reopen-own`, ou outra pessoa com `tickets:manage`. */
   protected canReopenTicket(t: TicketDetail): boolean {
     return canReopenTicket(t.status, this.isOwner(t), code => this.sessionService.hasPermission(code));
   }

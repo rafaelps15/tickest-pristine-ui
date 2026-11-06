@@ -36,6 +36,11 @@ describe('ticket-action-permissions', () => {
       expect(canReopenTicket(TicketStatus.Resolved, false, having('tickets:reopen-own'))).toBeFalse();
     });
 
+    it('like ReopenTicketCommandHandler, the owner reopens only with tickets:reopen-own: tickets:manage does not count for their own ticket', () => {
+      expect(canReopenTicket(TicketStatus.Resolved, true, having('tickets:manage'))).toBeFalse();
+      expect(canReopenTicket(TicketStatus.Resolved, true, having('tickets:manage', 'tickets:reopen-own'))).toBeTrue();
+    });
+
     it('rejects reopening a ticket that is still active', () => {
       expect(canReopenTicket(TicketStatus.Open, true, having('tickets:reopen-own', 'tickets:manage'))).toBeFalse();
     });

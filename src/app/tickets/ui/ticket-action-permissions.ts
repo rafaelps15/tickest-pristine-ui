@@ -1,12 +1,12 @@
 import { TicketStatus, TICKET_ACTIVE_STATUSES } from '../entities/ticket-status';
 
-/** Quem atende a fila: edita, muda status, assume e reabre qualquer chamado. */
+/** Quem atende a fila: edita, muda status e assume qualquer chamado, e reabre os chamados de outras pessoas. */
 export const TICKETS_MANAGE_PERMISSION = 'tickets:manage';
 
 /** Dono pode editar a descrição do próprio chamado. */
 export const TICKETS_UPDATE_OWN_PERMISSION = 'tickets:update-own';
 
-/** Dono pode reabrir o próprio chamado. */
+/** Dono pode reabrir o próprio chamado — a única permissão que vale para o dono reabrir. */
 export const TICKETS_REOPEN_OWN_PERMISSION = 'tickets:reopen-own';
 
 /** Atribuir o chamado a outra pessoa (além de `tickets:manage`, exigido pelo endpoint). */
@@ -24,10 +24,13 @@ export function canEditTicketDescription(status: TicketStatus, isOwner: boolean,
   return (isOwner && hasPermission(TICKETS_UPDATE_OWN_PERMISSION)) || hasPermission(TICKETS_MANAGE_PERMISSION);
 }
 
-/** Espelha `ReopenTicketCommandHandler`: dono com `tickets:reopen-own`, ou `tickets:manage`, com o chamado inativo. */
+/**
+ * Espelha o `ReopenTicketCommandHandler` (linhas 33-41): o dono reabre com `tickets:reopen-own`, e só com ela —
+ * `tickets:manage` não vale para o próprio chamado —; quem não é dono, com `tickets:manage`. Com o chamado inativo.
+ */
 export function canReopenTicket(status: TicketStatus, isOwner: boolean, hasPermission: HasPermission): boolean {
   if (TICKET_ACTIVE_STATUSES.has(status)) return false;
-  return (isOwner && hasPermission(TICKETS_REOPEN_OWN_PERMISSION)) || hasPermission(TICKETS_MANAGE_PERMISSION);
+  return hasPermission(isOwner ? TICKETS_REOPEN_OWN_PERMISSION : TICKETS_MANAGE_PERMISSION);
 }
 
 /** Espelha o endpoint de atribuição (`tickets:manage`) somado ao `AssignTicketCommandHandler` para outra pessoa (`tickets:assign`). */
