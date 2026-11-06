@@ -62,8 +62,8 @@
   background-color: rgba(var(--tk-primary-rgb), 0.08);
 }
 
+/* A tabela já fica sem transição pela regra global (styles.css). */
 @media (prefers-reduced-motion: reduce) {
-  .table,
   .permission-option {
     transition: none;
   }

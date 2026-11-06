@@ -47,10 +47,9 @@
     text-align: end;
   }
 
-  /* Acima do título esticado sobre o card (z-index 1), com alvo de toque de 44px. */
+  /* Acima do título esticado sobre o card (z-index 1); o alvo de 44px no toque vem do `.tap-target`. */
   .due-nudge {
     position: relative;
     z-index: 2;
-    min-height: 2.75rem;
   }
 }

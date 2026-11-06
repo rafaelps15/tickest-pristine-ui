@@ -1325,6 +1325,13 @@ router-outlet + * {
   pointer-events: none;
 }
 
+/* Com movimento reduzido, a tabela esmaece sem transição (DESIGN.md: todo movimento tem esse caminho). */
+@media (prefers-reduced-motion: reduce) {
+  .table {
+    transition: none;
+  }
+}
+
 /*
  * Item recém-criado (card, setor ou linha de tabela): um realce índigo que se desfaz em 4s — quem salvou
  * acha o que criou depois que a lista reordena. Termina na superfície do card, não em `transparent`, que

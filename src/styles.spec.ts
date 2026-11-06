@@ -40,4 +40,24 @@ describe('styles.css', () => {
     expect(title.fontWeight).toBe('700');
     expect([title.color, title.fontSize, title.letterSpacing]).toEqual([term.color, term.fontSize, term.letterSpacing]);
   });
+
+  it('takes the transition off every .table when the person asks for reduced motion', () => {
+    /** Regras de estilo dentro de um `@media` com a condição dada, em todas as folhas que o teste carregou. */
+    const rulesInMedia = (condition: string): CSSStyleRule[] => Array.from(document.styleSheets).flatMap(sheet => {
+      try {
+        return Array.from(sheet.cssRules);
+      } catch {
+        return [];
+      }
+    }).filter((rule): rule is CSSMediaRule => rule instanceof CSSMediaRule && rule.conditionText.includes(condition))
+      .flatMap(media => Array.from(media.cssRules))
+      .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+
+    const tableRules = rulesInMedia('prefers-reduced-motion: reduce').filter(rule => rule.selectorText === '.table');
+    expect(tableRules.map(rule => rule.style.getPropertyValue('transition'))).toContain('none');
+  });
+
+  it('keeps the fixed-width digits of .num, which the cancel countdown of Meus Chamados uses', () => {
+    expect(getComputedStyle(render('<span class="cancel-hint num">por mais 8 min</span>')).fontVariantNumeric).toBe('tabular-nums');
+  });
 });

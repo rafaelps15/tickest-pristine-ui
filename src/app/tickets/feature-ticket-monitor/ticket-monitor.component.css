@@ -78,11 +78,8 @@
   color: var(--tk-text-primary);
 }
 
+/* A tabela já fica sem transição pela regra global (styles.css). */
 @media (prefers-reduced-motion: reduce) {
-  .table {
-    transition: none;
-  }
-
   .monitor-refresh .bx-spin {
     animation: none;
   }

@@ -160,12 +160,14 @@
   color: var(--tk-text-muted);
 }
 
-/* Tempo restante pro dono cancelar, dentro do botão: menor e mais leve que o rótulo, na mesma cor (sem opacidade). */
+/*
+ * Tempo restante pro dono cancelar, dentro do botão: menor e mais leve que o rótulo, na mesma cor (sem
+ * opacidade). Os algarismos de largura fixa vêm do `.num`.
+ */
 .cancel-hint {
   margin-left: 0.25rem;
   font-size: 0.75rem;
   font-weight: 400;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Contagem do grupo no seletor ("Em aberto 3"): número menor, na cor do rótulo — opacidade derrubava o contraste. */
