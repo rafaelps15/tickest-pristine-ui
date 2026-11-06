@@ -89,12 +89,27 @@ export class TicketListComponent implements OnInit {
   readonly statusGroup = TicketStatusGroup;
 
   /**
-   * Mostra "Carregando…" na primeira carga e enquanto a sondagem decide entre primeiro uso e
+   * Se a pessoa tem algum chamado, filtrado ou não: `true` com a lista não vazia; com a lista filtrada
+   * vazia, o total do resumo (GET /tickets/mine/summary), sem outra requisição; `null` enquanto não dá pra saber.
+   */
+  readonly hasAnyTicket = computed((): boolean | null => {
+    const page = this.store.ticketsPage();
+    if (!page) return null;
+    if (page.totalCount > 0) return true;
+    if (this.store.statusGroup() === null && this.store.search().trim() === '') return false;
+    // Resumo em erro: assume que há chamados, pra mostrar o vazio do filtro (que tem saída) em vez de carregar pra sempre.
+    if (this.summaryStore.failed()) return true;
+    const total = this.summaryStore.totalCount();
+    return total === null ? null : total > 0;
+  });
+
+  /**
+   * Mostra "Carregando…" na primeira carga e enquanto o resumo decide entre primeiro uso e
    * "nada pendente" — sem isso, o estado vazio errado piscava antes do certo.
    */
   readonly isLoadingList = computed(() => {
     if (this.store.tickets().length > 0 || this.store.loadError()) return false;
-    return this.store.state().loading || this.store.hasAnyTicket() === null;
+    return this.store.state().loading || this.hasAnyTicket() === null;
   });
 
   /** Recarga com linhas já na tela (troca de página, depois de uma ação): esmaece a tabela e marca `aria-busy`. */

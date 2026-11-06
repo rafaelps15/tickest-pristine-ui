@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router, UrlTree } from '@angular/router';
 import { of } from 'rxjs';
 import { TicketListComponent, formatLastActivity } from './ticket-list.component';
@@ -59,13 +59,18 @@ describe('TicketListComponent', () => {
   function createStoreFake() {
     const statusGroup = signal<TicketStatusGroup | null>(TicketStatusGroup.Active);
     const search = signal('');
+    const tickets = signal<Ticket[]>([openTicket]);
     return {
       statusGroup,
       search,
-      hasAnyTicket: signal<boolean | null>(true),
       setStatusGroup: jasmine.createSpy('setStatusGroup').and.callFake((value: TicketStatusGroup | null) => statusGroup.set(value)),
       setSearch: jasmine.createSpy('setSearch').and.callFake((value: string) => search.set(value.trim())),
-      tickets: signal<Ticket[]>([openTicket]),
+      tickets,
+      /** Página da lista filtrada, com os chamados de {@link tickets}. */
+      ticketsPage: computed(() => ({
+        items: tickets(), page: 1, pageSize: 20, totalCount: tickets().length,
+        totalPages: 1, hasPreviousPage: false, hasNextPage: false
+      })),
       state: signal({ data: [openTicket], loading: false, error: null as string | null }),
       currentPage: signal(1),
       currentPageSize: signal(20),
@@ -89,7 +94,13 @@ describe('TicketListComponent', () => {
   let confirmDialogServiceFake: { confirm: jasmine.Spy };
   let toastServiceFake: { show: jasmine.Spy };
   let sessionServiceFake: { hasPermission: jasmine.Spy };
-  let summaryStoreFake: { activeCount: ReturnType<typeof signal<number | null>>; finishedCount: ReturnType<typeof signal<number | null>>; totalCount: ReturnType<typeof signal<number | null>>; reload: jasmine.Spy };
+  let summaryStoreFake: {
+    activeCount: ReturnType<typeof signal<number | null>>;
+    finishedCount: ReturnType<typeof signal<number | null>>;
+    totalCount: ReturnType<typeof signal<number | null>>;
+    failed: ReturnType<typeof signal<boolean>>;
+    reload: jasmine.Spy;
+  };
   let departmentsStoreFake: { departments: ReturnType<typeof signal<{ name: string; sectors: unknown[] }[]>> };
 
   beforeEach(async () => {
@@ -97,7 +108,10 @@ describe('TicketListComponent', () => {
     confirmDialogServiceFake = { confirm: jasmine.createSpy('confirm').and.returnValue(of(true)) };
     toastServiceFake = { show: jasmine.createSpy('show') };
     sessionServiceFake = { hasPermission: jasmine.createSpy('hasPermission').and.callFake(OWNER_PERMISSIONS) };
-    summaryStoreFake = { activeCount: signal<number | null>(3), finishedCount: signal<number | null>(5), totalCount: signal<number | null>(8), reload: jasmine.createSpy('reload') };
+    summaryStoreFake = {
+      activeCount: signal<number | null>(3), finishedCount: signal<number | null>(5), totalCount: signal<number | null>(8),
+      failed: signal(false), reload: jasmine.createSpy('reload')
+    };
     departmentsStoreFake = { departments: signal<{ name: string; sectors: unknown[] }[]>([]) };
 
     await TestBed.configureTestingModule({
@@ -181,7 +195,7 @@ describe('TicketListComponent', () => {
   it('does not offer "Novo Chamado" without tickets:create, in the header nor in the first-use state', async () => {
     sessionServiceFake.hasPermission.and.callFake((code: string) => code === 'tickets:view-own');
     storeFake.tickets.set([]);
-    storeFake.hasAnyTicket.set(false);
+    summaryStoreFake.totalCount.set(0);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -190,7 +204,7 @@ describe('TicketListComponent', () => {
 
   it('shows the first-use empty state when the person has no tickets at all', async () => {
     storeFake.tickets.set([]);
-    storeFake.hasAnyTicket.set(false);
+    summaryStoreFake.totalCount.set(0);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
@@ -201,7 +215,7 @@ describe('TicketListComponent', () => {
 
   it('lists in the empty state only the departments that have a sector to serve', async () => {
     storeFake.tickets.set([]);
-    storeFake.hasAnyTicket.set(false);
+    summaryStoreFake.totalCount.set(0);
     departmentsStoreFake.departments.set([
       { name: 'TI', sectors: [{}] },
       { name: 'RH', sectors: [{}] },
@@ -528,14 +542,34 @@ describe('TicketListComponent', () => {
     expect(storeFake.setStatusGroup).not.toHaveBeenCalled();
   });
 
-  it('shows "Carregando…" while the probe decides between first use and nothing pending', async () => {
+  it('shows "Carregando…" while the summary has not answered whether it is the first use or nothing pending', async () => {
     storeFake.tickets.set([]);
-    storeFake.hasAnyTicket.set(null);
+    summaryStoreFake.totalCount.set(null);
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Carregando chamados…');
     expect(fixture.nativeElement.textContent).not.toContain('Nada pendente');
+  });
+
+  it('with the filtered list empty and tickets in the summary, shows "Nada pendente" instead of the first use', async () => {
+    storeFake.tickets.set([]);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nada pendente');
+    expect(fixture.nativeElement.textContent).not.toContain('Nenhum chamado aberto ainda');
+  });
+
+  it('with the summary in error and no numbers, shows "Nada pendente" instead of loading forever', async () => {
+    storeFake.tickets.set([]);
+    summaryStoreFake.totalCount.set(null);
+    summaryStoreFake.failed.set(true);
+    const fixture = TestBed.createComponent(TicketListComponent);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Nada pendente');
+    expect(fixture.nativeElement.textContent).not.toContain('Carregando chamados…');
   });
 
   it('switches the group through the selector and only shows "Limpar filtros" when away from the default', async () => {
@@ -646,7 +680,6 @@ describe('TicketListComponent', () => {
 
   it('with a read error and an empty list, shows neither "Nada pendente" nor the first use, since the error does not become data', async () => {
     storeFake.tickets.set([]);
-    storeFake.hasAnyTicket.set(null);
     storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();
@@ -661,7 +694,6 @@ describe('TicketListComponent', () => {
 
   it('with a read error and an empty list, states the error only once, in the empty state, with "Tentar novamente" inside it', async () => {
     storeFake.tickets.set([]);
-    storeFake.hasAnyTicket.set(null);
     storeFake.loadError.set('Erro ao carregar chamados');
     const fixture = TestBed.createComponent(TicketListComponent);
     await fixture.whenStable();

@@ -325,39 +325,14 @@ describe('TicketsStore', () => {
     expect(dataService.getMine.calls.count()).toBe(calls);
   });
 
-  it('with the filtered list empty, probes without a filter whether the person has any ticket', async () => {
-    dataService.getMine.and.callFake((page: number, pageSize: number, statusGroup?: TicketStatusGroup | null) =>
-      of(statusGroup === undefined ? pageOf([ticket], 1, 3, 1) : pageOf([], 1, 0)));
-    await TestBed.inject(ApplicationRef).whenStable();
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(dataService.getMine).toHaveBeenCalledWith(1, 1);
-    expect(store.tickets()).toEqual([]);
-    expect(store.hasAnyTicket()).toBeTrue();
-  });
-
-  it('knows it is the first use when not even the probe finds a ticket', async () => {
+  it('with the filtered list empty, makes no other request to know whether the person has any ticket', async () => {
     dataService.getMine.and.returnValue(of(pageOf([], 1, 0)));
     await TestBed.inject(ApplicationRef).whenStable();
     await TestBed.inject(ApplicationRef).whenStable();
 
-    expect(store.hasAnyTicket()).toBeFalse();
-  });
-
-  it('with the probe in error, assumes there are tickets instead of loading forever', async () => {
-    dataService.getMine.and.callFake((page: number, pageSize: number, statusGroup?: TicketStatusGroup | null) =>
-      statusGroup === undefined ? throwError(() => new HttpErrorResponse({ status: 500 })) : of(pageOf([], 1, 0)));
-    await TestBed.inject(ApplicationRef).whenStable();
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(store.hasAnyTicket()).toBeTrue();
-  });
-
-  it('does not probe when the filtered list has tickets', async () => {
-    await TestBed.inject(ApplicationRef).whenStable();
-
-    expect(dataService.getMine).not.toHaveBeenCalledWith(1, 1);
-    expect(store.hasAnyTicket()).toBeTrue();
+    expect(store.tickets()).toEqual([]);
+    expect(store.total()).toBe(0);
+    expect(dataService.getMine.calls.allArgs()).toEqual([[1, 20, TicketStatusGroup.Active, '']]);
   });
 
   it('with the read in error, exposes the empty list and the error, without throwing an exception', async () => {
@@ -366,7 +341,7 @@ describe('TicketsStore', () => {
 
     expect(store.tickets()).toEqual([]);
     expect(store.total()).toBe(0);
-    expect(store.hasAnyTicket()).toBeNull();
+    expect(store.ticketsPage()).toBeUndefined();
     expect(store.loadError()).toBe('Erro ao carregar chamados');
   });
 
@@ -392,6 +367,38 @@ describe('TicketsStore', () => {
     await TestBed.inject(ApplicationRef).whenStable();
 
     expect(store.mutationError()).toBe('Você não tem permissão para reabrir este chamado.');
+  });
+});
+
+describe('TicketsStore with the real TicketDataService (C-40)', () => {
+  const mineUrl = `${environment.apiUrl}/tickets/mine`;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        TicketsStore,
+        { provide: SessionService, useValue: { userId: signal('u1') } }
+      ]
+    });
+    TestBed.inject(TicketsStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  it('with the filtered list empty, Meus Chamados sends only the GET of the list, without the "tem algum chamado?" probe', async () => {
+    TestBed.tick();
+    const list = http.expectOne(request => request.method === 'GET' && request.url === mineUrl);
+    expect(list.request.params.get('status')).toBe(String(TicketStatusGroup.Active));
+    expect(list.request.params.get('pageSize')).toBe('20');
+    list.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    http.expectNone(request => request.url === mineUrl);
   });
 });
 

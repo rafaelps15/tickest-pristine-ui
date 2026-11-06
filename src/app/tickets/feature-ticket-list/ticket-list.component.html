@@ -80,7 +80,7 @@
               </app-empty-state>
             </td>
           </tr>
-        } @else if (store.tickets().length === 0 && store.hasAnyTicket() === false) {
+        } @else if (store.tickets().length === 0 && hasAnyTicket() === false) {
           <!-- Primeiro uso: o estado vazio explica o canal (substitui e-mail/WhatsApp) e leva direto ao primeiro chamado. -->
           <tr>
             <td colspan="6" class="first-use py-5">

@@ -45,28 +45,9 @@ export const TicketsStore = signalStore(
       stream: ({ params }) => store._ticketDataService.getMine(params.page, params.pageSize, params.statusGroup, params.search)
     })
   })),
-  withProps((store) => ({
-    /**
-     * Sondagem "a pessoa tem algum chamado?", só quando a lista filtrada voltou vazia: separa o
-     * primeiro uso (nenhum chamado em lugar nenhum) do "nada pendente"/"nada encontrado". Uma linha
-     * só, sem filtro; sem lista vazia filtrada, não faz requisição.
-     */
-    _anyTicketResource: rxResource({
-      params: () => {
-        const userId = store._session.userId();
-        // hasValue() antes de value(): ler o valor de um resource em erro lança exceção.
-        const page = store._listResource.hasValue() ? store._listResource.value() : undefined;
-        const filtered = store.statusGroup() !== null || store.search().trim() !== '';
-        return userId && page && page.totalCount === 0 && filtered ? { userId } : undefined;
-      },
-      stream: () => store._ticketDataService.getMine(1, 1)
-    })
-  })),
   withComputed((store) => ({
     /** Página atual devolvida pela API, ou undefined enquanto carrega ou em erro (hasValue() evita a exceção de value()). */
     _listPage: computed(() => store._listResource.hasValue() ? store._listResource.value() : undefined),
-    /** Resposta da sondagem "tem algum chamado?", ou undefined enquanto não houver. */
-    _anyTicketPage: computed(() => store._anyTicketResource.hasValue() ? store._anyTicketResource.value() : undefined),
     /** Erro só da leitura da listagem (sem os erros de mutação) — o único que "Tentar novamente" resolve. */
     loadError: computed(() => {
       const resourceError = store._listResource.error() as HttpErrorResponse | undefined;
@@ -78,20 +59,6 @@ export const TicketsStore = signalStore(
     ticketsPage: computed(() => store._listPage()),
     /** Tickets da página atual, do que teve atividade mais recente para o mais antigo. */
     tickets: computed(() => store._listPage()?.items ?? ([] as Ticket[])),
-    /**
-     * Se a pessoa tem algum chamado, filtrado ou não: `true` com a lista não vazia; com a lista
-     * filtrada vazia, a resposta da sondagem; `null` enquanto ainda não dá pra saber.
-     */
-    hasAnyTicket: computed((): boolean | null => {
-      const page = store._listPage();
-      if (!page) return null;
-      if (page.totalCount > 0) return true;
-      if (store.statusGroup() === null && store.search().trim() === '') return false;
-      // Sondagem em erro: assume que há chamados, pra mostrar o vazio do filtro (que tem saída) em vez de carregar pra sempre.
-      if (store._anyTicketResource.error()) return true;
-      const probe = store._anyTicketPage();
-      return probe ? probe.totalCount > 0 : null;
-    }),
     /** Estado da leitura da listagem: carregamento e erro de leitura (o de mutação fica em `mutationError`). */
     state: computed(() => ({ loading: store._listResource.isLoading(), error: store.loadError() }))
   })),
