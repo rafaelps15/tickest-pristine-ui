@@ -111,7 +111,7 @@ describe('presentation components of Início', () => {
       expect(fixture.nativeElement.querySelector('.flow-chart .skeleton-block')).not.toBeNull();
     });
 
-    it('with the resolved ones (spec 028), the table gains the column and the "em breve" note goes away', async () => {
+    it('with the resolved ones (spec 028), the table gains the "Resolvidos" column', async () => {
       const fixture = TestBed.createComponent(DashboardHeroChartComponent);
       fixture.componentRef.setInput('flowState', 'ready');
       fixture.componentRef.setInput('points', [{ periodStart: '2026-10-27', count: 3, resolvedCount: 2 }]);
@@ -135,6 +135,79 @@ describe('presentation components of Início', () => {
       const footnote = fixture.nativeElement.querySelector('.hero-footnote').textContent;
       expect(footnote).toContain('Chamados com os filtros · De 01/10/2026 a 28/10/2026');
       expect(footnote).not.toContain('o fluxo ainda é o da empresa toda');
+    });
+  });
+
+  describe('DashboardHeroChartComponent — footer in each state of the flow', () => {
+    /** Texto do rodapé, com os espaços do template juntados. */
+    const footnote = (fixture: { nativeElement: HTMLElement }) =>
+      (fixture.nativeElement.querySelector('.hero-footnote') as HTMLElement).textContent?.replace(/\s+/g, ' ').trim();
+
+    /** Sete dias (de terça a segunda) com os resolvidos, como o back-end manda desde a spec 028. */
+    const week = Array.from({ length: 7 }, (_, i) => ({ periodStart: `2026-10-2${i}`, count: 3, resolvedCount: 2 }));
+
+    it('first load: only what the chart covers, with no "em breve"', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.flow-area [role="status"]')?.textContent).toContain('Carregando os chamados por período…');
+      expect(footnote(fixture)).toBe('Todos os chamados da empresa · Últimos 30 dias');
+    });
+
+    it('changing the grouping: while the new grouping loads, the footer says its range, with no "em breve"', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('points', week);
+      await fixture.whenStable();
+
+      fixture.componentRef.setInput('groupBy', 'Week');
+      fixture.componentRef.setInput('points', []);
+      fixture.componentRef.setInput('flowState', 'loading');
+      await fixture.whenStable();
+
+      expect(footnote(fixture)).toBe('Todos os chamados da empresa · Últimas 12 semanas');
+    });
+
+    it('changing the scope: while the volume of the selection loads, the footer says it follows the filters, with no "em breve"', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('points', week);
+      await fixture.whenStable();
+
+      fixture.componentRef.setInput('scope', 'filtered');
+      fixture.componentRef.setInput('points', []);
+      fixture.componentRef.setInput('flowState', 'loading');
+      await fixture.whenStable();
+
+      expect(footnote(fixture)).toBe('Chamados com os filtros · Últimos 30 dias');
+    });
+
+    it('flow error: the error stays in the flow area and the footer keeps only the coverage, with no "em breve"', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'error');
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.flow-area [role="alert"]')?.textContent).toContain('Não foi possível carregar os chamados por período.');
+      expect(footnote(fixture)).toBe('Todos os chamados da empresa · Últimos 30 dias');
+    });
+
+    it('no tickets in the period: the empty state in the flow area and the coverage in the footer, with no "em breve"', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'empty');
+      fixture.componentRef.setInput('points', week.map(point => ({ ...point, count: 0, resolvedCount: 0 })));
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Nenhum chamado no período.');
+      expect(footnote(fixture)).toBe('Todos os chamados da empresa · Últimos 7 dias');
+    });
+
+    it('flow ready: the coverage and the legend of the references, never a promise of a future feature', async () => {
+      const fixture = TestBed.createComponent(DashboardHeroChartComponent);
+      fixture.componentRef.setInput('flowState', 'ready');
+      fixture.componentRef.setInput('points', week);
+      await fixture.whenStable();
+
+      expect(footnote(fixture)).toBe('Todos os chamados da empresa · Últimos 7 dias · Tracejado: média dos períodos completos; faixas claras: sábados e domingos');
     });
   });
 

@@ -635,10 +635,51 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.querySelector('.hero-insight')).toBeNull();
     });
 
-    it('with the back end still without the resolved ones, says once that they are coming soon, with no ghost series', async () => {
+    it('the chart footer never promises the resolved ones ("em breve"): not on the first load, not on a flow error, not with the flow ready', async () => {
+      ticketsStoreFake.volume.set([]);
+      ticketsStoreFake.volumeHasValue.set(false);
+      ticketsStoreFake.volumeLoading.set(true);
       const fixture = await render();
-      const footnote = fixture.nativeElement.querySelector('.hero-footnote')?.textContent;
-      expect(footnote).toContain('Resolvidos por período e fila ao longo do tempo: disponível em breve.');
+      const footnote = () => (fixture.nativeElement.querySelector('.hero-footnote') as HTMLElement).textContent ?? '';
+      expect(footnote()).toContain('Todos os chamados da empresa · Últimos 30 dias');
+      expect(footnote()).not.toContain('em breve');
+
+      ticketsStoreFake.volumeLoading.set(false);
+      ticketsStoreFake.volumeFailed.set(true);
+      await fixture.whenStable();
+      expect(fixture.nativeElement.querySelector('.flow-area')?.textContent).toContain('Não foi possível carregar os chamados por período.');
+      expect(footnote()).not.toContain('em breve');
+
+      ticketsStoreFake.volumeFailed.set(false);
+      ticketsStoreFake.volume.set(thirtyDays());
+      ticketsStoreFake.volumeHasValue.set(true);
+      await fixture.whenStable();
+      expect(footnote()).toContain('Todos os chamados da empresa · Últimos 30 dias');
+      expect(footnote()).not.toContain('em breve');
+    });
+
+    it('changing the grouping or the scope does not bring an "em breve" to the footer while the new flow loads', async () => {
+      asAgent();
+      const fixture = await render();
+      const footnote = () => (fixture.nativeElement.querySelector('.hero-footnote') as HTMLElement).textContent ?? '';
+
+      // Troca de agrupamento: o volume da empresa recarrega no agrupamento novo, ainda sem pontos.
+      ticketsStoreFake.groupBy.set('Week');
+      ticketsStoreFake.volume.set([]);
+      ticketsStoreFake.volumeHasValue.set(false);
+      ticketsStoreFake.volumeLoading.set(true);
+      await fixture.whenStable();
+      expect(footnote()).toContain('Todos os chamados da empresa · Últimas 12 semanas');
+      expect(footnote()).not.toContain('em breve');
+
+      // Troca de escopo: o volume do recorte ainda não chegou.
+      operationFake.trend.set([]);
+      operationFake.trendHasValue.set(false);
+      operationFake.trendLoading.set(true);
+      operationFake.chartScope.set('filtered');
+      await fixture.whenStable();
+      expect(footnote()).toContain('Chamados com os filtros · Últimos 30 dias');
+      expect(footnote()).not.toContain('em breve');
     });
 
     it('empty: no tickets in the period', async () => {

@@ -156,16 +156,15 @@
       </div>
     }
 
-    <!-- O que o gráfico cobre e o que ainda não mostra, numa linha só, sem série fantasma. -->
+    <!--
+      O que o gráfico cobre, numa linha só. Sem promessa de recurso futuro: os resolvidos vêm do
+      back-end desde a spec 028, e carga, vazio e erro já aparecem na área do fluxo.
+    -->
     <p class="hero-footnote">
       <span aria-live="polite">{{ scope() !== 'filtered' ? 'Todos os chamados da empresa' : 'Chamados com os filtros' }} · {{ rangeLabel() }}</span>
       @if (average() !== null && flowState() === 'ready') {
         <!-- A legenda do que o gráfico desenha além das barras (a cor nunca é o único sinal). -->
         <span> · Tracejado: média dos períodos completos@if (hasWeekends()) {; faixas claras: sábados e domingos}</span>
-      }
-      <!-- A nota provisória enquanto a resposta não traz os resolvidos por período. -->
-      @if (!hasResolved()) {
-        <span> · Resolvidos por período e fila ao longo do tempo: disponível em breve.</span>
       }
     </p>
   </div>
