@@ -14,6 +14,8 @@ export * from './services/confirm-dialog.service';
 export * from './services/toast.service';
 export * from './utils/http-error.util';
 export * from './utils/password.validators';
+export * from './utils/new-password.validators';
+export * from './utils/form-field.util';
 export * from './utils/trimmed.validator';
 export * from './utils/chart-loader.util';
 export * from './utils/role-badges.util';

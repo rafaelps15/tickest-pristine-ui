@@ -2,7 +2,9 @@ import { Component, inject, signal, ChangeDetectionStrategy, OnInit } from '@ang
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ActivateAccountStore } from '../application/activate-account.store';
-import { passwordChangeValidator, strongPasswordValidator } from '../utils/password.validators';
+import { passwordChangeValidator } from '../utils/password.validators';
+import { NEW_PASSWORD_VALIDATORS } from '../utils/new-password.validators';
+import { isControlInvalid } from '../utils/form-field.util';
 
 /**
  * Lê o token do fragmento da URL do convite (`#token=...`). O token vem no fragmento, e não na
@@ -42,7 +44,7 @@ export class ActivateAccountComponent implements OnInit {
 
   /** Mesmas regras da política de senha do back-end (StrongPassword), com confirmação. */
   readonly form = this.fb.nonNullable.group({
-    newPassword: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
+    newPassword: ['', NEW_PASSWORD_VALIDATORS],
     confirmPassword: ['', [Validators.required]]
   }, { validators: passwordChangeValidator(() => null) });
 
@@ -62,8 +64,7 @@ export class ActivateAccountComponent implements OnInit {
 
   /** Verifica se um campo está inválido e já foi tocado. */
   isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
-    const control = this.form.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.form.controls[fieldName]);
   }
 
   /** Alterna a exibição em texto claro dos campos de senha. */

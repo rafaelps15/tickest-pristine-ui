@@ -4,7 +4,7 @@ import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { DepartmentsStore } from '../application/departments.store';
 import { Department, DepartmentSector } from '../entities/department';
-import { ConfirmDialogService, SessionService , ToastService} from '../../shared';
+import { ConfirmDialogService, SessionService, ToastService, isControlInvalid } from '../../shared';
 import { UserSummary } from '../../users';
 import { DepartmentGuideComponent } from './department-guide.component';
 import { DepartmentInsightsComponent, DepartmentIssue } from './department-insights.component';
@@ -202,14 +202,12 @@ export class DepartmentListComponent implements OnInit {
 
   /** Verifica se um campo do formulário de departamento está inválido e já foi tocado. */
   isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
-    const control = this.form.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.form.controls[fieldName]);
   }
 
   /** Verifica se um campo do formulário de setor está inválido e já foi tocado. */
   isSectorFieldInvalid(fieldName: keyof typeof this.sectorForm.controls): boolean {
-    const control = this.sectorForm.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.sectorForm.controls[fieldName]);
   }
 
   /** Liga a busca de responsável com debounce e a saída automática do filtro de problema. */

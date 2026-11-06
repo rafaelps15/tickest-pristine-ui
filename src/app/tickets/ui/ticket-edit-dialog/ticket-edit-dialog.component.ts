@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, input, output, effect } from '@angular/core';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { ConfirmDialogService, trimmed } from '../../../shared';
+import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { ConfirmDialogService, isControlInvalid } from '../../../shared';
+import { TICKET_DESCRIPTION_VALIDATORS } from '../ticket-description.validators';
 import { DialogComponent } from '../../../shared/ui/dialog/dialog.component';
 
 /** Dados mínimos de um ticket para editar a descrição — o suficiente tanto em `Ticket` quanto em `TicketDetail`. */
@@ -47,7 +48,7 @@ export class TicketEditDialogComponent {
    * e o mínimo valem para o texto aparado, que é o enviado; o máximo, para o digitado, o mesmo que o contador mostra.
    */
   readonly form = this.fb.group({
-    description: ['', [trimmed(Validators.required), trimmed(Validators.minLength(10)), Validators.maxLength(500)]]
+    description: ['', TICKET_DESCRIPTION_VALIDATORS]
   });
 
   constructor() {
@@ -60,8 +61,7 @@ export class TicketEditDialogComponent {
 
   /** Verifica se o campo de descrição está inválido e já foi tocado, pra só mostrar o erro depois da primeira interação. */
   isDescriptionInvalid(): boolean {
-    const control = this.form.controls.description;
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.form.controls.description);
   }
 
   /**

@@ -6,7 +6,8 @@ import { TicketCreateStore } from '../application/ticket-create.store';
 import { TicketsStore } from '../application/tickets.store';
 import { DepartmentsStore } from '../../departments';
 import { TicketPriority, TICKET_PRIORITY_LABELS } from '../entities/ticket-priority';
-import { SessionService, ToastService, trimmed } from '../../shared';
+import { SessionService, ToastService, isControlInvalid, trimmed } from '../../shared';
+import { TICKET_DESCRIPTION_VALIDATORS } from '../ui/ticket-description.validators';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { TicketCreateGuideComponent } from './ticket-create-guide.component';
 
@@ -42,7 +43,7 @@ export class TicketCreateComponent implements OnInit {
    */
   form = this.fb.group({
     title: ['', [trimmed(Validators.required), Validators.maxLength(200)]],
-    description: ['', [trimmed(Validators.required), trimmed(Validators.minLength(10)), Validators.maxLength(500)]],
+    description: ['', TICKET_DESCRIPTION_VALIDATORS],
     priority: [TicketPriority.Medium, [Validators.required]],
     departmentId: ['', [Validators.required]],
     sectorId: [{ value: '', disabled: true }, [Validators.required]]
@@ -78,8 +79,7 @@ export class TicketCreateComponent implements OnInit {
 
   /** Verifica se um campo está inválido e já foi tocado, pra só mostrar o erro depois da primeira interação. */
   isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
-    const control = this.form.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.form.controls[fieldName]);
   }
 
   /**

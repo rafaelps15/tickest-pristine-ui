@@ -3,7 +3,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ProfileEditStore } from '../application/profile-edit.store';
 import { USER_NAME_MAX_LENGTH } from '../entities/user-profile';
-import { ToastService, passwordChangeValidator, strongPasswordValidator } from '../../shared';
+import { NEW_PASSWORD_VALIDATORS, ToastService, isControlInvalid, passwordChangeValidator } from '../../shared';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { LoadingStateComponent } from '../../shared/ui/data-state/data-state.components';
 
@@ -31,7 +31,7 @@ export class ProfileEditComponent {
   /** Formulário com as mesmas regras do ChangeUserPasswordCommandValidator. */
   readonly passwordForm = this.fb.nonNullable.group({
     currentPassword: ['', [Validators.required]],
-    newPassword: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
+    newPassword: ['', NEW_PASSWORD_VALIDATORS],
     confirmPassword: ['', [Validators.required]]
   }, { validators: passwordChangeValidator(group => group.get('currentPassword')?.value) });
 
@@ -72,14 +72,12 @@ export class ProfileEditComponent {
 
   /** Verifica se um campo está inválido e já foi tocado. */
   isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
-    const control = this.form.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.form.controls[fieldName]);
   }
 
   /** Verifica se um campo do formulário de senha está inválido e já foi tocado. */
   isPasswordFieldInvalid(fieldName: keyof typeof this.passwordForm.controls): boolean {
-    const control = this.passwordForm.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.passwordForm.controls[fieldName]);
   }
 
   /** Envia as alterações do perfil, ou marca os campos inválidos. */

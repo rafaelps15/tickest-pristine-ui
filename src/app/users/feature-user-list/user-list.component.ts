@@ -11,7 +11,7 @@ import { RolesStore } from '../../roles';
 import {
   SessionService, ConfirmDialogService, ToastService,
   visibleRoles as sharedVisibleRoles, hiddenRolesCount as sharedHiddenRolesCount, hiddenRolesNames as sharedHiddenRolesNames,
-  injectSidePanelOverlay, isEscapeFromNestedLayer
+  injectSidePanelOverlay, isControlInvalid, isEscapeFromNestedLayer
 } from '../../shared';
 import { RowActionsComponent } from '../../shared/ui/row-actions/row-actions.component';
 import { UserListInfoPanelComponent } from './user-list-info-panel.component';
@@ -237,8 +237,7 @@ export class UserListComponent implements OnInit {
 
   /** Verifica se um campo de um dos formulários está inválido e já foi tocado. */
   isFieldInvalid(form: FormGroup, fieldName: string): boolean {
-    const control = form.get(fieldName);
-    return !!control && control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(form.get(fieldName));
   }
 
   /** Limite de nome e sobrenome nos campos, o mesmo do back-end. */

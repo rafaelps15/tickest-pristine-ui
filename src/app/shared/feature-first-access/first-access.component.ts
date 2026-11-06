@@ -1,7 +1,9 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { LoginStore } from '../application/login.store';
-import { passwordChangeValidator, strongPasswordValidator } from '../utils/password.validators';
+import { passwordChangeValidator } from '../utils/password.validators';
+import { NEW_PASSWORD_VALIDATORS } from '../utils/new-password.validators';
+import { isControlInvalid } from '../utils/form-field.util';
 
 /** Tela de primeiro acesso: troca a senha provisória antes de entrar no sistema. */
 @Component({
@@ -21,14 +23,13 @@ export class FirstAccessComponent {
 
   /** Formulário com as mesmas regras do ChangeRequiredUserPasswordCommandValidator; a senha atual é a provisória do login. */
   readonly form = this.fb.nonNullable.group({
-    newPassword: ['', [Validators.required, Validators.minLength(6), strongPasswordValidator]],
+    newPassword: ['', NEW_PASSWORD_VALIDATORS],
     confirmPassword: ['', [Validators.required]]
   }, { validators: passwordChangeValidator(() => this.store.pendingCredentials()?.password) });
 
   /** Verifica se um campo está inválido e já foi tocado. */
   isFieldInvalid(fieldName: keyof typeof this.form.controls): boolean {
-    const control = this.form.controls[fieldName];
-    return control.invalid && (control.dirty || control.touched);
+    return isControlInvalid(this.form.controls[fieldName]);
   }
 
   /** Alterna a exibição em texto claro dos campos de senha. */
