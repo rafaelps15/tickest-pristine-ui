@@ -240,6 +240,20 @@ describe('DashboardInsightsComponent', () => {
       expect(queue.getAttribute('href')).toContain('sectorId=s1');
     });
 
+    it('"Ver a fila pelo prazo" keeps the gap before the chevron with a margin on the icon, since the flex .tap-target drops the trailing space of the text', async () => {
+      const fixture = TestBed.createComponent(DashboardInsightsComponent);
+      fixture.componentRef.setInput('criticalTickets', [ticket]);
+      fixture.componentRef.setInput('showTotals', false);
+      await fixture.whenStable();
+
+      const queue = Array.from(fixture.nativeElement.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).find(a => a.textContent?.includes('Ver a fila pelo prazo'))!;
+      // A regra global do alvo de 24px (styles.css) faz do link um contêiner flex com qualquer ponteiro.
+      expect(getComputedStyle(queue).display).toBe('inline-flex');
+      const chevron = queue.querySelector('.bx-chevron-right') as HTMLElement;
+      expect(chevron.classList).toContain('ms-1');
+      expect(chevron.previousSibling?.textContent).toBe('Ver a fila pelo prazo');
+    });
+
     it('spins the button and marks it unavailable while refreshing (aria-disabled, without dropping focus), without hiding the list', async () => {
       const fixture = TestBed.createComponent(DashboardInsightsComponent);
       fixture.componentRef.setInput('criticalTickets', [ticket]);

@@ -48,7 +48,8 @@
       } @else if (!showTotals()) {
         <!-- Só a lista: os totais estão no topo da tela e no grupo de SLA. A fila inteira, pelo prazo, fica a um clique. -->
         <p class="small text-muted mb-1">Os mais perto do prazo primeiro.</p>
-        <a class="small fw-semibold tap-target" routerLink="/tickets/monitorar" [queryParams]="queueParams()">Ver a fila pelo prazo <i class="bx bx-chevron-right" aria-hidden="true"></i></a>
+        <!-- O .tap-target é flex e descarta o espaço do fim do texto: a distância até o chevron vem da margem do ícone. -->
+        <a class="small fw-semibold tap-target" routerLink="/tickets/monitorar" [queryParams]="queueParams()">Ver a fila pelo prazo<i class="bx bx-chevron-right ms-1" aria-hidden="true"></i></a>
       } @else {
         <!-- Totais da empresa (não só os 5 listados), cada um levando à fila já filtrada por esse SLA. -->
         <div class="sla-totals">
