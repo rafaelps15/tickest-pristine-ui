@@ -1,0 +1,5 @@
+# Commits só de formatação, que o git blame pula com --ignore-revs-file .git-blame-ignore-revs
+# (o GitHub lê este arquivo sozinho). Um hash completo por linha, com o motivo no comentário de cima.
+
+# C-10, 04/11/2026: só a indentação de 2 espaços em 20 arquivos .ts e no CSS do Início.
+0451269d726552b062a1c933f1ca7749853bc8dd
