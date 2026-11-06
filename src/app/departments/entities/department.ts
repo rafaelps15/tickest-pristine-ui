@@ -6,6 +6,8 @@ export interface DepartmentSector {
   name: string;
   /** Descrição do setor (opcional). */
   description: string | null;
+  /** Chamados em aberto ou em andamento no setor (spec 022): com algum, o back-end recusa desativá-lo. */
+  activeTicketCount: number;
 }
 
 /** Modelo de dados do departamento, conforme retornado por GET /departments. */
@@ -20,6 +22,11 @@ export interface Department {
   responsibleUserId: string | null;
   /** Nome do responsável, ou `null` quando não há responsável. */
   responsibleUserName: string | null;
+  /**
+   * Chamados em aberto ou em andamento nos setores do departamento, inclusive nos desativados (spec 022): com algum,
+   * o back-end recusa desativá-lo.
+   */
+  activeTicketCount: number;
   /** Setores ativos do departamento. */
   sectors: DepartmentSector[];
 }

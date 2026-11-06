@@ -24,8 +24,8 @@ describe('DepartmentDataService', () => {
 
   it('getAll reads the departments, with their sectors, from GET /departments', () => {
     const departments: Department[] = [{
-      id: 'd1', name: 'TI', description: 'Tecnologia', responsibleUserId: 'u1', responsibleUserName: 'Ana Souza',
-      sectors: [{ id: 's1', name: 'Helpdesk', description: null }]
+      id: 'd1', name: 'TI', description: 'Tecnologia', responsibleUserId: 'u1', responsibleUserName: 'Ana Souza', activeTicketCount: 0,
+      sectors: [{ id: 's1', name: 'Helpdesk', description: null, activeTicketCount: 0 }]
     }];
     let received: Department[] | undefined;
 

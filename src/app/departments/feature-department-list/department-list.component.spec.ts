@@ -12,17 +12,17 @@ describe('DepartmentListComponent', () => {
     id: 'dep-1',
     name: 'TI',
     description: 'Tecnologia da Informação',
-    responsibleUserId: null, responsibleUserName: null,
+    responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0,
     sectors: [
-      { id: 'sec-1', name: 'Helpdesk', description: 'Suporte do dia a dia' },
-      { id: 'sec-2', name: 'Infraestrutura', description: null }
+      { id: 'sec-1', name: 'Helpdesk', description: 'Suporte do dia a dia', activeTicketCount: 0 },
+      { id: 'sec-2', name: 'Infraestrutura', description: null, activeTicketCount: 0 }
     ]
   };
   const commercial: Department = {
     id: 'dep-2',
     name: 'Comercial',
     description: 'Vendas e clientes',
-    responsibleUserId: null, responsibleUserName: null,
+    responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0,
     sectors: []
   };
 
@@ -217,7 +217,7 @@ describe('DepartmentListComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    const fixed = { ...commercial, sectors: [{ id: 'sec-9', name: 'Vendas', description: null }] };
+    const fixed = { ...commercial, sectors: [{ id: 'sec-9', name: 'Vendas', description: null, activeTicketCount: 0 }] };
     storeFake.departments.set([informationTechnology, fixed]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -611,9 +611,42 @@ describe('DepartmentListComponent', () => {
 
     const options = confirmDialogServiceFake.confirm.calls.mostRecent().args[0];
     expect(options.message).toContain('Os 2 setores dele também serão desativados.');
-    expect(options.message).toContain('Se algum setor tiver chamados em andamento, a desativação é recusada.');
     expect(options.confirmLabel).toBe('Desativar departamento e 2 setores');
     expect(storeFake.deactivate).toHaveBeenCalledWith('dep-1', jasmine.any(Function), jasmine.any(Function));
+  });
+
+  it('warns with the number of open tickets that GET /departments counted, since the back end refuses to deactivate while there is any', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate({ ...informationTechnology, activeTicketCount: 3 });
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].message).toContain(
+      'O departamento tem 3 chamados em aberto ou em andamento, e a desativação é recusada enquanto eles não forem concluídos ou cancelados.');
+
+    fixture.componentInstance.onDeactivate({ ...informationTechnology, activeTicketCount: 1 });
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].message).toContain(
+      'O departamento tem 1 chamado em aberto ou em andamento, e a desativação é recusada enquanto ele não for concluído ou cancelado.');
+  });
+
+  it('does not warn of a refusal when the department has no open tickets', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivate(informationTechnology);
+
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].message).not.toContain('recusada');
+  });
+
+  it('warns with the number of open tickets of the sector when deactivating it, and not at all without them', async () => {
+    const fixture = TestBed.createComponent(DepartmentListComponent);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onDeactivateSector(informationTechnology, { ...informationTechnology.sectors[1], activeTicketCount: 2 });
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].message).toContain(
+      'O setor tem 2 chamados em aberto ou em andamento, e a desativação é recusada enquanto eles não forem concluídos ou cancelados.');
+
+    fixture.componentInstance.onDeactivateSector(informationTechnology, informationTechnology.sectors[1]);
+    expect(confirmDialogServiceFake.confirm.calls.mostRecent().args[0].message).not.toContain('recusada');
   });
 
   it('the deactivate button of a department without sectors does not mention sectors', async () => {
@@ -777,7 +810,7 @@ describe('DepartmentListComponent', () => {
       expect(scroll).not.toHaveBeenCalled();
       expect(component.highlightedId()).toBe('dep-novo');
 
-      const created: Department = { id: 'dep-novo', name: 'Jurídico', description: 'Contratos', responsibleUserId: null, responsibleUserName: null, sectors: [] };
+      const created: Department = { id: 'dep-novo', name: 'Jurídico', description: 'Contratos', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [] };
       storeFake.departments.set([informationTechnology, commercial, created]);
       storeFake.listState.set({ loading: false, error: null });
       fixture.detectChanges();

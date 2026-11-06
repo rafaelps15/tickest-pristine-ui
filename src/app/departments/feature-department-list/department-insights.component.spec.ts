@@ -5,8 +5,8 @@ import { Department } from '../entities/department';
 
 function makeDepartment(overrides: Partial<Department> = {}): Department {
   return {
-    id: 'd1', name: 'TI', description: 'Tecnologia', responsibleUserId: 'resp-1', responsibleUserName: 'Fulano',
-    sectors: [{ id: 's1', name: 'Suporte', description: null }],
+    id: 'd1', name: 'TI', description: 'Tecnologia', responsibleUserId: 'resp-1', responsibleUserName: 'Fulano', activeTicketCount: 0,
+    sectors: [{ id: 's1', name: 'Suporte', description: null, activeTicketCount: 0 }],
     ...overrides
   };
 }
@@ -23,7 +23,7 @@ describe('DepartmentInsightsComponent', () => {
     const fixture = TestBed.createComponent(DepartmentInsightsComponent);
     fixture.componentRef.setInput('departments', [
       makeDepartment(),
-      makeDepartment({ id: 'd2', name: 'RH', sectors: [{ id: 's2', name: 'Recrutamento', description: null }, { id: 's3', name: 'Folha', description: null }] })
+      makeDepartment({ id: 'd2', name: 'RH', sectors: [{ id: 's2', name: 'Recrutamento', description: null, activeTicketCount: 0 }, { id: 's3', name: 'Folha', description: null, activeTicketCount: 0 }] })
     ]);
     await fixture.whenStable();
 

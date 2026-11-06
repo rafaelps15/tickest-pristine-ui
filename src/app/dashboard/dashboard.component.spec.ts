@@ -144,7 +144,7 @@ describe('DashboardComponent', () => {
     toastServiceFake = { show: jasmine.createSpy('show') };
     features = { volumeResolved: false };
     departmentsFake = {
-      departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] }]),
+      departments: signal<Department[]>([{ id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's1', name: 'Helpdesk', description: null, activeTicketCount: 0 }, { id: 's2', name: 'Infra', description: null, activeTicketCount: 0 }] }]),
       listState: signal({ loading: false })
     };
     assigneesFake = { assignees: signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]), total: signal(1) };
@@ -817,7 +817,7 @@ describe('DashboardComponent', () => {
       expect(operationFake.setScope).not.toHaveBeenCalled();
 
       // A lista chega: o recorte (os setores do departamento) vale pros números e pros Alertas.
-      departmentsFake.departments.set([{ id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] }]);
+      departmentsFake.departments.set([{ id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's1', name: 'Helpdesk', description: null, activeTicketCount: 0 }, { id: 's2', name: 'Infra', description: null, activeTicketCount: 0 }] }]);
       departmentsFake.listState.set({ loading: false });
       await fixture.whenStable();
       expect(operationFake.setScope).toHaveBeenCalledWith(jasmine.objectContaining({ sectorIds: ['s1', 's2'] }));

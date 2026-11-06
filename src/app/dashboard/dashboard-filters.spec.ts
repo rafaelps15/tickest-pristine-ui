@@ -9,8 +9,8 @@ import { isIsoDate } from '../shared';
 
 /** Departamento de exemplo com dois setores. */
 const DEPARTMENTS: Department[] = [
-  { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }, { id: 's2', name: 'Infra', description: null }] },
-  { id: 'd2', name: 'Vazio', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [] }
+  { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's1', name: 'Helpdesk', description: null, activeTicketCount: 0 }, { id: 's2', name: 'Infra', description: null, activeTicketCount: 0 }] },
+  { id: 'd2', name: 'Vazio', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [] }
 ];
 
 describe('dashboard-filters', () => {

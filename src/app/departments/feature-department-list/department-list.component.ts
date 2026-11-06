@@ -17,6 +17,17 @@ import { DialogComponent } from '../../shared/ui/dialog/dialog.component';
 const NEW_ITEM_HIGHLIGHT_MS = 4000;
 
 /**
+ * Frase do aviso de desativar com os chamados em aberto ou em andamento contados pelo GET /departments (o back-end
+ * recusa a desativação enquanto houver algum), ou vazia quando não há nenhum.
+ */
+function activeTicketsNotice(subject: 'O departamento' | 'O setor', count: number): string {
+  if (count <= 0) return '';
+  return count === 1
+    ? ` ${subject} tem 1 chamado em aberto ou em andamento, e a desativação é recusada enquanto ele não for concluído ou cancelado.`
+    : ` ${subject} tem ${count} chamados em aberto ou em andamento, e a desativação é recusada enquanto eles não forem concluídos ou cancelados.`;
+}
+
+/**
  * Tela administrativa de departamentos e setores: cada departamento mostra os seus setores, e o setor é
  * sempre cadastrado a partir do departamento a que pertence.
  */
@@ -312,7 +323,7 @@ export class DepartmentListComponent implements OnInit {
         this.toastService.show(`Departamento "${data.name}" criado. Ele só aparece na abertura de chamados depois do primeiro setor.`, 'success', {
           label: 'Adicionar setor',
           run: () => this.openCreateSectorModal(this.store.departments().find(d => d.id === departmentId)
-            ?? { id: departmentId, name: data.name, description: data.description, responsibleUserId: data.responsibleUserId ?? null, responsibleUserName: null, sectors: [] })
+            ?? { id: departmentId, name: data.name, description: data.description, responsibleUserId: data.responsibleUserId ?? null, responsibleUserName: null, activeTicketCount: 0, sectors: [] })
         });
       });
     }
@@ -320,8 +331,9 @@ export class DepartmentListComponent implements OnInit {
 
   /**
    * Confirma e desativa o departamento selecionado. O botão diz o tamanho do efeito (os setores são
-   * desativados junto) e a mensagem antecipa a recusa do back quando há chamados em andamento (RN-10). No sucesso,
-   * toast e foco no título (o card some); na falha, foco de volta no "⋮" do card, onde o erro aparece.
+   * desativados junto) e a mensagem antecipa a recusa do back, com o número de chamados em andamento que o
+   * GET /departments trouxe (RN-10). No sucesso, toast e foco no título (o card some); na falha, foco de volta no
+   * "⋮" do card, onde o erro aparece.
    */
   onDeactivate(department: Department): void {
     const sectorCount = department.sectors.length;
@@ -333,7 +345,7 @@ export class DepartmentListComponent implements OnInit {
 
     this.confirmDialogService.confirm({
       title: `Desativar o departamento "${department.name}"?`,
-      message: `Ele deixa de aparecer na abertura de chamados.${sectorsNotice} Os chamados já registrados continuam no histórico. Se algum setor tiver chamados em andamento, a desativação é recusada. Por enquanto, não dá para reativar pela tela.`,
+      message: `Ele deixa de aparecer na abertura de chamados.${sectorsNotice} Os chamados já registrados continuam no histórico.${activeTicketsNotice('O departamento', department.activeTicketCount)} Por enquanto, não dá para reativar pela tela.`,
       confirmLabel: sectorCount === 0
         ? 'Desativar departamento'
         : `Desativar departamento e ${sectorCount === 1 ? '1 setor' : `${sectorCount} setores`}`,
@@ -459,13 +471,14 @@ export class DepartmentListComponent implements OnInit {
   }
 
   /**
-   * Confirma e desativa o setor selecionado. No sucesso, toast e foco no "⋮" do departamento (a linha do
-   * setor some); na falha, foco de volta no "⋮" do setor, com o erro no card.
+   * Confirma e desativa o setor selecionado; a mensagem antecipa a recusa do back, com o número de chamados em
+   * andamento que o GET /departments trouxe. No sucesso, toast e foco no "⋮" do departamento (a linha do setor some);
+   * na falha, foco de volta no "⋮" do setor, com o erro no card.
    */
   onDeactivateSector(department: Department, sector: DepartmentSector): void {
     this.confirmDialogService.confirm({
       title: `Desativar o setor "${sector.name}"?`,
-      message: `Ele deixa de aparecer em ${department.name} na abertura de chamados. Os chamados já registrados continuam no histórico. Se ele tiver chamados em andamento, a desativação é recusada. Por enquanto, não dá para reativar pela tela.`,
+      message: `Ele deixa de aparecer em ${department.name} na abertura de chamados. Os chamados já registrados continuam no histórico.${activeTicketsNotice('O setor', sector.activeTicketCount)} Por enquanto, não dá para reativar pela tela.`,
       confirmLabel: 'Desativar setor',
       variant: 'danger'
     }).subscribe(confirmed => {

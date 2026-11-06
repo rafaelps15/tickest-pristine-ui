@@ -28,7 +28,7 @@ describe('TicketMonitorComponent', () => {
     createdAtUtc: '2026-01-01T12:00:00Z', dueAtUtc: '2026-01-02T12:00:00Z', slaWarningAtUtc: '2026-01-02T06:00:00Z',
     resolvedAtUtc: null, slaStatus: TicketSlaStatus.OnTime
   };
-  const department: Department = { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's1', name: 'Suporte', description: null }] };
+  const department: Department = { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's1', name: 'Suporte', description: null, activeTicketCount: 0 }] };
   const slaSummary: TicketSlaSummary = { activeCount: 10, onTimeCount: 6, atRiskCount: 3, breachedCount: 1, serverNowUtc: '2026-01-01T12:00:00Z' };
 
   /** Cria um store de monitoramento falso com signals reais, para o template reagir como no store verdadeiro. */
@@ -234,7 +234,7 @@ describe('TicketMonitorComponent', () => {
   });
 
   it('with several sectors coming from Início, names the set and allows going back to it', async () => {
-    departmentsStoreFake.departments.set([{ ...department, sectors: [{ id: 's1', name: 'Suporte', description: null }, { id: 's2', name: 'Infra', description: null }] }]);
+    departmentsStoreFake.departments.set([{ ...department, sectors: [{ id: 's1', name: 'Suporte', description: null, activeTicketCount: 0 }, { id: 's2', name: 'Infra', description: null, activeTicketCount: 0 }] }]);
     TestBed.overrideProvider(ActivatedRoute, {
       useValue: { snapshot: { queryParamMap: convertToParamMap({ sectorId: ['s1', 's2'] }) } }
     });

@@ -15,8 +15,8 @@ describe('DepartmentsStore', () => {
       id: 'dep-1',
       name: 'Tecnologia da Informação',
       description: 'Equipamentos, sistemas, redes e acessos.',
-      responsibleUserId: null, responsibleUserName: null,
-      sectors: [{ id: 'sec-1', name: 'Suporte técnico', description: null }]
+      responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0,
+      sectors: [{ id: 'sec-1', name: 'Suporte técnico', description: null, activeTicketCount: 0 }]
     }
   ];
 

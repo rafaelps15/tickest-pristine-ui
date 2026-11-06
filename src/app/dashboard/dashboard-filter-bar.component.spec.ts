@@ -13,9 +13,9 @@ import { TicketAssignee } from '../tickets';
 class HostComponent {
   filters = signal<DashboardFilters>({});
   departments = signal<Department[]>([
-    { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's1', name: 'Helpdesk', description: null }] },
-    { id: 'd2', name: 'RH', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [{ id: 's2', name: 'Folha', description: null }] },
-    { id: 'd3', name: 'Vazio', description: '', responsibleUserId: null, responsibleUserName: null, sectors: [] }
+    { id: 'd1', name: 'TI', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's1', name: 'Helpdesk', description: null, activeTicketCount: 0 }] },
+    { id: 'd2', name: 'RH', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [{ id: 's2', name: 'Folha', description: null, activeTicketCount: 0 }] },
+    { id: 'd3', name: 'Vazio', description: '', responsibleUserId: null, responsibleUserName: null, activeTicketCount: 0, sectors: [] }
   ]);
   assignees = signal<TicketAssignee[]>([{ id: 'u-ana', fullName: 'Ana Souza', sectorId: 's1', sectorName: 'Helpdesk' }]);
   assigneesTotal = 1;
